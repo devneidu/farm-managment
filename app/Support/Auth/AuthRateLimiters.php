@@ -49,6 +49,18 @@ class AuthRateLimiters
         RateLimiter::for('auth-google', fn (Request $r) => [
             self::limit('google.ip')->by('google:ip:'.$r->ip()),
         ]);
+
+        RateLimiter::for('account-password', fn (Request $r) => [
+            self::limit('account_password.user')->by('account-password:'.self::actor($r)),
+        ]);
+
+        RateLimiter::for('invitation-accept', fn (Request $r) => [
+            self::limit('invitation_accept.user')->by('invitation-accept:'.self::actor($r)),
+        ]);
+
+        RateLimiter::for('team-invite', fn (Request $r) => [
+            self::limit('team_invite.user')->by('team-invite:'.self::actor($r)),
+        ]);
     }
 
     private static function limit(string $path): Limit

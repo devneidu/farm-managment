@@ -19,8 +19,15 @@ class Farm extends Model
         return $this->hasMany(FarmMembership::class);
     }
 
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(FarmInvitation::class);
+    }
+
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'farm_memberships')->withPivot('role');
+        return $this->belongsToMany(User::class, 'farm_memberships')
+            ->withPivot('role')
+            ->wherePivot('status', 'active');
     }
 }

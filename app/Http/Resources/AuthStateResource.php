@@ -21,7 +21,8 @@ class AuthStateResource extends JsonResource
      *     authenticated: true,
      *     email_verified: bool,
      *     onboarded: bool,
-     *     next_action: 'verify_email'|'complete_farm_setup'|'none',
+     *     has_active_farm: bool,
+     *     next_action: 'verify_email'|'complete_farm_setup'|'no_active_farm'|'none',
      *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, providers: string[]},
      *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null
      * }
@@ -29,15 +30,18 @@ class AuthStateResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $this->resource;
-        $farm = $user->isOnboarded() ? $user->currentFarm() : null;
+        // Distinct states: email verification, onboarding completion, active membership, current farm.
+        $farm = $user->currentFarm();
 
         return [
             'authenticated' => true,
             'email_verified' => $user->hasVerifiedEmail(),
             'onboarded' => $user->isOnboarded(),
+            'has_active_farm' => $farm !== null,
             'next_action' => match (true) {
                 ! $user->hasVerifiedEmail() => 'verify_email',
                 ! $user->isOnboarded() => 'complete_farm_setup',
+                $farm === null => 'no_active_farm',
                 default => 'none',
             },
             'user' => [

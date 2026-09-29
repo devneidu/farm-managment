@@ -15,6 +15,13 @@ return [
     // Lifetime of the single-use authorization issued after a password-reset OTP is verified.
     'reset_authorization_ttl_minutes' => (int) env('PASSWORD_RESET_AUTHORIZATION_TTL_MINUTES', 15),
 
+    // Team invitations (Phase 2). The emailed link is {frontend_url}{accept_path}?token=...
+    'invitations' => [
+        'ttl_days' => (int) env('INVITATION_TTL_DAYS', 7),
+        'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
+        'accept_path' => '/invitations/accept',
+    ],
+
     'rate_limits' => [
         'register' => ['ip' => [10, 60]],
         'login' => ['email_ip' => [5, 1], 'ip' => [30, 1]],
@@ -24,5 +31,8 @@ return [
         'reset_verify' => ['email_ip' => [10, 10], 'ip' => [30, 10]],
         'reset_password' => ['ip' => [10, 10]],
         'google' => ['ip' => [20, 1]],
+        'account_password' => ['user' => [5, 10]],
+        'invitation_accept' => ['user' => [10, 10]],
+        'team_invite' => ['user' => [30, 60]],
     ],
 ];

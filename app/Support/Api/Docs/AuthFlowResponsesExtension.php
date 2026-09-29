@@ -9,7 +9,8 @@ use Illuminate\Support\Str;
 
 /**
  * Documents errors that are raised by middleware (not visible in controller code):
- * 429 for throttled routes, 419 for CSRF on writes, 403 for the verification/onboarding gates.
+ * 429 for throttled routes, 419 for CSRF on writes, 403 for the verification/onboarding/farm-permission gates,
+ * 404 for routes with path parameters.
  */
 class AuthFlowResponsesExtension extends OperationExtension
 {
@@ -37,8 +38,27 @@ class AuthFlowResponsesExtension extends OperationExtension
             $forbidden[] = 'onboarding_required';
         }
 
+        $permission = $middleware->first(fn ($m) => Str::startsWith($m, 'farm.permission:'));
+
+        if ($middleware->contains('farm.context')) {
+            $forbidden[] = 'no_active_farm';
+            $forbidden[] = 'farm_access_denied';
+        }
+
+        if ($permission) {
+            $forbidden[] = 'forbidden';
+            $name = Str::after($permission, 'farm.permission:');
+            $operation->description(trim(($operation->description ?? '')."
+
+**Requires farm permission:** `{$name}`."));
+        }
+
         if ($forbidden) {
             $add(403, 'Forbidden: account state does not allow this request', $forbidden);
+        }
+
+        if ($routeInfo->route->parameterNames() !== []) {
+            $add(404, 'Resource not found (or it belongs to another farm)', ['not_found']);
         }
 
         if ($middleware->contains(fn ($m) => Str::startsWith($m, 'throttle:'))) {

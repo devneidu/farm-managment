@@ -9,6 +9,6 @@ class FarmPolicy
 {
     public function view(User $user, Farm $farm): bool
     {
-        return $farm->memberships()->where('user_id', $user->id)->exists();
+        return $farm->memberships()->active()->where('user_id', $user->id)->exists();
     }
 }

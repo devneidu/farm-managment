@@ -60,7 +60,9 @@ class User extends Authenticatable
 
     public function farms(): BelongsToMany
     {
-        return $this->belongsToMany(Farm::class, 'farm_memberships')->withPivot('role');
+        return $this->belongsToMany(Farm::class, 'farm_memberships')
+            ->withPivot('role')
+            ->wherePivot('status', 'active');
     }
 
     public function socialAccounts(): HasMany
@@ -68,7 +70,7 @@ class User extends Authenticatable
         return $this->hasMany(SocialAccount::class);
     }
 
-    /** Phase 1: a user has at most one farm; this is the farm the app operates on. */
+    /** Default farm context: the oldest ACTIVE membership (an X-Farm-Id header can select another one). */
     public function currentFarm(): ?Farm
     {
         return $this->farms()->orderBy('farm_memberships.created_at')->first();

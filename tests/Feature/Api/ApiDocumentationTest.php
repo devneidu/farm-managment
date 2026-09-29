@@ -59,4 +59,29 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('429', $spec['paths']['/auth/login']['post']['responses']);
         $this->assertArrayHasKey('201', $spec['paths']['/auth/register']['post']['responses']);
     }
+
+    public function test_phase_2_endpoints_are_documented_with_permissions_and_errors(): void
+    {
+        $spec = $this->spec();
+
+        foreach ([
+            'get /farm', 'patch /farm', 'get /roles',
+            'get /farm/members', 'get /farm/members/{membership}', 'patch /farm/members/{membership}', 'delete /farm/members/{membership}',
+            'get /farm/invitations', 'post /farm/invitations', 'post /farm/invitations/{invitation}/resend', 'delete /farm/invitations/{invitation}',
+            'post /invitations/accept', 'get /account', 'patch /account', 'put /account/password',
+            'get /settings/notifications', 'put /settings/notifications',
+        ] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], "Missing {$endpoint} in OpenAPI spec");
+        }
+
+        $invite = $spec['paths']['/farm/invitations']['post'];
+        $this->assertStringContainsString('team.invite', $invite['description']);
+        foreach (['201', '403', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $invite['responses'], "POST /farm/invitations missing {$status}");
+        }
+        $this->assertArrayHasKey('404', $spec['paths']['/farm/members/{membership}']['patch']['responses']);
+        $this->assertArrayHasKey('409', $spec['paths']['/farm/members/{membership}']['delete']['responses']);
+        $this->assertArrayHasKey('410', $spec['paths']['/invitations/accept']['post']['responses']);
+    }
 }

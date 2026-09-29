@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\FarmRole;
 use App\Models\Farm;
 use App\Models\FarmMembership;
 use App\Models\User;
@@ -41,7 +42,7 @@ class OnboardingTest extends AuthTestCase
         $this->assertTrue(Str::isUuid($membership->id, 7));
         $this->assertSame($farm->id, $membership->farm_id);
         $this->assertSame($user->id, $membership->user_id);
-        $this->assertSame('owner', $membership->role);
+        $this->assertSame(FarmRole::Owner, $membership->role);
     }
 
     public function test_unverified_user_cannot_onboard(): void

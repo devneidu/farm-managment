@@ -1,13 +1,20 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\Auth\CsrfCookieController;
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\FarmController;
+use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
+use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\TeamMemberController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -46,12 +53,45 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(function () {
     Route::post('/onboarding/farm', [OnboardingController::class, 'createFarm'])->name('api.v1.onboarding.farm');
+
+    // Joining a farm by invitation does not need farm setup (the user may not have a farm yet).
+    Route::post('/invitations/accept', InvitationAcceptanceController::class)->middleware('throttle:invitation-accept')->name('api.v1.invitations.accept');
+
+    // My Account (user-level, not farm-scoped)
+    Route::prefix('account')->group(function () {
+        Route::get('/', [AccountController::class, 'show'])->name('api.v1.account.show');
+        Route::patch('/', [AccountController::class, 'update'])->name('api.v1.account.update');
+        Route::put('/password', [AccountController::class, 'password'])->middleware('throttle:account-password')->name('api.v1.account.password');
+    });
 });
 
 /*
 | Phase 2+ farm-management routes go inside this group; nothing is reachable until the
 | user has a verified email and has completed farm setup.
 */
-Route::middleware('app.access')->group(function () {
-    //
+Route::middleware(['app.access', 'farm.context'])->group(function () {
+    // Every route here acts on the caller's ACTIVE farm membership (see ResolveFarmContext) and declares
+    // the permission it needs (see App\Enums\Permission / FarmRole::permissions()).
+    Route::get('/farm', [FarmController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.farm.show');
+    Route::patch('/farm', [FarmController::class, 'update'])->middleware('farm.permission:farm.update')->name('api.v1.farm.update');
+
+    Route::get('/roles', [RoleController::class, 'index'])->middleware('farm.permission:team.view')->name('api.v1.roles.index');
+
+    Route::prefix('farm/members')->group(function () {
+        Route::get('/', [TeamMemberController::class, 'index'])->middleware('farm.permission:team.view')->name('api.v1.farm.members.index');
+        Route::get('/{membership}', [TeamMemberController::class, 'show'])->middleware('farm.permission:team.view')->name('api.v1.farm.members.show');
+        Route::patch('/{membership}', [TeamMemberController::class, 'update'])->middleware('farm.permission:team.update_role')->name('api.v1.farm.members.update');
+        Route::delete('/{membership}', [TeamMemberController::class, 'destroy'])->middleware('farm.permission:team.remove')->name('api.v1.farm.members.destroy');
+    });
+
+    Route::prefix('farm/invitations')->group(function () {
+        Route::get('/', [FarmInvitationController::class, 'index'])->middleware('farm.permission:team.view')->name('api.v1.farm.invitations.index');
+        Route::post('/', [FarmInvitationController::class, 'store'])->middleware(['farm.permission:team.invite', 'throttle:team-invite'])->name('api.v1.farm.invitations.store');
+        Route::post('/{invitation}/resend', [FarmInvitationController::class, 'resend'])->middleware(['farm.permission:team.invite', 'throttle:team-invite'])->name('api.v1.farm.invitations.resend');
+        Route::delete('/{invitation}', [FarmInvitationController::class, 'destroy'])->middleware('farm.permission:team.invite')->name('api.v1.farm.invitations.destroy');
+    });
+
+    // Per-user, per-farm notification switches (shell only)
+    Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');
+    Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.update');
 });
