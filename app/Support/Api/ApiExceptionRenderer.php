@@ -50,6 +50,10 @@ class ApiExceptionRenderer
             return $this->respond($request, 403, ...self::HTTP_CODES[403]);
         }
 
+        if ($e instanceof ApiHttpException) {
+            return $this->respond($request, $e->getStatusCode(), $e->errorCode, $e->getMessage(), headers: $e->getHeaders());
+        }
+
         if ($e instanceof HttpExceptionInterface) {
             $status = $e->getStatusCode();
             [$code, $message] = self::HTTP_CODES[$status]

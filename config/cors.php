@@ -30,6 +30,6 @@ return [
 
     'max_age' => (int) env('CORS_MAX_AGE', 600),
 
-    'supports_credentials' => (bool) env('CORS_SUPPORTS_CREDENTIALS', false),
+    'supports_credentials' => (bool) env('CORS_SUPPORTS_CREDENTIALS', true),
 
 ];

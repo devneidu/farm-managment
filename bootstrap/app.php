@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureAccountIsActive;
+use App\Http\Middleware\EnsureEmailIsVerified;
+use App\Http\Middleware\EnsureOnboarded;
 use App\Support\Api\ApiExceptionRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +19,23 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(AssignRequestId::class);
+
+        // Sanctum first-party SPA: cookie session + CSRF for requests from stateful frontend origins.
+        $middleware->statefulApi();
+
+        $middleware->alias([
+            'account.active' => EnsureAccountIsActive::class,
+            'email.verified' => EnsureEmailIsVerified::class,
+            'onboarded' => EnsureOnboarded::class,
+        ]);
+
+        // Every farm-management endpoint (Phase 2+) uses this: authenticated, active, verified, onboarded.
+        $middleware->appendToGroup('app.access', [
+            'auth:sanctum',
+            'account.active',
+            'email.verified',
+            'onboarded',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(ApiExceptionRenderer::shouldRender(...));

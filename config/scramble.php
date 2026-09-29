@@ -153,7 +153,10 @@ return [
         RestrictedDocsAccess::class,
     ],
 
-    'extensions' => [],
+    'extensions' => [
+        \App\Support\Api\Docs\ApiHttpExceptionToResponseExtension::class,
+        \App\Support\Api\Docs\AuthFlowResponsesExtension::class,
+    ],
 
     /*
      * Automatically document API security (OpenAPI `security` / `securitySchemes`) based on route
