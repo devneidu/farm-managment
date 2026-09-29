@@ -11,9 +11,9 @@
 
 ## Current Status
 
-**Current Phase:** Phase 4 — Agricultural Master Data
+**Current Phase:** Phase 5 — Measurements, Units & Dynamic Conversions
 
-**Status:** Implemented; NOT committed (user reviews/commits). Phases 0-3 are committed (Phase 3 = `eaf3b7e`).
+**Status:** Implemented; NOT committed (user reviews/commits). Phases 0-4 are committed (Phase 4 = `daefd8b`).
 
 **Last Agent:** Claude Code (Sonnet 5.5)
 
@@ -128,13 +128,41 @@
 
 **Phase 4 closing verification:** (1) Migration reversibility exercised on `farm_management_test` only: rollback of `provision_agricultural_master_data` (its `down()` is intentionally a no-op; the tables are dropped by the next step), rollback of `create_master_data_tables` (all 9 tables removed, no FK-order errors), then `migrate` re-applied both and the seed returned identically (7 species, 36 species-capability rows, 9 reference values). (2) Seed catalogue audited against the source docs: goat pregnancy is sourced by `02-DOMAIN-BEHAVIOUR-MATRIX.md` ("Cattle/goat example" pregnancy capability; farm-setup row Cattle/Goat/Sheep/Pig/Rabbit "pregnancy/birth workflow where configured"). Goat keeps `supports_pregnancy` with no gestation value. Only sourced reference values are seeded: chicken incubation 21 d, cattle gestation 283 d. `supports_breeding` (chicken/cattle/goat) is derived from the matrix "Breeding" rows, which are defined over incubation-/pregnancy-capable species. No seed change was needed.
 
+## Phase 5 Architecture (measurements, units, conversions)
+
+**Status:** implemented; NOT committed. Measurement INFRASTRUCTURE only - no operational record uses it yet (no locations, batches, inventory, feed, eggs, harvest...). Later modules must call `QuantityNormalizer` / `MeasurementConverter`; nobody else multiplies quantities by unit factors.
+
+**Tables** (migrations `2026_10_03_100000_create_measurement_tables` reversible; `2026_10_03_100100_provision_standard_measurement_data` runs `MeasurementSeeder`, insert-only by code): `measurement_dimensions` (code, name, `supports_preference`), `units` (dimension, code, name, symbol, `family`, `is_canonical`, `conversion_strategy` linear|fahrenheit|none, `to_canonical_factor` decimal(30,12), `decimal_places`, `integer_only`, `is_system`, `is_active`), `farm_unit_preferences` (farm+dimension unique -> unit), `measurement_contexts` (farm_id, name, normalized_name, is_active; unique farm+normalized_name; added by `2026_10_03_100200_add_measurement_contexts`), `package_conversions` (farm_id, `context_type`, `context_id` uuid, package_unit, target_unit, `quantity_per_package` decimal(18,6), `version`, `is_active`; unique farm+context_type+context_id+package unit; NO label/key columns).
+
+**Dimensions (6):** `weight` (the docs call it "weight"; the prompt said "mass"), `volume`, `area`, `count`, `temperature`, `package`. Length/time/currency deliberately NOT seeded (unconfirmed; currency is integer minor units elsewhere).
+**Units seeded (23), canonical = factor 1:** weight: mg 0.001, **g**, kg 1000, tonne 1e6, lb 453.59237 (exact). volume: **ml**, cl 10, l 1000. area: **sq_m** (m²), hectare 1e4, acre 4046.8564224 (exact, international). temperature: **celsius**, fahrenheit (strategy `fahrenheit`). count (each its own family AND canonical, integer_only): piece, egg, head, planting_unit. package (no family, no factor): bag, sack, crate, tray, carton, bottle. Codes are the identity (`l`, `sq_m`); symbols/names are display only.
+
+**Standard conversion (`App\Services\Measurement\MeasurementConverter`, pure, no DB):** units convert only within the same non-null `family` via the canonical unit. Everything else = `422 incompatible_units`. Count families never mix (50 heads != 50 eggs; planting units never imply material quantity). Temperature = known strategy `fahrenheit` ((F-32)*5/9); no formula language. System units are protected in the model (redefining code/family/factor/strategy or deleting throws `LogicException`; only name/symbol/`is_active` are editable). No farm/custom physical units exist (packages are conversions, not units).
+
+**Exact arithmetic (`App\Support\Measurement\Decimal`, bcmath):** all values are numeric STRINGS; no floats. Entered quantities: <=12 integer digits, <=6 decimals (JSON floats accepted only via their shortest text); calculation scale 18; results/normalized rounded half away from zero to 6 dp; normalized quantities allow 18 integer digits (storage contract for later columns: `decimal(24,6)`). `ext-bcmath` added to composer.json `require` (lock content-hash refreshed with `composer update --lock`; no package installed).
+
+**Packages and contexts (context abstraction before inventory exists):** `bag`/`crate` etc. have NO universal size. A `package_conversions` row says "in context C, 1 package = N target unit". Context = `(context_type, context_id)`; the id is ALWAYS a real, validated entity, never display text: `crop_type` (id = an ACTIVE `crop_types.id`, e.g. Maize) or `custom` (id = `measurement_contexts.id`, a farm-owned, farm-scoped, renameable context such as Feed Grower Mash / Eggs, created via `POST /settings/measurement-contexts`). `PackageConversionService::resolveContext()` is the single gate (create AND `QuantityNormalizer::normalize`): unknown/malformed/wrong-type/inactive/another farm's id -> `422` on `context_id` / `context.id`. Labels are read from the entity (crop name / context name), never stored on the conversion; snapshots store `{type, id, label-at-the-time}`. Phase 9 adds `inventory_item` (id = item UUID) as a new `ConversionContextType` case + a branch in `resolveContext` with NO schema change; existing custom contexts do NOT automatically become inventory items (that would need a deliberate link/migration). Correction history: the first Phase 5 cut keyed custom contexts by `Str::slug(client text)` with the label copied per row; replaced before closing the phase (migration backfills legacy rows: one context per farm+key). Feed bag 25 kg and Maize bag 50 kg coexist as two rows. Contexts are always required for package units: missing -> `conversion_context_required` (or `ambiguous_conversion` if >=2 candidates, `details.candidates`); never guessed. Every lookup is filtered by the FarmContext farm.
+
+**Compound quantities:** `QuantityNormalizer::normalize($farm, [['quantity','unit'],...], ?ConversionContext, ?resultUnit, ?requiredDimensions)` -> `NormalizationResult{entered, normalized (canonical), total (result unit), snapshot}`. 3 crates + 14 pieces (1 crate=30 pieces) -> 104 piece. 12 bags + 18 kg with bag=50 kg -> 618 kg (normalized 618000 g). Parts must share a family; units may not repeat; temperatures can't be summed; a fractional result in an integer-only unit -> `invalid_quantity` (`reason: fraction_not_allowed`). Domain fields declare accepted dimensions through `requiredDimensions` (water: `['volume']`, dose: `['weight','volume']`) -> `unit_dimension_mismatch`.
+
+**History strategy (chosen: snapshot the conversion used + in-place versioning):** `NormalizationResult::snapshot` (schema 1) embeds every entered part with its full UnitSpec (code, dimension, family, strategy, factor, integer_only) and every PackageDefinition used (conversion id, version, context, per_package, target spec). `MeasurementConverter::replay($snapshot)` recomputes the numbers from the snapshot alone (tested after the conversion row was edited, deactivated and the unit relabelled). Later operational tables should store entered parts + normalized quantity/unit + this snapshot JSON. `package_conversions.version` bumps on quantity/target/active changes (label-only edits don't) and is recorded in snapshots; rows are edited in place, not duplicated.
+
+**Preferences:** `farm_unit_preferences` is farm-wide (per ERD), only for dimensions with `supports_preference` (weight, volume, area, temperature). Defaults (`UnitPreferenceService::DEFAULTS`): kg, l, hectare, celsius; `null` resets. Display/entry defaults only; never affect normalization.
+
+**Permissions:** `measurement.view` (owner, manager, farm_worker, finance - selectors, package conversions, preview), `measurement.manage` (owner, manager - preferences and package conversions). Not plan-gated. Rate limiters `measurement-write` (60/h/user) and `measurement-preview` (120/min/user).
+
+**Endpoints:** `GET /master/measurement-dimensions`, `GET /master/units?dimension=` (dimension REQUIRED; optional `family`, `include_inactive`; there is deliberately no "all units" listing), `GET|PUT /settings/units`, `GET|POST /settings/measurement-contexts`, `PATCH /settings/measurement-contexts/{id}` (rename / deactivate; no DELETE), `GET|POST /settings/package-conversions`, `PATCH /settings/package-conversions/{id}` (quantity/target/is_active only; no DELETE - deactivate), `POST /measurements/normalize` (preview; same service as future modules). Docs: `docs/api/README.md` section 18.
+
+**Errors (`App\Support\Measurement\MeasurementException`, all 422 unless noted):** incompatible_units, conversion_context_required, ambiguous_conversion, conversion_not_configured (`details.inactive`), invalid_quantity, invalid_conversion_ratio, unknown_unit, unit_not_selectable, unit_dimension_mismatch, conversion_exists (409), measurement_context_exists (409). Event `App\Events\Measurement\PackageConversionChanged` (created|updated|deactivated|reactivated) dispatched for a future audit module.
+
+**Deferred measurement decisions:** length/time/dose dimensions; farm custom units (intentionally none); an `inventory_item` context and item-level conversions (Phase 9; any link from a farm's custom contexts to items must be built deliberately); per-crop/species default packaging; platform-admin unit editing UI; per-USER unit preferences (farm-wide per ERD); `piece` vs `egg` (kept as separate count families: "3 crates + 14 pieces" uses a crate->piece definition; an eggs context may equally target `egg`); whether a `bird` count unit is needed (bird = head for now); Phase 4 planting unit types (heap/hole/stand) stay reference values, `planting_unit` is only a generic count unit.
 ## Last Completed Task
 
-Phase 4 — Agricultural master data.
+Phase 5 — Measurements, units & dynamic conversions.
 
 ## Endpoints (all under `/api/v1`)
 
-Phase 0/1 unchanged (see above). Phase 3: `GET /public/plans` (public), `GET /subscription`, `GET /subscription/entitlements`, `GET /subscription/usage`, `POST /subscription/cancel`, `POST /subscription/resume`; `POST /farm/invitations` can now return `409 plan_limit_reached`. Frontend guide: `docs/api/README.md` sections 9-12. Phase 2: `GET|PATCH /farm`, `GET /roles`, `GET /farm/members`, `GET|PATCH|DELETE /farm/members/{membership}`, `GET|POST /farm/invitations`, `POST /farm/invitations/{id}/resend`, `DELETE /farm/invitations/{id}`, `POST /invitations/accept`, `GET|PATCH /account`, `PUT /account/password`, `GET|PUT /settings/notifications`. Frontend guide: `docs/api/README.md` sections 5-8.
+Phase 5: see the Phase 5 Architecture section (frontend guide section 18). Phase 4: master data (guide sections 13-17). Phase 0/1 unchanged (see above). Phase 3: `GET /public/plans` (public), `GET /subscription`, `GET /subscription/entitlements`, `GET /subscription/usage`, `POST /subscription/cancel`, `POST /subscription/resume`; `POST /farm/invitations` can now return `409 plan_limit_reached`. Frontend guide: `docs/api/README.md` sections 9-12. Phase 2: `GET|PATCH /farm`, `GET /roles`, `GET /farm/members`, `GET|PATCH|DELETE /farm/members/{membership}`, `GET|POST /farm/invitations`, `POST /farm/invitations/{id}/resend`, `DELETE /farm/invitations/{id}`, `POST /invitations/accept`, `GET|PATCH /account`, `PUT /account/password`, `GET|PUT /settings/notifications`. Frontend guide: `docs/api/README.md` sections 5-8.
 
 ## Files Changed (Phase 3)
 
@@ -148,7 +176,9 @@ Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResp
 
 ## Tests
 
-**Phase 4 latest: 233 tests, 1453 assertions, all passing** (`php -d memory_limit=1G artisan test`, on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 4 added 40 tests (SystemMasterData 8, MasterDataApi 15, CustomMasterData 16, OpenAPI 1); RolePermissionTest expectations were extended for the new permissions. Dev DB `farm_management` got the 2 new migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
+**Phase 5 latest (after the context-identity correction): 303 tests, 2030 assertions, all passing** (`php -d memory_limit=1G artisan test` on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 5 added 70 tests (61 originally + 9 for stable context identity: id vs name, rename keeps conversions/snapshots, crop validation, type/id mismatch, deactivation, farm isolation of contexts, context CRUD/RBAC): StandardConversionTest 19 (units/seed/protection/exact conversions/temperature/count semantics/quantity validation/rounding), CompoundQuantityTest 20 (104 pieces, 618 kg, contexts, farm isolation, ambiguity, snapshot replay after config edits), MeasurementApiTest 30 (dimension-filtered selectors, RBAC, package conversion CRUD/validation/versioning/409, isolation, preview endpoint, preferences), OpenAPI 1; RolePermissionTest expectations extended. Migration down()/up() exercised on `farm_management_test` (rollback of both Phase 5 migrations dropped the 4 tables, re-apply restored 23 units / 6 dimensions); the contexts migration's down()/backfill/up() was also exercised on `farm_management_test` with legacy-shaped rows (2 custom rows + 1 crop row -> 1 context, ids matched, down() restored the keys); dev DB `farm_management` got the migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
+
+Previous (Phase 4): 233 tests, 1453 assertions, all passing** (`php -d memory_limit=1G artisan test`, on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 4 added 40 tests (SystemMasterData 8, MasterDataApi 15, CustomMasterData 16, OpenAPI 1); RolePermissionTest expectations were extended for the new permissions. Dev DB `farm_management` got the 2 new migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
 
 Previous (Phase 3): 193 tests, 1157 assertions, all passing (`php artisan test`, runs on `farm_management_test`). Phase 3 adds 43 (PlanCatalogue 7, EntitlementService 14, TeamLimit 9, SubscriptionApi 12, OpenAPI 1); existing Phase 0-2 tests are unchanged except 3 adaptations (new permissions in role lists; one invitation test moved to Farm Pro because Free allows 3 team members). Migrations were rolled back and re-applied on the test DB; plain `php artisan migrate` applied to dev DB `farm_management` (0 farms there, so the backfill is covered by a test). The simultaneous-request race is guarded by the farm row lock but not exercised by a parallel test (PHPUnit is single-process). Pint clean on app/database/routes/tests.
 
@@ -156,13 +186,13 @@ Earlier: Phase 2 added 67 tests (66 in tests/Feature/Team + 1 OpenAPI test; Phas
 
 ## Packages Added
 
-None.
+None installed. `ext-bcmath` declared in composer.json `require` (PHP extension used for exact decimal arithmetic; enabled in this environment); composer.lock content-hash refreshed only.
 
 ## Open Issues / Blockers
 
 - Carried over from Phase 1: `GOOGLE_CLIENT_ID` needed for real Google login; pre-existing Pint issues in bootstrap/providers.php + some config files (do NOT run pint on config/ blindly); production needs SESSION_DOMAIN/SECURE cookie, real MAIL_*, docs-exposure decision; Scramble pinned.
 - Phase 3 unresolved: final prices/limits/feature split (seed is provisional); payment provider + checkout/webhooks/billing_transactions; user-initiated plan change (none until payments exist, so cancel/resume are only reachable for farms moved to a paid plan by `changePlan`); Platform Admin plan management; `past_due` is honoured until the period ends (no separate grace policy); more `Feature`/`Limit` keys are added as later phases need them (farm count, storage, ...).
-- Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset, units, farm operations/locations.
+- Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset, locations. Production PHP must have the bcmath extension (declared in composer.json).
 - Invitation email is synchronous (the token must not sit in the jobs table); slow SMTP slows the invite request.
 - The invited email must equal the account's verified email (case-insensitive); there is no "accept with a different email" path by design.
 
@@ -170,11 +200,11 @@ None.
 
 ## Next Task
 
-Phase 5 — Measurements & conversions (`docs/implementations/16-PHASE-05-MEASUREMENTS.md`). Do not start until the user says so. Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
+Phase 6 (see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md`). Do not start until the user says so. Use `QuantityNormalizer` for every quantity a later phase stores (entered parts + normalized quantity/unit + snapshot JSON, `decimal(24,6)` columns). Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
 
 ## Recommended Next Commit
 
-`feat: add Phase 4 agricultural master data (operations, species, crops, capabilities, custom breeds and varieties)`
+`feat: add Phase 5 measurements, standard units, exact decimal conversions and farm package conversions`
 
 ---
 

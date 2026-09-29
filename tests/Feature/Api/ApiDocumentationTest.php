@@ -142,4 +142,29 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('404', $spec['paths']['/master/species/{species}/breeds']['get']['responses']);
         $this->assertArrayHasKey('401', $spec['paths']['/master/species']['get']['responses']);
     }
+
+    public function test_phase_5_endpoints_are_documented_with_permissions_and_errors(): void
+    {
+        $spec = $this->spec();
+
+        foreach ([
+            'get /master/measurement-dimensions', 'get /master/units', 'get /settings/units', 'put /settings/units',
+            'get /settings/package-conversions', 'post /settings/package-conversions',
+            'patch /settings/package-conversions/{conversion}', 'post /measurements/normalize',
+        ] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], "Missing {$endpoint} in OpenAPI spec");
+        }
+
+        $this->assertStringContainsString('measurement.view', $spec['paths']['/settings/package-conversions']['get']['description']);
+        $this->assertStringContainsString('measurement.manage', $spec['paths']['/settings/package-conversions']['post']['description']);
+        $this->assertStringContainsString('measurement.manage', $spec['paths']['/settings/units']['put']['description']);
+        $this->assertStringContainsString('dimension', $spec['paths']['/master/units']['get']['description']);
+        $this->assertStringContainsString('incompatible_units', $spec['paths']['/measurements/normalize']['post']['description']);
+        $this->assertStringContainsString('conversion_not_configured', $spec['paths']['/measurements/normalize']['post']['description']);
+        foreach (['201', '403', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/settings/package-conversions']['post']['responses'], "POST /settings/package-conversions missing {$status}");
+        }
+        $this->assertArrayHasKey('422', $spec['paths']['/master/units']['get']['responses']);
+    }
 }

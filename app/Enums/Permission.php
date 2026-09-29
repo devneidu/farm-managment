@@ -25,6 +25,10 @@ enum Permission: string
     case MasterDataView = 'master_data.view';
     case MasterDataManage = 'master_data.manage';
 
+    // Phase 5 - measurements: read unit selectors / conversions (every role) / manage the farm's unit preferences and package conversions
+    case MeasurementView = 'measurement.view';
+    case MeasurementManage = 'measurement.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case InventoryAdjust = 'inventory.adjust';

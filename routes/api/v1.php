@@ -15,12 +15,17 @@ use App\Http\Controllers\Api\V1\FarmOperationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\MasterDataController;
+use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
+use App\Http\Controllers\Api\V1\MeasurementContextController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
+use App\Http\Controllers\Api\V1\UnitPreferenceController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -130,6 +135,24 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
 
     Route::get('/farm/operations', [FarmOperationController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.farm.operations.show');
     Route::put('/farm/operations', [FarmOperationController::class, 'update'])->middleware('farm.permission:farm.update')->name('api.v1.farm.operations.update');
+
+    // Measurements (Phase 5). Not plan-gated. Reads: measurement.view (every role); farm unit preferences and package
+    // conversions are written with measurement.manage. Units are only ever listed per dimension.
+    Route::get('/master/measurement-dimensions', [MeasurementCatalogueController::class, 'dimensions'])->middleware('farm.permission:measurement.view')->name('api.v1.master.measurement-dimensions');
+    Route::get('/master/units', [MeasurementCatalogueController::class, 'units'])->middleware('farm.permission:measurement.view')->name('api.v1.master.units');
+
+    Route::get('/settings/units', [UnitPreferenceController::class, 'show'])->middleware('farm.permission:measurement.view')->name('api.v1.settings.units.show');
+    Route::put('/settings/units', [UnitPreferenceController::class, 'update'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.units.update');
+
+    Route::get('/settings/measurement-contexts', [MeasurementContextController::class, 'index'])->middleware('farm.permission:measurement.view')->name('api.v1.settings.measurement-contexts.index');
+    Route::post('/settings/measurement-contexts', [MeasurementContextController::class, 'store'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.measurement-contexts.store');
+    Route::patch('/settings/measurement-contexts/{context}', [MeasurementContextController::class, 'update'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.measurement-contexts.update');
+
+    Route::get('/settings/package-conversions', [PackageConversionController::class, 'index'])->middleware('farm.permission:measurement.view')->name('api.v1.settings.package-conversions.index');
+    Route::post('/settings/package-conversions', [PackageConversionController::class, 'store'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.package-conversions.store');
+    Route::patch('/settings/package-conversions/{conversion}', [PackageConversionController::class, 'update'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.package-conversions.update');
+
+    Route::post('/measurements/normalize', [QuantityNormalizationController::class, '__invoke'])->middleware(['farm.permission:measurement.view', 'throttle:measurement-preview'])->name('api.v1.measurements.normalize');
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

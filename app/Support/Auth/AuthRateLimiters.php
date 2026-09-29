@@ -62,6 +62,14 @@ class AuthRateLimiters
             self::limit('master_data_write.user')->by('master-data-write:'.self::actor($r)),
         ]);
 
+        RateLimiter::for('measurement-write', fn (Request $r) => [
+            self::limit('measurement_write.user')->by('measurement-write:'.self::actor($r)),
+        ]);
+
+        RateLimiter::for('measurement-preview', fn (Request $r) => [
+            self::limit('measurement_preview.user')->by('measurement-preview:'.self::actor($r)),
+        ]);
+
         RateLimiter::for('team-invite', fn (Request $r) => [
             self::limit('team_invite.user')->by('team-invite:'.self::actor($r)),
         ]);

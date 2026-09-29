@@ -34,9 +34,10 @@ enum FarmRole: string
                 Permission::LivestockBatchCreate, Permission::InventoryAdjust,
                 Permission::SubscriptionView,
                 Permission::MasterDataView, Permission::MasterDataManage,
+                Permission::MeasurementView, Permission::MeasurementManage,
             ],
-            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView],
+            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView],
+            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView],
         };
     }
 

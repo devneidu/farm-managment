@@ -313,4 +313,114 @@ lists to them; the unfiltered lists still return everything. Errors: `422` for u
 
 Items carry `id` (UUID), `code` (stable; null for custom items), `name`, `source`, `is_active`, `is_editable` (custom items only).
 Operation items also carry `selected` (explicit choice) and `available` (usable now). Not yet available: record-type/form field
-schemas (`GET /master/record-types`), units, task categories - they arrive with later phases.
+schemas (`GET /master/record-types`) and task categories arrive with later phases; units are documented in section 18.
+
+## 18. Measurements: dimensions, units and conversions (Phase 5)
+
+**Rule: never load "all units".** Every quantity field belongs to a *measurement dimension*; ask the API for that dimension's units only.
+The frontend keeps no unit-compatibility table.
+
+| Endpoint | Needs | Purpose |
+|---|---|---|
+| `GET /master/measurement-dimensions` | `measurement.view` (all roles) | `weight`, `volume`, `area`, `count`, `temperature`, `package` + `canonical_unit`, `supports_preference`. |
+| `GET /master/units?dimension={code}` (`&family=`, `&include_inactive=true`) | `measurement.view` | Units of ONE dimension (`dimension` is required; unknown -> `422`). |
+| `GET /settings/units` | `measurement.view` | Farm default unit per weight/volume/area/temperature (`is_default` true = nothing chosen yet: kg, L, hectare, Celsius). |
+| `PUT /settings/units` `{preferences: {weight: "kg", volume: null}}` | `measurement.manage` (Owner, Manager) | Set a default unit (`null` resets). Partial: omitted dimensions unchanged. Display/entry default only - never changes stored quantities. |
+| `GET /settings/measurement-contexts` (`include_inactive`) | `measurement.view` | This farm's own contexts ("Feed Grower Mash", "Eggs"), each with a stable `id`. |
+| `POST /settings/measurement-contexts` `{name}` | `measurement.manage` | Create a context. `201`; duplicate name (ignoring case/spaces) -> `409 measurement_context_exists`. |
+| `PATCH /settings/measurement-contexts/{id}` `{name?, is_active?}` | `measurement.manage` | Rename / deactivate / reactivate. Renaming never breaks anything that uses the `id`. |
+| `GET /settings/package-conversions` (`context_type`, `context_id`, `package_unit`, `include_inactive`) | `measurement.view` | This farm's package definitions. |
+| `POST /settings/package-conversions` | `measurement.manage` | Define what a package holds in a context (`context_type` + `context_id`). `201`. |
+| `PATCH /settings/package-conversions/{id}` | `measurement.manage` | Change quantity / target unit / `is_active`. |
+| `POST /measurements/normalize` | `measurement.view` | Live preview of an entered (compound) quantity. |
+
+Measurement is **not plan-gated**. There are no endpoints to create or edit units: standard units (kg, L, hectare...) are system-owned.
+
+### Which units does a field get?
+
+A form field declares its dimension; the dropdown is `GET /master/units?dimension=...`:
+
+| Field | Request | Options returned |
+|---|---|---|
+| Water consumed | `dimension=volume` | `ml`, `cl`, `l` (never kg, acre, crate, head) |
+| Animal live weight | `dimension=weight` | `mg`, `g`, `kg`, `tonne`, `lb` |
+| Land area | `dimension=area` | `sq_m` (m²), `hectare`, `acre` |
+| Temperature | `dimension=temperature` | `celsius`, `fahrenheit` |
+| Eggs / pieces | `dimension=count&family=piece` (or `egg`) | `piece` |
+| Animal population | `dimension=count&family=head` | `head` (whole numbers only) |
+| Medicine dose (weight OR volume) | call the endpoint for each allowed dimension | merge the two lists |
+| "Package" picker (bag, crate...) | `dimension=package` | `bag`, `sack`, `crate`, `tray`, `carton`, `bottle` |
+
+Unit fields: `code` (use this, never the label), `name`, `symbol`, `dimension`, `family`, `is_canonical`, `integer_only` (no fractions: heads, eggs),
+`decimal_places` (display hint), `is_active` (selectable for NEW entries), `source` (`system`). Units are converted only inside one `family`; count units
+are each their own family, so 50 heads never becomes 50 eggs. Use `unit` codes in requests, e.g. `"unit": "kg"`.
+
+### Package conversions: a bag has no universal size
+
+`bag`, `crate` etc. are just containers. What they hold is a farm setting *per context*. A context is **always identified by `(context_type, context_id)`** -
+an id, never typed text. `label` is display only and may change:
+
+| `context_type` | `context_id` is | Where the frontend gets it |
+|---|---|---|
+| `crop_type` | an active crop's id | `GET /master/crops` (e.g. Maize) |
+| `custom` | one of THIS farm's active measurement contexts | `GET /settings/measurement-contexts`, or create one with `POST` ("+ Add") |
+
+`inventory_item` (an item's UUID) will be added as a third type when inventory exists; it needs no change to this contract. A custom context does **not**
+automatically become an inventory item later.
+
+```json
+POST /settings/measurement-contexts        { "name": "Feed Grower Mash" }   ->  { "data": { "id": "0198...", "name": "Feed Grower Mash", "is_active": true, ... } }
+
+POST /settings/package-conversions
+{ "context_type": "custom", "context_id": "0198...", "package_unit": "bag", "target_unit": "kg", "quantity_per_package": "25" }
+
+{ "context_type": "crop_type", "context_id": "<maize id from GET /master/crops>", "package_unit": "bag", "target_unit": "kg", "quantity_per_package": "50" }
+```
+
+An id that is unknown, malformed, of the wrong type, inactive, or belongs to another farm is rejected with `422` on `context_id` (`context.id` when normalizing);
+`context_label`/`crop_type_id` are no longer accepted. Feed's bag (25 kg) and Maize's bag (50 kg) coexist. The response `context` is `{type, id, label}`; reuse `type`/`id` as the `context` of later calls.
+Renaming a context (`PATCH /settings/measurement-contexts/{id}`) changes `label` everywhere and nothing else; stored snapshots keep the name they were taken under.
+One definition per (context, package): a second POST -> `409 conversion_exists` (`details.existing_id`); PATCH it. Package and context never change.
+Deactivate with `{"is_active": false}` (no delete). `version` increases when the meaning changes. Quantities are exact decimal **strings**
+(up to 12 digits before and 6 after the point); numbers are accepted but send strings. A count target (`piece`, `egg`) needs a whole number.
+
+### Compound quantities and normalization
+
+`POST /measurements/normalize` (the same service later modules use):
+
+```json
+{ "components": [ {"quantity": "3", "unit": "crate"}, {"quantity": "14", "unit": "piece"} ],
+  "context": {"type": "custom", "id": "<measurement context id of Eggs>"} }
+```
+```json
+{ "data": {
+  "entered":    [ {"quantity": "3", "unit": "crate"}, {"quantity": "14", "unit": "piece"} ],
+  "normalized": {"quantity": "104", "unit": "piece"},
+  "total":      {"quantity": "104", "unit": "piece"},
+  "snapshot":   { "schema": 1, "entered": [...], "packages": [{"conversion_id": "...", "version": 1, "per_package": "30", ...}], ... } } }
+```
+
+- `entered` is what the user typed - show/edit this. `normalized` is the total in the dimension's canonical unit (g, ml, m², °C, or the count unit itself).
+  `total` is the same amount in `result_unit` (optional; default: the package target unit, else the first part's unit).
+- `context` is required whenever a package unit is used. The API never guesses: no context -> `422 conversion_context_required` (or
+  `ambiguous_conversion` when several contexts define that package; `details.candidates` lists them).
+- Later operational records store `entered`, `normalized` and the `snapshot`; the snapshot keeps the exact conversion used, so editing or
+  deactivating a package conversion afterwards never changes past records.
+- Temperature converts with an offset (100 °C -> 212 °F); temperatures cannot be added together. Results round half away from zero to 6 decimals.
+
+### Measurement errors
+
+All `422` unless noted; body `{message, code, request_id, details?}`.
+
+| `code` | Meaning / `details` |
+|---|---|
+| `incompatible_units` | Different dimensions/families (kg -> L, head -> egg, bag -> kg without context). `from_unit`, `to_unit`, `from_dimension`, `to_dimension`. |
+| `conversion_context_required` / `ambiguous_conversion` | Package unit used without `context`. `unit`, `candidates[]`. |
+| `conversion_not_configured` | The farm has no (active) definition for that package in that (valid) context. `unit`, `context`, `inactive`. |
+| `invalid_quantity` | Malformed, over-precise, too large, negative (non-temperature), fraction for `integer_only`. `unit`, `reason` (`fraction_not_allowed`). |
+| `invalid_conversion_ratio` | Package quantity zero, negative, malformed, or fractional for a count target. |
+| `unknown_unit` / `unit_not_selectable` | Unit code not found / inactive for new entries. `unit`. |
+| `unit_dimension_mismatch` | Unit of the wrong dimension (kg as a volume preference). `unit`, `required_dimension`. |
+| `conversion_exists` (`409`) | Definition already exists. `existing_id`, `is_active`. |
+| `measurement_context_exists` (`409`) | A context with that name already exists in this farm. `existing_id`, `is_active`. |
+| `403 forbidden`, `404 not_found`, `429` | Missing `measurement.manage`; another farm's or unknown conversion/context id; rate limit. |
