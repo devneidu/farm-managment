@@ -69,6 +69,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Default Farm (Business / Presentation) Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Storage and application time stay in UTC. This is only the default
+    | timezone used to present and schedule farm data until a farm sets its own.
+    |
+    */
+
+    'default_farm_timezone' => env('APP_DEFAULT_FARM_TIMEZONE', 'Africa/Lagos'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

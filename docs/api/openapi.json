@@ -1,0 +1,74 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Farm Management API",
+        "version": "0.0.1"
+    },
+    "servers": [
+        {
+            "url": "http://localhost/api/v1"
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "operationId": "v1.health",
+                "description": "Public liveness check for the API. It does not touch the database, so it is\nsafe for uptime monitors and for the frontend to verify connectivity.",
+                "summary": "API health check",
+                "tags": [
+                    "Health"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "status": {
+                                                    "type": "string",
+                                                    "const": "ok"
+                                                },
+                                                "service": {
+                                                    "type": "string"
+                                                },
+                                                "version": {
+                                                    "type": "string"
+                                                },
+                                                "timestamp": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "status",
+                                                "service",
+                                                "version",
+                                                "timestamp"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        }
+    }
+}
