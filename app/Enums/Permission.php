@@ -21,6 +21,10 @@ enum Permission: string
     case SubscriptionView = 'subscription.view';
     case SubscriptionManage = 'subscription.manage';
 
+    // Phase 4 - agricultural master data: view selectors (every role) / manage the farm's own custom breeds & varieties
+    case MasterDataView = 'master_data.view';
+    case MasterDataManage = 'master_data.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case InventoryAdjust = 'inventory.adjust';

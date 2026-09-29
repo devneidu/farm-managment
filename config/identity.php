@@ -34,5 +34,6 @@ return [
         'account_password' => ['user' => [5, 10]],
         'invitation_accept' => ['user' => [10, 10]],
         'team_invite' => ['user' => [30, 60]],
+        'master_data_write' => ['user' => [60, 60]],
     ],
 ];

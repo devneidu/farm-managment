@@ -7,7 +7,15 @@ use Tests\TestCase;
 
 class ApiDocumentationTest extends TestCase
 {
+    private static ?array $cachedSpec = null;
+
+    /** The export is slow and memory hungry; generate it once per run (routes do not change between tests). */
     private function spec(): array
+    {
+        return self::$cachedSpec ??= $this->generateSpec();
+    }
+
+    private function generateSpec(): array
     {
         $path = sys_get_temp_dir().'/openapi-'.uniqid().'.json';
 
@@ -105,5 +113,33 @@ class ApiDocumentationTest extends TestCase
         }
         $this->assertStringContainsString('plan_limit_reached', $spec['paths']['/farm/invitations']['post']['description']);
         $this->assertArrayHasKey('details', $spec['paths']['/subscription']['get']['responses']['403']['content']['application/json']['schema']['properties']);
+    }
+
+    public function test_phase_4_endpoints_are_documented_with_permissions_and_errors(): void
+    {
+        $spec = $this->spec();
+
+        foreach ([
+            'get /master/farm-operations', 'get /master/species', 'get /master/species/{species}/capabilities',
+            'get /master/species/{species}/breeds', 'get /master/crops', 'get /master/crops/{crop}/varieties',
+            'get /master/planting-reference', 'get /custom-breeds', 'post /custom-breeds', 'patch /custom-breeds/{breed}',
+            'get /custom-varieties', 'post /custom-varieties', 'patch /custom-varieties/{variety}',
+            'get /farm/operations', 'put /farm/operations',
+        ] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], "Missing {$endpoint} in OpenAPI spec");
+        }
+
+        $this->assertStringContainsString('master_data.view', $spec['paths']['/master/species']['get']['description']);
+        $this->assertStringContainsString('master_data.manage', $spec['paths']['/custom-breeds']['post']['description']);
+        $this->assertStringContainsString('farm.update', $spec['paths']['/farm/operations']['put']['description']);
+        foreach (['201', '403', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/custom-breeds']['post']['responses'], "POST /custom-breeds missing {$status}");
+        }
+        foreach (['403', '404', '409', '422'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/custom-breeds/{breed}']['patch']['responses'], "PATCH /custom-breeds/{breed} missing {$status}");
+        }
+        $this->assertArrayHasKey('404', $spec['paths']['/master/species/{species}/breeds']['get']['responses']);
+        $this->assertArrayHasKey('401', $spec['paths']['/master/species']['get']['responses']);
     }
 }

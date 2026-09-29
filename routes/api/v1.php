@@ -7,10 +7,14 @@ use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\CustomBreedController;
+use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\FarmController;
 use App\Http\Controllers\Api\V1\FarmInvitationController;
+use App\Http\Controllers\Api\V1\FarmOperationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
+use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\PlanController;
@@ -103,6 +107,29 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/cancel', [SubscriptionController::class, 'cancel'])->middleware('farm.permission:subscription.manage')->name('api.v1.subscription.cancel');
         Route::post('/resume', [SubscriptionController::class, 'resume'])->middleware('farm.permission:subscription.manage')->name('api.v1.subscription.resume');
     });
+
+    // Agricultural master data (Phase 4). Not plan-gated. Reads: master_data.view (every role);
+    // farm custom breeds/varieties: master_data.manage; the optional farm operation selection: farm.view / farm.update.
+    Route::prefix('master')->middleware('farm.permission:master_data.view')->group(function () {
+        Route::get('/farm-operations', [MasterDataController::class, 'operations'])->name('api.v1.master.farm-operations');
+        Route::get('/species', [MasterDataController::class, 'species'])->name('api.v1.master.species');
+        Route::get('/species/{species}/capabilities', [MasterDataController::class, 'capabilities'])->name('api.v1.master.species.capabilities');
+        Route::get('/species/{species}/breeds', [MasterDataController::class, 'breeds'])->name('api.v1.master.species.breeds');
+        Route::get('/crops', [MasterDataController::class, 'crops'])->name('api.v1.master.crops');
+        Route::get('/crops/{crop}/varieties', [MasterDataController::class, 'varieties'])->name('api.v1.master.crops.varieties');
+        Route::get('/planting-reference', [MasterDataController::class, 'plantingReference'])->name('api.v1.master.planting-reference');
+    });
+
+    Route::get('/custom-breeds', [CustomBreedController::class, 'index'])->middleware('farm.permission:master_data.view')->name('api.v1.custom-breeds.index');
+    Route::post('/custom-breeds', [CustomBreedController::class, 'store'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-breeds.store');
+    Route::patch('/custom-breeds/{breed}', [CustomBreedController::class, 'update'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-breeds.update');
+
+    Route::get('/custom-varieties', [CustomVarietyController::class, 'index'])->middleware('farm.permission:master_data.view')->name('api.v1.custom-varieties.index');
+    Route::post('/custom-varieties', [CustomVarietyController::class, 'store'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-varieties.store');
+    Route::patch('/custom-varieties/{variety}', [CustomVarietyController::class, 'update'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-varieties.update');
+
+    Route::get('/farm/operations', [FarmOperationController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.farm.operations.show');
+    Route::put('/farm/operations', [FarmOperationController::class, 'update'])->middleware('farm.permission:farm.update')->name('api.v1.farm.operations.update');
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

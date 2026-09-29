@@ -11,13 +11,13 @@
 
 ## Current Status
 
-**Current Phase:** Phase 3 — Subscriptions, Plans & Entitlements
+**Current Phase:** Phase 4 — Agricultural Master Data
 
-**Status:** Implemented and verified; NOT committed (user reviews/commits). Phases 0 (`dce84b6`), 1 (`1723f1a`) and 2 (`8785d23`) are committed.
+**Status:** Implemented; NOT committed (user reviews/commits). Phases 0-3 are committed (Phase 3 = `eaf3b7e`).
 
 **Last Agent:** Claude Code (Sonnet 5.5)
 
-**Last Updated:** 2026-10-01
+**Last Updated:** 2026-09-29
 
 ---
 
@@ -101,9 +101,36 @@
 
 **Billing provider: DEFERRED.** No provider chosen (37-OPEN-DECISIONS). NOT built: `POST /subscription/checkout`, `POST /billing/webhooks/{provider}`, `billing_transactions`, any Paystack/Flutterwave code, mock payment endpoints. `subscriptions.provider/provider_reference` are the only groundwork. When a provider is chosen: interface + adapter, `billing_transactions` + stored provider event ids (idempotent, signature-verified, server-side verification, out-of-order safe), and call `SubscriptionService::changePlan` on verified payment only. Platform Admin plan editing is also not built (plans are plain editable rows).
 
+## Phase 4 Architecture (agricultural master data)
+
+**Status:** implemented; NOT committed. Master data = what the system UNDERSTANDS, never what happened on a farm. No operational tables exist.
+
+**Tables** (migrations `2026_10_02_100000_create_master_data_tables` reversible; `2026_10_02_100100_provision_agricultural_master_data` runs `MasterDataSeeder`): `operation_types` (code, name, `category` livestock|aquaculture|crop, `tracking_model` population|planting_units), `species` (-> operation_type), `crop_types` (-> operation_type), `capabilities` (registry, mirrors `App\Enums\Capability`), `species_capabilities` (`enabled`, `reference_config` json), `reference_values` (`list`+`code`: planting_material_type / planting_unit_type), `breeds` (species_id, nullable farm_id, code, name, normalized_name, is_active), `crop_varieties` (same shape, crop_type_id), `farm_operations` (farm_id, operation_type_id). Deviation from the ERD: ONE `breeds` table (system row = farm_id NULL, custom = farm_id set) instead of `breeds`+`custom_breeds`, so future records need a single breed FK. Uniqueness: generated column `scope = coalesce(farm_id,'system')`, unique (parent, scope, normalized_name) and (parent, code).
+
+**System vs farm:** system rows are shared, never copied per farm. Farms only ADD custom breeds/varieties (no overrides of system rows: not needed yet, so not built; an overlay table can be added later if a farm must rename/hide a system item). `App\Models\Concerns\FarmScopedMasterRecord` holds the only "system + this farm" scope (`visibleTo`, `customOf`, `system`, `active`) and name normalization. Reads live in `MasterDataCatalogue`, writes in `CustomMasterDataService` (farm from `FarmContext`, name duplicate check vs system + own farm -> `409 duplicate_name` with details, unique-index race also -> 409, deactivate/reactivate instead of delete, dispatches `App\Events\MasterData\CustomMasterDataChanged` created|updated|deactivated|reactivated for the future audit module). Other farm's/system ids on PATCH -> 404. Request bodies reject `farm_id`, `code`, parent id (`missing` rule).
+
+**Taxonomy:** operations (category): poultry, cattle, goat, sheep, pig, rabbit (livestock), fishery (aquaculture), crops (crop). Species (operation): chicken (poultry), cattle, goat, sheep, pig, rabbit, fish (fishery). Crops (all under `crops`): maize, cassava, yam, vegetables, fruits. Only ONE species per operation is seeded (docs confirm only "chicken" and generic "fish"); other poultry species, fish species etc. are an open catalogue decision (rows only, no code change).
+
+**Seeded capabilities:** all 11 registry codes. Every species: supports_group_tracking, supports_mortality, supports_feed_records, supports_live_weight. chicken + produces_eggs, supports_incubation (`incubation_days: 21`), supports_breeding. cattle + supports_pregnancy (`gestation_days: 283`), supports_breeding. goat + supports_pregnancy (NO gestation value), supports_breeding. fish + supports_harvest. NOT seeded (unconfirmed): produces_milk anywhere, individual tracking, pregnancy for sheep/pig/rabbit ("where configured"), any other duration. Reference values are biological reference defaults only (distinct from farm target, configuration, actual outcome). `reference_config` keys are validated by `Capability::configRules()` via `SpeciesCapabilityService::set()` (the only writer); unknown keys/other types rejected.
+**Planting lists:** material types seed, seedling, stem_cutting, tuber, sucker, other; unit types heap, hole, stand (separate lists; planting units != material quantity). No per-crop defaults/farm-configured units yet. **Breeds/varieties seeded: none** (unconfirmed).
+
+**Seeder** is insert-only keyed by code (never overwrites edits), run by the data migration so dev/test DBs need no manual step; safe to rerun (`db:seed --class=MasterDataSeeder`).
+
+**Farm operations:** optional, post-onboarding, never blocks. No rows = unconfigured = everything `available`; once selected, `available=true` filters narrow operations/species/crops. `GET|PUT /farm/operations`.
+
+**Permissions:** `master_data.view` (owner, manager, farm_worker, finance), `master_data.manage` (owner, manager; worker/finance denied per matrix "Farm config: No" — a worker-facing "+ add custom breed" is an open product question). Farm operations: `farm.view` / `farm.update`. Not plan-gated. Rate limiter `master-data-write` (60/h/user) on POST/PATCH.
+
+**Endpoints:** `GET /master/farm-operations`, `/master/species`, `/master/species/{id}/capabilities`, `/master/species/{id}/breeds`, `/master/crops`, `/master/crops/{id}/varieties`, `/master/planting-reference`; `GET|POST /custom-breeds`, `PATCH /custom-breeds/{id}`; `GET|POST /custom-varieties`, `PATCH /custom-varieties/{id}`; `GET|PUT /farm/operations`. No DELETE (deactivate). Filters: `operation` (code), `category`, `available`, `include_inactive`. Frontend guide `docs/api/README.md` sections 13-17.
+
+**Deferred:** `/master/record-types` + schema versioning (depends on Phase 5 units / Phase 8 records), `/master/task-categories`, `/master/units`, per-crop planting defaults, farm-configured planting unit types, system overrides, Platform Admin editing of master data, milk capability seeding, more species/breeds/varieties.
+
+**Ops notes:** the OpenAPI export is memory hungry: use `php -d memory_limit=1G artisan test` / `scramble:export`; `ApiDocumentationTest` now generates the spec once per run. `AuthFlowResponsesExtension` documents `401` on `app.access` routes.
+
+**Phase 4 closing verification:** (1) Migration reversibility exercised on `farm_management_test` only: rollback of `provision_agricultural_master_data` (its `down()` is intentionally a no-op; the tables are dropped by the next step), rollback of `create_master_data_tables` (all 9 tables removed, no FK-order errors), then `migrate` re-applied both and the seed returned identically (7 species, 36 species-capability rows, 9 reference values). (2) Seed catalogue audited against the source docs: goat pregnancy is sourced by `02-DOMAIN-BEHAVIOUR-MATRIX.md` ("Cattle/goat example" pregnancy capability; farm-setup row Cattle/Goat/Sheep/Pig/Rabbit "pregnancy/birth workflow where configured"). Goat keeps `supports_pregnancy` with no gestation value. Only sourced reference values are seeded: chicken incubation 21 d, cattle gestation 283 d. `supports_breeding` (chicken/cattle/goat) is derived from the matrix "Breeding" rows, which are defined over incubation-/pregnancy-capable species. No seed change was needed.
+
 ## Last Completed Task
 
-Phase 3 — Plans, subscriptions & entitlements (billing provider deferred).
+Phase 4 — Agricultural master data.
 
 ## Endpoints (all under `/api/v1`)
 
@@ -121,7 +148,9 @@ Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResp
 
 ## Tests
 
-193 tests, 1157 assertions, all passing (`php artisan test`, runs on `farm_management_test`). Phase 3 adds 43 (PlanCatalogue 7, EntitlementService 14, TeamLimit 9, SubscriptionApi 12, OpenAPI 1); existing Phase 0-2 tests are unchanged except 3 adaptations (new permissions in role lists; one invitation test moved to Farm Pro because Free allows 3 team members). Migrations were rolled back and re-applied on the test DB; plain `php artisan migrate` applied to dev DB `farm_management` (0 farms there, so the backfill is covered by a test). The simultaneous-request race is guarded by the farm row lock but not exercised by a parallel test (PHPUnit is single-process). Pint clean on app/database/routes/tests.
+**Phase 4 latest: 233 tests, 1453 assertions, all passing** (`php -d memory_limit=1G artisan test`, on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 4 added 40 tests (SystemMasterData 8, MasterDataApi 15, CustomMasterData 16, OpenAPI 1); RolePermissionTest expectations were extended for the new permissions. Dev DB `farm_management` got the 2 new migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
+
+Previous (Phase 3): 193 tests, 1157 assertions, all passing (`php artisan test`, runs on `farm_management_test`). Phase 3 adds 43 (PlanCatalogue 7, EntitlementService 14, TeamLimit 9, SubscriptionApi 12, OpenAPI 1); existing Phase 0-2 tests are unchanged except 3 adaptations (new permissions in role lists; one invitation test moved to Farm Pro because Free allows 3 team members). Migrations were rolled back and re-applied on the test DB; plain `php artisan migrate` applied to dev DB `farm_management` (0 farms there, so the backfill is covered by a test). The simultaneous-request race is guarded by the farm row lock but not exercised by a parallel test (PHPUnit is single-process). Pint clean on app/database/routes/tests.
 
 Earlier: Phase 2 added 67 tests (66 in tests/Feature/Team + 1 OpenAPI test; Phase 1 had 83); the Phase 1 auth suite is unchanged and green (one assertion adapted to the enum cast). Pint passes on app/database/routes/tests (config/ deliberately not touched).
 
@@ -141,11 +170,11 @@ None.
 
 ## Next Task
 
-Phase 4 — see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md` and its phase doc. Do not start until the user says so. Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
+Phase 5 — Measurements & conversions (`docs/implementations/16-PHASE-05-MEASUREMENTS.md`). Do not start until the user says so. Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
 
 ## Recommended Next Commit
 
-`feat: add Phase 3 subscription plans, farm subscriptions and entitlement service`
+`feat: add Phase 4 agricultural master data (operations, species, crops, capabilities, custom breeds and varieties)`
 
 ---
 

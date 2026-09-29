@@ -35,19 +35,19 @@ class RolePermissionTest extends TestCase
     {
         $this->assertSame([
             'farm.update', 'farm.view', 'inventory.adjust', 'livestock.batch.create',
-            'subscription.view', 'team.invite', 'team.remove', 'team.update_role', 'team.view',
+            'master_data.manage', 'master_data.view', 'subscription.view', 'team.invite', 'team.remove', 'team.update_role', 'team.view',
         ], $this->values(FarmRole::Manager));
         $this->assertFalse(FarmRole::Manager->can(Permission::FinanceExpenseCreate));
     }
 
-    public function test_farm_worker_can_only_view_the_farm(): void
+    public function test_farm_worker_can_only_view_the_farm_and_master_data(): void
     {
-        $this->assertSame(['farm.view'], $this->values(FarmRole::FarmWorker));
+        $this->assertSame(['farm.view', 'master_data.view'], $this->values(FarmRole::FarmWorker));
     }
 
     public function test_finance_permissions(): void
     {
-        $this->assertSame(['farm.view', 'finance.expense.create', 'subscription.view'], $this->values(FarmRole::Finance));
+        $this->assertSame(['farm.view', 'finance.expense.create', 'master_data.view', 'subscription.view'], $this->values(FarmRole::Finance));
         $this->assertFalse(FarmRole::Finance->can(Permission::TeamView));
         $this->assertFalse(FarmRole::Finance->can(Permission::FarmUpdate));
     }

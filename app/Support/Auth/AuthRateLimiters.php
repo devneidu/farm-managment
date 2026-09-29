@@ -58,6 +58,10 @@ class AuthRateLimiters
             self::limit('invitation_accept.user')->by('invitation-accept:'.self::actor($r)),
         ]);
 
+        RateLimiter::for('master-data-write', fn (Request $r) => [
+            self::limit('master_data_write.user')->by('master-data-write:'.self::actor($r)),
+        ]);
+
         RateLimiter::for('team-invite', fn (Request $r) => [
             self::limit('team_invite.user')->by('team-invite:'.self::actor($r)),
         ]);

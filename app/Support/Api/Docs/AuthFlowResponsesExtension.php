@@ -53,6 +53,10 @@ class AuthFlowResponsesExtension extends OperationExtension
 **Requires farm permission:** `{$name}`."));
         }
 
+        if ($middleware->contains('app.access')) {
+            $add(401, 'Not authenticated (no valid session)', ['unauthenticated']);
+        }
+
         if ($forbidden) {
             $add(403, 'Forbidden: account state does not allow this request', $forbidden);
         }

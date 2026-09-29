@@ -259,3 +259,58 @@ Error envelope as usual, plus optional `details`:
 
 Currently enforced: `POST /farm/invitations` (and resending an EXPIRED invitation) -> `plan_limit_reached` for `team_members`.
 Show an upgrade prompt on these codes; show a permissions message on `403 forbidden`.
+
+---
+
+# Phase 4 - Agricultural master data
+
+## 13. What master data is (and is not)
+
+Master data describes what the system UNDERSTANDS (operations, species, crops, breeds, varieties, capabilities). It never
+records what happened on the farm. Drive forms from these APIs; never branch on `name` (`"Poultry"`), use stable `code`,
+`category`, `tracking_model` and capability codes. All routes are farm-scoped (session farm, optional `X-Farm-Id`), need
+`master_data.view` (every role) and are NOT plan-gated.
+
+## 14. Populating selectors
+
+| Step | Endpoint | Notes |
+|---|---|---|
+| Production type | `GET /master/farm-operations` | `category` = `livestock` / `aquaculture` / `crop`; `tracking_model` = `population` (livestock, fish: initial head count) or `planting_units` (crops). Filters: `category`, `available=true`, `include_inactive=true`. |
+| Species | `GET /master/species?operation=poultry` | Filters: `operation` (operation code), `category`, `available=true`. Each item has `capability_codes` (enabled). |
+| Species behaviour | `GET /master/species/{id}/capabilities` | All 11 capabilities with `enabled` and `reference` (biological REFERENCE defaults such as `{incubation_days: 21}` / `{gestation_days: 283}`, or `null`). Reference values are starting points - not guarantees, not farm targets, not recorded outcomes. Show/hide fields from `enabled`. |
+| Breed dropdown | `GET /master/species/{id}/breeds` | System breeds + THIS farm's custom breeds, active only. `source` = `system` \| `farm`. `include_inactive=true` to display historical values. |
+| Crop | `GET /master/crops` | Crops belong to the `crops` operation (`tracking_model: planting_units`). |
+| Variety dropdown | `GET /master/crops/{id}/varieties` | Same system + farm rule. A variety is optional; the list may be empty. |
+| Planting lists | `GET /master/planting-reference` | `material_types` (what is planted) and `unit_types` (how it is counted) are SEPARATE. Number of planting units is not seed/material quantity. |
+
+Selectors show only active items. An inactive item is not selectable for new records but stays resolvable (use `include_inactive=true` to label old data).
+The catalogue ships only reviewed defaults: there are currently **no system breeds or varieties**, so the breed/variety lists
+start empty and fill with the farm's custom items.
+
+## 15. Custom breeds and varieties ("+ Add custom breed")
+
+| Endpoint | Needs | Purpose |
+|---|---|---|
+| `GET /custom-breeds`, `GET /custom-varieties` | `master_data.view` | This farm's custom items (filters `species_id` / `crop_type_id`, `include_inactive`). |
+| `POST /custom-breeds` `{species_id, name}` | `master_data.manage` (Owner, Manager) | Create. `201`. |
+| `POST /custom-varieties` `{crop_type_id, name}` | `master_data.manage` | Create. `201`. |
+| `PATCH /custom-breeds/{id}`, `PATCH /custom-varieties/{id}` `{name?, is_active?}` | `master_data.manage` | Rename, deactivate (`is_active:false`), reactivate. |
+
+- No delete: deactivate instead. Farm, parent (species/crop) and `code` can never change; sending `farm_id`, `code` or the parent id on update -> `422`.
+- The farm always comes from your session. System items and other farms' items are `404` on PATCH (never `403`, never editable).
+- Names are trimmed (2-100 chars). Duplicates (case/space-insensitive, versus system items and this farm's items of the same parent) -> `409 duplicate_name` with `details: {existing_id, source, is_active}`; reuse `existing_id`, or reactivate it when `is_active` is false.
+- Other errors: `403 forbidden`, `422` (unknown/inactive species or crop, invalid name), `429`.
+- The frontend hides the "+ Add custom breed" option when `membership.permissions` (from `GET /farm`) lacks `master_data.manage`.
+
+## 16. Optional farm operations
+
+`GET /farm/operations` (`farm.view`) returns `{configured, operations[]}`. `PUT /farm/operations` `{operation_ids: [...]}` (`farm.update`) replaces
+the selection (empty array clears it). This is never part of onboarding and nothing depends on it: a farm with NO selection is
+"unconfigured" and every operation is `available`. Once operations are selected, `available=true` filters narrow the species/crop
+lists to them; the unfiltered lists still return everything. Errors: `422` for unknown/inactive/duplicate ids.
+
+## 17. Response shape notes
+
+Items carry `id` (UUID), `code` (stable; null for custom items), `name`, `source`, `is_active`, `is_editable` (custom items only).
+Operation items also carry `selected` (explicit choice) and `available` (usable now). Not yet available: record-type/form field
+schemas (`GET /master/record-types`), units, task categories - they arrive with later phases.
