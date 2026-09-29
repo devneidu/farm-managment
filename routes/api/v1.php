@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +30,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', HealthController::class)->name('api.v1.health');
+
+Route::get('/public/plans', [PlanController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.plans');
 
 Route::prefix('auth')->group(function () {
     Route::get('/csrf-cookie', CsrfCookieController::class)->name('api.v1.auth.csrf-cookie');
@@ -89,6 +93,15 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/', [FarmInvitationController::class, 'store'])->middleware(['farm.permission:team.invite', 'throttle:team-invite'])->name('api.v1.farm.invitations.store');
         Route::post('/{invitation}/resend', [FarmInvitationController::class, 'resend'])->middleware(['farm.permission:team.invite', 'throttle:team-invite'])->name('api.v1.farm.invitations.resend');
         Route::delete('/{invitation}', [FarmInvitationController::class, 'destroy'])->middleware('farm.permission:team.invite')->name('api.v1.farm.invitations.destroy');
+    });
+
+    // Subscription (RBAC decides who may see/manage billing; entitlements decide what the plan allows)
+    Route::prefix('subscription')->group(function () {
+        Route::get('/', [SubscriptionController::class, 'show'])->middleware('farm.permission:subscription.view')->name('api.v1.subscription.show');
+        Route::get('/entitlements', [SubscriptionController::class, 'entitlements'])->middleware('farm.permission:farm.view')->name('api.v1.subscription.entitlements');
+        Route::get('/usage', [SubscriptionController::class, 'usage'])->middleware('farm.permission:subscription.view')->name('api.v1.subscription.usage');
+        Route::post('/cancel', [SubscriptionController::class, 'cancel'])->middleware('farm.permission:subscription.manage')->name('api.v1.subscription.cancel');
+        Route::post('/resume', [SubscriptionController::class, 'resume'])->middleware('farm.permission:subscription.manage')->name('api.v1.subscription.resume');
     });
 
     // Per-user, per-farm notification switches (shell only)

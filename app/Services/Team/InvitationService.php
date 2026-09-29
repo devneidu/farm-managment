@@ -3,6 +3,7 @@
 namespace App\Services\Team;
 
 use App\Enums\FarmRole;
+use App\Enums\Limit;
 use App\Enums\MembershipStatus;
 use App\Events\Access\InvitationAccepted;
 use App\Events\Access\InvitationResent;
@@ -13,6 +14,7 @@ use App\Models\FarmInvitation;
 use App\Models\FarmMembership;
 use App\Models\User;
 use App\Notifications\FarmInvitationNotification;
+use App\Services\Subscription\EntitlementService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use Illuminate\Support\Carbon;
@@ -23,6 +25,8 @@ use Throwable;
 
 class InvitationService
 {
+    public function __construct(private readonly EntitlementService $entitlements) {}
+
     /** Guard shared by invite/role-change: Owner is never assignable; others are limited to assignableRoles(). */
     public static function assertCanGrant(FarmRole $actorRole, FarmRole $role): void
     {
@@ -42,6 +46,10 @@ class InvitationService
         [$token, $invitation] = DB::transaction(function () use ($ctx, $actor, $email, $role) {
             // Serialise invitations per farm so two concurrent requests cannot both create a pending one.
             Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
+
+            // Plan capacity (entitlement) - separate from the RBAC check already passed. Evaluated under the
+            // farm lock so concurrent invites cannot both take the last seat.
+            $this->entitlements->assertCapacity($ctx->farm, Limit::TeamMembers);
 
             $isMember = FarmMembership::active()
                 ->where('farm_id', $ctx->farm->id)
@@ -89,9 +97,15 @@ class InvitationService
     {
         $this->assertManageable($ctx, $invitation);
 
-        [$token, $invitation] = DB::transaction(function () use ($invitation) {
+        [$token, $invitation] = DB::transaction(function () use ($ctx, $invitation) {
+            Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
             $locked = FarmInvitation::whereKey($invitation->id)->lockForUpdate()->firstOrFail();
             $this->assertOpen($locked);
+
+            // Resending an EXPIRED invitation re-reserves a seat it no longer holds, so capacity applies again.
+            if ($locked->expires_at->lte(now())) {
+                $this->entitlements->assertCapacity($ctx->farm, Limit::TeamMembers);
+            }
 
             [$token, $hash] = FarmInvitation::newToken();
             $locked->token_hash = $hash;

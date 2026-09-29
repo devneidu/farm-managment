@@ -84,4 +84,26 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('409', $spec['paths']['/farm/members/{membership}']['delete']['responses']);
         $this->assertArrayHasKey('410', $spec['paths']['/invitations/accept']['post']['responses']);
     }
+
+    public function test_phase_3_endpoints_are_documented_with_entitlement_errors(): void
+    {
+        $spec = $this->spec();
+
+        foreach ([
+            'get /public/plans', 'get /subscription', 'get /subscription/entitlements', 'get /subscription/usage',
+            'post /subscription/cancel', 'post /subscription/resume',
+        ] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], "Missing {$endpoint} in OpenAPI spec");
+        }
+
+        $this->assertSame([], $spec['paths']['/public/plans']['get']['security']);
+        $this->assertStringContainsString('subscription.manage', $spec['paths']['/subscription/cancel']['post']['description']);
+        $this->assertStringContainsString('subscription.view', $spec['paths']['/subscription']['get']['description']);
+        foreach (['403', '409'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/subscription/cancel']['post']['responses']);
+        }
+        $this->assertStringContainsString('plan_limit_reached', $spec['paths']['/farm/invitations']['post']['description']);
+        $this->assertArrayHasKey('details', $spec['paths']['/subscription']['get']['responses']['403']['content']['application/json']['schema']['properties']);
+    }
 }

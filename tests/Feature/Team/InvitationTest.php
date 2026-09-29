@@ -66,6 +66,7 @@ class InvitationTest extends TeamTestCase
 
     public function test_manager_can_invite_workers_and_finance_but_not_managers(): void
     {
+        $this->onPlan('farm-pro');
         $this->signInAs($this->member(FarmRole::Manager));
 
         $this->invite('a@example.com', 'farm_worker')->assertCreated();

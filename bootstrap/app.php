@@ -4,6 +4,7 @@ use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\EnsureOnboarded;
+use App\Http\Middleware\RequireEntitlement;
 use App\Http\Middleware\RequireFarmPermission;
 use App\Http\Middleware\ResolveFarmContext;
 use App\Support\Api\ApiExceptionRenderer;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'onboarded' => EnsureOnboarded::class,
             'farm.context' => ResolveFarmContext::class,
             'farm.permission' => RequireFarmPermission::class,
+            'entitlement' => RequireEntitlement::class,
         ]);
 
         // Every farm-management endpoint (Phase 2+) uses this: authenticated, active, verified, onboarded.

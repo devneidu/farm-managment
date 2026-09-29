@@ -24,6 +24,7 @@ class ApiErrorResponse
             ->addProperty('message', (new OpenApiTypes\StringType)->setDescription('Human-readable summary.'))
             ->addProperty('code', $code)
             ->addProperty('request_id', (new OpenApiTypes\StringType)->setDescription('Echo of the X-Request-Id header, for support.'))
+            ->addProperty('details', (new OpenApiTypes\ObjectType)->setDescription('Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining.'))
             ->setRequired(['message', 'code', 'request_id']);
 
         return Response::make($status)

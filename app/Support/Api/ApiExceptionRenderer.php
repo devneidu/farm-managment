@@ -51,7 +51,7 @@ class ApiExceptionRenderer
         }
 
         if ($e instanceof ApiHttpException) {
-            return $this->respond($request, $e->getStatusCode(), $e->errorCode, $e->getMessage(), headers: $e->getHeaders());
+            return $this->respond($request, $e->getStatusCode(), $e->errorCode, $e->getMessage(), headers: $e->getHeaders(), details: $e->details);
         }
 
         if ($e instanceof HttpExceptionInterface) {
@@ -67,12 +67,16 @@ class ApiExceptionRenderer
         return $this->respond($request, 500, 'server_error', $message);
     }
 
-    private function respond(Request $request, int $status, string $code, string $message, ?array $errors = null, array $headers = []): JsonResponse
+    private function respond(Request $request, int $status, string $code, string $message, ?array $errors = null, array $headers = [], array $details = []): JsonResponse
     {
         $body = ['message' => $message, 'code' => $code, 'request_id' => $request->attributes->get('request_id')];
 
         if ($errors !== null) {
             $body['errors'] = $errors;
+        }
+
+        if ($details !== []) {
+            $body['details'] = $details;
         }
 
         return response()->json($body, $status, $headers);

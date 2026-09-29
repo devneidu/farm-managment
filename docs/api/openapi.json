@@ -77,6 +77,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -165,6 +169,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -197,6 +205,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -278,6 +290,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -317,6 +333,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -349,6 +369,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -381,6 +405,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -517,6 +545,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -549,6 +581,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -581,6 +617,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -659,6 +699,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -721,6 +765,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -753,6 +801,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -831,6 +883,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -920,6 +976,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -952,6 +1012,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1033,6 +1097,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1048,7 +1116,7 @@
             },
             "post": {
                 "operationId": "v1.farm.invitations.store",
-                "description": "Emails a single-use link (`{FRONTEND_URL}/invitations/accept?token=...`, valid 7 days) to the address.\nThe person signs in or registers with THAT email, then the frontend calls `POST /invitations/accept`.\nRequires `team.invite`. Owners may invite manager/farm_worker/finance; Managers farm_worker/finance.\n\nErrors: `403 forbidden` / `insufficient_role`, `409 already_member` / `invitation_already_pending`,\n`422` (invalid email/role; `ownership_transfer_unsupported` for `owner`), `429`.\n\n**Requires farm permission:** `team.invite`.",
+                "description": "Emails a single-use link (`{FRONTEND_URL}/invitations/accept?token=...`, valid 7 days) to the address.\nThe person signs in or registers with THAT email, then the frontend calls `POST /invitations/accept`.\nRequires `team.invite`. Owners may invite manager/farm_worker/finance; Managers farm_worker/finance.\n\nErrors: `403 forbidden` / `insufficient_role`, `409 already_member` / `invitation_already_pending` / `plan_limit_reached` (the plan's team-member limit is reached; pending invitations count; RBAC and plan limits are separate checks),\n`422` (invalid email/role; `ownership_transfer_unsupported` for `owner`), `429`.\n\n**Requires farm permission:** `team.invite`.",
                 "summary": "Invite a team member",
                 "tags": [
                     "FarmInvitation"
@@ -1107,11 +1175,41 @@
                                             "type": "string",
                                             "enum": [
                                                 "already_member",
-                                                "invitation_already_pending"
+                                                "invitation_already_pending",
+                                                "plan_limit_reached"
                                             ]
                                         },
                                         "request_id": {
                                             "type": "string"
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "properties": {
+                                                "entitlement_key": {
+                                                    "type": "string"
+                                                },
+                                                "limit": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "usage": {
+                                                    "type": "integer"
+                                                },
+                                                "remaining": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "entitlement_key",
+                                                "limit",
+                                                "usage",
+                                                "remaining"
+                                            ]
                                         }
                                     },
                                     "required": [
@@ -1149,6 +1247,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1181,6 +1283,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1213,6 +1319,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1230,7 +1340,7 @@
         "/farm/invitations/{invitation}/resend": {
             "post": {
                 "operationId": "v1.farm.invitations.resend",
-                "description": "Issues a new link with a fresh expiry; the previous link stops working. Requires `team.invite`.\n\nErrors: `403`, `404`, `409 invitation_not_pending` (already accepted or revoked), `429`.\n\n**Requires farm permission:** `team.invite`.",
+                "description": "Issues a new link with a fresh expiry; the previous link stops working. Requires `team.invite`.\n\nErrors: `403`, `404`, `409 invitation_not_pending` (already accepted or revoked) / `plan_limit_reached` (resending an expired invitation needs a free seat), `429`.\n\n**Requires farm permission:** `team.invite`.",
                 "summary": "Resend an invitation",
                 "tags": [
                     "FarmInvitation"
@@ -1287,7 +1397,10 @@
                                         },
                                         "code": {
                                             "type": "string",
-                                            "const": "invitation_not_pending"
+                                            "enum": [
+                                                "invitation_not_pending",
+                                                "plan_limit_reached"
+                                            ]
                                         },
                                         "request_id": {
                                             "type": "string"
@@ -1328,6 +1441,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1360,6 +1477,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1392,6 +1513,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1424,6 +1549,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1539,6 +1668,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1571,6 +1704,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1603,6 +1740,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1691,6 +1832,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1723,6 +1868,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1758,6 +1907,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -1790,6 +1943,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2025,6 +2182,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2057,6 +2218,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2089,6 +2254,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2187,6 +2356,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2296,6 +2469,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2328,6 +2505,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2442,6 +2623,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2474,6 +2659,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2557,6 +2746,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2589,6 +2782,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2685,6 +2882,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2717,6 +2918,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2801,6 +3006,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2833,6 +3042,91 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/public/plans": {
+            "get": {
+                "operationId": "v1.public.plans",
+                "description": "The public plan catalogue for pricing/comparison pages: active, public plans in display order\n(`sort_order`, then slug). Each plan lists every known feature and limit, so a comparison table needs\nno hard-coded plan knowledge. Prices are integer minor units (kobo) - use `amount_minor`, not `formatted`.\nPrices and limits are provisional and configurable; do not hard-code them in the frontend.",
+                "summary": "List plans",
+                "tags": [
+                    "Plan"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlanResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2917,6 +3211,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -2949,6 +3247,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3060,6 +3362,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3140,6 +3446,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3172,6 +3482,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3207,6 +3521,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3239,6 +3557,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3313,6 +3635,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3386,6 +3712,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3418,6 +3748,648 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription": {
+            "get": {
+                "operationId": "v1.subscription.show",
+                "description": "The farm's subscription and plan. Every farm always has one (new farms start on the default plan).\n`effective_plan` is the plan whose entitlements apply now; when `subscription_inactive` is true the\nsubscription has lapsed and the default plan applies. Requires `subscription.view`.\n\n**Requires farm permission:** `subscription.view`.",
+                "summary": "Current subscription",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SubscriptionResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/entitlements": {
+            "get": {
+                "operationId": "v1.subscription.entitlements",
+                "description": "What the farm's plan allows right now: boolean `features` and numeric `limits` (`unlimited: true` with\n`limit: null` means no cap). Use this to enable/disable UI; the API enforces the same rules and answers\ndenied actions with `feature_not_available`, `subscription_inactive` or `plan_limit_reached`.\nAny farm member may read this (`farm.view`); it does not grant any RBAC permission.\n\n**Requires farm permission:** `farm.view`.",
+                "summary": "Current entitlements",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "plan": {
+                                                    "type": [
+                                                        "object",
+                                                        "null"
+                                                    ],
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string"
+                                                        },
+                                                        "slug": {
+                                                            "type": "string"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "id",
+                                                        "slug",
+                                                        "name"
+                                                    ]
+                                                },
+                                                "subscription_inactive": {
+                                                    "type": "boolean"
+                                                },
+                                                "features": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "boolean"
+                                                    }
+                                                },
+                                                "limits": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "limit": {
+                                                                "type": [
+                                                                    "integer",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "unlimited": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "limit",
+                                                            "unlimited"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "plan",
+                                                "subscription_inactive",
+                                                "features",
+                                                "limits"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/usage": {
+            "get": {
+                "operationId": "v1.subscription.usage",
+                "description": "Usage against each numeric limit. `remaining` never goes below 0 and is null when unlimited;\n`exceeded` is true when a downgrade left the farm above its limit (existing data is kept; only growth is\nblocked). Team members count active members (Owner included) plus pending invitations. Requires `subscription.view`.\n\n**Requires farm permission:** `subscription.view`.",
+                "summary": "Current usage",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "limits": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "limit": {
+                                                                "type": [
+                                                                    "integer",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "unlimited": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "usage": {
+                                                                "type": "integer"
+                                                            },
+                                                            "remaining": {
+                                                                "type": [
+                                                                    "integer",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "exceeded": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "label",
+                                                            "limit",
+                                                            "unlimited",
+                                                            "usage",
+                                                            "remaining",
+                                                            "exceeded"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "limits"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/cancel": {
+            "post": {
+                "operationId": "v1.subscription.cancel",
+                "description": "Schedules the paid subscription to end at the close of the current period; access continues until\nthen. Requires `subscription.manage`. Errors: `409 subscription_not_cancellable` (default/free plan or\nlapsed subscription), `409 subscription_already_cancelled`.\nPayment checkout is not available yet (no billing provider is configured).\n\n**Requires farm permission:** `subscription.manage`.",
+                "summary": "Cancel subscription",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SubscriptionResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Nothing to cancel, or already cancelled",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "subscription_not_cancellable",
+                                                "subscription_already_cancelled"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/resume": {
+            "post": {
+                "operationId": "v1.subscription.resume",
+                "description": "Withdraws a scheduled cancellation while the paid period is still running. Requires `subscription.manage`.\nErrors: `409 subscription_not_cancelled`.\n\n**Requires farm permission:** `subscription.manage`.",
+                "summary": "Resume subscription",
+                "tags": [
+                    "Subscription"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/SubscriptionResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "No scheduled cancellation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "subscription_not_cancelled"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3499,6 +4471,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3587,6 +4563,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3619,6 +4599,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3745,6 +4729,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3777,6 +4765,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3809,6 +4801,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3920,6 +4916,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3952,6 +4952,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -3984,6 +4988,10 @@
                                         "request_id": {
                                             "type": "string",
                                             "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
                                         }
                                     },
                                     "required": [
@@ -4491,6 +5499,78 @@
                 ],
                 "title": "MemberResource"
             },
+            "PlanResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "is_default": {
+                        "type": "boolean"
+                    },
+                    "prices": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "interval": {
+                                    "type": "string"
+                                },
+                                "amount_minor": {
+                                    "type": "integer"
+                                },
+                                "currency": {
+                                    "type": "string"
+                                },
+                                "formatted": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "interval",
+                                "amount_minor",
+                                "currency",
+                                "formatted"
+                            ]
+                        }
+                    },
+                    "features": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "limits": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "required": [
+                    "id",
+                    "slug",
+                    "name",
+                    "description",
+                    "currency",
+                    "is_default",
+                    "prices",
+                    "features",
+                    "limits"
+                ],
+                "title": "PlanResource"
+            },
             "RegisterRequest": {
                 "type": "object",
                 "properties": {
@@ -4539,6 +5619,97 @@
                     "password_confirmation"
                 ],
                 "title": "ResetPasswordRequest"
+            },
+            "SubscriptionResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "billing_interval": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "starts_at": {
+                        "type": "string"
+                    },
+                    "current_period_start": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "current_period_end": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "cancel_at_period_end": {
+                        "type": "boolean"
+                    },
+                    "cancelled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "ends_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "subscription_inactive": {
+                        "type": "string"
+                    },
+                    "plan": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "effective_plan": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "slug": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "slug",
+                            "name"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "status",
+                    "billing_interval",
+                    "starts_at",
+                    "current_period_start",
+                    "current_period_end",
+                    "cancel_at_period_end",
+                    "cancelled_at",
+                    "ends_at",
+                    "subscription_inactive",
+                    "plan",
+                    "effective_plan"
+                ],
+                "title": "SubscriptionResource"
             },
             "UpdateFarmRequest": {
                 "type": "object",

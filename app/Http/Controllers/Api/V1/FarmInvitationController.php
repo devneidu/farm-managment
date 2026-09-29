@@ -38,10 +38,10 @@ class FarmInvitationController extends Controller
      * The person signs in or registers with THAT email, then the frontend calls `POST /invitations/accept`.
      * Requires `team.invite`. Owners may invite manager/farm_worker/finance; Managers farm_worker/finance.
      *
-     * Errors: `403 forbidden` / `insufficient_role`, `409 already_member` / `invitation_already_pending`,
+     * Errors: `403 forbidden` / `insufficient_role`, `409 already_member` / `invitation_already_pending` / `plan_limit_reached` (the plan's team-member limit is reached; pending invitations count; RBAC and plan limits are separate checks),
      * `422` (invalid email/role; `ownership_transfer_unsupported` for `owner`), `429`.
      */
-    #[Response(status: 409, description: 'Already a member or invitation already pending', type: 'array{message: string, code: "already_member"|"invitation_already_pending", request_id: string}')]
+    #[Response(status: 409, description: 'Already a member or invitation already pending', type: 'array{message: string, code: "already_member"|"invitation_already_pending"|"plan_limit_reached", request_id: string, details?: array{entitlement_key: string, limit: int|null, usage: int, remaining: int|null}}')]
     #[Response(status: 201, description: 'Invitation created and emailed', type: 'array{data: \App\Http\Resources\InvitationResource, meta: object, message: string}')]
     public function store(InviteMemberRequest $request, FarmContext $ctx, InvitationService $invitations): JsonResponse
     {
@@ -60,11 +60,11 @@ class FarmInvitationController extends Controller
      *
      * Issues a new link with a fresh expiry; the previous link stops working. Requires `team.invite`.
      *
-     * Errors: `403`, `404`, `409 invitation_not_pending` (already accepted or revoked), `429`.
+     * Errors: `403`, `404`, `409 invitation_not_pending` (already accepted or revoked) / `plan_limit_reached` (resending an expired invitation needs a free seat), `429`.
      *
      * @response array{data: InvitationResource, meta: object, message: string|null}
      */
-    #[Response(status: 409, description: 'Invitation already accepted or revoked', type: 'array{message: string, code: "invitation_not_pending", request_id: string}')]
+    #[Response(status: 409, description: 'Invitation already accepted or revoked', type: 'array{message: string, code: "invitation_not_pending"|"plan_limit_reached", request_id: string}')]
     public function resend(Request $request, FarmContext $ctx, InvitationService $invitations, string $invitation): JsonResponse
     {
         $updated = $invitations->resend($ctx, $request->user(), $this->find($ctx, $invitation));

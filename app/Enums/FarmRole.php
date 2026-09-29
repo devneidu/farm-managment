@@ -32,9 +32,10 @@ enum FarmRole: string
                 Permission::FarmView, Permission::FarmUpdate,
                 Permission::TeamView, Permission::TeamInvite, Permission::TeamUpdateRole, Permission::TeamRemove,
                 Permission::LivestockBatchCreate, Permission::InventoryAdjust,
+                Permission::SubscriptionView,
             ],
             self::FarmWorker => [Permission::FarmView],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate],
+            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView],
         };
     }
 

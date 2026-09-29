@@ -17,6 +17,10 @@ enum Permission: string
     case TeamUpdateRole = 'team.update_role';
     case TeamRemove = 'team.remove';
 
+    // Phase 3 - subscription (RBAC only; plan entitlements are a separate system)
+    case SubscriptionView = 'subscription.view';
+    case SubscriptionManage = 'subscription.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case InventoryAdjust = 'inventory.adjust';

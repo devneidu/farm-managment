@@ -173,6 +173,8 @@ Roles: `owner`, `manager`, `farm_worker`, `finance` (labels: Owner, Manager, Far
 | `team.view` / `team.invite` / `team.update_role` / `team.remove` | x | x | | |
 | `livestock.batch.create`, `inventory.adjust` (reserved) | x | x | | |
 | `finance.expense.create` (reserved) | x | | | x |
+| `subscription.view` | x | x | | x |
+| `subscription.manage` | x | | | |
 
 Team rules: Owner may invite/assign manager, farm_worker, finance. Manager may only invite/assign/manage farm_worker and
 finance. **Nobody can assign `owner`** (`422 ownership_transfer_unsupported`), change their own role, or demote/remove the
@@ -206,3 +208,54 @@ A user who already has a farm keeps it as their default; send `X-Farm-Id` to wor
 Removing a user's last membership does NOT clear `onboarded`; they get `next_action = no_active_farm`. Accepting an
 invitation marks a never-onboarded verified user as `onboarded` (they enter through an existing farm instead of creating
 one); it never creates a farm and never duplicates a membership.
+
+---
+
+# Phase 3 - Plans, subscription & entitlements
+
+## 9. Two separate systems
+
+- **RBAC** (Phase 2): may THIS USER do this in the farm? -> `403 forbidden`.
+- **Entitlements** (Phase 3): does THIS FARM'S plan allow the feature/capacity? -> the codes below.
+An action needs both. A paid plan never grants a role a permission it lacks; a permission never bypasses the plan.
+Check order on the backend: authenticated -> active membership -> RBAC -> plan entitlement -> business validation.
+Never hard-code plan names, prices or limits in the frontend: render them from the API.
+
+## 10. Endpoints
+
+| Endpoint | Auth | Needs | Purpose |
+|---|---|---|---|
+| `GET /public/plans` | none | - | Pricing/comparison page. Active + public plans, ordered by `sort_order`. Every plan lists ALL features and limits. |
+| `GET /subscription` | session | `subscription.view` | The farm's subscription (`plan`, `status`, period dates, `cancel_at_period_end`, `effective_plan`, `subscription_inactive`). |
+| `GET /subscription/entitlements` | session | `farm.view` | What the plan allows now: `features` (bool map) and `limits` (`{limit, unlimited}` map). Any member can read it to enable/disable UI. |
+| `GET /subscription/usage` | session | `subscription.view` | Per limit: `limit`, `usage`, `remaining`, `exceeded`, `unlimited`. |
+| `POST /subscription/cancel` | session | `subscription.manage` | Schedule the paid subscription to end at period end (`409 subscription_not_cancellable | subscription_already_cancelled`). |
+| `POST /subscription/resume` | session | `subscription.manage` | Withdraw a scheduled cancellation (`409 subscription_not_cancelled`). |
+
+**Not available yet:** checkout/payment and billing webhooks (no payment provider chosen). Do not build a payment UI;
+plan changes are not user-initiated in this phase.
+
+## 11. Data conventions
+
+- Money is integer **minor units** (`amount_minor`, kobo for NGN: `300000` = ₦3,000.00). `formatted` is display-only.
+- Unlimited is explicit: `{"limit": null, "unlimited": true}`; `remaining` is `null` when unlimited. There is no "big number".
+- Every farm always has a subscription (new farms start on the default plan). `effective_plan` is the plan actually
+  honoured; if the paid period lapsed or the plan was retired, `subscription_inactive` is `true` and the default plan applies.
+- A downgrade never deletes data. If usage is above the new limit, `exceeded` is `true`, `remaining` is `0`, existing
+  data stays readable, and only NEW capacity-consuming actions are refused.
+- Plan `key`s (`features[].key`, `limits[].key`) are stable machine identifiers: `advanced_reports`, `data_export`, `team_members`.
+  New keys appear in the lists without an API change.
+- Team-member usage = active members (Owner included) + pending invitations (expired/revoked/removed do not count).
+
+## 12. Entitlement errors
+
+Error envelope as usual, plus optional `details`:
+
+| HTTP | `code` | Meaning | `details` |
+|---|---|---|---|
+| 403 | `feature_not_available` | The plan does not include the feature | `entitlement_key` |
+| 403 | `subscription_inactive` | The subscription lapsed; renew to use this | `entitlement_key` |
+| 409 | `plan_limit_reached` | The plan's capacity is used up (e.g. inviting when the team limit is reached) | `entitlement_key`, `limit`, `usage`, `remaining` |
+
+Currently enforced: `POST /farm/invitations` (and resending an EXPIRED invitation) -> `plan_limit_reached` for `team_members`.
+Show an upgrade prompt on these codes; show a permissions message on `403 forbidden`.

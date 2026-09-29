@@ -11,13 +11,13 @@
 
 ## Current Status
 
-**Current Phase:** Phase 2 — RBAC, Team Access & Core Settings
+**Current Phase:** Phase 3 — Subscriptions, Plans & Entitlements
 
-**Status:** Implemented and verified; NOT committed (user reviews/commits). Phases 0 (`dce84b6`) and 1 (`1723f1a`) are committed.
+**Status:** Implemented and verified; NOT committed (user reviews/commits). Phases 0 (`dce84b6`), 1 (`1723f1a`) and 2 (`8785d23`) are committed.
 
 **Last Agent:** Claude Code (Sonnet 5.5)
 
-**Last Updated:** 2026-09-30
+**Last Updated:** 2026-10-01
 
 ---
 
@@ -79,13 +79,40 @@
 
 **Schema:** migration `2026_09_30_100000_...`: `farm_memberships` + `status` (default active), `removed_at`, `removed_by_user_id`, `notification_preferences` json; new `farm_invitations`. Reversible (rollback + re-migrate verified on `farm_management_test`). Applied to dev DB `farm_management` with plain `migrate`.
 
+## Phase 3 Architecture (plans, subscription, entitlements)
+
+**Locked rule:** RBAC ("may this USER act?") and entitlements ("does this FARM'S plan allow it?") are separate. No plan-name checks anywhere; no role checks in subscription code. Order: auth -> active membership -> RBAC -> entitlement -> business validation.
+
+**Schema** (migration `2026_10_01_100000_create_subscription_tables`, reversible; data migration `2026_10_01_100100_provision_default_plans_and_backfill_subscriptions`): `plans` (uuid, slug unique, name, description, currency, `is_active`, `is_public`, `is_default`, sort_order), `plan_prices` (plan, interval monthly|annual, currency, `amount_minor` unsigned bigint = kobo; unique plan+interval+currency), `entitlements` (registry rows: key unique, type feature|limit), `plan_entitlements` (plan, entitlement, `enabled` for features, `limit_value` + `is_unlimited` for limits), `subscriptions` (ONE per farm, `farm_id` unique; plan_id, status, billing_interval, starts_at, current_period_start/end, cancel_at_period_end, cancelled_at, ends_at, provider + provider_reference groundwork), `subscription_events` (append-only history: type, from/to plan, from/to status, actor, occurred_at). New keys need no schema change. Flags: `is_active=false` => plan NOT honoured (safe fallback); `is_public=false` => hidden from the catalogue but still honoured; `is_default` = plan every new farm starts on.
+
+**Registry:** `App\Enums\Feature` (`advanced_reports`, `data_export` — identifiers only, no feature built), `App\Enums\Limit` (`team_members`). To add one: enum case + label; a usage rule in `UsageResolver` (limits); plan values in the DB (seed/admin). Also `SubscriptionStatus` (active, past_due, cancelled, expired; no trialing), `SubscriptionEventType`, `BillingInterval`.
+
+**Entitlement service (`App\Services\Subscription\EntitlementService`) is THE resolver:** `for($farm): EntitlementSet`, `allows($farm, Feature)`, `limit($farm, Limit): LimitValue`, `usage()`, `remaining()` (null = unlimited), `assertAllows()`, `assertCapacity($farm, Limit, $n=1)`, `forPlan($plan)`. Deny-by-default: the subscription's plan is honoured only if status is active/past_due AND `current_period_end` is null-or-future AND the plan is active; otherwise the DEFAULT plan (Free) applies and `subscriptionInactive=true`; no subscription row => default plan; no active default plan => nothing allowed, limits 0; missing/unknown/wrong-typed/malformed rows never grant. Not cached across calls (a plan change is immediate). Unlimited = `LimitValue::unlimited()` (`value=null, unlimited=true`; API `{limit:null, unlimited:true}`), never a big number. Route gate: middleware `entitlement:<feature_key>` (after `farm.context`). Errors: `App\Support\Entitlements\EntitlementException` (extends ApiHttpException, which now supports optional `details`, rendered as `details` in the error envelope): `403 feature_not_available`, `403 subscription_inactive`, `409 plan_limit_reached` (details: entitlement_key, limit, usage, remaining).
+
+**Default subscription:** `Farm::created` hook -> `SubscriptionService::startDefault()` (same transaction as farm creation, so onboarding, factories and any future creation path are covered; idempotent; throws if no active default plan exists). The data migration backfills existing farms. Free has no period (`current_period_end` null).
+
+**Lifecycle (`SubscriptionService`):** `changePlan($farm, $plan, ?interval, ?actor)` (internal only — for the future webhook processor/admin tooling; a paid plan starts a period of the interval from now, the default plan clears the period), `cancel` (paid only; sets `cancel_at_period_end`, access continues), `resume`, `closeLapsed()` (command `subscriptions:close-lapsed`, scheduled hourly in routes/console.php: period ended => `cancelled` if cancellation was scheduled, else `expired`; `ends_at` = period end). Every mutation locks the subscription row and appends a `subscription_events` row, so history survives plan_id changes. No separate Laravel event classes (the event rows are the audit hook; add classes when the audit module needs them).
+
+**Team-limit integration:** `InvitationService::invite` calls `assertCapacity(TeamMembers)` inside the existing per-farm row lock (concurrency-safe: two simultaneous invites cannot both take the last seat) BEFORE the duplicate/already-member business checks. `resend` of an EXPIRED invitation re-checks capacity (its seat was released; resend now also takes the farm lock). Accepting a pending invitation is net-zero, so it is never blocked. **Usage rule (`UsageResolver`):** active memberships (Owner included) + pending invitations (unaccepted, unrevoked, unexpired). Removed members and expired/revoked invitations do not count. Downgrade: over-limit state is kept and readable (`exceeded: true`, `remaining: 0`); only growth is blocked.
+
+**Permissions:** `subscription.view` (owner, manager, finance), `subscription.manage` (owner only). `GET /subscription/entitlements` uses `farm.view` so every member can render gated UI.
+
+**Seed data (PROVISIONAL, configurable; final prices/limits are an open product decision):** `PlanSeeder` is INSERT-ONLY (skips existing slugs, never overwrites admin edits) and runs from the data migration, so local/test/prod DBs get plans on `migrate` and tests need no manual step. Free (default, ₦0, team_members 3, no paid features); Farm Pro `farm-pro` (₦3,000/mo = 300000 kobo, ₦30,000/yr = 3000000, advanced_reports on, team_members 10); Farm Business `farm-business` (₦7,500/mo = 750000, ₦75,000/yr = 7500000, advanced_reports + data_export, team_members unlimited).
+
+**Billing provider: DEFERRED.** No provider chosen (37-OPEN-DECISIONS). NOT built: `POST /subscription/checkout`, `POST /billing/webhooks/{provider}`, `billing_transactions`, any Paystack/Flutterwave code, mock payment endpoints. `subscriptions.provider/provider_reference` are the only groundwork. When a provider is chosen: interface + adapter, `billing_transactions` + stored provider event ids (idempotent, signature-verified, server-side verification, out-of-order safe), and call `SubscriptionService::changePlan` on verified payment only. Platform Admin plan editing is also not built (plans are plain editable rows).
+
 ## Last Completed Task
 
-Phase 2 — RBAC, Team & Access, account/farm settings, invitations.
+Phase 3 — Plans, subscriptions & entitlements (billing provider deferred).
 
 ## Endpoints (all under `/api/v1`)
 
-Phase 0/1 unchanged (see above). Phase 2: `GET|PATCH /farm`, `GET /roles`, `GET /farm/members`, `GET|PATCH|DELETE /farm/members/{membership}`, `GET|POST /farm/invitations`, `POST /farm/invitations/{id}/resend`, `DELETE /farm/invitations/{id}`, `POST /invitations/accept`, `GET|PATCH /account`, `PUT /account/password`, `GET|PUT /settings/notifications`. Frontend guide: `docs/api/README.md` sections 5-8.
+Phase 0/1 unchanged (see above). Phase 3: `GET /public/plans` (public), `GET /subscription`, `GET /subscription/entitlements`, `GET /subscription/usage`, `POST /subscription/cancel`, `POST /subscription/resume`; `POST /farm/invitations` can now return `409 plan_limit_reached`. Frontend guide: `docs/api/README.md` sections 9-12. Phase 2: `GET|PATCH /farm`, `GET /roles`, `GET /farm/members`, `GET|PATCH|DELETE /farm/members/{membership}`, `GET|POST /farm/invitations`, `POST /farm/invitations/{id}/resend`, `DELETE /farm/invitations/{id}`, `POST /invitations/accept`, `GET|PATCH /account`, `PUT /account/password`, `GET|PUT /settings/notifications`. Frontend guide: `docs/api/README.md` sections 5-8.
+
+## Files Changed (Phase 3)
+
+Created: app/Enums/{Feature,Limit,SubscriptionStatus,SubscriptionEventType,BillingInterval}.php; app/Models/{Plan,PlanPrice,Entitlement,PlanEntitlement,Subscription,SubscriptionEvent}.php; app/Services/Subscription/{EntitlementService,SubscriptionService,UsageResolver}.php; app/Support/Entitlements/{LimitValue,EntitlementSet,EntitlementException}.php; app/Http/Middleware/RequireEntitlement.php; controllers Plan/Subscription; resources Plan/Subscription; app/Console/Commands/CloseLapsedSubscriptions.php; database/seeders/PlanSeeder.php; 2 migrations; tests/Feature/Subscription/*.
+Modified: Farm (created hook + subscription relation), FarmRole/Permission, InvitationService (limit check), ApiHttpException/ApiExceptionRenderer/ApiErrorResponse (`details`), FarmInvitationController docs, bootstrap/app.php (`entitlement` alias), routes/api/v1.php, routes/console.php, docs/api/{README.md,openapi.json}, RolePermissionTest/InvitationTest/TeamTestCase/ApiDocumentationTest (adapted: new permissions, `onPlan()` helper, Free team limit of 3), WORKLOG.md.
 
 ## Files Changed (Phase 2)
 
@@ -94,7 +121,9 @@ Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResp
 
 ## Tests
 
-150 tests, 893 assertions, all passing (`php artisan test`, runs on `farm_management_test`); Phase 2 adds 67 tests (66 in tests/Feature/Team + 1 OpenAPI test; Phase 1 had 83); the Phase 1 auth suite is unchanged and green (one assertion adapted to the enum cast). Pint passes on app/database/routes/tests (config/ deliberately not touched).
+193 tests, 1157 assertions, all passing (`php artisan test`, runs on `farm_management_test`). Phase 3 adds 43 (PlanCatalogue 7, EntitlementService 14, TeamLimit 9, SubscriptionApi 12, OpenAPI 1); existing Phase 0-2 tests are unchanged except 3 adaptations (new permissions in role lists; one invitation test moved to Farm Pro because Free allows 3 team members). Migrations were rolled back and re-applied on the test DB; plain `php artisan migrate` applied to dev DB `farm_management` (0 farms there, so the backfill is covered by a test). The simultaneous-request race is guarded by the farm row lock but not exercised by a parallel test (PHPUnit is single-process). Pint clean on app/database/routes/tests.
+
+Earlier: Phase 2 added 67 tests (66 in tests/Feature/Team + 1 OpenAPI test; Phase 1 had 83); the Phase 1 auth suite is unchanged and green (one assertion adapted to the enum cast). Pint passes on app/database/routes/tests (config/ deliberately not touched).
 
 ## Packages Added
 
@@ -103,6 +132,7 @@ None.
 ## Open Issues / Blockers
 
 - Carried over from Phase 1: `GOOGLE_CLIENT_ID` needed for real Google login; pre-existing Pint issues in bootstrap/providers.php + some config files (do NOT run pint on config/ blindly); production needs SESSION_DOMAIN/SECURE cookie, real MAIL_*, docs-exposure decision; Scramble pinned.
+- Phase 3 unresolved: final prices/limits/feature split (seed is provisional); payment provider + checkout/webhooks/billing_transactions; user-initiated plan change (none until payments exist, so cancel/resume are only reachable for farms moved to a paid plan by `changePlan`); Platform Admin plan management; `past_due` is honoured until the period ends (no separate grace policy); more `Feature`/`Limit` keys are added as later phases need them (farm count, storage, ...).
 - Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset, units, farm operations/locations.
 - Invitation email is synchronous (the token must not sit in the jobs table); slow SMTP slows the invite request.
 - The invited email must equal the account's verified email (case-insensitive); there is no "accept with a different email" path by design.
@@ -111,11 +141,11 @@ None.
 
 ## Next Task
 
-Phase 3 — see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md` and its phase doc. Do not start until the user says so. Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` middleware.
+Phase 4 — see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md` and its phase doc. Do not start until the user says so. Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
 
 ## Recommended Next Commit
 
-`feat: add Phase 2 farm RBAC, team invitations, account and farm settings`
+`feat: add Phase 3 subscription plans, farm subscriptions and entitlement service`
 
 ---
 

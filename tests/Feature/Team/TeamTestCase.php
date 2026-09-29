@@ -6,7 +6,9 @@ use App\Enums\FarmRole;
 use App\Enums\MembershipStatus;
 use App\Models\Farm;
 use App\Models\FarmMembership;
+use App\Models\Plan;
 use App\Models\User;
+use App\Services\Subscription\SubscriptionService;
 use Tests\Feature\Auth\AuthTestCase;
 
 abstract class TeamTestCase extends AuthTestCase
@@ -32,6 +34,12 @@ abstract class TeamTestCase extends AuthTestCase
         FarmMembership::create(['farm_id' => $farm->id, 'user_id' => $user->id, 'role' => $role->value]);
 
         return $user;
+    }
+
+    /** Moves a farm onto a plan by slug (test setup for plan-dependent behaviour). */
+    protected function onPlan(string $slug, ?Farm $farm = null): void
+    {
+        app(SubscriptionService::class)->changePlan($farm ?? $this->farm, Plan::where('slug', $slug)->firstOrFail());
     }
 
     protected function membershipOf(User $user, ?Farm $farm = null): FarmMembership
