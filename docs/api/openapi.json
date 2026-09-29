@@ -4145,6 +4145,1083 @@
                 }
             }
         },
+        "/locations": {
+            "get": {
+                "operationId": "v1.locations.index",
+                "description": "Active by default. Name/id ordering, pagination (50 by default, max 100), complete path on each row.\nParent IDs always refer to locations of this farm. No operation filter. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "List locations",
+                "tags": [
+                    "Location"
+                ],
+                "parameters": [
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "description": "Include inactive rows for management/history; omitted means active only.",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "A stable code from GET /master/location-types, appropriate to this endpoint's kind.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "site",
+                                "building",
+                                "house",
+                                "field",
+                                "pen",
+                                "pond",
+                                "plot",
+                                "store",
+                                "other"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "parent_id",
+                        "in": "query",
+                        "description": "Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "top_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlaceResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "last_page",
+                                                "total"
+                                            ]
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "Parent not found in this farm",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.locations.store",
+                "description": "Parent is optional; zero places is valid. Names unique per kind/farm/parent (case and whitespace normalized),\nincluding inactive rows. At most seven ancestors; parent must be active. Requires location.manage.\nErrors: 404 unknown/foreign parent; 409 duplicate_location, location_inactive, location_depth_exceeded.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Create location",
+                "tags": [
+                    "Location"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreLocationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_inactive",
+                                                "location_depth_exceeded"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/locations/{place}": {
+            "get": {
+                "operationId": "v1.locations.show",
+                "description": "Includes inactive places for history. Foreign-farm UUIDs return 404. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "Show location",
+                "tags": [
+                    "Location"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.locations.update",
+                "description": "PATCH preserves omitted fields; parent_id=null moves to farm root. UUID stays unchanged. No DELETE.\nActive descendants must be deactivated/moved first. Reparenting checks the whole subtree's depth.\nInactive places remain readable and reserve their names. Requires location.manage.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Edit / deactivate / reactivate location",
+                "tags": [
+                    "Location"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateLocationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_cycle",
+                                                "location_inactive",
+                                                "location_depth_exceeded",
+                                                "location_has_active_children"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/master/location-types": {
+            "get": {
+                "operationId": "v1.master.location-types",
+                "description": "Shared stable codes grouped by resource kind. Custom names are unrestricted; use other for unlisted types.\nType never implies a biological capacity or operation. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "Read-only place type catalogue",
+                "tags": [
+                    "LocationType"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "kind": {
+                                                        "type": "string"
+                                                    },
+                                                    "types": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "code": {
+                                                                    "type": "string"
+                                                                },
+                                                                "label": {
+                                                                    "type": "string"
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "code",
+                                                                "label"
+                                                            ]
+                                                        }
+                                                    }
+                                                },
+                                                "required": [
+                                                    "kind",
+                                                    "types"
+                                                ]
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/master/farm-operations": {
             "get": {
                 "operationId": "v1.master.farm-operations",
@@ -7825,6 +8902,938 @@
                 "security": []
             }
         },
+        "/production-areas": {
+            "get": {
+                "operationId": "v1.production-areas.index",
+                "description": "Active by default. Name/id ordering, pagination (50 by default, max 100), complete path on each row.\nParent IDs always refer to locations of this farm. No operation filter. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "List production areas",
+                "tags": [
+                    "ProductionArea"
+                ],
+                "parameters": [
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "description": "Include inactive rows for management/history; omitted means active only.",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "A stable code from GET /master/location-types, appropriate to this endpoint's kind.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "site",
+                                "building",
+                                "house",
+                                "field",
+                                "pen",
+                                "pond",
+                                "plot",
+                                "store",
+                                "other"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "parent_id",
+                        "in": "query",
+                        "description": "Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "top_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlaceResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "last_page",
+                                                "total"
+                                            ]
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "Parent not found in this farm",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.production-areas.store",
+                "description": "Parent is optional; zero places is valid. Names unique per kind/farm/parent (case and whitespace normalized),\nincluding inactive rows. At most seven ancestors; parent must be active. Requires location.manage.\nErrors: 404 unknown/foreign parent; 409 duplicate_location, location_inactive, location_depth_exceeded.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Create production area",
+                "tags": [
+                    "ProductionArea"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreProductionAreaRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_inactive",
+                                                "location_depth_exceeded"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/production-areas/{place}": {
+            "get": {
+                "operationId": "v1.production-areas.show",
+                "description": "Includes inactive places for history. Foreign-farm UUIDs return 404. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "Show production area",
+                "tags": [
+                    "ProductionArea"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.production-areas.update",
+                "description": "PATCH preserves omitted fields; parent_id=null moves to farm root. UUID stays unchanged. No DELETE.\nActive descendants must be deactivated/moved first. Reparenting checks the whole subtree's depth.\nInactive places remain readable and reserve their names. Requires location.manage.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Edit / deactivate / reactivate production area",
+                "tags": [
+                    "ProductionArea"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProductionAreaRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_cycle",
+                                                "location_inactive",
+                                                "location_depth_exceeded",
+                                                "location_has_active_children"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/measurements/normalize": {
             "post": {
                 "operationId": "v1.measurements.normalize",
@@ -8689,6 +10698,938 @@
                                             "description": "Machine-readable error code.",
                                             "enum": [
                                                 "account_suspended"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/storage-locations": {
+            "get": {
+                "operationId": "v1.storage-locations.index",
+                "description": "Active by default. Name/id ordering, pagination (50 by default, max 100), complete path on each row.\nParent IDs always refer to locations of this farm. No operation filter. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "List storage locations",
+                "tags": [
+                    "StorageLocation"
+                ],
+                "parameters": [
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "description": "Include inactive rows for management/history; omitted means active only.",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "A stable code from GET /master/location-types, appropriate to this endpoint's kind.",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "site",
+                                "building",
+                                "house",
+                                "field",
+                                "pen",
+                                "pond",
+                                "plot",
+                                "store",
+                                "other"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "parent_id",
+                        "in": "query",
+                        "description": "Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true.",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "top_level",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PlaceResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer"
+                                                },
+                                                "per_page": {
+                                                    "type": "integer"
+                                                },
+                                                "last_page": {
+                                                    "type": "integer"
+                                                },
+                                                "total": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "per_page",
+                                                "last_page",
+                                                "total"
+                                            ]
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "Parent not found in this farm",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.storage-locations.store",
+                "description": "Parent is optional; zero places is valid. Names unique per kind/farm/parent (case and whitespace normalized),\nincluding inactive rows. At most seven ancestors; parent must be active. Requires location.manage.\nErrors: 404 unknown/foreign parent; 409 duplicate_location, location_inactive, location_depth_exceeded.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Create storage location",
+                "tags": [
+                    "StorageLocation"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreStorageLocationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_found"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_inactive",
+                                                "location_depth_exceeded"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/storage-locations/{place}": {
+            "get": {
+                "operationId": "v1.storage-locations.show",
+                "description": "Includes inactive places for history. Foreign-farm UUIDs return 404. Requires location.view.\n\n**Requires farm permission:** `location.view`.",
+                "summary": "Show storage location",
+                "tags": [
+                    "StorageLocation"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.storage-locations.update",
+                "description": "PATCH preserves omitted fields; parent_id=null moves to farm root. UUID stays unchanged. No DELETE.\nActive descendants must be deactivated/moved first. Reparenting checks the whole subtree's depth.\nInactive places remain readable and reserve their names. Requires location.manage.\n\n**Requires farm permission:** `location.manage`.",
+                "summary": "Edit / deactivate / reactivate storage location",
+                "tags": [
+                    "StorageLocation"
+                ],
+                "parameters": [
+                    {
+                        "name": "place",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateStorageLocationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PlaceResource"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "enum": [
+                                                "duplicate_location",
+                                                "location_cycle",
+                                                "location_inactive",
+                                                "location_depth_exceeded",
+                                                "location_has_active_children"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
                                             ]
                                         },
                                         "request_id": {
@@ -11652,6 +14593,73 @@
                 ],
                 "title": "PackageConversionResource"
             },
+            "PlaceResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "type_label": {
+                        "type": "string"
+                    },
+                    "parent_id": {
+                        "type": "string"
+                    },
+                    "path": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0
+                    },
+                    "path_label": {
+                        "type": "string"
+                    },
+                    "depth": {
+                        "type": "integer"
+                    },
+                    "is_active": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "name",
+                    "type",
+                    "type_label",
+                    "parent_id",
+                    "path",
+                    "path_label",
+                    "depth",
+                    "is_active",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "PlaceResource"
+            },
             "PlanResource": {
                 "type": "object",
                 "properties": {
@@ -11944,6 +14952,42 @@
                 ],
                 "title": "StoreCustomVarietyRequest"
             },
+            "StoreLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "site",
+                            "building",
+                            "house",
+                            "field",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "name",
+                    "type"
+                ],
+                "title": "StoreLocationRequest"
+            },
             "StoreMeasurementContextRequest": {
                 "type": "object",
                 "properties": {
@@ -12006,6 +15050,76 @@
                     "quantity_per_package"
                 ],
                 "title": "StorePackageConversionRequest"
+            },
+            "StoreProductionAreaRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "house",
+                            "pen",
+                            "pond",
+                            "field",
+                            "plot",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "name",
+                    "type"
+                ],
+                "title": "StoreProductionAreaRequest"
+            },
+            "StoreStorageLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "store",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "name",
+                    "type"
+                ],
+                "title": "StoreStorageLocationRequest"
             },
             "SubscriptionResource": {
                 "type": "object",
@@ -12238,6 +15352,38 @@
                 ],
                 "title": "UpdateFarmRequest"
             },
+            "UpdateLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "site",
+                            "building",
+                            "house",
+                            "field",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "UpdateLocationRequest"
+            },
             "UpdateMeasurementContextRequest": {
                 "type": "object",
                 "properties": {
@@ -12331,6 +15477,39 @@
                 },
                 "title": "UpdatePackageConversionRequest"
             },
+            "UpdateProductionAreaRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "house",
+                            "pen",
+                            "pond",
+                            "field",
+                            "plot",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "UpdateProductionAreaRequest"
+            },
             "UpdateProfileRequest": {
                 "type": "object",
                 "properties": {
@@ -12344,6 +15523,35 @@
                     "name"
                 ],
                 "title": "UpdateProfileRequest"
+            },
+            "UpdateStorageLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "store",
+                            "other"
+                        ]
+                    },
+                    "parent_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Always references a location, never a production area or storage location."
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "title": "UpdateStorageLocationRequest"
             },
             "UpdateUnitPreferencesRequest": {
                 "type": "object",

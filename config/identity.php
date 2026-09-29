@@ -36,6 +36,7 @@ return [
         'team_invite' => ['user' => [30, 60]],
         'master_data_write' => ['user' => [60, 60]],
         'measurement_write' => ['user' => [60, 60]],
+        'location_write' => ['user' => [60, 60]],
         'measurement_preview' => ['user' => [120, 1]],
     ],
 ];

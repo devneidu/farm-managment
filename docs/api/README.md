@@ -424,3 +424,165 @@ All `422` unless noted; body `{message, code, request_id, details?}`.
 | `conversion_exists` (`409`) | Definition already exists. `existing_id`, `is_active`. |
 | `measurement_context_exists` (`409`) | A context with that name already exists in this farm. `existing_id`, `is_active`. |
 | `403 forbidden`, `404 not_found`, `429` | Missing `measurement.manage`; another farm's or unknown conversion/context id; rate limit. |
+
+## 19. Farm places (Phase 6)
+
+Places answer **“Where on my farm is this?”** and belong under Farm / Places or contextual creation in operational forms. Onboarding still asks for **Farm Name only**. A farm starts with zero places and has full application access. No locations are created automatically, and no subscription entitlement gates these endpoints.
+
+### Entities and hierarchy
+
+The ERD's three entities are retained as separate tables and API collections:
+
+| Collection | Purpose | Allowed `type` codes |
+|---|---|---|
+| `locations` | Optional sites / containing buildings or fields; may contain other locations | `site`, `building`, `house`, `field`, `other` |
+| `production-areas` | Places future production cycles will reference | `house`, `pen`, `pond`, `field`, `plot`, `other` |
+| `storage-locations` | Stores future inventory records will reference | `store`, `other` |
+
+`other` supports custom places (e.g. a tank, greenhouse or nursery) without inventing a larger reviewed type list. Names remain farmer-defined. A house used as a container is a location; a house hosting production directly can be a production area. Types convey physical purpose only, never biological behaviour.
+
+Every entity belongs directly to a farm. Every `parent_id` is optional and refers **only to a location UUID in that farm**, including on areas and stores. Internally, areas/stores store that relationship in `location_id`. They are terminal entities and cannot parent anything. Locations can nest up to seven ancestors (root depth 0, deepest depth 7), counting the final area/store too. There is no fake “Farm” root record and no required intermediate site. Future production cycles reference `production_areas.id`; inventory references `storage_locations.id`.
+
+Flat farm: create three production areas with no parent:
+
+```json
+{"name":"Broiler Pen","type":"pen"}
+{"name":"Pond A","type":"pond"}
+{"name":"Cassava Plot","type":"plot"}
+```
+
+Hierarchical farm: `POST /locations` with `{"name":"Poultry House","type":"house"}`, then `POST /production-areas` with `{"name":"Pen 1","type":"pen","parent_id":"<house UUID>"}` and the same for Pen 2. An optional Abuja Site can be another location above the house. `POST /storage-locations` with `{"name":"Main Store","type":"store"}` works directly under the farm.
+
+### Authentication and endpoints
+
+All paths below have prefix `/api/v1`. Use the existing Sanctum SPA cookie session and CSRF header on writes. User must be active, verified, onboarded and an active farm member (`app.access`, `farm.context`). Optional `X-Farm-Id` selects an active membership, never grants access. Do not send `farm_id` in body or query. The server resolves ownership.
+
+| Method | Path | Permission | Success |
+|---|---|---|---|
+| GET | `/master/location-types` | `location.view` | 200, shared read-only catalogue |
+| GET | `/locations` | `location.view` | 200, paginated locations |
+| POST | `/locations` | `location.manage` | 201, created location |
+| GET | `/locations/{place}` | `location.view` | 200, including inactive |
+| PATCH | `/locations/{place}` | `location.manage` | 200, updated location |
+| GET | `/production-areas` | `location.view` | 200, paginated areas |
+| POST | `/production-areas` | `location.manage` | 201, created area |
+| GET | `/production-areas/{place}` | `location.view` | 200, including inactive |
+| PATCH | `/production-areas/{place}` | `location.manage` | 200, updated area |
+| GET | `/storage-locations` | `location.view` | 200, paginated stores |
+| POST | `/storage-locations` | `location.manage` | 201, created store |
+| GET | `/storage-locations/{place}` | `location.view` | 200, including inactive |
+| PATCH | `/storage-locations/{place}` | `location.manage` | 200, updated store |
+
+All four roles can view; Owner and Manager can manage. POST/PATCH share a 60/hour/user limiter across all three collections. No DELETE endpoint. `{place}` is the UUID of that collection's entity, never its name.
+
+The catalogue is returned in `{data:[{kind,types:[{code,label}]}],meta:{},message:null}`. Kinds are `location`, `production_area`, `storage_location`; codes/labels match the table above, with title-case labels. It cannot be edited by farms and is not copied per farm.
+
+### Create and update body
+
+| Field | POST | PATCH | Validation / meaning |
+|---|---|---|---|
+| `name` | Required | Optional | String, 1–100 characters after trim and whitespace collapse; arbitrary farmer-friendly names |
+| `type` | Required | Optional | Stable code from that collection's catalogue; null invalid |
+| `parent_id` | Optional, defaults null | Optional; explicit null detaches | UUID of a same-farm location; active ancestors required for creates, moves and reactivation |
+| `is_active` | Optional, defaults true | Optional | Boolean; false archives, true reactivates |
+
+PATCH retains omitted values; an empty/no-change PATCH is a successful no-op. `id`, `farm_id`, `location_id`, `normalized_name`, `parent_scope` are server-owned and rejected. Operation assignment, area and capacity are unsupported in Phase 6. No measurements, stock or population are stored here.
+
+**Duplicate invariant:** within the **same resource kind + farm + parent**, names must be unique after whitespace collapse/trim and Unicode lowercase. Inactive records reserve their names. Case-only display renames are allowed. Names in different branches, farms or resource kinds may repeat; different kinds have distinct selectors and UUID namespaces. For example, Site A / Store and Site B / Store are valid. No accent folding or slug identity is used. MySQL binary-collated normalized names and a generated non-null parent key protect duplicate siblings, including top-level places. All writes share a farm-row lock for concurrent moves and deactivation checks.
+
+Cycles/self-parenting are rejected. Reparenting checks the depth of the **whole subtree**, including inactive descendants and terminal areas/stores. Composite foreign keys enforce parent ownership at the database level too.
+
+### Resource and contextual creation
+
+Example `POST /production-areas` body:
+
+```json
+{"name":"Pen 1","type":"pen","parent_id":"019f0000-0000-7000-8000-000000000001"}
+```
+
+201 response (the referenced house must already exist):
+
+```json
+{
+  "data": {
+    "id": "019f0000-0000-7000-8000-000000000002",
+    "kind": "production_area",
+    "name": "Pen 1",
+    "type": "pen",
+    "type_label": "Pen",
+    "parent_id": "019f0000-0000-7000-8000-000000000001",
+    "path": [
+      {"id":"019f0000-0000-7000-8000-000000000001","kind":"location","name":"Poultry House"},
+      {"id":"019f0000-0000-7000-8000-000000000002","kind":"production_area","name":"Pen 1"}
+    ],
+    "path_label": "Poultry House / Pen 1",
+    "depth": 1,
+    "is_active": true,
+    "created_at": "2026-09-29T10:00:00+00:00",
+    "updated_at": "2026-09-29T10:00:00+00:00"
+  },
+  "meta": {},
+  "message": "Place created."
+}
+```
+
+GET item uses the same resource with `message:null`; PATCH uses `message:"Place updated."`. UUIDv7 identities remain unchanged by rename, move, type change or deactivation. Paths include the resource itself and current ancestor names; historical references keep their UUID and initially display current names. `path_label` is display text, never parsed for identity (names may contain `/`). The path array provides structure even when a list is filtered or paginated. Ancestors are eager-loaded in bounded queries, avoiding per-row lookups.
+
+After contextual creation, select the returned UUID immediately and refresh the relevant collection. React needs no extra requests to construct the path. There is no separate tree endpoint: management can build trees from the location collection using `parent_id` and attach areas/stores by the same field. Follow all pages when building a complete tree.
+
+### List filters
+
+All three collection GETs accept these query parameters:
+
+| Parameter | Default | Behaviour |
+|---|---|---|
+| `include_inactive` | `0` | `1` includes inactive; otherwise only active |
+| `type` | Omitted | Exact code, must be valid for this collection |
+| `parent_id` | Omitted | Direct children of this same-farm location UUID; unknown/foreign returns 404 |
+| `top_level` | `0` | `1` returns only rows without a parent; incompatible with `parent_id` |
+| `search` | Omitted | Literal case-insensitive normalized-name substring, 1–100 characters; `%` and `_` are literal |
+| `page` | `1` | Integer >=1 |
+| `per_page` | `50` | Integer 1–100 |
+
+Use `0`/`1` for query booleans. No operation filter exists: the docs do not define a compatibility model, and repurposing a place remains possible. `operation` is rejected rather than silently returning irrelevant choices.
+
+Example: `GET /api/v1/production-areas?type=pen&parent_id=<house UUID>&per_page=50`. Response is `{data:[<resources>],meta:{current_page:1,per_page:50,last_page:1,total:2},message:null}`. Empty results have `data:[]` and `total:0`. Ordering is normalized name, then UUID; filters never change farm scope.
+
+### Deactivation and future assignments
+
+`PATCH /locations/{place}` with `{"is_active":false}` deactivates a location. First deactivate or move **all active descendants**, including production areas and stores; nothing cascades automatically. Reactivate ancestors before children. An inactive child can still be renamed under an inactive parent, or moved to an active parent/root. Creates and moves cannot target an inactive parent even if the new child is inactive. GET item and `include_inactive=1` remain available for history. Reactivation does not reactivate descendants.
+
+New operational assignments must use the shared server-side `PlaceService::selectable(farm, kind, UUID)` gate in later phases; it rejects inactive rows/ancestors and scopes every lookup to the farm. Phase 6 creates no operational records. Current names resolve through stable UUIDs; no premature name snapshots are introduced.
+
+### Errors and audit hook
+
+| HTTP | `code` | Meaning |
+|---|---|---|
+| 401 | `unauthenticated` | Missing session |
+| 403 | `forbidden` | Missing view/manage permission |
+| 403 | `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied` | Existing access/FarmContext gates |
+| 404 | `not_found` | Unknown, wrong-kind or foreign-farm resource/parent UUID; existence of another farm's data is not disclosed |
+| 409 | `duplicate_location` | Duplicate normalized sibling name in this resource kind, including inactive rows |
+| 409 | `location_cycle` | Self-parent or descendant used as parent |
+| 409 | `location_depth_exceeded` | Proposed hierarchy/subtree exceeds seven ancestors |
+| 409 | `location_inactive` | Inactive parent/ancestor for a create, move, activation or future operational assignment |
+| 409 | `location_has_active_children` | Deactivation would strand active descendants |
+| 419 | `session_expired` | CSRF/session failure |
+| 422 | `validation_failed` | Invalid fields/type/UUID/filters; field errors included |
+| 429 | `too_many_requests` | Write limit exceeded; retry after `Retry-After` |
+
+Validation example:
+
+```json
+{"message":"The selected type is invalid.","code":"validation_failed","request_id":"<request UUID>","errors":{"type":["The selected type is invalid."]}}
+```
+
+Conflict example:
+
+```json
+{"message":"A location cannot be its own ancestor.","code":"location_cycle","request_id":"<request UUID>"}
+```
+
+`PlaceChanged` emits `created`, `updated`, `deactivated`, or `reactivated` after commit with entity, farm (on entity), actor and old/new values for name/type/parent/activity. A combined edit emits one event with all changes; parent changes and renames use `updated` unless activation also changes. No-op or failed writes emit nothing. Durable platform audit storage remains a later phase.
+
+**Explicit deferrals:** operation compatibility (neither a single operation nor a many-to-many relationship is defined by Phase 6 docs), physical area, capacity, GPS/address, additional type codes, production cycles, inventory and operational records. Later quantities must use Phase 5 `QuantityNormalizer` and preserve entered values, normalized values and conversion snapshots. Land area, planting units, capacity and actual population remain separate concepts.

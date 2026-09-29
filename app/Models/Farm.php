@@ -37,6 +37,21 @@ class Farm extends Model
         return $this->hasMany(FarmInvitation::class);
     }
 
+    public function locations(): HasMany
+    {
+        return $this->hasMany(Location::class);
+    }
+
+    public function productionAreas(): HasMany
+    {
+        return $this->hasMany(ProductionArea::class);
+    }
+
+    public function storageLocations(): HasMany
+    {
+        return $this->hasMany(StorageLocation::class);
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'farm_memberships')

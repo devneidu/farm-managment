@@ -43,6 +43,10 @@ class OnboardingTest extends AuthTestCase
         $this->assertSame($farm->id, $membership->farm_id);
         $this->assertSame($user->id, $membership->user_id);
         $this->assertSame(FarmRole::Owner, $membership->role);
+        $this->assertSame(0, $farm->locations()->count());
+        $this->assertSame(0, $farm->productionAreas()->count());
+        $this->assertSame(0, $farm->storageLocations()->count());
+        $this->getJson('/api/v1/farm')->assertOk();
     }
 
     public function test_unverified_user_cannot_onboard(): void

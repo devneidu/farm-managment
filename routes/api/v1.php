@@ -14,6 +14,8 @@ use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\FarmOperationController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
+use App\Http\Controllers\Api\V1\LocationController;
+use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
 use App\Http\Controllers\Api\V1\MeasurementContextController;
@@ -21,8 +23,10 @@ use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\StorageLocationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
@@ -153,6 +157,15 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     Route::patch('/settings/package-conversions/{conversion}', [PackageConversionController::class, 'update'])->middleware(['farm.permission:measurement.manage', 'throttle:measurement-write'])->name('api.v1.settings.package-conversions.update');
 
     Route::post('/measurements/normalize', [QuantityNormalizationController::class, '__invoke'])->middleware(['farm.permission:measurement.view', 'throttle:measurement-preview'])->name('api.v1.measurements.normalize');
+
+    // Phase 6: distinct ERD entities; parent is optional for every collection. No plan gate or DELETE.
+    Route::get('/master/location-types', [LocationTypeController::class, 'index'])->middleware('farm.permission:location.view')->name('api.v1.master.location-types');
+    foreach (['locations' => LocationController::class, 'production-areas' => ProductionAreaController::class, 'storage-locations' => StorageLocationController::class] as $path => $controller) {
+        Route::get('/'.$path, [$controller, 'index'])->middleware('farm.permission:location.view')->name('api.v1.'.$path.'.index');
+        Route::get('/'.$path.'/{place}', [$controller, 'show'])->middleware('farm.permission:location.view')->name('api.v1.'.$path.'.show');
+        Route::post('/'.$path, [$controller, 'store'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.'.$path.'.store');
+        Route::patch('/'.$path.'/{place}', [$controller, 'update'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.'.$path.'.update');
+    }
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

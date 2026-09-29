@@ -66,6 +66,10 @@ class AuthRateLimiters
             self::limit('measurement_write.user')->by('measurement-write:'.self::actor($r)),
         ]);
 
+        RateLimiter::for('location-write', fn (Request $r) => [
+            self::limit('location_write.user')->by('location-write:'.self::actor($r)),
+        ]);
+
         RateLimiter::for('measurement-preview', fn (Request $r) => [
             self::limit('measurement_preview.user')->by('measurement-preview:'.self::actor($r)),
         ]);

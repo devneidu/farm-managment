@@ -143,6 +143,46 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('401', $spec['paths']['/master/species']['get']['responses']);
     }
 
+    public function test_phase_6_place_endpoints_document_contracts_and_errors(): void
+    {
+        $spec = $this->spec();
+        $this->assertArrayHasKey('get', $spec['paths']['/master/location-types']);
+        foreach (['locations', 'production-areas', 'storage-locations'] as $path) {
+            $collection = $spec['paths']['/'.$path];
+            $item = $spec['paths']['/'.$path.'/{place}'];
+            $this->assertArrayHasKey('get', $collection);
+            $this->assertArrayHasKey('post', $collection);
+            $this->assertArrayHasKey('get', $item);
+            $this->assertArrayHasKey('patch', $item);
+            $this->assertArrayNotHasKey('delete', $item);
+            $this->assertStringContainsString('location.view', $collection['get']['description']);
+            $this->assertStringContainsString('location.manage', $collection['post']['description']);
+            $this->assertStringContainsString('location.manage', $item['patch']['description']);
+            foreach (['201', '401', '403', '404', '409', '419', '422', '429'] as $status) {
+                $this->assertArrayHasKey($status, $collection['post']['responses']);
+            }
+            foreach (['200', '404', '409', '422'] as $status) {
+                $this->assertArrayHasKey($status, $item['patch']['responses']);
+            }
+            $names = array_column($collection['get']['parameters'], 'name');
+            foreach (['include_inactive', 'type', 'parent_id', 'top_level', 'search', 'page', 'per_page'] as $name) {
+                $this->assertContains($name, $names);
+            }
+            $body = $collection['post']['requestBody']['content']['application/json']['schema'];
+            if (isset($body['$ref'])) {
+                $body = $spec['components']['schemas'][basename($body['$ref'])];
+            }
+            $this->assertSame(['name', 'type'], $body['required']);
+            $this->assertArrayHasKey('parent_id', $body['properties']);
+            $this->assertArrayHasKey('is_active', $body['properties']);
+            $this->assertArrayHasKey('enum', $body['properties']['type']);
+        }
+        $resource = $spec['components']['schemas']['PlaceResource'];
+        foreach (['id', 'kind', 'name', 'type', 'type_label', 'parent_id', 'path', 'path_label', 'depth', 'is_active'] as $key) {
+            $this->assertArrayHasKey($key, $resource['properties']);
+        }
+    }
+
     public function test_phase_5_endpoints_are_documented_with_permissions_and_errors(): void
     {
         $spec = $this->spec();

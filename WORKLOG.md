@@ -11,11 +11,11 @@
 
 ## Current Status
 
-**Current Phase:** Phase 5 — Measurements, Units & Dynamic Conversions
+**Current Phase:** Phase 6 — Farm Locations & Production Structure
 
-**Status:** Implemented; NOT committed (user reviews/commits). Phases 0-4 are committed (Phase 4 = `daefd8b`).
+**Status:** Phase 6 implemented and verified; included in the user-authorized commit `feat: add Phase 6 farm locations, production areas and storage places`. Phases 0-5 are committed (Phase 5 = `b8be597`, Phase 4 = `daefd8b`). Phase 7 has NOT been started.
 
-**Last Agent:** Claude Code (Sonnet 5.5)
+**Last Agent:** Codex
 
 **Last Updated:** 2026-09-29
 
@@ -130,7 +130,7 @@
 
 ## Phase 5 Architecture (measurements, units, conversions)
 
-**Status:** implemented; NOT committed. Measurement INFRASTRUCTURE only - no operational record uses it yet (no locations, batches, inventory, feed, eggs, harvest...). Later modules must call `QuantityNormalizer` / `MeasurementConverter`; nobody else multiplies quantities by unit factors.
+**Status:** committed as `b8be597`. Measurement INFRASTRUCTURE only - no operational record uses it yet (no batches, inventory, feed, eggs, harvest...). Later modules must call `QuantityNormalizer` / `MeasurementConverter`; nobody else multiplies quantities by unit factors.
 
 **Tables** (migrations `2026_10_03_100000_create_measurement_tables` reversible; `2026_10_03_100100_provision_standard_measurement_data` runs `MeasurementSeeder`, insert-only by code): `measurement_dimensions` (code, name, `supports_preference`), `units` (dimension, code, name, symbol, `family`, `is_canonical`, `conversion_strategy` linear|fahrenheit|none, `to_canonical_factor` decimal(30,12), `decimal_places`, `integer_only`, `is_system`, `is_active`), `farm_unit_preferences` (farm+dimension unique -> unit), `measurement_contexts` (farm_id, name, normalized_name, is_active; unique farm+normalized_name; added by `2026_10_03_100200_add_measurement_contexts`), `package_conversions` (farm_id, `context_type`, `context_id` uuid, package_unit, target_unit, `quantity_per_package` decimal(18,6), `version`, `is_active`; unique farm+context_type+context_id+package unit; NO label/key columns).
 
@@ -156,9 +156,43 @@
 **Errors (`App\Support\Measurement\MeasurementException`, all 422 unless noted):** incompatible_units, conversion_context_required, ambiguous_conversion, conversion_not_configured (`details.inactive`), invalid_quantity, invalid_conversion_ratio, unknown_unit, unit_not_selectable, unit_dimension_mismatch, conversion_exists (409), measurement_context_exists (409). Event `App\Events\Measurement\PackageConversionChanged` (created|updated|deactivated|reactivated) dispatched for a future audit module.
 
 **Deferred measurement decisions:** length/time/dose dimensions; farm custom units (intentionally none); an `inventory_item` context and item-level conversions (Phase 9; any link from a farm's custom contexts to items must be built deliberately); per-crop/species default packaging; platform-admin unit editing UI; per-USER unit preferences (farm-wide per ERD); `piece` vs `egg` (kept as separate count families: "3 crates + 14 pieces" uses a crate->piece definition; an eggs context may equally target `egg`); whether a `bird` count unit is needed (bird = head for now); Phase 4 planting unit types (heap/hole/stand) stay reference values, `planting_unit` is only a generic count unit.
+## Phase 6 Architecture (farm places)
+
+**Completed:** locations, production areas and storage locations, UUIDv7 identity, list/show/create/PATCH, rename/reparent/deactivate/reactivate, farm isolation, centralized permissions, validation, duplicate/concurrency guards, audit events, frontend guide and generated OpenAPI. No work remains in progress for this phase. No packages installed, no seeds, no frontend, no production cycles or other Phase 7+ work.
+
+**Structural decision:** retained the ERD's separate `locations`, `production_areas`, `storage_locations` tables and documented collection routes. `locations.parent_id` optionally references another location; `production_areas.location_id` and `storage_locations.location_id` optionally reference a location. Every table has its own `farm_id`; all three can exist directly under the farm without an artificial root/site. Production areas and stores are terminal (cannot parent anything). Example: Farm -> Abuja Site (location/site) -> Poultry House (location/house) -> Pen 1 (production_area/pen). A flat farm can have just Pen/Pond/Plot production areas and a store. Future cycles reference `production_areas.id`; future stock records reference `storage_locations.id`. Do not make Phase 7 require an artificial site.
+
+**Schema:** new migration `2026_10_04_100000_create_farm_places`. Each table: UUID `id`, `farm_id`, nullable parent FK, name/normalized_name (100), type (30), is_active (default true), timestamps, generated stored `parent_scope=COALESCE(parent FK,'')`. Unique `(farm_id,parent_scope,normalized_name)` per table; binary-collated normalized names. Unique `(farm_id,id)` supports composite `(farm_id,parent FK)` -> `locations(farm_id,id)` foreign keys. Farm/parent deletion restricted. Index `(farm_id,is_active,type)`. No quantities, operation assignment, address or GPS columns. Only new migration; no prior migration was edited.
+
+**Types (`PlaceKind` read-only code/label catalogue, no per-farm seed rows):** location: `site`, `building`, `house`, `field`, `other`; production_area: `house`, `pen`, `pond`, `field`, `plot`, `other`; storage_location: `store`, `other`. Labels are title case. Minimal codes reflect the pack's examples; `other` covers e.g. tank/nursery/greenhouse pending a reviewed extension. House/field can represent a containing location or a terminal production area. Type does not prescribe biological behaviour.
+
+**Naming:** trim/collapse Unicode whitespace for display; Unicode lowercase for duplicate detection. Unique **resource kind + farm + parent + normalized name**, including inactive rows. Same name in different branches/farms/kinds is allowed (selectors are separate by resource kind). Name is never identity; UUID unchanged on rename/move/type/activity changes. Names 1–100 characters, no agriculture-specific naming regex.
+
+**Hierarchy/lifecycle:** at most 7 ancestors (root depth 0, max depth 7, includes terminal area/store). Self-parent, direct/indirect cycles and subtree moves exceeding depth are rejected. All mutation paths in `PlaceService` lock the farm row, read current hierarchy under locks, validate and save in a transaction (3 deadlock attempts). DB unique indexes protect duplicate siblings/roots; composite FKs enforce ownership independently of the service. Concurrency mechanism and constraints verified; no multi-process race/load test was run. Never write locations directly from future controllers.
+
+**Active/inactive:** default lists show active; show and include_inactive preserve history. No DELETE endpoints; model deletes throw. Deactivation of a location requires moving/deactivating all active descendants, including areas/stores; no automatic cascades. Reactivate ancestors before children. New/moved places require an active parent chain even when the place itself is inactive. Inactive children can be renamed under inactive parents. Reactivating a parent does not reactivate descendants. `PlaceService::selectable(Farm, PlaceKind, UUID)` is the farm-scoped gate later operational modules should use for new assignments (checks row and all ancestors active). No history snapshots yet; names resolve through the current stable entity.
+
+**Scoping/RBAC:** `app.access` + `farm.context`; only FarmContext supplies farm ownership. `X-Farm-Id` retains existing membership semantics (unauthorized farm 403). Unknown/wrong-kind/foreign IDs, including supplied parent IDs and parent filters, are 404. `location.view` granted to all 4 roles; `location.manage` to Owner/Manager. Service also enforces manage permission. No plan entitlement. `location-write` limiter 60/hour/user across the three collections (`config/identity.php`). Farm Name-only onboarding unchanged and explicitly tested to create no places.
+
+**Endpoints (prefix `/api/v1`):** `GET /master/location-types`; `GET|POST /locations`, `GET|PATCH /locations/{place}`; `GET|POST /production-areas`, `GET|PATCH /production-areas/{place}`; `GET|POST /storage-locations`, `GET|PATCH /storage-locations/{place}`. POST name/type required, parent_id nullable optional, is_active optional; PATCH same mutable fields all optional. API uses `parent_id` consistently (mapped to location_id for terminal tables). Server-owned fields are rejected. GET catalogue returns kind/types(code,label) groups; farms cannot mutate it.
+
+**Filters/resources:** `include_inactive` (default false), `type` (valid for kind), `parent_id` (direct children only), `top_level` (when true, mutually exclusive with parent_id), `search` (literal normalized-name substring), `page`, `per_page` (default 50/max100). Use 0/1 query booleans. Deterministic normalized-name/UUID ordering. Resource: id, kind, name, type, type_label, parent_id, path[{id,kind,name}] including self, path_label, depth, is_active, created_at, updated_at. Pagination meta: current_page/per_page/last_page/total. Paths reflect current ancestor names, include filtered-out ancestors, and load with bounded eager queries (no per-row N+1). No redundant tree endpoint; fetch all pages of the three collections to build the management hierarchy. Create returns a full 201 resource immediately usable in selectors.
+
+**Events/errors:** `PlaceChanged` implements `ShouldDispatchAfterCommit`; created|updated|deactivated|reactivated with actor, place (including farm_id), and old/new name/type/parent_id/is_active values. One event per effective write; no-op/failed/rolled-back writes emit none. Renaming/reparenting use updated unless activation changes too. No audit table/listeners. 409 codes: duplicate_location, location_cycle, location_depth_exceeded, location_inactive, location_has_active_children; field/type/UUID/filter failures use 422 validation_failed. Existing 401/403/404/419/429 envelope retained.
+
+**Files created:** `app/Enums/PlaceKind.php`; `app/Models/{Place,Location,ProductionArea,StorageLocation}.php`; `app/Services/Locations/PlaceService.php`; `app/Events/Locations/PlaceChanged.php`; controllers `LocationController`, `ProductionAreaController`, `StorageLocationController`, `LocationTypeController`; `app/Http/Requests/Locations/{PlaceWriteRequest,ListPlacesRequest,StoreLocationRequest,UpdateLocationRequest,StoreProductionAreaRequest,UpdateProductionAreaRequest,StoreStorageLocationRequest,UpdateStorageLocationRequest}.php`; `app/Http/Resources/PlaceResource.php`; migration above; `tests/Feature/Locations/PlacesTest.php`.
+
+**Files modified:** Farm, FarmRole, Permission, AuthRateLimiters, config/identity.php (one rate entry), routes/api/v1.php, tests/Feature/Api/ApiDocumentationTest.php, tests/Feature/Auth/OnboardingTest.php, tests/Feature/Team/RolePermissionTest.php, docs/api/README.md (section 19), docs/api/openapi.json, WORKLOG.md. Existing OpenAPI endpoint definitions compared semantically to HEAD: unchanged; seven new paths / thirteen operations added. Scramble annotations hide rejected server-owned/deferred fields from input schemas.
+
+**Verification:** targeted Phase 6 + OpenAPI: **45 tests, 647 assertions passed** (`php -d memory_limit=1G artisan test tests/Feature/Locations tests/Feature/Api/ApiDocumentationTest.php --filter='PlacesTest|phase_6'`). Full suite after migration rollback/re-apply: **348 tests, 2682 assertions passed** (`php -d memory_limit=1G artisan test`, 116.33s). Phase 6 adds 44 place tests + 1 OpenAPI test; existing onboarding and role matrix assertions extended. Covers lifecycle/UUID/path, normalized duplicates, database uniqueness/FKs, cycle/depth/whole-subtree checks, all roles, farm isolation/X-Farm-Id, filters/pagination/type catalogue, events/no-op/outer rollback, future assignment gate, rate limit, bounded path queries. Pint passed on app/database/routes/tests; git diff --check clean. Regenerated OpenAPI successfully.
+
+**Migration safety:** explicitly guarded runtime connection to `farm_management_test`; populated a site -> house plus area/store; ran Phase 6-only `migrate:rollback --step=1 --path=...`, verified all three tables removed and previous-phase farms retained, then migrated the same file and verified tables restored empty. Reviewed dev `migrate --pretend`; applied normal Artisan `migrate` guarded to `farm_management`. Existing farms/users/memberships/package conversions/measurement contexts row counts unchanged. No rollback/fresh/refresh/wipe on dev. Full tests ran only on farm_management_test.
+
+**Deferred:** area, capacity, operation compatibility (Phase 6 specifies no one/many-operation model), GPS/address, additional codes, platform type editing, durable audit store, operational assignment use of the gate, production cycles and inventory. No agricultural defaults invented. Later physical quantities must reuse Phase 5 normalizer/snapshots; capacity is not population, area is not planting units. No Phase 6 blocker remains.
+
 ## Last Completed Task
 
-Phase 5 — Measurements, units & dynamic conversions.
+Phase 6 — Farm Locations & Production Structure.
 
 ## Endpoints (all under `/api/v1`)
 
@@ -176,6 +210,8 @@ Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResp
 
 ## Tests
 
+**Phase 6 latest: 348 tests, 2682 assertions, all passing.** Targeted: 45 tests, 647 assertions. Full regression includes all Phase 0–5 auth/onboarding, RBAC, subscriptions/team limits, master data and measurements. See Phase 6 verification above for commands and migration checks.
+
 **Phase 5 latest (after the context-identity correction): 303 tests, 2030 assertions, all passing** (`php -d memory_limit=1G artisan test` on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 5 added 70 tests (61 originally + 9 for stable context identity: id vs name, rename keeps conversions/snapshots, crop validation, type/id mismatch, deactivation, farm isolation of contexts, context CRUD/RBAC): StandardConversionTest 19 (units/seed/protection/exact conversions/temperature/count semantics/quantity validation/rounding), CompoundQuantityTest 20 (104 pieces, 618 kg, contexts, farm isolation, ambiguity, snapshot replay after config edits), MeasurementApiTest 30 (dimension-filtered selectors, RBAC, package conversion CRUD/validation/versioning/409, isolation, preview endpoint, preferences), OpenAPI 1; RolePermissionTest expectations extended. Migration down()/up() exercised on `farm_management_test` (rollback of both Phase 5 migrations dropped the 4 tables, re-apply restored 23 units / 6 dimensions); the contexts migration's down()/backfill/up() was also exercised on `farm_management_test` with legacy-shaped rows (2 custom rows + 1 crop row -> 1 context, ids matched, down() restored the keys); dev DB `farm_management` got the migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
 
 Previous (Phase 4): 233 tests, 1453 assertions, all passing** (`php -d memory_limit=1G artisan test`, on `farm_management_test`; Pint clean on app/database/routes/tests). Phase 4 added 40 tests (SystemMasterData 8, MasterDataApi 15, CustomMasterData 16, OpenAPI 1); RolePermissionTest expectations were extended for the new permissions. Dev DB `farm_management` got the 2 new migrations via plain `php artisan migrate`; `docs/api/openapi.json` regenerated.
@@ -192,7 +228,7 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 - Carried over from Phase 1: `GOOGLE_CLIENT_ID` needed for real Google login; pre-existing Pint issues in bootstrap/providers.php + some config files (do NOT run pint on config/ blindly); production needs SESSION_DOMAIN/SECURE cookie, real MAIL_*, docs-exposure decision; Scramble pinned.
 - Phase 3 unresolved: final prices/limits/feature split (seed is provisional); payment provider + checkout/webhooks/billing_transactions; user-initiated plan change (none until payments exist, so cancel/resume are only reachable for farms moved to a paid plan by `changePlan`); Platform Admin plan management; `past_due` is honoured until the period ends (no separate grace policy); more `Feature`/`Limit` keys are added as later phases need them (farm count, storage, ...).
-- Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset, locations. Production PHP must have the bcmath extension (declared in composer.json).
+- Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset. Production PHP must have the bcmath extension (declared in composer.json).
 - Invitation email is synchronous (the token must not sit in the jobs table); slow SMTP slows the invite request.
 - The invited email must equal the account's verified email (case-insensitive); there is no "accept with a different email" path by design.
 
@@ -200,11 +236,11 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 6 (see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md`). Do not start until the user says so. Use `QuantityNormalizer` for every quantity a later phase stores (entered parts + normalized quantity/unit + snapshot JSON, `decimal(24,6)` columns). Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
+Phase 7 — Production cycles (see `docs/implementations/10-IMPLEMENTATION-MASTER-PLAN.md`). NOT started; wait for explicit user instruction. Preserve optional direct-to-farm production areas and use `PlaceService::selectable` for assignments. Use `QuantityNormalizer` for every quantity a later phase stores (entered parts + normalized quantity/unit + snapshot JSON, `decimal(24,6)` columns). Farm-management routes go in the `['app.access','farm.context']` group with `farm.permission:` and, for plan-gated features, `entitlement:<key>` middleware (or `EntitlementService::assertCapacity` inside the locking transaction for capacity limits).
 
 ## Recommended Next Commit
 
-`feat: add Phase 5 measurements, standard units, exact decimal conversions and farm package conversions`
+`feat: add Phase 6 farm locations, production areas and storage places`
 
 ---
 

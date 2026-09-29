@@ -29,6 +29,10 @@ enum Permission: string
     case MeasurementView = 'measurement.view';
     case MeasurementManage = 'measurement.manage';
 
+    // Phase 6 - places: selectors for all roles, management for owner/manager.
+    case LocationView = 'location.view';
+    case LocationManage = 'location.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case InventoryAdjust = 'inventory.adjust';
