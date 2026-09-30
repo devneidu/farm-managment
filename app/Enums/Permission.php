@@ -33,6 +33,12 @@ enum Permission: string
     case LocationView = 'location.view';
     case LocationManage = 'location.manage';
 
+    case ProductionCycleView = 'production_cycle.view';
+    case ProductionCycleCreate = 'production_cycle.create';
+    case ProductionCycleUpdate = 'production_cycle.update';
+    case ProductionCycleClose = 'production_cycle.close';
+    case ProductionCycleReopen = 'production_cycle.reopen';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case InventoryAdjust = 'inventory.adjust';

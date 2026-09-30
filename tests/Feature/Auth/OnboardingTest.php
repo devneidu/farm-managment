@@ -46,6 +46,7 @@ class OnboardingTest extends AuthTestCase
         $this->assertSame(0, $farm->locations()->count());
         $this->assertSame(0, $farm->productionAreas()->count());
         $this->assertSame(0, $farm->storageLocations()->count());
+        $this->assertSame(0, $farm->productionCycles()->count());
         $this->getJson('/api/v1/farm')->assertOk();
     }
 

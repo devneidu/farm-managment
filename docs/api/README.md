@@ -586,3 +586,209 @@ Conflict example:
 `PlaceChanged` emits `created`, `updated`, `deactivated`, or `reactivated` after commit with entity, farm (on entity), actor and old/new values for name/type/parent/activity. A combined edit emits one event with all changes; parent changes and renames use `updated` unless activation also changes. No-op or failed writes emit nothing. Durable platform audit storage remains a later phase.
 
 **Explicit deferrals:** operation compatibility (neither a single operation nor a many-to-many relationship is defined by Phase 6 docs), physical area, capacity, GPS/address, additional type codes, production cycles, inventory and operational records. Later quantities must use Phase 5 `QuantityNormalizer` and preserve entered values, normalized values and conversion snapshots. Land area, planting units, capacity and actual population remain separate concepts.
+
+## 20. Production cycles — livestock batches and crop projects (Phase 7)
+
+Use **Livestock Batch** (including fish) and **Crop Project** in the UI. The canonical backend routes are `/api/v1/production-cycles`; no duplicate domain aliases. All calls use the existing verified, onboarded Sanctum session, CSRF on writes, and current-farm context (`X-Farm-Id` when choosing another membership). Never send `farm_id`.
+
+| Method | URL after `/api/v1` | Permission | Success |
+|---|---|---|---|
+| GET | `/production-cycles` | `production_cycle.view` | 200 paginated resources |
+| POST | `/production-cycles` | `production_cycle.create` | 201 full resource |
+| GET | `/production-cycles/{cycle}` | `production_cycle.view` | 200 full resource |
+| PATCH | `/production-cycles/{cycle}` | `production_cycle.update` | 200 full resource |
+| POST | `/production-cycles/{cycle}/close` | `production_cycle.close` | 200 full resource |
+| POST | `/production-cycles/{cycle}/reopen` | `production_cycle.reopen` | 200 full resource |
+| GET | `/production-cycles/{cycle}/summary` | `production_cycle.view` | 200 full resource (Phase 7 baseline summary) |
+| GET | `/production-cycles/{cycle}/activity` | `production_cycle.view` | 200 paginated lifecycle events |
+
+All four roles can read. Owner and Manager can create, edit, close and reopen. Finance and Farm Worker cannot manage cycles. Assigned-cycle permissions are deferred until assignments exist. Each mutation is also authorized inside the service. Cycle writes share a 60/hour/user throttle. No DELETE endpoint.
+
+### Create fields and dependent selectors
+
+Common required fields: `kind` (`livestock` or `crop`), `name` (1–100 characters after trimming/collapsing whitespace), `operation_type_id` (UUID). Common optional fields: `production_area_id` (UUID or null), `notes` (string up to 5000 or null), `expected_end_date` (`YYYY-MM-DD` or null). Server generates UUIDv7 `id`, human `reference`, and `status=active`. Reference example `BAT-2026-00001` or `CRP-2026-00002`; numbering is farm-wide, includes both kinds, and does not reset annually. UUID is the resource identity. Names are case/whitespace-normalized and unique per farm and kind, including closed cycles. The same name can be used by another farm or by the other kind.
+
+| Domain | Required fields | Optional fields |
+|---|---|---|
+| livestock | `species_id`, `initial_population`, `start_date` | `breed_id` |
+| crop | `crop_type_id`, `planting_material_type`, `planting_unit_type`, `initial_planting_units`, `planting_date` | `crop_variety_id`, `area`, `expected_germination_date` |
+
+Counts must be positive whole numbers, 1–999999999999. Booleans, fractional counts, unit strings, zero and negatives are rejected. Counts may be JSON integers or canonical digit strings without leading zeroes. Livestock counts always mean heads, including fish; no kg/litre/package population. Optional master UUIDs accept null. Dates must be actual `YYYY-MM-DD` calendar dates; historical dates are valid and independent of entry time. Future start/planting dates are accepted without inventing a draft status. Expected dates are nullable, user-entered estimates; they cannot precede start/planting. No biological duration is assumed. `expected_germination_date` is crop-only.
+
+Resolve dependencies using the existing Phase 4 endpoints:
+
+1. `GET /master/farm-operations` returns operations and `tracking_model`; `population` uses the livestock shape (fishery included), `planting_units` uses the crop shape.
+2. `GET /master/species?operation=poultry` returns relevant species; `GET /master/species/{species}/breeds` returns system/current-farm breeds. Create a custom breed through `POST /custom-breeds`, then use its UUID.
+3. `GET /master/crops?operation=crops`, then `GET /master/crops/{crop}/varieties`; custom varieties use `POST /custom-varieties`.
+4. `GET /master/planting-reference` returns active codes for `planting_material_type` (seed, seedling, stem_cutting, tuber, sucker, other) and `planting_unit_type` (heap, hole, stand). Render catalogue responses rather than copying these lists into the client. Added active catalogue entries are supported.
+5. `GET /production-areas` provides current-farm active areas. **Zero production areas is valid.** Omit the field or send null. Areas can host multiple active cycles and have no invented operation/type compatibility restrictions.
+
+Operation/species and operation/crop relationships are validated. Breed must belong to the species; variety to the crop. New assignments require active catalogue entries and system/current-farm visibility. Unknown/foreign UUIDs return 404. Historical selections remain readable after deactivation and descriptive edits do not require reselecting them. New area assignments require active ancestors too. Farm-operation selections remain optional selector preferences, as in Phase 4, and do not block an otherwise valid cycle.
+
+### Examples
+
+Replace angle-bracket placeholders with UUIDs from the selectors.
+
+Poultry → Chicken → optional breed → 500 heads → optional Broiler Pen:
+
+```json
+{
+  "kind": "livestock",
+  "name": "October Broilers",
+  "operation_type_id": "<poultry-uuid>",
+  "species_id": "<chicken-uuid>",
+  "breed_id": null,
+  "initial_population": 500,
+  "start_date": "2026-10-01",
+  "production_area_id": null,
+  "expected_end_date": null,
+  "notes": "First flock"
+}
+```
+
+Fishery → Fish → 2,000 heads → optional Pond A (same livestock model):
+
+```json
+{
+  "kind": "livestock",
+  "name": "Catfish Batch A",
+  "operation_type_id": "<fishery-uuid>",
+  "species_id": "<fish-uuid>",
+  "initial_population": 2000,
+  "start_date": "2026-09-01",
+  "production_area_id": "<pond-a-production-area-uuid>"
+}
+```
+
+Yam → optional variety → tuber → heap → 800 heaps → optional Yam Plot:
+
+```json
+{
+  "kind": "crop",
+  "name": "2026 Yam",
+  "operation_type_id": "<crops-uuid>",
+  "crop_type_id": "<yam-uuid>",
+  "crop_variety_id": null,
+  "planting_material_type": "tuber",
+  "planting_unit_type": "heap",
+  "initial_planting_units": 800,
+  "planting_date": "2026-04-10",
+  "production_area_id": null,
+  "area": {"quantity": "2", "unit": "hectare"}
+}
+```
+
+**800 heaps != 800 tubers.** Planting units are the baseline for later establishment/survival checks. The API never derives seed/tuber/seedling quantity, inventory consumption, or stock deductions. `material_quantity` is rejected. Actual material use belongs to later input/operational workflows.
+
+Land area is optional and separate: `{quantity,unit}`, with a positive quantity and an active AREA unit from `GET /master/units?dimension=area` (`hectare`, `sq_m`, `acre`). The Phase 5 engine preserves entered representation, normalized quantity/unit and conversion snapshot. `2 hectare` normalizes to `20000 sq_m`; it does not affect the 800 heaps. Weight, volume and count units are rejected. Package units are not usable without a conversion context (this field deliberately has none).
+
+### Resource and success envelopes
+
+All create/show/update/close/reopen/summary responses use the same resource. `meta` is `{}` for a single record. Create message is `Production cycle created.`; update/close/reopen messages identify that action; GET messages are null.
+
+```json
+{
+  "data": {
+    "id": "<cycle-uuid>",
+    "kind": "livestock",
+    "name": "October Broilers",
+    "reference": "BAT-2026-00001",
+    "status": "active",
+    "operation": {"id": "<poultry-uuid>", "code": "poultry", "name": "Poultry", "tracking_model": "population"},
+    "production_area": null,
+    "start_date": "2026-10-01",
+    "planting_date": null,
+    "expected_end_date": null,
+    "end_date": null,
+    "notes": "First flock",
+    "baseline_locked": true,
+    "livestock": {
+      "species": {"id": "<chicken-uuid>", "code": "chicken", "name": "Chicken"},
+      "breed": null,
+      "initial_population": 500,
+      "current_population": 500,
+      "population_unit": "head",
+      "population_basis": "population_movements"
+    },
+    "crop": null,
+    "created_at": "2026-09-30T08:00:00.000000Z",
+    "updated_at": "2026-09-30T08:00:00.000000Z"
+  },
+  "meta": {},
+  "message": "Production cycle created."
+}
+```
+
+A crop resource has `livestock=null`, `start_date=null`, a `planting_date`, and:
+
+```json
+{
+  "crop_type": {"id": "<yam-uuid>", "code": "yam", "name": "Yam"},
+  "variety": null,
+  "planting_material_type": "tuber",
+  "planting_material_label": "Tuber",
+  "planting_unit_type": "heap",
+  "planting_unit_label": "Heap",
+  "initial_planting_units": 800,
+  "expected_germination_date": null,
+  "area": {
+    "entered": [{"quantity": "2", "unit": "hectare"}],
+    "normalized": {"quantity": "20000", "unit": "sq_m"}
+  }
+}
+```
+
+Breed/variety summaries contain `id,name,is_active`. Assigned production area is the complete Phase 6 place resource with path. Read resources resolve current names, preserving UUID identity; they do not copy names as identities. Measurement snapshot stays stored internally; entered and normalized values are returned as decimal strings.
+
+### Editing, lifecycle and history
+
+PATCH allows `name`, `notes`, `production_area_id`, `expected_end_date`; crops additionally allow `area`, `expected_germination_date`. Omission preserves values; null clears optional fields. Example: `{"name":"Broilers A","production_area_id":null,"notes":"Moved out"}`. An unchanged area may remain historically inactive; a new area must be selectable. No-op PATCH produces no lifecycle event.
+
+Starting identity and baseline are **immutable from creation**: kind, operation, species, breed, initial population, start date, crop, variety, planting material/unit types, initial planting units, planting date. Sending any of these in PATCH returns `409 baseline_locked`, even if unchanged. The source provides no approved pre-activity baseline correction workflow; Phase 7 does not invent one. Reopening does not unlock this baseline. Phase 8 must implement approved corrections as explainable adjustments and extend reconciliation, not add a free-form current-population editor.
+
+Current livestock population is SUM(population_movements.quantity). Creation inserts exactly one `initial` movement in the same transaction; its `recorded_at` is midnight on the starting domain date in the farm timezone, stored in UTC, separate from `created_at`. No editable current-population column exists. No operational population event types are implemented yet.
+
+Statuses: **active → closed → active** only. Close body: `{"end_date":"2026-09-20","reason":"Season finished"}`; reopen body: `{"reason":"Resume work"}`. Reasons are required, up to 2000 characters. Close date must be on/after start and on/before today in farm timezone. Closing reconciles the current supported baseline/initial movement, protects ordinary edits, and releases active-cycle capacity. A nonzero livestock population does not automatically become an exit or sale; closure does not dispose of animals. Reopening clears the current `end_date`; prior dates/reasons remain in activity. Repeated close/reopen in the same state returns `409 invalid_status_transition`, without duplicate effects.
+
+Lifecycle events are appended transactionally for created/updated/closed/reopened, with actor UUID, changes `{field:{old,new}}`, reason, `recorded_at` and `created_at`. Area reassignments preserve both IDs. Creation snapshots capture both common fields and the relevant subtype baseline. Changes to subtype fields appear under `crop` or `livestock` as before/after objects, including stored measurement metadata. `CycleChanged` dispatches after commit only. This is cycle activity, not the future global audit or operational-record system.
+
+Example activity envelope:
+
+```json
+{"data":[{"id":"<event-uuid>","action":"updated","actor_id":"<user-uuid>","changes":{"production_area_id":{"old":"<old-area-uuid>","new":null}},"reason":null,"recorded_at":"2026-09-30T08:00:00.000000Z","created_at":"2026-09-30T08:00:00.000000Z"}],"meta":{"current_page":1,"per_page":50,"last_page":1,"total":1},"message":null}
+```
+
+### Listing, capacity and errors
+
+List filters: `kind`, `status`, `operation_type_id`, `species_id`, `crop_type_id`, `production_area_id`, `search`, `page`, `per_page`. UUID filters use UUIDs; kind/status use stable codes. Default includes active and closed. Search matches literal name/reference substrings (`%` and `_` are not wildcards). Ordering: start/planting date descending, UUID ascending. Page >=1; per_page 1–100, default 50. List and activity meta: `current_page,per_page,last_page,total`. Activity accepts only page/per_page, newest UUID first. Example: `GET /production-cycles?kind=livestock&status=active&per_page=25`.
+
+Creation and reopening consume the existing entitlement service's `active_cycles` limit, counting both kinds with status active. Source section 32 defines provisional Free=3 and Pro/Business=unlimited; these are database configuration, not plan-name checks in business logic. Farm-row locking serializes growth. Closing releases a slot. Downgrade never hides/deletes history or blocks ordinary edits. New over-limit growth returns `409 plan_limit_reached` with `{entitlement_key:"active_cycles",limit,usage,remaining}`. Existing subscription/public-plan APIs expose this additional limit alongside team capacity.
+
+| HTTP | Code | Meaning |
+|---|---|---|
+| 401 / 403 / 419 | existing auth/farm/CSRF codes | Sign in, onboarding/verification/current membership, permission or CSRF failure |
+| 404 | `not_found` | Unknown or foreign cycle, master UUID, or production area (including foreign area filters) |
+| 422 | `validation_failed` | Missing/invalid fields, mismatched relationships, inactive master selection, invalid dates |
+| 422 | Phase 5 measurement codes | `unit_dimension_mismatch`, `unknown_unit`, `invalid_quantity`, `unit_not_selectable`, etc. |
+| 409 | `duplicate_cycle_name` | Same farm/kind already owns the normalized name, even if closed |
+| 409 | `baseline_locked` | PATCH supplied a starting identity/baseline field |
+| 409 | `cycle_closed` | Ordinary edit attempted while closed |
+| 409 | `invalid_status_transition` | Close already closed or reopen already active |
+| 409 | `cycle_reconciliation_failed` | Baseline/initial population ledger inconsistent; no transition applied |
+| 409 | `location_inactive` | New area assignment or an ancestor is inactive |
+| 409 | `plan_limit_reached` | Creation/reopen exceeds active-cycle capacity |
+| 429 | `too_many_requests` | Shared cycle-write rate limit; respect Retry-After |
+
+Validation example (POST either count field at zero):
+
+```json
+{"message":"The initial population field must be at least 1.","code":"validation_failed","request_id":"<request-uuid>","errors":{"initial_population":["The initial population field must be at least 1."]}}
+```
+
+Conflict example:
+
+```json
+{"message":"Reopen the cycle before making ordinary edits.","code":"cycle_closed","request_id":"<request-uuid>"}
+```
+
+Server-owned `id,farm_id,reference,status,current_population,end_date,is_active` and `material_quantity` are rejected in create/PATCH. Do not use inactive master flags as cycle lifecycle status. Fields from the opposite kind are rejected on creation. Attachments, mortality, births, transfers, adjustments, survival checks, feeding, inventory, harvest, sales, finance and the generic operational-record engine remain deferred. Phase 8 has not been implemented.

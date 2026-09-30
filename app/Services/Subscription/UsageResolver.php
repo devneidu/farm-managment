@@ -6,6 +6,7 @@ use App\Enums\Limit;
 use App\Models\Farm;
 use App\Models\FarmInvitation;
 use App\Models\FarmMembership;
+use App\Models\ProductionCycle;
 
 /**
  * Current consumption of each capacity limit. The single place that defines what "usage" means.
@@ -15,6 +16,7 @@ class UsageResolver
     public function usage(Farm $farm, Limit $limit): int
     {
         return match ($limit) {
+            Limit::ActiveCycles => ProductionCycle::ofFarm($farm)->where('status', 'active')->count(),
             Limit::TeamMembers => $this->teamMembers($farm),
         };
     }

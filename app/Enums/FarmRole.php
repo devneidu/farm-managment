@@ -35,10 +35,10 @@ enum FarmRole: string
                 Permission::SubscriptionView,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
-                Permission::LocationView, Permission::LocationManage,
+                Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,
             ],
-            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView],
+            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView],
+            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView],
         };
     }
 

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\ProductionAreaController;
+use App\Http\Controllers\Api\V1\ProductionCycleController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\StorageLocationController;
@@ -166,6 +167,20 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/'.$path, [$controller, 'store'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.'.$path.'.store');
         Route::patch('/'.$path.'/{place}', [$controller, 'update'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.'.$path.'.update');
     }
+
+    Route::prefix('production-cycles')->group(function () {
+        $controller = ProductionCycleController::class;
+        Route::get('/', [$controller, 'index'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.index');
+        Route::get('/{cycle}', [$controller, 'show'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.show');
+        Route::get('/{cycle}/summary', [$controller, 'summary'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.summary');
+        Route::get('/{cycle}/activity', [$controller, 'activity'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.activity');
+        foreach (['store' => 'create', 'update' => 'update', 'close' => 'close', 'reopen' => 'reopen'] as $action => $permission) {
+            $path = match ($action) {
+                'store' => '/', 'update' => '/{cycle}', default => '/{cycle}/'.$action
+            };
+            Route::match([$action === 'update' ? 'PATCH' : 'POST'], $path, [$controller, $action])->middleware(['farm.permission:production_cycle.'.$permission, 'throttle:production-cycle-write'])->name('api.v1.production-cycles.'.$action);
+        }
+    });
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

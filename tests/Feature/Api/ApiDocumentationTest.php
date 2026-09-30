@@ -143,6 +143,37 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('401', $spec['paths']['/master/species']['get']['responses']);
     }
 
+    public function test_phase_7_documents_cycle_endpoints_conditional_fields_and_resources(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /production-cycles', 'post /production-cycles', 'get /production-cycles/{cycle}', 'patch /production-cycles/{cycle}', 'post /production-cycles/{cycle}/close', 'post /production-cycles/{cycle}/reopen', 'get /production-cycles/{cycle}/summary', 'get /production-cycles/{cycle}/activity'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? []);
+            $this->assertStringContainsString('production_cycle.', $spec['paths'][$path][$method]['description']);
+            $this->assertArrayHasKey('401', $spec['paths'][$path][$method]['responses']);
+            $this->assertArrayHasKey('403', $spec['paths'][$path][$method]['responses']);
+        }
+        $post = $spec['paths']['/production-cycles']['post'];
+        foreach (['201', '404', '409', '419', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $post['responses']);
+        }
+        $this->assertStringContainsString('kind=crop requires', $post['description']);
+        $this->assertStringContainsString('plan_limit_reached', $post['description']);
+        $body = $spec['components']['schemas']['StoreCycleRequest'];
+        foreach (['kind', 'name', 'operation_type_id', 'species_id', 'initial_population', 'crop_type_id', 'planting_material_type', 'planting_unit_type', 'initial_planting_units', 'planting_date', 'area'] as $field) {
+            $this->assertArrayHasKey($field, $body['properties']);
+        }
+        foreach (['farm_id', 'current_population', 'material_quantity', 'status'] as $field) {
+            $this->assertArrayNotHasKey($field, $body['properties']);
+        }
+        $resource = $spec['components']['schemas']['ProductionCycleResource']['properties'];
+        $this->assertSame('integer', $resource['livestock']['properties']['initial_population']['type']);
+        $this->assertSame('integer', $resource['crop']['properties']['initial_planting_units']['type']);
+        $this->assertSame('array', $resource['crop']['properties']['area']['properties']['entered']['type']);
+        $this->assertArrayHasKey('production_area', $resource);
+        $this->assertArrayNotHasKey('delete', $spec['paths']['/production-cycles/{cycle}']);
+    }
+
     public function test_phase_6_place_endpoints_document_contracts_and_errors(): void
     {
         $spec = $this->spec();

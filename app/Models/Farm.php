@@ -37,6 +37,11 @@ class Farm extends Model
         return $this->hasMany(FarmInvitation::class);
     }
 
+    public function productionCycles(): HasMany
+    {
+        return $this->hasMany(ProductionCycle::class);
+    }
+
     public function locations(): HasMany
     {
         return $this->hasMany(Location::class);
