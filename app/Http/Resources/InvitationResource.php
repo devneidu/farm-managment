@@ -17,7 +17,7 @@ class InvitationResource extends JsonResource
 
     /**
      * @return array{
-     *     id: string, email: string, role: 'manager'|'farm_worker'|'finance', role_label: string,
+     *     id: string, email: string, role: 'manager'|'farm_worker'|'finance'|'vet', role_label: string,
      *     status: 'pending'|'expired'|'accepted'|'revoked', expires_at: string, last_sent_at: string|null,
      *     created_at: string|null, invited_by: array{id: string, name: string|null, email: string}|null
      * }

@@ -130,8 +130,8 @@ class FarmAccessTest extends TeamTestCase
     {
         $roles = $this->signInAs($this->member(FarmRole::Manager))->getJson('/api/v1/roles')->assertOk()->json('data');
 
-        $this->assertSame(['owner', 'manager', 'farm_worker', 'finance'], array_column($roles, 'id'));
-        $this->assertSame([false, false, true, true], array_column($roles, 'assignable'));
+        $this->assertSame(['owner', 'manager', 'farm_worker', 'finance', 'vet'], array_column($roles, 'id'));
+        $this->assertSame([false, false, true, true, true], array_column($roles, 'assignable'));
 
         $this->signInAs($this->member(FarmRole::FarmWorker))->getJson('/api/v1/roles')->assertForbidden();
     }

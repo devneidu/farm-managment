@@ -50,6 +50,12 @@ enum Permission: string
     case InventoryManage = 'inventory.manage';
     case InventoryAdjust = 'inventory.adjust';
 
+    // Phase 10 - health: view / record events / reverse and correct / manage medicine withdrawal metadata
+    case HealthView = 'health.view';
+    case HealthCreate = 'health.create';
+    case HealthReverse = 'health.reverse';
+    case HealthManage = 'health.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case FinanceExpenseCreate = 'finance.expense.create';

@@ -11,9 +11,9 @@
 
 ## Current Status
 
-**Current Phase:** Phase 9 — Inventory, lots, stock ledger and feed formulas
+**Current Phase:** Phase 10 — Health and medicine
 
-**Status:** Phase 9 implemented and verified; UNCOMMITTED (together with the also-uncommitted Phase 8 working tree; Phase 7 is committed as `29c05fb`). Targeted Phase 9: **31 tests, 700 assertions** (30 behaviour tests + 1 generated-OpenAPI test). Full suite: **469 tests, 4272 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (21 new paths vs HEAD = Phase 8 + Phase 9; no HEAD path removed), test-DB rollback/reapply verified, dev DB migrated normally. Phase 10 NOT started.
+**Status:** Phase 10 implemented and verified; UNCOMMITTED (Phases 0-9 are committed; Phase 9 is `baab4eb`). Targeted Phase 10: **21 tests, 538 assertions** (20 behaviour + 1 generated-OpenAPI test). Full suite: **491 tests, 4818 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (8 new paths, none removed), test-DB rollback/reapply verified with data, dev DB migrated normally. Phase 11 NOT started.
 
 **Last Agent:** Claude Code
 
@@ -291,9 +291,37 @@
 
 **Verification:** see Tests section.
 
+## Phase 10 Architecture (health and medicine)
+
+**Scope/status:** implemented, UNCOMMITTED at user request, on committed Phase 9 `baab4eb`. Spec (`21-PHASE-10-HEALTH.md`) is a short brief: vaccination/medication/deworming/treatment/disease-issue/vet visit, multiple medicines with dose, medicine packaging + withdrawal metadata, medicine use reduces linked stock, follow-up may create a task (Phase 12), farm-vet preset (Phase 2 + Phase 10 acceptance). The brief line "crop health can use crop-specific issue/treatment records" is NOT implemented in Health: crop pest/fertilizer workflows are owned by Phase 8 record types and Phase 13. Contract: [docs/api/PHASE-10-HEALTH.md](docs/api/PHASE-10-HEALTH.md), README section 23.
+
+**Schema (migration `2026_10_08_100000_create_health`, reversible):** `health_records` (farm+cycle composite FK, type, strictly validated `details` JSON, `animals_affected`, `follow_up_on` date, nullable `mortality_record_id` -> Phase 8 `operational_records`, `recorded_at` vs `created_at`, notes, unique `reverses_record_id`/`corrects_record_id`, farm-wide idempotency key + request hash, actor, request id), `health_record_medicines` (one immutable line per medicine: item + name snapshot, location, lot, `quantity_used` canonical decimal(24,6) + Phase 5 `measurement` snapshot, optional per-animal `dose` measurement, `dosage_instructions`, `withdrawal_days`/`withdrawal_source`/`withdrawal_ends_at`), `medicine_profiles` (mutable per-item `default_withdrawal_days`, notes). `inventory_movements` gained nullable unique `health_record_medicine_id` (a line can consume stock only once, DB-enforced) and `health_record_id` (the record that caused the row; reversal rows point at the reversing record). Records and lines are append-only (model guards); no PATCH/DELETE.
+
+**Types (6 + server reversal):** vaccination (livestock, medicines required, `target_disease`), medication (`condition`), deworming (`parasite_target`), treatment (`condition`), disease_issue (medicines forbidden, `condition`+`severity`), vet_visit (livestock, medicines forbidden, `vet_name`). Registry `HealthTypeRegistry`; `GET /master/health-record-types`. All types are livestock-only: crop cycles are refused (422 `type`) and lines accept only `medicine` items (`InventoryService::medicineItemForHealth`); `fertilizer_agrochemical` is never a health medicine. No health species capability exists in Phase 4 data, so compatibility = cycle kind (judgment call).
+
+**Write path (`HealthService`):** same lock order as Phases 7-9 (farm, cycle, item). One transaction: replay by idempotency key -> validate -> insert record -> per line: lock/validate item, `InventoryService::measureForItem` (Phase 5 normaliser, packages only via the item's own context), `healthSource` (location/lot validation incl. expiry for use) BEFORE the line row is written (so foreign ids are 404, not FK errors), line row, then `consumeForHealth` (one `stock_out` reason `use`, never-negative replay of the dated bucket). Any failure rolls back everything; failed attempts do not consume keys. Retry with same key+payload returns the original (no second deduction); changed payload 409.
+
+**Withdrawal:** effective days = line `withdrawal_days` override, else the item's profile default at that moment (`source` explicit|item_default), `ends_at = recorded_at + days` stored on the line; 0 = none. Later profile edits never change history. `GET /health/withdrawals` (active by default; reversed records excluded) rows trace to record + line + item + lot. No farm-wide mutable flag, and no sale/harvest blocking yet (Phases 13/15).
+
+**Mortality/population:** health never changes population and never creates mortality. `mortality_record_id` links an existing non-reversed Phase 8 mortality record of the same farm+cycle. Reversing a health record does not touch the mortality record.
+
+**Corrections:** `POST /health-records/{id}/reverse` appends a `reversal` health row plus one compensating `reversal` stock movement per line (same location/lot/measurement); no reversal of reversal/repeat (409 record_already_reversed); replacement via `corrects_record_id` (same type+cycle, once, needs `health.reverse`). Health-created stock movements cannot be reversed through `/inventory/movements/{id}/reverse` (409 reverse_via_health_record). Closed cycles reject writes (409 cycle_closed).
+
+**Medicine endpoints (view over Phase 9 items):** `GET /health/medicines`, `GET /health/medicines/{item}` (balances + lots with expiry), `PUT /health/medicines/{item}/profile`. Items are created/stocked/packaged through Phase 9.
+
+**Permissions:** new `health.view|create|reverse|manage`. Owner all; Manager all; Farm Worker view+create; Finance none; NEW role `vet` (`FarmRole::Vet`, assignable by Owner/Manager): all health permissions + read-only farm/cycle/location/measurement/record/inventory (no inventory.use, no record.create). Limiter `health-write` 120/h/user. Inventory movement resource/list gained `health_record_id`.
+
+**API:** 9 operations / 8 paths: `/master/health-record-types`, `/health-records` (GET,POST), `/health-records/{record}`, `/health-records/{record}/reverse`, `/health/withdrawals`, `/health/medicines`, `/health/medicines/{item}`, `/health/medicines/{item}/profile`.
+
+**Files:** migration; models HealthRecord/HealthRecordMedicine/MedicineProfile; `app/Services/Health/{HealthService,HealthQueries,HealthTypeRegistry}.php`; `HealthRecordController` (the pre-existing `HealthController` is the system health ping, untouched); requests in `app/Http/Requests/Health`; resources HealthRecord/Withdrawal/Medicine; event HealthRecordCreated; docs/api/PHASE-10-HEALTH.md; tests/Feature/Health/HealthTest.php. Modified: Permission, FarmRole, InventoryService (health integration methods + reverse guard), InventoryQueries/ListMovementsRequest/InventoryMovementResource, AuthRateLimiters, routes, RoleController/resource docblocks, README + openapi.json, ApiDocumentationTest, RolePermissionTest, FarmAccessTest.
+
+**Pre-commit review (2 decisions):** (1) crop treatment REMOVED from Health (Phase 10 objective is livestock; pesticide/fertilizer belong to Phase 8/13). (2) `vet` role KEPT: Phase 2 doc says "optional Vet role may be implemented as a role preset", 34-PERMISSIONS-MATRIX has a Vet preset column, and Phase 10 acceptance lists "farm-vet permission preset".
+
+**Deferred:** tasks from `follow_up_on` (Phase 12), withdrawal enforcement in sales/harvest, health reports/notifications, vet contacts/cost/purchasing, individual animal identity, a species health capability flag. True multi-process concurrency was not run (safety rests on the farm-row lock + in-transaction recheck, as in Phase 9).
+
 ## Last Completed Task
 
-Phase 9 — Inventory, lots, stock ledger and feed formulas (see Phase 9 Architecture). Earlier: Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 10 — Health and medicine (see Phase 10 Architecture). Earlier: Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -310,6 +338,10 @@ Created: app/Enums/{FarmRole,Permission,MembershipStatus}.php; app/Events/Access
 Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResponsesExtension (documents farm permission / 404 / farm-context 403), bootstrap/app.php (aliases), routes/api/v1.php, config/identity.php, .env.example (FRONTEND_URL, INVITATION_TTL_DAYS), docs/api/{README.md,openapi.json}, ApiDocumentationTest, OnboardingTest (role is now the FarmRole enum), WORKLOG.md.
 
 ## Tests
+
+**Phase 10 latest: 491 tests, 4818 assertions, all passing** (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). Targeted `--filter='HealthTest|phase_10'`: 21 tests, 538 assertions. Coverage: multi-medicine doses and single deduction per line, type-specific validation/closed vocabulary, cycle-kind and item-category compatibility, atomic rollback on insufficient stock (incl. dated history), retries/idempotency, DB-level one-movement-per-line, append-only guards, contextual package conversion and unit mismatch, lot requirement/expiry, withdrawal calculation/traceability/active filter, mortality link without a second population effect, reversal/correction/closed cycles, farm isolation, role presets incl. vet, listing and medicine endpoints. No true parallel-process concurrency test was run. Role/permission tests updated for `vet` and `health.*`.
+
+**Migration verification (Phase 10):** `migrate --pretend` reviewed; dev `farm_management` normal `migrate` only; destructive checks ONLY on `farm_management_test` (DB_DATABASE override, `SELECT DATABASE()` verified): committed fixture 3 health records, 2 lines, 1 profile, 4 movements (3 health-linked) -> `migrate:rollback --step=1` dropped the 3 tables + 2 movement columns, deleted the 3 health-linked movements and kept the Phase 9 stock-in; reapply restored empty tables. Test DB then `migrate:fresh`ed. No fresh/refresh/wipe on development.
 
 **Phase 9 latest: 469 tests, 4272 assertions, all passing** (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). Targeted `--filter="InventoryTest|phase_9"`: 31 tests, 700 assertions. Phase 9 coverage: ledger-derived stock, no writable balance, exact decimals, zero balance, insufficient/negative stock (current and dated history), adjustments (stale/zero/back-dated), transfers (linked, retry, insufficient, reversal of both legs), reversal rules, lots/expiry (required, reuse, immutability, expired use vs write-off, filters), package contexts (12 bag + 18 kg = 618 kg only with the item conversion, missing conversion, snapshot replay after edit), dimension/family mismatch, idempotency (retry, conflict, failed attempt keeps key), farm/store/lot isolation, inactive item/location semantics, permissions per role, Phase 8 feed_use (one movement, retry, reversal compensation, correction, rollback on failure, item package, lots, worker), feed formulas (not stock), append-only guards, filters/pagination. Three obsolete earlier assertions (Phase 4/5/7/8 "inventory table/context type does not exist") and the role-permission lists were updated to the new reality. **Limitation: true parallel multi-process stock-out concurrency was not exercised** (single-process PHPUnit); protection is the per-farm `FOR UPDATE` lock plus in-transaction chronological recheck.
 
@@ -336,7 +368,7 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 - Carried over from Phase 1: `GOOGLE_CLIENT_ID` needed for real Google login; pre-existing Pint issues in bootstrap/providers.php + some config files (do NOT run pint on config/ blindly); production needs SESSION_DOMAIN/SECURE cookie, real MAIL_*, docs-exposure decision; Scramble pinned.
 - Phase 3 unresolved: final prices/limits/feature split (seed is provisional); payment provider + checkout/webhooks/billing_transactions; user-initiated plan change (none until payments exist, so cancel/resume are only reachable for farms moved to a paid plan by `changePlan`); Platform Admin plan management; `past_due` is honoured until the period ends (no separate grace policy); more `Feature`/`Limit` keys are added as later phases need them (farm count, storage, ...).
-- Not built: ownership transfer, leaving a farm yourself, email change, profile image, Vet preset. Production PHP must have the bcmath extension (declared in composer.json).
+- Not built: ownership transfer, leaving a farm yourself, email change, profile image (the Vet preset now exists as role `vet`, Phase 10). Production PHP must have the bcmath extension (declared in composer.json).
 - Invitation email is synchronous (the token must not sit in the jobs table); slow SMTP slows the invite request.
 - The invited email must equal the account's verified email (case-insensitive); there is no "accept with a different email" path by design.
 
@@ -344,49 +376,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 10 — Health (see `docs/implementations/21-PHASE-10-HEALTH.md`), ONLY after explicit user instruction. Reuse Phase 9: medicine is an inventory item (category `medicine`) and consumption must go through `InventoryService` movements linked to the health record (`operational_record_id`-style source link, idempotent, reversible); medicine packaging/dose/withdrawal metadata is Phase 10 and attaches to items without changing the ledger. Also pending: commit Phase 8 + Phase 9 (both are uncommitted working-tree changes).
+Phase 11 — Breeding (see `docs/implementations/22-PHASE-11-BREEDING.md`), ONLY after explicit user instruction.
 
 ## Recommended Next Commit
 
-`feat: add Phase 9 inventory with lots, movement ledger, transfers, adjustments and feed formulas`
-
----
-
-# Update Template
-
-When finishing work, replace/update the sections above.
-
-At minimum record:
-
-**Last Agent:**
-Claude Code / Codex / other
-
-**Completed:**
-What was actually completed.
-
-**Currently In Progress:**
-Anything partially implemented.
-
-**Files Changed:**
-Important files created/modified.
-
-**Database Changes:**
-Migrations/schema changes.
-
-**API Changes:**
-Endpoints or API contracts added/changed.
-
-**Tests:**
-Tests added and exact latest result.
-
-**Packages Added:**
-Any Composer/NPM packages and why.
-
-**Open Issues / Blockers:**
-Anything the next agent needs to know.
-
-**Next Task:**
-The exact next logical task.
-
-**Recommended Commit:**
-Suggested commit message.
+`feat: add Phase 10 health records with multi-medicine inventory deduction, withdrawal tracking, vet role preset and medicine endpoints`

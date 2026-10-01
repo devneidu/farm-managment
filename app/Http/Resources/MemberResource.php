@@ -13,7 +13,7 @@ class MemberResource extends JsonResource
 
     /**
      * @return array{
-     *     id: string, role: 'owner'|'manager'|'farm_worker'|'finance', role_label: string, status: 'active'|'removed',
+     *     id: string, role: 'owner'|'manager'|'farm_worker'|'finance'|'vet', role_label: string, status: 'active'|'removed',
      *     joined_at: string|null, is_current_user: bool,
      *     user: array{id: string, name: string|null, email: string}
      * }

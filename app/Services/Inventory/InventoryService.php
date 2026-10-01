@@ -21,6 +21,7 @@ use App\Models\InventoryItem;
 use App\Models\InventoryLot;
 use App\Models\InventoryMovement;
 use App\Models\OperationalRecord;
+use App\Models\StorageLocation;
 use App\Services\Locations\PlaceService;
 use App\Services\Measurement\PackageConversionService;
 use App\Services\Measurement\QuantityNormalizer;
@@ -259,6 +260,9 @@ class InventoryService
 
         return $this->atomic($ctx, 'reversal:'.$id, $data, function (string $hash) use ($ctx, $id, $data) {
             $original = InventoryMovement::where('farm_id', $ctx->farm->id)->lockForUpdate()->findOrFail($id);
+            if ($original->health_record_id !== null) {
+                throw new ApiHttpException(409, 'reverse_via_health_record', 'This stock effect belongs to a health record; reverse the health record instead.');
+            }
             if ($original->operational_record_id !== null) {
                 throw new ApiHttpException(409, 'reverse_via_record', 'This stock effect belongs to an operational record; reverse the record instead.');
             }
@@ -329,6 +333,74 @@ class InventoryService
 
         return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $reversal->recorded_at, [
             'operational_record_id' => $reversal->id, 'reverses_movement_id' => $movement->id, 'justification' => $reversal->details['reason'] ?? null,
+        ], guard: true);
+    }
+
+    // ----------------------------------------------- Phase 10 integration (health)
+
+    /**
+     * Validates and locks the medicine a health line wants to use: health records only use `medicine` items.
+     * Called by HealthService inside its transaction.
+     */
+    public function medicineItemForHealth(FarmContext $ctx, string $itemId, string $prefix): InventoryItem
+    {
+        $item = $this->activeItem($ctx, $itemId, $prefix.'.inventory_item_id');
+        if ($item->category !== InventoryCategory::Medicine) {
+            $this->invalid($prefix.'.inventory_item_id', 'Health records can only use an inventory item in the medicine category.');
+        }
+
+        return $item;
+    }
+
+    /** Entered parts -> normalised quantity in the item's stock basis (packages resolve only through the item's own context). */
+    public function measureForItem(FarmContext $ctx, InventoryItem $item, array $components, string $field)
+    {
+        return $this->measure($ctx, $item, $components, $field);
+    }
+
+    /** Entered parts with no fixed result unit, only the item's package context (a per-animal dose, for example). */
+    public function measureLoose(FarmContext $ctx, InventoryItem $item, array $components, string $field): array
+    {
+        $context = $this->packages->resolveContext($ctx->farm, ConversionContextType::InventoryItem, $item->id, $field);
+
+        return $this->quantities->normalize($ctx->farm, $components, $context, null, self::DIMENSIONS)->toArray();
+    }
+
+    /**
+     * Resolves and validates where a medicine line draws stock from (before its row is written, so foreign or unknown
+     * locations/lots fail as 404/409 rather than as a database constraint).
+     *
+     * @return array{0: StorageLocation, 1: InventoryLot|null}
+     */
+    public function healthSource(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
+    {
+        $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: $prefix.'.lot_id');
+        $this->assertUsable($ctx, $lot, $when);
+
+        return [$location, $lot];
+    }
+
+    /** One stock_out per medicine line, in the health record's transaction (farm and cycle already locked). */
+    public function consumeForHealth(FarmContext $ctx, string $recordId, string $lineId, InventoryItem $item, StorageLocation $location, ?InventoryLot $lot, array $measurement, CarbonImmutable $when, string $prefix): InventoryMovement
+    {
+        $qty = $this->positive($measurement['normalized']['quantity'], $prefix.'.components');
+        $this->assertAvailable($item, $location->id, $lot?->id, $qty);
+
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockOut, 'use', Decimal::sub('0', $qty), $measurement, $when, ['health_record_id' => $recordId, 'health_record_medicine_id' => $lineId], guard: true);
+    }
+
+    /** Compensates the stock a reversed health record consumed (one reversal movement per line). */
+    public function reverseForHealth(FarmContext $ctx, string $lineId, string $reversalRecordId, CarbonImmutable $when, string $reason): ?InventoryMovement
+    {
+        $movement = InventoryMovement::where('farm_id', $ctx->farm->id)->where('health_record_medicine_id', $lineId)->lockForUpdate()->first();
+        if (! $movement) {
+            return null;
+        }
+        $item = $this->lockItem($ctx, $movement->inventory_item_id);
+
+        return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $when, [
+            'health_record_id' => $reversalRecordId, 'reverses_movement_id' => $movement->id, 'justification' => $reason,
         ], guard: true);
     }
 

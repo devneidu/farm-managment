@@ -12,6 +12,8 @@ enum FarmRole: string
     case Manager = 'manager';
     case FarmWorker = 'farm_worker';
     case Finance = 'finance';
+    /** Veterinary preset: health and medicine work, read-only elsewhere. */
+    case Vet = 'vet';
 
     public function label(): string
     {
@@ -20,6 +22,7 @@ enum FarmRole: string
             self::Manager => 'Manager',
             self::FarmWorker => 'Farm Worker',
             self::Finance => 'Finance',
+            self::Vet => 'Vet',
         };
     }
 
@@ -34,12 +37,14 @@ enum FarmRole: string
                 Permission::LivestockBatchCreate, Permission::InventoryAdjust, Permission::InventoryView, Permission::InventoryUse, Permission::InventoryManage,
                 Permission::SubscriptionView,
                 Permission::RecordView, Permission::RecordCreate, Permission::RecordReverse, Permission::RecordAdjust,
+                Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
                 Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,
             ],
-            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse],
+            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse, Permission::HealthView, Permission::HealthCreate],
             self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView],
+            self::Vet => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage],
         };
     }
 
@@ -57,8 +62,8 @@ enum FarmRole: string
     public function assignableRoles(): array
     {
         return match ($this) {
-            self::Owner => [self::Manager, self::FarmWorker, self::Finance],
-            self::Manager => [self::FarmWorker, self::Finance],
+            self::Owner => [self::Manager, self::FarmWorker, self::Finance, self::Vet],
+            self::Manager => [self::FarmWorker, self::Finance, self::Vet],
             default => [],
         };
     }
@@ -68,7 +73,7 @@ enum FarmRole: string
     {
         return match ($this) {
             self::Owner => true,
-            self::Manager => in_array($target, [self::FarmWorker, self::Finance], true),
+            self::Manager => in_array($target, [self::FarmWorker, self::Finance, self::Vet], true),
             default => false,
         };
     }

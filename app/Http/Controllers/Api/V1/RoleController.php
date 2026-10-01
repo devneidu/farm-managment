@@ -13,10 +13,10 @@ class RoleController extends Controller
     /**
      * List roles
      *
-     * The four MVP roles with their permission presets. `assignable` tells the UI which roles the
+     * The MVP roles (owner, manager, farm worker, finance, vet preset) with their permission presets. `assignable` tells the UI which roles the
      * CALLER may invite or assign (Owner is never assignable: ownership transfer is not supported yet).
      *
-     * @response array{data: array<int, array{id: 'owner'|'manager'|'farm_worker'|'finance', label: string, permissions: string[], assignable: bool}>, meta: object, message: string|null}
+     * @response array{data: array<int, array{id: 'owner'|'manager'|'farm_worker'|'finance'|'vet', label: string, permissions: string[], assignable: bool}>, meta: object, message: string|null}
      */
     public function index(FarmContext $ctx): JsonResponse
     {

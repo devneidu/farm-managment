@@ -803,3 +803,7 @@ The complete frontend integration contract is [Phase 8 records](PHASE-08-RECORDS
 ## 22. Inventory, lots, stock movements and feed formulas (Phase 9)
 
 The complete frontend integration contract is [Phase 9 inventory](PHASE-09-INVENTORY.md): items, lots/expiry, the movement ledger, stock-in/out, count adjustments, transfers, reversals, package conversion contexts, feed formulas, the optional `feed_use` stock link, permissions, retries, errors and examples. These endpoints are also included in openapi.json.
+
+## 23. Health records and medicine (Phase 10)
+
+The complete frontend integration contract is [Phase 10 health](PHASE-10-HEALTH.md): typed health records (vaccination, medication, deworming, treatment, disease/issue, vet visit), multi-medicine lines with dose and package conversions, the linked inventory deduction, lots/expiry, withdrawal windows, the medicine read model, the `vet` role preset, mortality linking, reversal/correction, permissions, retries and errors. These endpoints are also included in openapi.json.

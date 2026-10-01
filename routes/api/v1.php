@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\FarmOperationController;
 use App\Http\Controllers\Api\V1\FeedFormulaController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\HealthRecordController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\LocationController;
@@ -195,6 +196,22 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/{record}/reverse', [$controller, 'reverse'])->middleware(['farm.permission:record.reverse', 'throttle:record-write'])->name('api.v1.records.reverse');
         Route::post('/{record}/attachments', [$controller, 'attach'])->middleware(['farm.permission:record.create', 'throttle:record-write'])->name('api.v1.records.attachments.store');
         Route::get('/{record}/attachments/{attachment}', [$controller, 'download'])->middleware('farm.permission:record.view')->name('api.v1.records.attachments.download');
+    });
+
+    Route::get('/master/health-record-types', [HealthRecordController::class, 'types'])->middleware('farm.permission:health.view')->name('api.v1.health-record-types.index');
+    Route::prefix('health-records')->group(function () {
+        $c = HealthRecordController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:health.view')->name('api.v1.health-records.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:health.create', 'throttle:health-write'])->name('api.v1.health-records.store');
+        Route::get('/{record}', [$c, 'show'])->middleware('farm.permission:health.view')->name('api.v1.health-records.show');
+        Route::post('/{record}/reverse', [$c, 'reverse'])->middleware(['farm.permission:health.reverse', 'throttle:health-write'])->name('api.v1.health-records.reverse');
+    });
+    Route::prefix('health')->group(function () {
+        $c = HealthRecordController::class;
+        Route::get('/withdrawals', [$c, 'withdrawals'])->middleware('farm.permission:health.view')->name('api.v1.health.withdrawals');
+        Route::get('/medicines', [$c, 'medicines'])->middleware('farm.permission:health.view')->name('api.v1.health.medicines.index');
+        Route::get('/medicines/{item}', [$c, 'medicine'])->middleware('farm.permission:health.view')->name('api.v1.health.medicines.show');
+        Route::put('/medicines/{item}/profile', [$c, 'updateProfile'])->middleware(['farm.permission:health.manage', 'throttle:health-write'])->name('api.v1.health.medicines.profile');
     });
 
     Route::get('/master/inventory-options', [InventoryController::class, 'options'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.options');

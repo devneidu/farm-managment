@@ -31,6 +31,33 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('application/octet-stream', $spec['paths']['/records/{record}/attachments/{attachment}']['get']['responses']['200']['content']);
     }
 
+    public function test_phase_10_health_endpoints_schemas_permissions_and_errors_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /health-records', 'post /health-records', 'get /health-records/{record}', 'post /health-records/{record}/reverse', 'get /master/health-record-types',
+            'get /health/withdrawals', 'get /health/medicines', 'get /health/medicines/{item}', 'put /health/medicines/{item}/profile'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method];
+            $this->assertStringContainsString('health.', $operation['description'] ?? '', $endpoint.' documents its permission');
+            $this->assertArrayHasKey('401', $operation['responses']);
+            $this->assertArrayHasKey('403', $operation['responses']);
+        }
+        foreach (['201', '401', '403', '404', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/health-records']['post']['responses']);
+        }
+        $body = $spec['components']['schemas']['StoreHealthRecordRequest'];
+        $this->assertContains('idempotency_key', $body['required']);
+        $this->assertContains('vaccination', $body['properties']['type']['enum']);
+        $this->assertArrayHasKey('medicines', $body['properties']);
+        $this->assertArrayNotHasKey('farm_id', $body['properties']);
+        $this->assertArrayNotHasKey('withdrawal_ends_at', $body['properties']);
+        foreach (['medicines', 'mortality_record_id', 'recorded_at', 'created_at', 'reversed_by_record_id'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['HealthRecordResource']['properties']);
+        }
+        $this->assertArrayHasKey('profile', $spec['components']['schemas']['MedicineResource']['properties']);
+        $this->assertArrayHasKey('health_record_id', $spec['components']['schemas']['InventoryMovementResource']['properties']);
+    }
+
     public function test_phase_9_inventory_endpoints_schemas_permissions_and_errors_are_documented(): void
     {
         $spec = $this->spec();

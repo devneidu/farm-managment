@@ -19,7 +19,7 @@ class RolePermissionTest extends TestCase
 
     public function test_mvp_roles_are_exactly_these_identifiers(): void
     {
-        $this->assertSame(['owner', 'manager', 'farm_worker', 'finance'], array_map(fn ($r) => $r->value, FarmRole::cases()));
+        $this->assertSame(['owner', 'manager', 'farm_worker', 'finance', 'vet'], array_map(fn ($r) => $r->value, FarmRole::cases()));
         $this->assertNull(FarmRole::tryFrom('admin'));
         $this->assertNull(FarmRole::tryFrom('Owner'));
     }
@@ -34,7 +34,7 @@ class RolePermissionTest extends TestCase
     public function test_manager_permissions(): void
     {
         $this->assertSame([
-            'farm.update', 'farm.view', 'inventory.adjust', 'inventory.manage', 'inventory.use', 'inventory.view', 'livestock.batch.create',
+            'farm.update', 'farm.view', 'health.create', 'health.manage', 'health.reverse', 'health.view', 'inventory.adjust', 'inventory.manage', 'inventory.use', 'inventory.view', 'livestock.batch.create',
             'location.manage', 'location.view',
             'master_data.manage', 'master_data.view', 'measurement.manage', 'measurement.view', 'production_cycle.close', 'production_cycle.create', 'production_cycle.reopen', 'production_cycle.update', 'production_cycle.view', 'record.adjust', 'record.create', 'record.reverse', 'record.view', 'subscription.view', 'team.invite', 'team.remove', 'team.update_role', 'team.view',
         ], $this->values(FarmRole::Manager));
@@ -43,7 +43,7 @@ class RolePermissionTest extends TestCase
 
     public function test_farm_worker_can_only_view_the_farm_master_data_and_measurements(): void
     {
-        $this->assertSame(['farm.view', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view'], $this->values(FarmRole::FarmWorker));
+        $this->assertSame(['farm.view', 'health.create', 'health.view', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view'], $this->values(FarmRole::FarmWorker));
     }
 
     public function test_finance_permissions(): void
@@ -53,14 +53,22 @@ class RolePermissionTest extends TestCase
         $this->assertFalse(FarmRole::Finance->can(Permission::FarmUpdate));
     }
 
+    public function test_vet_preset_does_health_work_and_is_read_only_elsewhere(): void
+    {
+        $this->assertSame(['farm.view', 'health.create', 'health.manage', 'health.reverse', 'health.view', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.view'], $this->values(FarmRole::Vet));
+        $this->assertFalse(FarmRole::Vet->can(Permission::InventoryUse));
+        $this->assertFalse(FarmRole::Vet->can(Permission::RecordCreate));
+        $this->assertSame([], FarmRole::Vet->assignableRoles());
+    }
+
     public function test_owner_is_never_assignable_and_assignment_is_hierarchical(): void
     {
         foreach (FarmRole::cases() as $role) {
             $this->assertNotContains(FarmRole::Owner, $role->assignableRoles());
         }
 
-        $this->assertSame([FarmRole::Manager, FarmRole::FarmWorker, FarmRole::Finance], FarmRole::Owner->assignableRoles());
-        $this->assertSame([FarmRole::FarmWorker, FarmRole::Finance], FarmRole::Manager->assignableRoles());
+        $this->assertSame([FarmRole::Manager, FarmRole::FarmWorker, FarmRole::Finance, FarmRole::Vet], FarmRole::Owner->assignableRoles());
+        $this->assertSame([FarmRole::FarmWorker, FarmRole::Finance, FarmRole::Vet], FarmRole::Manager->assignableRoles());
         $this->assertSame([], FarmRole::FarmWorker->assignableRoles());
         $this->assertSame([], FarmRole::Finance->assignableRoles());
 

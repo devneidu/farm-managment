@@ -15,7 +15,7 @@ class FarmResource extends JsonResource
     /**
      * @return array{
      *     id: string, name: string, country_code: string, currency: string, timezone: string, locale: string,
-     *     membership: array{id: string, role: 'owner'|'manager'|'farm_worker'|'finance', role_label: string, permissions: string[]}
+     *     membership: array{id: string, role: 'owner'|'manager'|'farm_worker'|'finance'|'vet', role_label: string, permissions: string[]}
      * }
      */
     public function toArray(Request $request): array
