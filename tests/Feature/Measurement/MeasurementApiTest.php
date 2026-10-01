@@ -307,7 +307,9 @@ class MeasurementApiTest extends MeasurementTestCase
         $this->postJson('/api/v1/settings/package-conversions', ['package_unit' => 'kg'] + $base)->assertStatus(422)->assertJsonPath('code', 'unit_dimension_mismatch');
         $this->postJson('/api/v1/settings/package-conversions', ['target_unit' => 'bag'] + $base)->assertStatus(422)->assertJsonPath('code', 'incompatible_units');
         $this->postJson('/api/v1/settings/package-conversions', ['target_unit' => 'furlong'] + $base)->assertStatus(422)->assertJsonPath('code', 'unknown_unit');
-        $this->postJson('/api/v1/settings/package-conversions', ['context_type' => 'inventory_item'] + $base)->assertStatus(422)->assertJsonValidationErrors('context_type');
+        $this->postJson('/api/v1/settings/package-conversions', ['context_type' => 'bogus'] + $base)->assertStatus(422)->assertJsonValidationErrors('context_type');
+        // inventory_item is a valid type since Phase 9, but only for an active inventory item of THIS farm
+        $this->postJson('/api/v1/settings/package-conversions', ['context_type' => 'inventory_item'] + $base)->assertStatus(422)->assertJsonValidationErrors('context_id');
         // a context can no longer be conjured from typed text on a conversion: only an id is accepted
         $this->postJson('/api/v1/settings/package-conversions', $base + ['context_label' => 'Brand new'])->assertStatus(422)->assertJsonValidationErrors('context_label');
         $this->postJson('/api/v1/settings/package-conversions', ['context_id' => null] + $base)->assertStatus(422)->assertJsonValidationErrors('context_id');

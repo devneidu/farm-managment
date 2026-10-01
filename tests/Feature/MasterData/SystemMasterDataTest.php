@@ -17,7 +17,6 @@ use App\Services\MasterData\SpeciesCapabilityService;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 class SystemMasterDataTest extends MasterDataTestCase
@@ -144,6 +143,6 @@ class SystemMasterDataTest extends MasterDataTestCase
         }
 
         // Reference metadata is configuration only: no operational record exists or is created.
-        $this->assertFalse(Schema::hasTable('operational_records'));
+        $this->assertDatabaseCount('operational_records', 0);
     }
 }

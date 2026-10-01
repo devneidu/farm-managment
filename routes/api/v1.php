@@ -12,7 +12,9 @@ use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\FarmController;
 use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\FarmOperationController;
+use App\Http\Controllers\Api\V1\FeedFormulaController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
 use App\Http\Controllers\Api\V1\MeasurementContextController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
+use App\Http\Controllers\Api\V1\OperationalRecordController;
 use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\ProductionAreaController;
@@ -180,6 +183,43 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
             };
             Route::match([$action === 'update' ? 'PATCH' : 'POST'], $path, [$controller, $action])->middleware(['farm.permission:production_cycle.'.$permission, 'throttle:production-cycle-write'])->name('api.v1.production-cycles.'.$action);
         }
+    });
+
+    Route::get('/master/record-types', [OperationalRecordController::class, 'types'])->middleware('farm.permission:record.view')->name('api.v1.record-types.index');
+    Route::get('/record-types/{type}/schema', [OperationalRecordController::class, 'schema'])->middleware('farm.permission:record.view')->name('api.v1.record-types.schema');
+    Route::prefix('records')->group(function () {
+        $controller = OperationalRecordController::class;
+        Route::get('/', [$controller, 'index'])->middleware('farm.permission:record.view')->name('api.v1.records.index');
+        Route::get('/{record}', [$controller, 'show'])->middleware('farm.permission:record.view')->name('api.v1.records.show');
+        Route::post('/', [$controller, 'store'])->middleware(['farm.permission:record.create', 'throttle:record-write'])->name('api.v1.records.store');
+        Route::post('/{record}/reverse', [$controller, 'reverse'])->middleware(['farm.permission:record.reverse', 'throttle:record-write'])->name('api.v1.records.reverse');
+        Route::post('/{record}/attachments', [$controller, 'attach'])->middleware(['farm.permission:record.create', 'throttle:record-write'])->name('api.v1.records.attachments.store');
+        Route::get('/{record}/attachments/{attachment}', [$controller, 'download'])->middleware('farm.permission:record.view')->name('api.v1.records.attachments.download');
+    });
+
+    Route::get('/master/inventory-options', [InventoryController::class, 'options'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.options');
+    Route::prefix('inventory')->group(function () {
+        $c = InventoryController::class;
+        Route::get('/items', [$c, 'items'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.items.index');
+        Route::post('/items', [$c, 'storeItem'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.items.store');
+        Route::get('/items/{item}', [$c, 'showItem'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.items.show');
+        Route::patch('/items/{item}', [$c, 'updateItem'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.items.update');
+        Route::get('/items/{item}/movements', [$c, 'itemMovements'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.items.movements');
+        Route::get('/movements', [$c, 'movements'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.movements.index');
+        Route::get('/movements/{movement}', [$c, 'showMovement'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.movements.show');
+        Route::post('/movements/{movement}/reverse', [$c, 'reverse'])->middleware(['farm.permission:inventory.adjust', 'throttle:inventory-write'])->name('api.v1.inventory.movements.reverse');
+        Route::get('/lots', [$c, 'lots'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.lots.index');
+        Route::post('/stock-in', [$c, 'stockIn'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.stock-in');
+        Route::post('/stock-out', [$c, 'stockOut'])->middleware(['farm.permission:inventory.use', 'throttle:inventory-write'])->name('api.v1.inventory.stock-out');
+        Route::post('/adjustments', [$c, 'adjust'])->middleware(['farm.permission:inventory.adjust', 'throttle:inventory-write'])->name('api.v1.inventory.adjustments');
+        Route::post('/transfers', [$c, 'transfer'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.transfers');
+    });
+    Route::prefix('feed-formulas')->group(function () {
+        $c = FeedFormulaController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:inventory.view')->name('api.v1.feed-formulas.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.feed-formulas.store');
+        Route::get('/{formula}', [$c, 'show'])->middleware('farm.permission:inventory.view')->name('api.v1.feed-formulas.show');
+        Route::patch('/{formula}', [$c, 'update'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.feed-formulas.update');
     });
 
     // Per-user, per-farm notification switches (shell only)

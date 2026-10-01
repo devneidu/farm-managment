@@ -105,8 +105,8 @@ class ProductionCyclesTest extends TeamTestCase
         $this->assertNull($cycle['livestock']);
         $this->assertArrayNotHasKey('material_quantity', $cycle['crop']);
         $this->assertDatabaseCount('population_movements', 0);
-        $this->assertFalse(Schema::hasTable('inventory_movements'));
-        $this->assertFalse(Schema::hasTable('operational_records'));
+        $this->assertDatabaseCount('inventory_movements', 0);
+        $this->assertDatabaseCount('operational_records', 0);
         $detail = ProductionCycle::first()->crop;
         $this->assertSame('20000.000000', $detail->area_normalized_quantity);
         $this->assertArrayHasKey('snapshot', $detail->area_measurement);

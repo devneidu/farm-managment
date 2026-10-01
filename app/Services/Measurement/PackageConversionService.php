@@ -6,6 +6,7 @@ use App\Enums\ConversionContextType;
 use App\Events\Measurement\PackageConversionChanged;
 use App\Models\CropType;
 use App\Models\Farm;
+use App\Models\InventoryItem;
 use App\Models\MeasurementContext;
 use App\Models\PackageConversion;
 use App\Models\Unit;
@@ -129,6 +130,7 @@ class PackageConversionService
 
         $label = match ($type) {
             ConversionContextType::CropType => CropType::where('id', $id)->where('is_active', true)->value('name'),
+            ConversionContextType::InventoryItem => InventoryItem::ofFarm($farm)->where('id', $id)->where('is_active', true)->value('name'),
             ConversionContextType::Custom => MeasurementContext::ofFarm($farm)->where('id', $id)->where('is_active', true)->value('name'),
         };
 

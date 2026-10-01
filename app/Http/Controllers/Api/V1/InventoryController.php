@@ -1,0 +1,243 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Enums\InventoryCategory;
+use App\Enums\InventoryMovementType;
+use App\Enums\StockInReason;
+use App\Enums\StockOutReason;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Inventory\AdjustStockRequest;
+use App\Http\Requests\Inventory\ListItemsRequest;
+use App\Http\Requests\Inventory\ListLotsRequest;
+use App\Http\Requests\Inventory\ListMovementsRequest;
+use App\Http\Requests\Inventory\ReverseMovementRequest;
+use App\Http\Requests\Inventory\StockInRequest;
+use App\Http\Requests\Inventory\StockOutRequest;
+use App\Http\Requests\Inventory\StoreItemRequest;
+use App\Http\Requests\Inventory\TransferStockRequest;
+use App\Http\Requests\Inventory\UpdateItemRequest;
+use App\Http\Resources\InventoryItemResource;
+use App\Http\Resources\InventoryLotResource;
+use App\Http\Resources\InventoryMovementResource;
+use App\Services\Inventory\InventoryQueries;
+use App\Services\Inventory\InventoryService;
+use App\Support\Access\FarmContext;
+use App\Support\Api\ApiResponse;
+use Dedoc\Scramble\Attributes\Response;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+
+class InventoryController extends Controller
+{
+    private function page(LengthAwarePaginator $page): array
+    {
+        return ['current_page' => $page->currentPage(), 'per_page' => $page->perPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()];
+    }
+
+    /**
+     * Inventory option catalogue
+     *
+     * Requires inventory.view. Item categories, movement types and the stock-in / stock-out reason codes.
+     *
+     * @response array{data: array{categories: array<int, array{code: string, label: string}>, movement_types: string[], stock_in_reasons: string[], stock_out_reasons: string[]}, meta: object, message: null}
+     */
+    public function options(): JsonResponse
+    {
+        return ApiResponse::success([
+            'categories' => array_map(fn (InventoryCategory $c) => ['code' => $c->value, 'label' => $c->label()], InventoryCategory::cases()),
+            'movement_types' => array_column(InventoryMovementType::cases(), 'value'),
+            'stock_in_reasons' => array_column(StockInReason::cases(), 'value'),
+            'stock_out_reasons' => array_column(StockOutReason::cases(), 'value'),
+        ]);
+    }
+
+    /**
+     * List inventory items with derived stock
+     *
+     * Requires inventory.view. Current farm only. `stock` is derived from movements. Active items by default.
+     *
+     * @response array{data: InventoryItemResource[], meta: array{current_page:int,per_page:int,last_page:int,total:int}, message:null}
+     */
+    public function items(ListItemsRequest $request, FarmContext $ctx, InventoryQueries $queries): JsonResponse
+    {
+        $page = $queries->items($ctx, $request->validated());
+
+        return ApiResponse::success(InventoryItemResource::collection($page->getCollection())->resolve($request), $this->page($page));
+    }
+
+    /**
+     * Create an inventory item
+     *
+     * Requires inventory.manage. There is no opening quantity here: receive opening stock with POST /inventory/stock-in
+     * (reason opening_balance). Stock is never writable on an item.
+     */
+    #[Response(status: 201, type: 'array{data: \App\Http\Resources\InventoryItemResource, meta: object, message: string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"inventory_item_exists", request_id:string}')]
+    public function storeItem(StoreItemRequest $request, FarmContext $ctx, InventoryService $service): JsonResponse
+    {
+        return ApiResponse::success((new InventoryItemResource($service->createItem($ctx, $request->validated())))->resolve($request), message: 'Inventory item created.', status: 201);
+    }
+
+    /**
+     * Show an inventory item with stock by location and lot
+     *
+     * Requires inventory.view. Foreign items return 404. `balances` lists non-zero (location, lot) buckets.
+     *
+     * @response array{data: InventoryItemResource, meta: object, message: null}
+     */
+    public function showItem(Request $request, FarmContext $ctx, InventoryQueries $queries, string $item): JsonResponse
+    {
+        return ApiResponse::success((new InventoryItemResource($queries->item($ctx, $item)))->withBalances()->resolve($request));
+    }
+
+    /**
+     * Update item details
+     *
+     * Requires inventory.manage. Name, description, threshold and activation can change at any time. Category, stock unit and
+     * lot/expiry tracking lock after the first movement (409 item_has_movements). Deactivation needs zero stock (409 item_has_stock).
+     */
+    #[Response(status: 409, type: 'array{message:string, code:"item_has_movements"|"item_has_stock"|"inventory_item_exists", request_id:string}')]
+    public function updateItem(UpdateItemRequest $request, FarmContext $ctx, InventoryService $service, string $item): JsonResponse
+    {
+        return ApiResponse::success((new InventoryItemResource($service->updateItem($ctx, $item, $request->validated())))->resolve($request), message: 'Inventory item updated.');
+    }
+
+    /**
+     * List stock movements (ledger)
+     *
+     * Requires inventory.view. Newest recorded_at first. Filter by item, storage location, lot, type, source record and farm-local dates.
+     *
+     * @response array{data: InventoryMovementResource[], meta: array{current_page:int,per_page:int,last_page:int,total:int}, message:null}
+     */
+    public function movements(ListMovementsRequest $request, FarmContext $ctx, InventoryQueries $queries): JsonResponse
+    {
+        $page = $queries->movements($ctx, $request->validated());
+
+        return ApiResponse::success(InventoryMovementResource::collection($page->getCollection())->resolve($request), $this->page($page));
+    }
+
+    /**
+     * Movement history of one item
+     *
+     * Requires inventory.view. Same filters as GET /inventory/movements.
+     *
+     * @response array{data: InventoryMovementResource[], meta: array{current_page:int,per_page:int,last_page:int,total:int}, message:null}
+     */
+    public function itemMovements(ListMovementsRequest $request, FarmContext $ctx, InventoryQueries $queries, string $item): JsonResponse
+    {
+        $page = $queries->movements($ctx, $request->validated(), $item);
+
+        return ApiResponse::success(InventoryMovementResource::collection($page->getCollection())->resolve($request), $this->page($page));
+    }
+
+    /**
+     * Show one movement
+     *
+     * Requires inventory.view. Foreign movements return 404.
+     *
+     * @response array{data: InventoryMovementResource, meta: object, message: null}
+     */
+    public function showMovement(Request $request, FarmContext $ctx, InventoryQueries $queries, string $movement): JsonResponse
+    {
+        return ApiResponse::success((new InventoryMovementResource($queries->movement($ctx, $movement)))->resolve($request));
+    }
+
+    /**
+     * List lots with stock on hand
+     *
+     * Requires inventory.view. Lots with zero stock are hidden unless include_empty. Soonest expiry first. Expiry is compared with today in the farm timezone.
+     *
+     * @response array{data: InventoryLotResource[], meta: array{current_page:int,per_page:int,last_page:int,total:int}, message:null}
+     */
+    public function lots(ListLotsRequest $request, FarmContext $ctx, InventoryQueries $queries): JsonResponse
+    {
+        $page = $queries->lots($ctx, $request->validated());
+
+        return ApiResponse::success(InventoryLotResource::collection($page->getCollection())->resolve($request), $this->page($page));
+    }
+
+    /**
+     * Receive stock (stock-in)
+     *
+     * Requires inventory.manage. Appends a stock_in movement (reasons: opening_balance, purchase, donation, other; no supplier/expense effect in this phase).
+     * `components` are entered parts such as 12 bag + 18 kg; bag/crate/bottle resolve only through the item's own package conversion
+     * (POST /settings/package-conversions with context_type inventory_item), otherwise 422 conversion_not_configured.
+     * Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The storage location must be active with active ancestors.
+     * Required idempotency_key is farm-wide: the same key and payload returns the original movement (201); a changed payload is 409.
+     */
+    #[Response(status: 201, type: 'array{data: \App\Http\Resources\InventoryMovementResource, meta: object, message: string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"item_inactive"|"location_inactive"|"lot_expired"|"idempotency_conflict", request_id:string}')]
+    public function stockIn(StockInRequest $request, FarmContext $ctx, InventoryService $service): JsonResponse
+    {
+        return $this->single($request, $service->stockIn($ctx, $request->validated()), 'Stock received.');
+    }
+
+    /**
+     * Issue stock (stock-out)
+     *
+     * Requires inventory.use. Appends a negative stock_out movement (reasons: use, damaged, expired, wasted, other). Stock can never go negative:
+     * the (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id
+     * (no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.
+     */
+    #[Response(status: 201, type: 'array{data: \App\Http\Resources\InventoryMovementResource, meta: object, message: string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"insufficient_stock"|"item_inactive"|"lot_expired"|"idempotency_conflict", request_id:string, details?: object}')]
+    public function stockOut(StockOutRequest $request, FarmContext $ctx, InventoryService $service): JsonResponse
+    {
+        return $this->single($request, $service->stockOut($ctx, $request->validated()), 'Stock issued.');
+    }
+
+    /**
+     * Reconcile a physical count (adjustment)
+     *
+     * Requires inventory.adjust. The client sends the `expected` ledger balance and the `counted` physical stock of one (item, location, lot);
+     * the server stores counted minus expected as a signed adjustment movement (a zero difference is an audited verification). A stale
+     * expectation is 409 stock_changed. A count cannot precede existing movements of the same stock. There is no PATCH on quantity.
+     */
+    #[Response(status: 201, type: 'array{data: \App\Http\Resources\InventoryMovementResource, meta: object, message: string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"stock_changed"|"item_inactive"|"insufficient_stock"|"idempotency_conflict", request_id:string, details?: object}')]
+    public function adjust(AdjustStockRequest $request, FarmContext $ctx, InventoryService $service): JsonResponse
+    {
+        return $this->single($request, $service->adjust($ctx, $request->validated()), 'Adjustment recorded.');
+    }
+
+    /**
+     * Transfer stock between storage locations
+     *
+     * Requires inventory.manage. One business operation: a transfer_out and a transfer_in movement sharing `transfer_group_id`, written atomically;
+     * a retry with the same idempotency_key returns the same pair. The source must hold enough stock; the destination must be active.
+     * The same lot arrives at the destination. data.movements is [transfer_out, transfer_in].
+     *
+     * @response 201 array{data: array{transfer_group_id: string, movements: InventoryMovementResource[]}, meta: object, message: string}
+     */
+    #[Response(status: 409, type: 'array{message:string, code:"insufficient_stock"|"item_inactive"|"location_inactive"|"idempotency_conflict", request_id:string, details?: object}')]
+    public function transfer(TransferStockRequest $request, FarmContext $ctx, InventoryService $service): JsonResponse
+    {
+        $rows = $service->transfer($ctx, $request->validated());
+
+        return ApiResponse::success(['transfer_group_id' => $rows[0]->transfer_group_id, 'movements' => InventoryMovementResource::collection($rows)->resolve($request)], message: 'Stock transferred.', status: 201);
+    }
+
+    /**
+     * Reverse a movement
+     *
+     * Requires inventory.adjust. Appends compensating reversal movement(s) (both legs of a transfer together); the original stays visible with
+     * `reversed_by_movement_id`. Cannot reverse a reversal, reverse twice (409 movement_already_reversed) or reverse a record-driven effect
+     * (409 reverse_via_record: reverse the operational record). A reversal that would make stock negative is 409 insufficient_stock.
+     *
+     * @response 201 array{data: InventoryMovementResource[], meta: object, message: string}
+     */
+    #[Response(status: 409, type: 'array{message:string, code:"movement_already_reversed"|"reverse_via_record"|"insufficient_stock"|"idempotency_conflict", request_id:string}')]
+    public function reverse(ReverseMovementRequest $request, FarmContext $ctx, InventoryService $service, string $movement): JsonResponse
+    {
+        $rows = $service->reverse($ctx, $movement, $request->validated());
+
+        return ApiResponse::success(InventoryMovementResource::collection($rows)->resolve($request), message: 'Reversal recorded.', status: 201);
+    }
+
+    private function single(Request $request, array $rows, string $message): JsonResponse
+    {
+        return ApiResponse::success((new InventoryMovementResource($rows[0]))->resolve($request), message: $message, status: 201);
+    }
+}

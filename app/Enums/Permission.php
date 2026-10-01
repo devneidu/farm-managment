@@ -39,8 +39,18 @@ enum Permission: string
     case ProductionCycleClose = 'production_cycle.close';
     case ProductionCycleReopen = 'production_cycle.reopen';
 
+    case RecordView = 'record.view';
+    case RecordCreate = 'record.create';
+    case RecordReverse = 'record.reverse';
+    case RecordAdjust = 'record.adjust';
+
+    // Phase 9 - inventory: view (all roles) / use stock / manage items, stock-in, transfers, formulas / adjust and reverse
+    case InventoryView = 'inventory.view';
+    case InventoryUse = 'inventory.use';
+    case InventoryManage = 'inventory.manage';
+    case InventoryAdjust = 'inventory.adjust';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
-    case InventoryAdjust = 'inventory.adjust';
     case FinanceExpenseCreate = 'finance.expense.create';
 }

@@ -18,7 +18,7 @@ class PackageConversion extends Model
     use HasUuidV7;
 
     /** Relations that resolve the context label; eager load them when listing. */
-    public const CONTEXT_RELATIONS = ['measurementContext', 'cropType'];
+    public const CONTEXT_RELATIONS = ['measurementContext', 'cropType', 'inventoryItem'];
 
     protected $fillable = [
         'farm_id', 'context_type', 'context_id', 'package_unit_id', 'target_unit_id',
@@ -62,7 +62,14 @@ class PackageConversion extends Model
         return Attribute::get(fn () => match ($this->context_type) {
             ConversionContextType::Custom => $this->measurementContext?->name,
             ConversionContextType::CropType => $this->cropType?->name,
+            ConversionContextType::InventoryItem => $this->inventoryItem?->name,
         } ?? '');
+    }
+
+    /** Only meaningful when context_type = inventory_item. */
+    public function inventoryItem(): BelongsTo
+    {
+        return $this->belongsTo(InventoryItem::class, 'context_id');
     }
 
     public function conversionContext(): ConversionContext

@@ -6,7 +6,7 @@ use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Model;
 use LogicException;
 
-/** Phase 7 writes only the initial movement. Phase 8 must add movements, never edit this history. */
+/** Initial baseline and linked operational effects share one append-only population ledger. */
 class PopulationMovement extends Model
 {
     use HasUuidV7;

@@ -7,6 +7,66 @@ use Tests\TestCase;
 
 class ApiDocumentationTest extends TestCase
 {
+    public function test_phase_8_endpoints_schemas_permissions_and_errors_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /records', 'post /records', 'get /records/{record}', 'post /records/{record}/reverse', 'post /records/{record}/attachments', 'get /records/{record}/attachments/{attachment}', 'get /master/record-types', 'get /record-types/{type}/schema'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method];
+            $this->assertStringContainsString('record.', $operation['description']);
+            $this->assertArrayHasKey('401', $operation['responses']);
+            $this->assertArrayHasKey('403', $operation['responses']);
+        }
+        foreach (['201', '401', '403', '404', '409', '419', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/records']['post']['responses']);
+        }
+        $body = $spec['components']['schemas']['StoreRecordRequest'];
+        $this->assertSame('object', $body['properties']['details']['type']);
+        $this->assertContains('idempotency_key', $body['required']);
+        $this->assertContains('population_adjustment', $body['properties']['type']['enum']);
+        $this->assertArrayNotHasKey('farm_id', $body['properties']);
+        foreach (['population_delta', 'recorded_at', 'created_at', 'measurement', 'reversed_by_record_id', 'attachments'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['OperationalRecordResource']['properties']);
+        }
+        $this->assertArrayHasKey('application/octet-stream', $spec['paths']['/records/{record}/attachments/{attachment}']['get']['responses']['200']['content']);
+    }
+
+    public function test_phase_9_inventory_endpoints_schemas_permissions_and_errors_are_documented(): void
+    {
+        $spec = $this->spec();
+        $endpoints = [
+            'get /inventory/items', 'post /inventory/items', 'get /inventory/items/{item}', 'patch /inventory/items/{item}', 'get /inventory/items/{item}/movements',
+            'get /inventory/movements', 'get /inventory/movements/{movement}', 'post /inventory/movements/{movement}/reverse', 'get /inventory/lots',
+            'post /inventory/stock-in', 'post /inventory/stock-out', 'post /inventory/adjustments', 'post /inventory/transfers', 'get /master/inventory-options',
+            'get /feed-formulas', 'post /feed-formulas', 'get /feed-formulas/{formula}', 'patch /feed-formulas/{formula}',
+        ];
+        foreach ($endpoints as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method] ?? null;
+            $this->assertNotNull($operation, $endpoint);
+            $this->assertStringContainsString('inventory.', $operation['description'] ?? '', $endpoint.' documents its permission');
+            $this->assertArrayHasKey('401', $operation['responses']);
+            $this->assertArrayHasKey('403', $operation['responses']);
+        }
+        foreach (['201', '401', '403', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/inventory/stock-out']['post']['responses']);
+        }
+        $this->assertContains('idempotency_key', $spec['components']['schemas']['StockInRequest']['required']);
+        $this->assertContains('recorded_at', $spec['components']['schemas']['StockOutRequest']['required']);
+        foreach (['quantity', 'quantity_on_hand', 'farm_id'] as $forbidden) {
+            $this->assertArrayNotHasKey($forbidden, $spec['components']['schemas']['StockInRequest']['properties']);
+            $this->assertArrayNotHasKey($forbidden, $spec['components']['schemas']['StoreItemRequest']['properties']);
+        }
+        foreach (['stock', 'is_low_stock', 'stock_unit', 'tracks_lots'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['InventoryItemResource']['properties']);
+        }
+        foreach (['quantity_delta', 'quantity_delta_display', 'measurement', 'recorded_at', 'created_at', 'operational_record_id', 'transfer_group_id', 'reverses_movement_id', 'reversed_by_movement_id'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['InventoryMovementResource']['properties']);
+        }
+        $this->assertArrayHasKey('inventory_movement_id', $spec['components']['schemas']['OperationalRecordResource']['properties']);
+        $this->assertContains('inventory_item', $spec['components']['schemas']['StorePackageConversionRequest']['properties']['context_type']['enum'] ?? ['inventory_item']);
+    }
+
     private static ?array $cachedSpec = null;
 
     /** The export is slow and memory hungry; generate it once per run (routes do not change between tests). */

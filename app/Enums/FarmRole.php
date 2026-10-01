@@ -31,14 +31,15 @@ enum FarmRole: string
             self::Manager => [
                 Permission::FarmView, Permission::FarmUpdate,
                 Permission::TeamView, Permission::TeamInvite, Permission::TeamUpdateRole, Permission::TeamRemove,
-                Permission::LivestockBatchCreate, Permission::InventoryAdjust,
+                Permission::LivestockBatchCreate, Permission::InventoryAdjust, Permission::InventoryView, Permission::InventoryUse, Permission::InventoryManage,
                 Permission::SubscriptionView,
+                Permission::RecordView, Permission::RecordCreate, Permission::RecordReverse, Permission::RecordAdjust,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
                 Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,
             ],
-            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView],
+            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse],
+            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView],
         };
     }
 

@@ -17,6 +17,7 @@ use App\Models\Breed;
 use App\Models\CropType;
 use App\Models\CropVariety;
 use App\Models\Farm;
+use App\Models\OperationalRecord;
 use App\Models\OperationType;
 use App\Models\Place;
 use App\Models\PopulationMovement;
@@ -28,6 +29,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Services\Locations\PlaceService;
 use App\Services\Measurement\QuantityNormalizer;
+use App\Services\Records\PopulationLedger;
 use App\Services\Subscription\EntitlementService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -257,6 +259,10 @@ class CycleService
                     $this->invalid('end_date', 'Actual completion date cannot be in the future.');
                 }
                 $this->reconcile($cycle);
+                $endExclusive = CarbonImmutable::parse($data['end_date'], $ctx->farm->timezone)->addDay()->startOfDay()->utc();
+                if (OperationalRecord::where('production_cycle_id', $cycle->id)->where('recorded_at', '>=', $endExclusive)->exists()) {
+                    $this->invalid('end_date', 'Completion cannot precede recorded operational events.');
+                }
             } else {
                 $this->entitlements->assertCapacity($ctx->farm, Limit::ActiveCycles);
             }
@@ -269,16 +275,11 @@ class CycleService
         return $this->find($ctx->farm, $id);
     }
 
-    /** Phase 8 must extend reconciliation for its new movement types and linked records under the same locks. */
+    /** Shared ledger reconciliation under the farm/cycle locks, including operational effects. */
     public function reconcile(ProductionCycle $cycle): void
     {
-        if ($cycle->kind === CycleKind::Livestock) {
-            $rows = $cycle->movements()->lockForUpdate()->get();
-            $initial = $rows->where('source_key', 'initial');
-            if (! $cycle->livestock || $initial->count() !== 1 || $initial->first()->type !== 'initial' || $initial->first()->quantity !== $cycle->livestock->initial_population || $rows->count() !== 1) {
-                throw new ApiHttpException(409, 'cycle_reconciliation_failed', 'The population ledger does not match the supported starting baseline.');
-            }
-        } elseif (! $cycle->crop || $cycle->crop->initial_planting_units < 1) {
+        app(PopulationLedger::class)->reconcile($cycle);
+        if ($cycle->kind === CycleKind::Crop && (! $cycle->crop || $cycle->crop->initial_planting_units < 1)) {
             throw new ApiHttpException(409, 'cycle_reconciliation_failed', 'The crop starting baseline is missing or invalid.');
         }
     }

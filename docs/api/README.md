@@ -171,7 +171,10 @@ Roles: `owner`, `manager`, `farm_worker`, `finance` (labels: Owner, Manager, Far
 | `farm.view` | x | x | x | x |
 | `farm.update` | x | x | | |
 | `team.view` / `team.invite` / `team.update_role` / `team.remove` | x | x | | |
-| `livestock.batch.create`, `inventory.adjust` (reserved) | x | x | | |
+| `inventory.view` | x | x | x | x |
+| `inventory.use` | x | x | x | |
+| `inventory.manage`, `inventory.adjust` | x | x | | |
+| `livestock.batch.create` (reserved) | x | x | | |
 | `finance.expense.create` (reserved) | x | | | x |
 | `subscription.view` | x | x | | x |
 | `subscription.manage` | x | | | |
@@ -365,7 +368,7 @@ an id, never typed text. `label` is display only and may change:
 | `crop_type` | an active crop's id | `GET /master/crops` (e.g. Maize) |
 | `custom` | one of THIS farm's active measurement contexts | `GET /settings/measurement-contexts`, or create one with `POST` ("+ Add") |
 
-`inventory_item` (an item's UUID) will be added as a third type when inventory exists; it needs no change to this contract. A custom context does **not**
+`inventory_item` (an item's UUID, Phase 9) is now a third `context_type`: see [Phase 9 inventory](PHASE-09-INVENTORY.md). A custom context does **not**
 automatically become an inventory item later.
 
 ```json
@@ -744,13 +747,13 @@ Breed/variety summaries contain `id,name,is_active`. Assigned production area is
 
 PATCH allows `name`, `notes`, `production_area_id`, `expected_end_date`; crops additionally allow `area`, `expected_germination_date`. Omission preserves values; null clears optional fields. Example: `{"name":"Broilers A","production_area_id":null,"notes":"Moved out"}`. An unchanged area may remain historically inactive; a new area must be selectable. No-op PATCH produces no lifecycle event.
 
-Starting identity and baseline are **immutable from creation**: kind, operation, species, breed, initial population, start date, crop, variety, planting material/unit types, initial planting units, planting date. Sending any of these in PATCH returns `409 baseline_locked`, even if unchanged. The source provides no approved pre-activity baseline correction workflow; Phase 7 does not invent one. Reopening does not unlock this baseline. Phase 8 must implement approved corrections as explainable adjustments and extend reconciliation, not add a free-form current-population editor.
+Starting identity and baseline are **immutable from creation**: kind, operation, species, breed, initial population, start date, crop, variety, planting material/unit types, initial planting units, planting date. Sending any of these in PATCH returns `409 baseline_locked`, even if unchanged. The source provides no approved pre-activity baseline correction workflow; Phase 7 does not invent one. Reopening does not unlock this baseline. Phase 8 implements explainable population adjustments and reversals through the operational-record endpoints; the initial baseline remains immutable.
 
-Current livestock population is SUM(population_movements.quantity). Creation inserts exactly one `initial` movement in the same transaction; its `recorded_at` is midnight on the starting domain date in the farm timezone, stored in UTC, separate from `created_at`. No editable current-population column exists. No operational population event types are implemented yet.
+Current livestock population is SUM(population_movements.quantity). Creation inserts exactly one `initial` movement in the same transaction; its `recorded_at` is midnight on the starting domain date in the farm timezone, stored in UTC, separate from `created_at`. No editable current-population column exists. Phase 8 adds mortality, reconciliation adjustments and reversal movements to this same ledger.
 
-Statuses: **active → closed → active** only. Close body: `{"end_date":"2026-09-20","reason":"Season finished"}`; reopen body: `{"reason":"Resume work"}`. Reasons are required, up to 2000 characters. Close date must be on/after start and on/before today in farm timezone. Closing reconciles the current supported baseline/initial movement, protects ordinary edits, and releases active-cycle capacity. A nonzero livestock population does not automatically become an exit or sale; closure does not dispose of animals. Reopening clears the current `end_date`; prior dates/reasons remain in activity. Repeated close/reopen in the same state returns `409 invalid_status_transition`, without duplicate effects.
+Statuses: **active → closed → active** only. Close body: `{"end_date":"2026-09-20","reason":"Season finished"}`; reopen body: `{"reason":"Resume work"}`. Reasons are required, up to 2000 characters. Close date must be on/after start and on/before today in farm timezone. Closing reconciles the baseline and linked operational movements, rejects end dates before recorded activity, protects ordinary edits/new records, and releases active-cycle capacity. A nonzero livestock population does not automatically become an exit or sale; closure does not dispose of animals. Reopening clears the current `end_date`; prior dates/reasons remain in activity. Repeated close/reopen in the same state returns `409 invalid_status_transition`, without duplicate effects.
 
-Lifecycle events are appended transactionally for created/updated/closed/reopened, with actor UUID, changes `{field:{old,new}}`, reason, `recorded_at` and `created_at`. Area reassignments preserve both IDs. Creation snapshots capture both common fields and the relevant subtype baseline. Changes to subtype fields appear under `crop` or `livestock` as before/after objects, including stored measurement metadata. `CycleChanged` dispatches after commit only. This is cycle activity, not the future global audit or operational-record system.
+Lifecycle events are appended transactionally for created/updated/closed/reopened, with actor UUID, changes `{field:{old,new}}`, reason, `recorded_at` and `created_at`. Area reassignments preserve both IDs. Creation snapshots capture both common fields and the relevant subtype baseline. Changes to subtype fields appear under `crop` or `livestock` as before/after objects, including stored measurement metadata. `CycleChanged` dispatches after commit only. Operational activity is available separately through /records; global audit remains deferred.
 
 Example activity envelope:
 
@@ -791,4 +794,12 @@ Conflict example:
 {"message":"Reopen the cycle before making ordinary edits.","code":"cycle_closed","request_id":"<request-uuid>"}
 ```
 
-Server-owned `id,farm_id,reference,status,current_population,end_date,is_active` and `material_quantity` are rejected in create/PATCH. Do not use inactive master flags as cycle lifecycle status. Fields from the opposite kind are rejected on creation. Attachments, mortality, births, transfers, adjustments, survival checks, feeding, inventory, harvest, sales, finance and the generic operational-record engine remain deferred. Phase 8 has not been implemented.
+Server-owned `id,farm_id,reference,status,current_population,end_date,is_active` and `material_quantity` are rejected in create/PATCH. Do not use inactive master flags as cycle lifecycle status. Fields from the opposite kind are rejected on creation. Phase 8 records, mortality, adjustments, reversals, feeding and attachments are documented below. Birth/hatch workflows, transfers, survival checks, harvest, sales and finance remain deferred to their respective phases.
+
+## 21. Operational records and population ledger (Phase 8)
+
+The complete frontend integration contract is [Phase 8 records](PHASE-08-RECORDS.md): typed events, schemas, permissions, retries, population reconciliation, reversals, measurement snapshots, private attachments, examples and errors. These endpoints are also included in openapi.json.
+
+## 22. Inventory, lots, stock movements and feed formulas (Phase 9)
+
+The complete frontend integration contract is [Phase 9 inventory](PHASE-09-INVENTORY.md): items, lots/expiry, the movement ledger, stock-in/out, count adjustments, transfers, reversals, package conversion contexts, feed formulas, the optional `feed_use` stock link, permissions, retries, errors and examples. These endpoints are also included in openapi.json.

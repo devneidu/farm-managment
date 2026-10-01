@@ -83,7 +83,7 @@ class ProductionCycleController extends Controller
     /**
      * Close production cycle
      *
-     * Requires production_cycle.close. active -> closed only. Checks baseline/initial movement reconciliation.
+     * Requires production_cycle.close. active -> closed only. Reconciles baseline plus linked operational movements.
      * end_date must be between start/planting date and today in farm timezone. Reason required. Preserves population;
      * does not create a sale, harvest, exit, inventory or finance record. Locks ordinary edits and releases capacity.
      *
@@ -126,7 +126,7 @@ class ProductionCycleController extends Controller
      * Cycle lifecycle activity
      *
      * Requires production_cycle.view. Creation, descriptive/area updates, close and reopen only; newest first.
-     * Operational records will be introduced in Phase 8. page >=1, per_page 1–100 (default 50).
+     * Operational records are available separately through /records. page >=1, per_page 1–100 (default 50).
      *
      * @response array{data: ProductionCycleEventResource[], meta: array{current_page: int, per_page: int, last_page: int, total: int}, message: null}
      */

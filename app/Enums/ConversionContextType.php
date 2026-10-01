@@ -10,5 +10,6 @@ namespace App\Enums;
 enum ConversionContextType: string
 {
     case CropType = 'crop_type'; // id = crop_types.id (Phase 4 master data, e.g. maize); must be an active crop
+    case InventoryItem = 'inventory_item'; // id = inventory_items.id (Phase 9); must be an active item of the farm
     case Custom = 'custom';      // id = measurement_contexts.id, a farm-owned context (e.g. "Feed Grower Mash", "Eggs")
 }
