@@ -10932,6 +10932,13 @@
                         }
                     },
                     {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
+                        }
+                    },
+                    {
                         "name": "available",
                         "in": "query",
                         "schema": {
@@ -11092,6 +11099,13 @@
                         "in": "query",
                         "schema": {
                             "$ref": "#/components/schemas/OperationCategory"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
                         }
                     },
                     {
@@ -11422,6 +11436,13 @@
                         }
                     },
                     {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
+                        }
+                    },
+                    {
                         "name": "available",
                         "in": "query",
                         "schema": {
@@ -11613,6 +11634,13 @@
                         }
                     },
                     {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
+                        }
+                    },
+                    {
                         "name": "available",
                         "in": "query",
                         "schema": {
@@ -11773,6 +11801,13 @@
                         "in": "query",
                         "schema": {
                             "$ref": "#/components/schemas/OperationCategory"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
                         }
                     },
                     {
@@ -24235,6 +24270,19 @@
                 ],
                 "title": "InviteMemberRequest"
             },
+            "LivestockGroup": {
+                "type": "string",
+                "description": "Product grouping of livestock species for selectors and forms (a presentation/product classification only: it never drives biological behaviour, which comes from species capabilities). Fish/aquaculture species have no group.\n",
+                "enum": [
+                    "poultry",
+                    "small_ruminants",
+                    "large_ruminants",
+                    "non_ruminant_mammals",
+                    "equines",
+                    "micro_livestock"
+                ],
+                "title": "LivestockGroup"
+            },
             "LoginRequest": {
                 "type": "object",
                 "properties": {
@@ -25608,6 +25656,24 @@
                     "is_active": {
                         "type": "boolean"
                     },
+                    "livestock_group": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "code",
+                            "name"
+                        ]
+                    },
                     "operation": {
                         "type": "object",
                         "properties": {
@@ -25647,6 +25713,7 @@
                     "code",
                     "name",
                     "is_active",
+                    "livestock_group",
                     "operation",
                     "capability_codes"
                 ],

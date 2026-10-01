@@ -55,12 +55,12 @@ class MasterDataApiTest extends MasterDataTestCase
         $this->signInAs($this->owner);
 
         $this->getJson('/api/v1/master/species?operation=poultry')
-            ->assertOk()->assertJsonCount(1, 'data')
+            ->assertOk()->assertJsonCount(8, 'data')
             ->assertJsonPath('data.0.code', 'chicken')
             ->assertJsonPath('data.0.operation.category', 'livestock');
 
         $this->getJson('/api/v1/master/species?category=aquaculture')->assertOk()->assertJsonPath('data.0.code', 'fish');
-        $this->getJson('/api/v1/master/species')->assertOk()->assertJsonCount(7, 'data');
+        $this->getJson('/api/v1/master/species')->assertOk()->assertJsonCount(22, 'data');
         $this->getJson('/api/v1/master/species?operation=crops')->assertOk()->assertJsonCount(0, 'data');
     }
 
@@ -82,7 +82,7 @@ class MasterDataApiTest extends MasterDataTestCase
         $caps = collect($response->json('data.capabilities'))->keyBy('code');
         $this->assertCount(11, $caps);
         $this->assertTrue($caps['supports_pregnancy']['enabled']);
-        $this->assertSame(['gestation_days' => 283], $caps['supports_pregnancy']['reference']);
+        $this->assertEquals(['gestation_days' => 283, 'gestation_days_min' => 280, 'gestation_days_max' => 285, 'approximate' => true], $caps['supports_pregnancy']['reference']);
         $this->assertFalse($caps['supports_incubation']['enabled']);
         $this->assertNull($caps['supports_incubation']['reference']);
         $response->assertJsonPath('data.operation.code', 'cattle');
@@ -169,7 +169,7 @@ class MasterDataApiTest extends MasterDataTestCase
     {
         $this->signInAs($this->owner);
         $this->getJson('/api/v1/farm/operations')->assertOk()->assertJsonPath('data.configured', false)->assertJsonCount(0, 'data.operations');
-        $this->getJson('/api/v1/master/species?available=true')->assertOk()->assertJsonCount(7, 'data');
+        $this->getJson('/api/v1/master/species?available=true')->assertOk()->assertJsonCount(22, 'data');
 
         $poultry = OperationType::where('code', 'poultry')->value('id');
         $crops = OperationType::where('code', 'crops')->value('id');
@@ -179,8 +179,8 @@ class MasterDataApiTest extends MasterDataTestCase
 
         // disabled operations are filtered out of "available" selectors, but not removed from the full catalogue
         $available = collect($this->getJson('/api/v1/master/species?available=true')->json('data'))->pluck('code')->all();
-        $this->assertSame(['chicken'], $available);
-        $this->getJson('/api/v1/master/species')->assertJsonCount(7, 'data');
+        $this->assertSame(['chicken', 'turkey', 'guinea_fowl', 'duck', 'goose', 'quail', 'pigeon', 'ostrich'], $available);
+        $this->getJson('/api/v1/master/species')->assertJsonCount(22, 'data');
         $this->assertSame(['maize', 'cassava', 'yam', 'vegetables', 'fruits'], collect($this->getJson('/api/v1/master/crops?available=true')->json('data'))->pluck('code')->all());
 
         $ops = collect($this->getJson('/api/v1/master/farm-operations')->assertJsonPath('meta.farm_operations_configured', true)->json('data'));
@@ -190,7 +190,7 @@ class MasterDataApiTest extends MasterDataTestCase
 
         // clearing returns to unconfigured
         $this->putJson('/api/v1/farm/operations', ['operation_ids' => []])->assertOk()->assertJsonPath('data.configured', false);
-        $this->getJson('/api/v1/master/species?available=true')->assertJsonCount(7, 'data');
+        $this->getJson('/api/v1/master/species?available=true')->assertJsonCount(22, 'data');
     }
 
     public function test_farm_operations_are_farm_scoped_and_validated(): void

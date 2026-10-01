@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\MasterData;
 
+use App\Enums\LivestockGroup;
 use App\Enums\OperationCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,17 +33,19 @@ class MasterDataListRequest extends FormRequest
         return [
             'operation' => ['sometimes', 'string', 'max:64'],
             'category' => ['sometimes', 'string', Rule::enum(OperationCategory::class)],
+            'group' => ['sometimes', 'string', Rule::enum(LivestockGroup::class)],
             'available' => ['sometimes', 'boolean'],
             'include_inactive' => ['sometimes', 'boolean'],
         ];
     }
 
-    /** @return array{operation?: string, category?: string, available: bool, include_inactive: bool} */
+    /** @return array{operation?: string, category?: string, group?: string, available: bool, include_inactive: bool} */
     public function filters(): array
     {
         return [
             'operation' => $this->validated('operation'),
             'category' => $this->validated('category'),
+            'group' => $this->validated('group'),
             'available' => $this->boolean('available'),
             'include_inactive' => $this->boolean('include_inactive'),
         ];

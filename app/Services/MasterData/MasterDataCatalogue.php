@@ -27,11 +27,12 @@ class MasterDataCatalogue
             ->get();
     }
 
-    /** @param  array{operation?: string|null, category?: string|null, available?: bool|null, include_inactive?: bool|null}  $f */
+    /** @param  array{operation?: string|null, category?: string|null, group?: string|null, available?: bool|null, include_inactive?: bool|null}  $f */
     public function species(Farm $farm, array $f = []): Collection
     {
         $query = Species::query()->ordered()->with(['operationType', 'speciesCapabilities.capability'])
-            ->when(empty($f['include_inactive']), fn ($q) => $q->active());
+            ->when(empty($f['include_inactive']), fn ($q) => $q->active())
+            ->when(! empty($f['group']), fn ($q) => $q->where('livestock_group', $f['group']));
 
         $this->filterByOperation($query, $farm, $f);
 

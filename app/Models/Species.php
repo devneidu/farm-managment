@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\LivestockGroup;
 use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -14,11 +15,11 @@ class Species extends Model
 
     protected $table = 'species';
 
-    protected $fillable = ['operation_type_id', 'code', 'name', 'sort_order', 'is_active'];
+    protected $fillable = ['operation_type_id', 'code', 'name', 'livestock_group', 'sort_order', 'is_active'];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean', 'sort_order' => 'integer'];
+        return ['is_active' => 'boolean', 'sort_order' => 'integer', 'livestock_group' => LivestockGroup::class];
     }
 
     public function scopeActive(Builder $query): Builder

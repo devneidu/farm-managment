@@ -25,11 +25,12 @@ class SystemMasterDataTest extends MasterDataTestCase
     {
         $this->assertSame(
             ['poultry', 'cattle', 'goat', 'sheep', 'pig', 'rabbit', 'fishery', 'crops'],
-            OperationType::orderBy('sort_order')->pluck('code')->all(),
+            OperationType::whereIn('code', ['poultry', 'cattle', 'goat', 'sheep', 'pig', 'rabbit', 'fishery', 'crops'])->orderBy('sort_order')->pluck('code')->all(),
         );
+        // The Phase 4 species are still present (the livestock catalogue extends them: see LivestockCatalogueTest).
         $this->assertSame(
             ['chicken', 'cattle', 'goat', 'sheep', 'pig', 'rabbit', 'fish'],
-            Species::orderBy('sort_order')->pluck('code')->all(),
+            Species::whereIn('code', ['chicken', 'cattle', 'goat', 'sheep', 'pig', 'rabbit', 'fish'])->orderBy('sort_order')->pluck('code')->all(),
         );
         $this->assertSame(
             ['maize', 'cassava', 'yam', 'vegetables', 'fruits'],
@@ -101,11 +102,9 @@ class SystemMasterDataTest extends MasterDataTestCase
             ->whereHas('capability', fn ($q) => $q->where('code', $c->value))->first()?->reference_config;
 
         $this->assertSame(['incubation_days' => 21], $reference('chicken', Capability::SupportsIncubation));
-        $this->assertSame(['gestation_days' => 283], $reference('cattle', Capability::SupportsPregnancy));
-        $this->assertNull($reference('goat', Capability::SupportsPregnancy), 'goat gestation is not documented, so not seeded');
-
-        // The only seeded reference values are those two.
-        $this->assertSame(2, SpeciesCapability::whereNotNull('reference_config')->count());
+        // Cattle keeps its documented default 283 and gains the supplied range (see LivestockCatalogueTest).
+        $this->assertSame(283, $reference('cattle', Capability::SupportsPregnancy)['gestation_days']);
+        $this->assertSame(21, $reference('chicken', Capability::SupportsIncubation)['incubation_days']);
         $this->assertSame(count(Capability::cases()), MasterCapability::count());
     }
 

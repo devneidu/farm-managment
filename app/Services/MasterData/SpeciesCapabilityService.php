@@ -48,6 +48,18 @@ class SpeciesCapabilityService
             });
         }
 
+        // A default, when present, must sit inside the range.
+        foreach (array_keys($rules) as $key) {
+            $base = substr($key, 0, -4);
+            if (str_ends_with($key, '_min') && isset($config[$base], $config[$key], $config[$base.'_max'])) {
+                $validator->after(function ($v) use ($config, $base) {
+                    if ($config[$base] < $config[$base.'_min'] || $config[$base] > $config[$base.'_max']) {
+                        $v->errors()->add($base, 'The default must lie within the min/max range.');
+                    }
+                });
+            }
+        }
+
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }

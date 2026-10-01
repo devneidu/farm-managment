@@ -19,6 +19,7 @@ class SpeciesResource extends JsonResource
     /**
      * @return array{
      *     id: string, code: string, name: string, is_active: bool,
+     *     livestock_group: array{code: string, name: string}|null,
      *     operation: array{id: string, code: string, name: string, category: string, tracking_model: string},
      *     capability_codes: string[]
      * }
@@ -30,6 +31,7 @@ class SpeciesResource extends JsonResource
             'code' => $this->code,
             'name' => $this->name,
             'is_active' => $this->is_active,
+            'livestock_group' => $this->livestock_group ? ['code' => $this->livestock_group->value, 'name' => $this->livestock_group->label()] : null,
             'operation' => OperationTypeResource::summary($this->operationType),
             'capability_codes' => $this->speciesCapabilities
                 ->filter(fn ($c) => $c->enabled)

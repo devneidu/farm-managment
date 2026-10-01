@@ -22,7 +22,7 @@ class SpeciesCapabilitiesResource extends JsonResource
      * @return array{
      *     species: array{id: string, code: string, name: string},
      *     operation: array{id: string, code: string, name: string, category: string, tracking_model: string},
-     *     capabilities: array<int, array{code: string, label: string, enabled: bool, reference: array<string, int>|null}>
+     *     capabilities: array<int, array{code: string, label: string, enabled: bool, reference: array<string, int|bool|string>|null}>
      * }
      */
     public function toArray(Request $request): array

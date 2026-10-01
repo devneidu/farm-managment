@@ -31,9 +31,27 @@ enum Capability: string
     public function configRules(): array
     {
         return match ($this) {
-            self::SupportsIncubation => ['incubation_days' => ['integer', 'min:1', 'max:365']],
-            self::SupportsPregnancy => ['gestation_days' => ['integer', 'min:1', 'max:1000']],
+            self::SupportsIncubation => self::periodRules('incubation_days', 365),
+            self::SupportsPregnancy => self::periodRules('gestation_days', 1000),
             default => [],
         };
+    }
+
+    /**
+     * A biological reference period: an optional single default (`<key>`), an optional inclusive range
+     * (`<key>_min` + `<key>_max`, only together), `approximate` (the source gives "about N") and a short `note`
+     * (e.g. "varies by caste"). A range is never collapsed to a midpoint; whether a default exists is explicit.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function periodRules(string $key, int $max): array
+    {
+        return [
+            $key => ['integer', 'min:1', 'max:'.$max],
+            $key.'_min' => ['integer', 'min:1', 'max:'.$max, 'required_with:'.$key.'_max'],
+            $key.'_max' => ['integer', 'min:1', 'max:'.$max, 'required_with:'.$key.'_min', 'gte:'.$key.'_min'],
+            'approximate' => ['boolean'],
+            'note' => ['string', 'max:255'],
+        ];
     }
 }
