@@ -308,7 +308,7 @@ class OperationalRecordsTest extends TeamTestCase
 
     public function test_schemas_listing_and_date_filters(): void
     {
-        $this->getJson('/api/v1/master/record-types')->assertOk()->assertJsonCount(13, 'data');
+        $this->getJson('/api/v1/master/record-types')->assertOk()->assertJsonCount(20, 'data');
         $this->getJson('/api/v1/record-types/mortality/schema')->assertOk()->assertJsonPath('data.population_effect', 'decrease');
         $this->getJson('/api/v1/record-types/not-a-type/schema')->assertNotFound();
         $this->record($this->payload());

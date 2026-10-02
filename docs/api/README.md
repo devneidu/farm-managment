@@ -815,3 +815,7 @@ The complete frontend integration contract is [Phase 11 breeding](PHASE-11-BREED
 ## 25. Work: tasks, schedules, templates and calendar (Phase 12)
 
 The complete frontend integration contract is [Phase 12 work](PHASE-12-WORK.md): tasks with a derived `due_state`, recurrence, templates, assignment, record-linked completion (completing never creates a record), the calendar read model, permissions and errors. These endpoints are also included in openapi.json.
+
+## 26. Crop operations and outputs (Phase 13)
+
+The complete frontend integration contract is [Phase 13 crop operations](PHASE-13-CROP-INPUTS.md): land preparation, planting, establishment/survival (50 planted, 47 established = 94%), growth stage, crop loss, crop harvest (optionally into `produce` stock), fertilizer and pesticide/herbicide applications with linked stock, the crop project detail `GET /production-cycles/{cycle}/crop`, plot-scoped record listing, package/lot rules, reversal/correction and errors. Everything except the detail endpoint is a record type on `/records`; these endpoints are also included in openapi.json.

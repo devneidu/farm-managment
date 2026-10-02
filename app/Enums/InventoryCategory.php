@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-/** Shared movement infrastructure; categories carry no extra schema in Phase 9 (medicine/crop-input metadata arrive later). */
+/** Shared movement infrastructure; categories carry no extra schema (produce receives crop harvests in Phase 13). */
 enum InventoryCategory: string
 {
     case Feed = 'feed';
@@ -10,6 +10,7 @@ enum InventoryCategory: string
     case SeedPlantingMaterial = 'seed_planting_material';
     case FertilizerAgrochemical = 'fertilizer_agrochemical';
     case GeneralSupply = 'general_supply';
+    case Produce = 'produce';
 
     public function label(): string
     {
@@ -19,6 +20,7 @@ enum InventoryCategory: string
             self::SeedPlantingMaterial => 'Seed / planting material',
             self::FertilizerAgrochemical => 'Fertilizer / agrochemical',
             self::GeneralSupply => 'General supply',
+            self::Produce => 'Produce',
         };
     }
 }

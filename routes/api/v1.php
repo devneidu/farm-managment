@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\BreedingProjectController;
 use App\Http\Controllers\Api\V1\CalendarController;
+use App\Http\Controllers\Api\V1\CropProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\FarmController;
@@ -182,6 +183,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/', [$controller, 'index'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.index');
         Route::get('/{cycle}', [$controller, 'show'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.show');
         Route::get('/{cycle}/summary', [$controller, 'summary'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.summary');
+        Route::get('/{cycle}/crop', [CropProjectController::class, 'show'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.crop');
         Route::get('/{cycle}/activity', [$controller, 'activity'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.activity');
         foreach (['store' => 'create', 'update' => 'update', 'close' => 'close', 'reopen' => 'reopen'] as $action => $permission) {
             $path = match ($action) {

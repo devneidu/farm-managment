@@ -68,6 +68,7 @@ class RecordService
                     throw new ApiHttpException(409, 'invalid_correction', 'Replace a reversed record once, using the same record type and cycle.');
                 }
             }
+            $details = $this->cropEvent($cycle, $data['type'], $details);
             $current = $this->ledger->reconcile($cycle);
             $delta = 0;
             $measurement = null;
@@ -92,24 +93,51 @@ class RecordService
                 $measurement = $this->quantities->normalize($ctx->farm, [['quantity' => $details['actual_population'], 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
             } elseif (isset($details['components'])) {
                 $context = isset($details['context']) ? new ConversionContext(ConversionContextType::from($details['context']['type']), $details['context']['id']) : null;
+                $stock = $definition['stock'] ?? null;
                 if (isset($details['inventory'])) {
                     // Linked stock: the quantity is measured against the inventory item, so its packages (and only its packages) apply.
                     $ctx->authorize(Permission::InventoryUse);
-                    $stockItem = $this->inventory->feedItemForRecord($ctx, $details['inventory']);
+                    $stockItem = $stock !== null ? $this->inventory->cropStockItemForRecord($ctx, $details['inventory'], $stock) : $this->inventory->feedItemForRecord($ctx, $details['inventory']);
                     if ($context !== null) {
-                        $this->invalid('details.context', 'Feed linked to inventory is measured against the inventory item; omit context.');
+                        $this->invalid('details.context', 'Stock linked to inventory is measured against the inventory item; omit context.');
                     }
                     $context = new ConversionContext(ConversionContextType::InventoryItem, $stockItem->id);
+                    if ($stock !== null) {
+                        // The item decides the dimension (a liquid is measured by volume, seed may be counted); quantity is never area or planting units.
+                        $definition['dimension'] = $stockItem->dimension();
+                        $definition['unit'] = $stockItem->stockUnit->code;
+                        if (isset($definition['fields']['input_name'])) {
+                            $details['input_name'] ??= $stockItem->name;
+                        }
+                    }
                 }
                 if ($context !== null) {
                     $context = app(PackageConversionService::class)->resolveContext($ctx->farm, $context->type, $context->id);
                 }
-                $measurement = $this->quantities->normalize($ctx->farm, $details['components'], $context, $definition['unit'], [$definition['dimension']])->toArray();
+                $dimensions = [$definition['dimension']];
+                if ($stock !== null && ! isset($stockItem)) {
+                    // No stock link: the entered unit decides among the dimensions this event allows; never a guessed package size.
+                    $dimensions = $stock['dimensions'];
+                    $definition['unit'] = null;
+                }
+                $measurement = $this->quantities->normalize($ctx->farm, $details['components'], $context, $definition['unit'], $dimensions)->toArray();
+            }
+            if ($data['type'] === 'crop_harvest' && ($measurement['normalized']['quantity'] === '0' || str_starts_with((string) $measurement['normalized']['quantity'], '-'))) {
+                $this->invalid('details.components', 'A harvest quantity must be greater than zero.');
+            }
+            foreach ($definition['area_fields'] ?? [] as $areaField) {
+                if (isset($details[$areaField])) {
+                    $details[$areaField] = $this->area($ctx, $areaField, $details[$areaField]);
+                }
             }
             $record = $this->insert($ctx, $cycle, $data, $details, $measurement, $delta, $when, $hash);
             if (isset($stockItem)) {
-                // One real-world feeding -> one stock movement, in the same transaction as the record.
-                $this->inventory->consumeForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when);
+                // One real-world event -> one stock movement, in the same transaction as the record.
+                if (($definition['stock']['direction'] ?? 'out') === 'in') {
+                    $this->inventory->receiveForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when);
+                } else {
+                    $this->inventory->consumeForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when);
+                }
             }
             $this->ledger->reconcile($cycle);
             RecordCreated::dispatch($record);
@@ -165,6 +193,51 @@ class RecordService
         RecordCreated::dispatch($record);
 
         return $record;
+    }
+
+    /**
+     * Phase 13 baseline rules. Planting units are the crop baseline (initial_planting_units, immutable); every figure here is
+     * derived from it and from the project's own non-reversed records, never from seed quantity, area or stock.
+     */
+    private function cropEvent(ProductionCycle $cycle, string $type, array $details): array
+    {
+        if (! in_array($type, ['planting', 'establishment_check', 'crop_loss'], true)) {
+            return $details;
+        }
+        $baseline = (int) $cycle->crop->initial_planting_units;
+        $sum = fn (string $recordType, string $field): int => (int) OperationalRecord::where('production_cycle_id', $cycle->id)->where('type', $recordType)->whereDoesntHave('reversal')->get()->sum(fn ($r) => (int) ($r->details[$field] ?? 0));
+        if ($type === 'establishment_check') {
+            $established = (int) $details['established_units'];
+            if ($established > $baseline) {
+                $this->invalid('details.established_units', 'Established units cannot exceed the project baseline of '.$baseline.' planting units.');
+            }
+            $details['established_units'] = $established;
+            $details['baseline_units'] = $baseline;
+            $details['failed_units'] = $baseline - $established;
+            $details['survival_percent'] = CropMetrics::percent($established, $baseline);
+
+            return $details;
+        }
+        $field = $type === 'planting' ? 'units_planted' : 'units_lost';
+        $already = $sum($type, $field);
+        $units = (int) $details[$field];
+        if ($already + $units > $baseline) {
+            $this->invalid('details.'.$field, 'Recorded '.($type === 'planting' ? 'planting' : 'loss').' would total '.($already + $units).' units, more than the project baseline of '.$baseline.' (already recorded: '.$already.').');
+        }
+        $details[$field] = $units;
+
+        return $details;
+    }
+
+    /** An area (treated, affected) normalised on its own (hectare/acre/m²); it is context for the event and never feeds stock, land totals or planting units. */
+    private function area(FarmContext $ctx, string $field, array $area): array
+    {
+        $normalized = $this->quantities->normalize($ctx->farm, [$area], requiredDimensions: ['area'])->toArray();
+        if ($normalized['normalized']['quantity'] === '0' || str_starts_with($normalized['normalized']['quantity'], '-')) {
+            $this->invalid('details.'.$field, 'The area must be greater than zero.');
+        }
+
+        return ['quantity' => $area['quantity'], 'unit' => $area['unit'], 'normalized' => $normalized['normalized']];
     }
 
     private function insert(FarmContext $ctx, ProductionCycle $cycle, array $data, array $details, ?array $measurement, int $delta, CarbonImmutable $when, string $hash): OperationalRecord

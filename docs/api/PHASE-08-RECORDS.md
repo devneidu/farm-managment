@@ -36,7 +36,7 @@ Required common fields: `type` from the catalogue, `production_cycle_id` UUID, `
 
 ## Type-specific details
 
-All fields listed as required below are required within `details`. Text names identify the observed input; they are not inventory-item IDs. Only `feed_use` may carry an optional `details.inventory` link that consumes stock (Phase 9).
+All fields listed as required below are required within `details`. Text names identify the observed input; they are not inventory-item IDs. Only `feed_use` and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may carry an optional `details.inventory` link that consumes stock (Phase 9).
 
 | Type | Kind/capability | Required details | Optional details | Effect |
 |---|---|---|---|---|
@@ -49,14 +49,21 @@ All fields listed as required below are required within `details`. Text names id
 | `water` | Livestock/fish | Volume `components` | `context` | Consumption history only |
 | `irrigation` | Crop | `method` ≤200 | Volume `components`, `context`, `duration_minutes` integer 1–10080 | Activity only |
 | `weeding` | Crop | `method` ≤200 | — | Activity only |
-| `fertilizer_application` | Crop | `input_name` and `method` ≤200; weight `components` | `context` | Activity/input-use history only |
+| `fertilizer_application` | Crop | `method` ≤200; `input_name` ≤200 (unless `inventory`); weight/volume `components` | `context`, `treated_area`, `concentration`, `inventory` (see Phase 13) | History; with `details.inventory` also one stock-out |
+| `pesticide_application` | Crop | `product_type`, `method`; `input_name` (unless `inventory`); weight/volume `components` | `target`, `pre_harvest_interval_days`, `treated_area`, `concentration`, `inventory` (see Phase 13) | History; with `details.inventory` also one stock-out |
+| `land_preparation` | Crop | `method` ≤200 | `treated_area` | Activity only (Phase 13) |
+| `planting` | Crop | `units_planted` whole count | `method`, material `components` + `inventory` (seed/planting material) | Planting units capped by the baseline; optional seed stock-out (Phase 13) |
+| `establishment_check` | Crop | `established_units` 0…baseline | — | Server derives failed units and survival % (Phase 13) |
+| `growth_stage` | Crop | `stage` | `observation` | Observation only (Phase 13) |
+| `crop_loss` | Crop | `units_lost`, `cause` | `affected_area` | Audit record; no population effect (Phase 13) |
+| `crop_harvest` | Crop | weight/volume/count `components`, `inventory` (produce) | `quality` | One produce stock-in (Phase 13) |
 | `pest_observation` | Crop | `issue` ≤500; `severity` = low/moderate/high | nullable `action` ≤2000 | Observation only |
 | `general_note` | Either | `text` ≤5000 | — | Activity only |
 | `population_adjustment` | Livestock/fish, manager permission | `expected_population`, `actual_population`, `reason` ≤2000 | — | Signed actual − expected movement |
 
 Positive whole quantities have maximum 999999999999. Recount expected/actual counts are whole integers or canonical digit strings from 0 to 999999999999; negatives, fractions and booleans are rejected. `difference` is server-generated, never submitted.
 
-The schema endpoints return the same registry used by backend validators: type, cycle kind, capability, field rules, measurement dimension/canonical unit/display unit/component limit, permission, population effect and `inventory_effect_enabled` (true only for `feed_use`). Species capability records are authoritative. In the current seed catalogue, milk is not enabled for any species; it becomes selectable when `produces_milk` is configured. This phase does not infer dairy capability from species names or add an administration UI.
+The schema endpoints return the same registry used by backend validators: type, cycle kind, capability, field rules, measurement dimension/canonical unit/display unit/component limit, permission, population effect and `inventory_effect_enabled` (true for `feed_use`, `fertilizer_application` and `pesticide_application`; see `inventory_category`). Species capability records are authoritative. In the current seed catalogue, milk is not enabled for any species; it becomes selectable when `produces_milk` is configured. This phase does not infer dairy capability from species names or add an administration UI.
 
 Crop records never append population movements, change planting baselines or infer material quantity from planting units. Crop establishment, harvest, health treatments and cost posting are outside this phase.
 

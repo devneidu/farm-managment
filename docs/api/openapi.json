@@ -2850,6 +2850,195 @@
                 }
             }
         },
+        "/production-cycles/{cycle}/crop": {
+            "get": {
+                "operationId": "v1.production-cycles.crop",
+                "description": "Requires production_cycle.view and record.view. Everything is derived from the project's immutable planting-unit\nbaseline and its own non-reversed records (reversed records are excluded; nothing is stored): planting progress,\nlatest establishment check (established, failed units and survival percent against the baseline: 47 of 50 = 94),\ncurrent growth stage, crop losses by cause, harvest totals per normalised unit (g, ml, piece) and activity counts.\nPlanting units, seed/material quantity, land area and harvested output stay separate. Livestock cycles return\n409 not_a_crop_project; foreign or unknown projects return 404.\n\n**Requires farm permission:** `production_cycle.view`.",
+                "summary": "Crop project detail",
+                "tags": [
+                    "CropProject"
+                ],
+                "parameters": [
+                    {
+                        "name": "cycle",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "const": "not_a_crop_project"
+                                        },
+                                        "request_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/csrf-cookie": {
             "get": {
                 "operationId": "v1.auth.csrf-cookie",
@@ -16239,6 +16428,14 @@
                         }
                     },
                     {
+                        "name": "production_area_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
                         "name": "type",
                         "in": "query",
                         "schema": {
@@ -16254,6 +16451,13 @@
                                 "irrigation",
                                 "weeding",
                                 "fertilizer_application",
+                                "pesticide_application",
+                                "land_preparation",
+                                "planting",
+                                "establishment_check",
+                                "growth_stage",
+                                "crop_loss",
+                                "crop_harvest",
                                 "pest_observation",
                                 "general_note",
                                 "population_adjustment",
@@ -16430,7 +16634,7 @@
             },
             "post": {
                 "operationId": "v1.records.store",
-                "description": "Requires record.create; population_adjustment additionally record.adjust, correction links record.reverse.\nSee /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.\nrecorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.\nRequired idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.\nMeasurements use Phase 5 components/context; feed_use may link stock via details.inventory (see Phase 9).\n\n**Requires farm permission:** `record.create`.",
+                "description": "Requires record.create; population_adjustment additionally record.adjust, correction links record.reverse.\nSee /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.\nrecorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.\nRequired idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.\nMeasurements use Phase 5 components/context; feed_use and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may link stock via details.inventory (see Phase 9 and Phase 13).\n\n**Requires farm permission:** `record.create`.",
                 "summary": "Record a real farm event",
                 "tags": [
                     "OperationalRecord"
@@ -30842,13 +31046,14 @@
             },
             "InventoryCategory": {
                 "type": "string",
-                "description": "Shared movement infrastructure; categories carry no extra schema in Phase 9 (medicine/crop-input metadata arrive later).\n",
+                "description": "Shared movement infrastructure; categories carry no extra schema (produce receives crop harvests in Phase 13).\n",
                 "enum": [
                     "feed",
                     "medicine",
                     "seed_planting_material",
                     "fertilizer_agrochemical",
-                    "general_supply"
+                    "general_supply",
+                    "produce"
                 ],
                 "title": "InventoryCategory"
             },
@@ -33962,6 +34167,13 @@
                             "irrigation",
                             "weeding",
                             "fertilizer_application",
+                            "pesticide_application",
+                            "land_preparation",
+                            "planting",
+                            "establishment_check",
+                            "growth_stage",
+                            "crop_loss",
+                            "crop_harvest",
                             "pest_observation",
                             "general_note",
                             "population_adjustment"
@@ -34103,6 +34315,13 @@
                             "irrigation",
                             "weeding",
                             "fertilizer_application",
+                            "pesticide_application",
+                            "land_preparation",
+                            "planting",
+                            "establishment_check",
+                            "growth_stage",
+                            "crop_loss",
+                            "crop_harvest",
                             "pest_observation",
                             "general_note",
                             "population_adjustment",
@@ -34250,6 +34469,13 @@
                             "irrigation",
                             "weeding",
                             "fertilizer_application",
+                            "pesticide_application",
+                            "land_preparation",
+                            "planting",
+                            "establishment_check",
+                            "growth_stage",
+                            "crop_loss",
+                            "crop_harvest",
                             "pest_observation",
                             "general_note",
                             "population_adjustment",
@@ -34450,6 +34676,13 @@
                                         "irrigation",
                                         "weeding",
                                         "fertilizer_application",
+                                        "pesticide_application",
+                                        "land_preparation",
+                                        "planting",
+                                        "establishment_check",
+                                        "growth_stage",
+                                        "crop_loss",
+                                        "crop_harvest",
                                         "pest_observation",
                                         "general_note",
                                         "population_adjustment",
@@ -35664,6 +35897,13 @@
                             "irrigation",
                             "weeding",
                             "fertilizer_application",
+                            "pesticide_application",
+                            "land_preparation",
+                            "planting",
+                            "establishment_check",
+                            "growth_stage",
+                            "crop_loss",
+                            "crop_harvest",
                             "pest_observation",
                             "general_note",
                             "population_adjustment",
@@ -35888,6 +36128,13 @@
                                         "irrigation",
                                         "weeding",
                                         "fertilizer_application",
+                                        "pesticide_application",
+                                        "land_preparation",
+                                        "planting",
+                                        "establishment_check",
+                                        "growth_stage",
+                                        "crop_loss",
+                                        "crop_harvest",
                                         "pest_observation",
                                         "general_note",
                                         "population_adjustment",

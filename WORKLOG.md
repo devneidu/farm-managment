@@ -11,13 +11,33 @@
 
 ## Current Status
 
-**Current Phase:** Phase 12 — Tasks, Work & Calendar
+**Current Phase:** Phase 13 — Crop operations and outputs (complete)
 
-**Status:** Phase 12 implemented and verified; UNCOMMITTED (Phases 0-11 committed; HEAD `642a79a`). Targeted `WorkTest`: **33 tests, 461 assertions**; ApiDocumentationTest includes the Phase 12 spec test. Full suite: **570 tests, 6066 assertions**, all passing (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). Pint clean on changed files, `git diff --check` clean, OpenAPI regenerated without warnings (20 operations added, none removed or changed), migration `down()`/`up()` verified on `farm_management_test` (see Tests). Phase 13 not started.
+**Status:** Phase 13 (`24-PHASE-13-CROPS-OUTPUTS.md`, the complete source-defined phase: land prep, planting, establishment/survival, fertilizer, pesticide/herbicide, irrigation, weeding, growth stage, crop loss, crop harvest, produce inventory, crop project detail) implemented and verified; UNCOMMITTED (Phases 0-12 committed; HEAD `a8d330d`). No migrations. Targeted `tests/Feature/Crops`: **22 tests, 597 assertions** (`CropTreatmentTest` 10, `CropOperationsTest` 12). Full suite: **592 tests, 6663 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (adds `GET /production-cycles/{cycle}/crop`, `production_area_id` records filter). Phase 14 not started.
 
 **Last Agent:** Claude Code
 
 **Last Updated:** 2026-10-02
+
+---
+
+## Phase 13 Architecture (crop operations and outputs)
+
+**Scope:** the whole source phase (`docs/implementations/24-PHASE-13-CROPS-OUTPUTS.md`). Contract: [docs/api/PHASE-13-CROP-INPUTS.md](docs/api/PHASE-13-CROP-INPUTS.md), README section 26. An earlier iteration built only the fertilizer/pesticide slice; the rest was added afterwards and nothing from that slice was redone.
+
+**One event architecture, no schema change:** every crop event is a Phase 8 record on `POST /records` (JSON `details`), reusing the Phase 8 idempotency/reversal/correction/closed-cycle machinery, Phase 5 measurements and the Phase 9 ledger. New types: `land_preparation`, `planting`, `establishment_check`, `growth_stage`, `crop_loss`, `crop_harvest`, `pesticide_application`; extended: `fertilizer_application`. `irrigation`/`weeding`/`pest_observation` unchanged.
+
+**Registry (`RecordTypeRegistry`):** a type may declare `stock` (`category`, allowed `dimensions`, `direction` in/out, `required`) and `area_fields`. `RecordService` turns that into one stock movement in the same transaction (`consumeForRecord` out / `receiveForRecord` in, reason `harvest`), reversed by the generic `reverseForRecord`. `InventoryService::cropStockItemForRecord` validates category + dimension. New inventory category `produce` (enum case; items table stores a string, no migration).
+
+**Baseline rules (`RecordService::cropEvent`):** planting units are `initial_planting_units` (immutable). Cumulative non-reversed `units_planted` and `units_lost` are each capped by it; `establishment_check` derives `baseline_units`/`failed_units`/`survival_percent` server-side (`CropMetrics::percent`, 47/50 = "94"). Crop loss has no population movement. Seed material quantity (stock) is separate from planting units.
+
+**Harvest:** `inventory` link is OPTIONAL (product decision after review: recording the real-world harvest must not depend on prior produce-inventory setup). Unlinked: normal record, normalised quantity > 0, counted in project yield, NO inventory movement, reversal = record only. Linked: requires a `produce` item, one `stock_in`; item dimension decides weight/volume/count; packages only via the item's own conversion; lots by `lot_id` or new `lot {code, expires_on}`; permission record.create + inventory.use. Reversal of a harvest whose produce was already used is 409 insufficient_stock (nothing changes).
+
+**Read model:** `GET /production-cycles/{cycle}/crop` (`CropMetrics::summary`, `CropProjectController`) derives baseline/planting/establishment/growth stage/losses/harvest totals per normalised unit/activity counts from non-reversed records; livestock cycles 409 `not_a_crop_project`. Plot scope: project sits on one production area; `GET /records?production_area_id=` filters (foreign → 404).
+
+**Boundaries:** records never create tasks; no finance, sales, notifications, reports. Medicine semantics are not reused.
+
+**Deferred / known:** a harvest recorded without a link never reaches stock unless someone adds stock separately (no later 'link this harvest' action); no fertilizer-vs-pesticide sub-category on inventory items; no per-hectare rate calculator; `pre_harvest_interval_days` stored, not enforced against harvest; areas (`treated_area`, `affected_area`) are informational and not capped by project area; growth stages are a fixed generic list (not per-crop master data); loss/planting caps are by units, not by area.
 
 ---
 
@@ -434,8 +454,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 13 — crops outputs/treatments (see `docs/implementations/24-PHASE-13-CROPS-OUTPUTS.md`), ONLY after explicit user instruction. Commit Phase 12 first.
+Phase 14 (see `docs/implementations/25-PHASE-14-FINANCE-PURCHASING.md`: contacts, purchasing and finance), ONLY after explicit user instruction. Commit Phase 13 first. Note: notification delivery belongs to Phase 17 (notification centre) and Phase 20 (WhatsApp); Phase 19 is localization.
 
 ## Recommended Next Commit
 
-`feat: add Phase 12 work module with tasks, daily/weekly schedules, platform and farm templates, evidence-linked completion and calendar read model`
+`feat: add Phase 13 crop operations with planting, establishment survival, crop loss, optional produce stock-in on harvest, fertilizer/pesticide applications and crop project detail`

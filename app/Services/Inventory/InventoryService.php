@@ -311,6 +311,42 @@ class InventoryService
         return $item;
     }
 
+    /**
+     * Phase 13: crop events only touch the stock category their record type names (fertilizer/agrochemical, seed/planting
+     * material or produce), in a dimension that type allows. Called by RecordService inside its transaction
+     * (farm and cycle already locked).
+     *
+     * @param  array{category: string, dimensions: list<string>}  $stock
+     */
+    public function cropStockItemForRecord(FarmContext $ctx, array $link, array $stock): InventoryItem
+    {
+        $item = $this->activeItem($ctx, $link['item_id'], 'details.inventory.item_id');
+        if ($item->category->value !== $stock['category']) {
+            $this->invalid('details.inventory.item_id', 'This crop event can only use an inventory item in the '.InventoryCategory::from($stock['category'])->label().' category.');
+        }
+        if (! in_array($item->dimension(), $stock['dimensions'], true)) {
+            $this->invalid('details.inventory.item_id', 'This crop event is measured by '.implode(' or ', $stock['dimensions']).'; choose an item counted that way.');
+        }
+
+        return $item;
+    }
+
+    /**
+     * Phase 13: one harvest record -> one stock_in (reason "harvest") of produce, in the record's transaction. A new lot may be
+     * opened from details.inventory.lot; the receiving location must be an active storage location.
+     */
+    public function receiveForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when): InventoryMovement
+    {
+        $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $lot = $this->lot($ctx, $item, $link, create: true, field: 'details.inventory.lot_id');
+        if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
+            throw new ApiHttpException(409, 'lot_expired', 'Stock cannot be received into a lot that had already expired on the harvest date.');
+        }
+        $qty = $this->positive($measurement['normalized']['quantity'], 'details.components');
+
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, 'harvest', $qty, $measurement, $when, ['operational_record_id' => $record->id]);
+    }
+
     public function consumeForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when): InventoryMovement
     {
         $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);

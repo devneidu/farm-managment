@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\PlaceKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Records\AttachRecordRequest;
 use App\Http\Requests\Records\ListRecordsRequest;
@@ -11,6 +12,7 @@ use App\Http\Resources\OperationalRecordResource;
 use App\Http\Resources\RecordAttachmentResource;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
+use App\Services\Locations\PlaceService;
 use App\Services\Records\RecordAttachmentService;
 use App\Services\Records\RecordService;
 use App\Services\Records\RecordTypeRegistry;
@@ -40,6 +42,11 @@ class OperationalRecordController extends Controller
             ProductionCycle::ofFarm($ctx->farm)->findOrFail($data['production_cycle_id']);
             $q->where('production_cycle_id', $data['production_cycle_id']);
         }
+        if (isset($data['production_area_id'])) {
+            // Plot scope: records of every project sited on this production area (foreign areas are 404).
+            app(PlaceService::class)->find($ctx->farm, PlaceKind::ProductionArea, $data['production_area_id']);
+            $q->whereIn('production_cycle_id', ProductionCycle::where('farm_id', $ctx->farm->id)->where('production_area_id', $data['production_area_id'])->select('id'));
+        }
         if (isset($data['type'])) {
             $q->where('type', $data['type']);
         }
@@ -61,7 +68,7 @@ class OperationalRecordController extends Controller
      * See /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.
      * recorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.
      * Required idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.
-     * Measurements use Phase 5 components/context; feed_use may link stock via details.inventory (see Phase 9).
+     * Measurements use Phase 5 components/context; feed_use and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may link stock via details.inventory (see Phase 9 and Phase 13).
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\OperationalRecordResource, meta: object, message:string}')]
     #[Response(status: 404, type: 'array{message:string, code:"not_found", request_id:string}')]

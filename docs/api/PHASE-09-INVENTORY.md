@@ -47,7 +47,7 @@ Roles: Owner and Manager have all four permissions (`view`, `use`, `manage`, `ad
  "low_stock_threshold": {"quantity": "50", "unit": "kg"}, "description": "20 kg bags"}
 ```
 
-- `category`: `feed`, `medicine`, `seed_planting_material`, `fertilizer_agrochemical`, `general_supply`. Phase 9 attaches no category-specific schema (medicine packaging/dose arrive with Health).
+- `category`: `feed`, `medicine`, `seed_planting_material`, `fertilizer_agrochemical`, `general_supply`, `produce` (receives crop harvests, Phase 13). Phase 9 attaches no category-specific schema (medicine packaging/dose arrive with Health).
 - `stock_unit`: a weight, volume or count unit code (`kg`, `g`, `l`, `ml`, `piece`, `egg`, `head`, ...). This fixes the item's **measurement basis**; incompatible units can never enter the same balance (`422 unit_dimension_mismatch` / `incompatible_units`). Packages (`bag`, `crate`...) are never a stock unit.
 - `tracks_expiry` requires `tracks_lots`. `low_stock_threshold` is in a unit of the item's basis.
 - Names are unique per farm after trimming/case-folding (409 `inventory_item_exists`).
@@ -154,7 +154,7 @@ POST /records
 - In the same transaction the record and exactly one `stock_out` movement (reason `use`, `operational_record_id` = the record, same `recorded_at` and measurement snapshot) are written. The record resource exposes `inventory_movement_id`. A retry with the same record `idempotency_key` returns the original record and writes nothing more.
 - Insufficient stock, an expired lot, an inactive item/location mismatch or any validation error rolls the whole record back.
 - Reversing the record (`POST /records/{record}/reverse`) appends a compensating `reversal` movement linked to the reversal record. Correcting uses the existing reverse + `corrects_record_id` flow; the replacement consumes stock again.
-- A `feed_use` without `details.inventory` stays a pure record with no stock effect. Egg, milk and harvest output stock are **not** created in this phase.
+- A `feed_use` without `details.inventory` stays a pure record with no stock effect. Egg and milk output stock are **not** created. Crop harvest stock-in is owned by Phase 13 (`crop_harvest` records into `produce` items).
 
 ## Feed formulas
 
