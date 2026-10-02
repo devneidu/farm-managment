@@ -56,6 +56,11 @@ enum Permission: string
     case HealthReverse = 'health.reverse';
     case HealthManage = 'health.manage';
 
+    // Phase 11 - breeding: view / start projects, checks, outcomes, cancel / reverse and correct outcomes
+    case BreedingView = 'breeding.view';
+    case BreedingCreate = 'breeding.create';
+    case BreedingReverse = 'breeding.reverse';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case FinanceExpenseCreate = 'finance.expense.create';

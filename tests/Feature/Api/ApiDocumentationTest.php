@@ -58,6 +58,30 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('health_record_id', $spec['components']['schemas']['InventoryMovementResource']['properties']);
     }
 
+    public function test_phase_11_breeding_endpoints_schemas_permissions_and_errors_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /breeding-projects', 'post /breeding-projects', 'get /breeding-projects/{project}', 'patch /breeding-projects/{project}', 'get /breeding-projects/{project}/milestones',
+            'post /breeding-projects/{project}/checks', 'post /breeding-projects/{project}/cancel', 'post /breeding-projects/{project}/outcomes', 'post /breeding-projects/{project}/outcomes/{outcome}/reverse'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method];
+            $this->assertStringContainsString('breeding.', $operation['description'] ?? '', $endpoint.' documents its permission');
+            $this->assertArrayHasKey('401', $operation['responses']);
+            $this->assertArrayHasKey('403', $operation['responses']);
+        }
+        foreach (['201', '401', '403', '404', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/breeding-projects/{project}/outcomes']['post']['responses']);
+        }
+        $this->assertContains('idempotency_key', $spec['components']['schemas']['StoreBreedingProjectRequest']['required']);
+        $this->assertArrayNotHasKey('add_to_population', $spec['components']['schemas']['StoreBreedingOutcomeRequest']['properties']);
+        $this->assertArrayNotHasKey('farm_id', $spec['components']['schemas']['StoreBreedingProjectRequest']['properties']);
+        $this->assertArrayNotHasKey('population_delta', $spec['components']['schemas']['StoreBreedingOutcomeRequest']['properties']);
+        foreach (['expectation', 'biological_reference', 'expected_offspring', 'result', 'outcomes'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['BreedingProjectResource']['properties']);
+        }
+        $this->assertArrayHasKey('operational_record_id', $spec['components']['schemas']['BreedingOutcomeResource']['properties']);
+    }
+
     public function test_phase_9_inventory_endpoints_schemas_permissions_and_errors_are_documented(): void
     {
         $spec = $this->spec();

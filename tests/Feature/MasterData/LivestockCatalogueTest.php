@@ -166,6 +166,8 @@ class LivestockCatalogueTest extends MasterDataTestCase
         $this->assertSame(24, $bee['incubation_days_max']);
         $this->assertArrayNotHasKey('incubation_days', $bee, 'no 20-day midpoint');
         $this->assertStringContainsString('caste', $bee['note']);
+        $this->assertFalse($bee['automatic_expectation'], 'explicit machine-readable flag, not the note');
+        $this->assertArrayNotHasKey('automatic_expectation', $snail);
 
         // The API exposes the same range and caveat.
         $this->signInAs($this->owner);

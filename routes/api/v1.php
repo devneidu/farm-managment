@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
+use App\Http\Controllers\Api\V1\BreedingProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\FarmController;
@@ -205,6 +206,18 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/', [$c, 'store'])->middleware(['farm.permission:health.create', 'throttle:health-write'])->name('api.v1.health-records.store');
         Route::get('/{record}', [$c, 'show'])->middleware('farm.permission:health.view')->name('api.v1.health-records.show');
         Route::post('/{record}/reverse', [$c, 'reverse'])->middleware(['farm.permission:health.reverse', 'throttle:health-write'])->name('api.v1.health-records.reverse');
+    });
+    Route::prefix('breeding-projects')->group(function () {
+        $c = BreedingProjectController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:breeding.view')->name('api.v1.breeding-projects.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.store');
+        Route::get('/{project}', [$c, 'show'])->middleware('farm.permission:breeding.view')->name('api.v1.breeding-projects.show');
+        Route::patch('/{project}', [$c, 'update'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.update');
+        Route::get('/{project}/milestones', [$c, 'milestones'])->middleware('farm.permission:breeding.view')->name('api.v1.breeding-projects.milestones');
+        Route::post('/{project}/checks', [$c, 'check'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.checks.store');
+        Route::post('/{project}/cancel', [$c, 'cancel'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.cancel');
+        Route::post('/{project}/outcomes', [$c, 'outcome'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.outcomes.store');
+        Route::post('/{project}/outcomes/{outcome}/reverse', [$c, 'reverseOutcome'])->middleware(['farm.permission:breeding.reverse', 'throttle:breeding-write'])->name('api.v1.breeding-projects.outcomes.reverse');
     });
     Route::prefix('health')->group(function () {
         $c = HealthRecordController::class;

@@ -807,3 +807,7 @@ The complete frontend integration contract is [Phase 9 inventory](PHASE-09-INVEN
 ## 23. Health records and medicine (Phase 10)
 
 The complete frontend integration contract is [Phase 10 health](PHASE-10-HEALTH.md): typed health records (vaccination, medication, deworming, treatment, disease/issue, vet visit), multi-medicine lines with dose and package conversions, the linked inventory deduction, lots/expiry, withdrawal windows, the medicine read model, the `vet` role preset, mortality linking, reversal/correction, permissions, retries and errors. These endpoints are also included in openapi.json.
+
+## 24. Breeding (Phase 11)
+
+The complete frontend integration contract is [Phase 11 breeding](PHASE-11-BREEDING.md): breeding projects (incubation and pregnancy workflows unlocked by species capabilities), the frozen biological reference, exact expected dates versus expected windows (never a midpoint; no fabricated dates for snail or honeybee), manual expectation overrides, checks, milestones, actual outcomes with the explicit population confirmation (50 eggs set, 40 expected, 37 hatched = +37 once), reversal/correction, permissions, retries and errors. These endpoints are also included in openapi.json.

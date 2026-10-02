@@ -101,7 +101,7 @@ class LivestockCatalogueSeeder extends Seeder
             'donkey' => $ges(['gestation_days' => 365]),
             // Micro-livestock: no universal number. Snail varies by species; honeybee development depends on caste.
             'snail' => $inc(['note' => 'Incubation varies significantly by species; no universal period is defined.']),
-            'honeybee' => $inc(['incubation_days_min' => 16, 'incubation_days_max' => 24, 'note' => 'Development period depends on caste (16-24 days); no single value applies.']),
+            'honeybee' => $inc(['incubation_days_min' => 16, 'incubation_days_max' => 24, 'automatic_expectation' => false, 'note' => 'Development period depends on caste (16-24 days); no single value applies.']),
         ];
     }
 

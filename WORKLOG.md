@@ -11,9 +11,9 @@
 
 ## Current Status
 
-**Current Phase:** Phase 10 — Health and medicine
+**Current Phase:** Phase 11 — Breeding
 
-**Status:** Phase 10 implemented and verified; UNCOMMITTED (Phases 0-9 are committed; Phase 9 is `baab4eb`). Targeted Phase 10: **21 tests, 538 assertions** (20 behaviour + 1 generated-OpenAPI test). Full suite: **491 tests, 4818 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (8 new paths, none removed), test-DB rollback/reapply verified with data, dev DB migrated normally. Phase 11 NOT started.
+**Status:** Phase 11 implemented and verified; UNCOMMITTED (Phases 0-10 and the livestock catalogue correction are committed; HEAD `fbba4dc`). Targeted `BreedingTest`: **33 tests, 356 assertions**; ApiDocumentationTest 12 tests (incl. the Phase 11 spec test). Full suite: **534 tests, 5501 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (7 new paths / 9 operations, none removed; only `GET /records` changed: the `type` filter accepts `breeding_outcome`), test-DB rollback/reapply verified (see Phase 11 Architecture). Phase 12 not started.
 
 **Last Agent:** Claude Code
 
@@ -321,9 +321,33 @@
 
 **Deferred:** tasks from `follow_up_on` (Phase 12), withdrawal enforcement in sales/harvest, health reports/notifications, vet contacts/cost/purchasing, individual animal identity, a species health capability flag. True multi-process concurrency was not run (safety rests on the farm-row lock + in-transaction recheck, as in Phase 9).
 
+## Phase 11 Architecture (breeding)
+
+**Scope/status:** implemented, UNCOMMITTED at user request. Spec (`22-PHASE-11-BREEDING.md`) is a short brief; contract in [docs/api/PHASE-11-BREEDING.md](docs/api/PHASE-11-BREEDING.md). A breeding project is ONE reproductive attempt on a livestock cycle (group-managed; no individual animal identity or pedigree). It keeps apart the biological reference (frozen snapshot), the expectation (estimate) and the actual outcome.
+
+**Schema (migration `2026_10_10_100000_create_breeding`, reversible):** `breeding_projects` (farm+cycle composite FK, `reference` BRD-YYYY-NNNNN, workflow, status, `start_date`, `eggs_set` (incubation), `females_bred` (pregnancy), `expected_offspring`, `reference_snapshot` JSON, `expectation_source` reference|manual|none, `expected_date` XOR `expected_from`/`expected_to`, cancel fields, farm-wide idempotency key + request hash); `breeding_parents` (dam/sire = a livestock cycle of the same farm+species, optional head_count); `breeding_checks` (append-only; result positive/negative/inconclusive, incubation-only `fertile_count`); `breeding_outcomes` (append-only; kind outcome|reversal, `live_count`, `loss_count`, `outcome_date`, `operational_record_id` unique, `reverses_outcome_id`/`corrects_outcome_id` unique, `recorded_at`, idempotency). `down()` drops the 4 tables and removes the generated Phase 8 records and movements (initial baselines and other records stay).
+
+**Workflows/statuses:** `incubation` (needs `supports_breeding` + `supports_incubation`) and `pregnancy` (`supports_breeding` + `supports_pregnancy`), checked through species capabilities (`BreedingReference::capabilityRow`), never species names. Statuses: `active` -> `completed` (outcome) | `cancelled`; reversing the only outcome returns `completed` -> `active`. Closed cycles reject all writes (409 cycle_closed).
+
+**Expected dates (locked rule):** exact reference (`<x>_days`, e.g. chicken 21, cattle default 283) -> exact date; range (`_min`/`_max`, guinea fowl 26-28, camel 365-400) -> window from = start+min, to = start+max (never a midpoint); no numeric reference (snail) -> none, no fabricated date; a reference with the explicit `reference_config.automatic_expectation: false` (honeybee 16-24, caste; the human-readable `note` never drives behaviour) -> preserved in the snapshot (which also keeps the flag) but NOT applied automatically (`no_expectation_reason`: no_numeric_reference | qualified_reference). Manual `expected_date` or `expected_from`+`expected_to` is allowed for any species and never alters the snapshot. `PATCH start_date` recalculates a reference-derived expectation from the stored snapshot (not live master data) while active; manual expectations are kept (re-validated); `revert_to_reference` drops a manual one. No catalogue or reference values were changed.
+
+**Population integration:** eggs set and expected offspring never touch population. `POST /breeding-projects/{id}/outcomes` with `live_count > 0` (no client flag: live offspring join the project cycle automatically) appends ONE Phase 8 operational record (type `breeding_outcome`, `population_delta = +live`, details link project/outcome) and its population movement through the new `RecordService::appendForBreeding` (ledger reconciled before and after) in the same transaction. Zero/failed outcomes add nothing. Reversal appends a reversal outcome plus a compensating Phase 8 `reversal` record (409 insufficient_population if the dated ledger would go negative); correction = reverse then a new outcome with `corrects_outcome_id`. The `breeding_outcome` record is not creatable via `POST /records` and not reversible via `/records/{id}/reverse` (409 reverse_via_breeding_outcome). Example: 50 eggs, 40 expected, 37 hatched -> +37 once.
+
+**Idempotency/locks:** farm-wide keys on project start, outcome and reversal (same key+payload replays the original, changed payload 409 idempotency_conflict); the generated record uses key `breeding:<outcome id>`. Lock order farm row -> cycle row -> project row. True multi-process concurrency was not run (single-process PHPUnit), as in earlier phases.
+
+**Permissions:** `breeding.view|create|reverse`. Owner all; Manager all; Farm Worker and Vet view+create; Finance none. Limiter `breeding-write` 120/h/user.
+
+**API:** `GET|POST /breeding-projects`, `GET|PATCH /breeding-projects/{project}`, `GET .../milestones` (derived: started, expected_outcome exact|window, checks, outcome), `POST .../checks`, `POST .../cancel`, `POST .../outcomes`, `POST .../outcomes/{outcome}/reverse`.
+
+**Files:** migration; enums BreedingWorkflow/BreedingStatus; models BreedingProject/BreedingParent/BreedingCheck/BreedingOutcome; `app/Services/Breeding/{BreedingService,BreedingReference}.php`; BreedingProjectController; requests in `app/Http/Requests/Breeding`; resources BreedingProject/BreedingOutcome; event BreedingOutcomeRecorded; docs/api/PHASE-11-BREEDING.md; tests/Feature/Breeding/BreedingTest.php. Modified: Permission, FarmRole, AuthRateLimiters, RecordService (appendForBreeding + reverse guard), ListRecordsRequest, routes, README (section 24) + openapi.json, ApiDocumentationTest, RolePermissionTest.
+
+**Migration verification:** `migrate --pretend` reviewed (additive create tables); dev `farm_management` normal `migrate` only; destructive check ONLY on `farm_management_test` (SELECT DATABASE() asserted): fixture 1 project, 3 outcomes, 3 Phase 8 records, 4 movements -> `down()` left only the cycle's initial baseline movement (records 0, movements 1), `up()` restored 4 empty tables.
+
+**Deferred:** breeding reminders/tasks/calendar (Phase 12; expected dates are stored for it), offspring as a new batch/cycle or individual animals (offspring join the project's cycle only), caste/species-subtype model for honeybee/snail, mid-gestation milestone templates, staggered/partial hatches (one effective outcome per project), breeding reports/notifications.
+
 ## Last Completed Task
 
-Phase 10 — Health and medicine (see Phase 10 Architecture). Earlier: Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 11 — Breeding (see Phase 11 Architecture). Earlier: Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -340,6 +364,8 @@ Created: app/Enums/{FarmRole,Permission,MembershipStatus}.php; app/Events/Access
 Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResponsesExtension (documents farm permission / 404 / farm-context 403), bootstrap/app.php (aliases), routes/api/v1.php, config/identity.php, .env.example (FRONTEND_URL, INVITATION_TTL_DAYS), docs/api/{README.md,openapi.json}, ApiDocumentationTest, OnboardingTest (role is now the FarmRole enum), WORKLOG.md.
 
 ## Tests
+
+**Phase 11 latest: 534 tests, 5501 assertions, all passing** (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). `--filter=BreedingTest`: 33 tests, 356 assertions. Coverage: chicken exact date, guinea fowl/camel windows, cattle exact default, snail none, honeybee qualified/none, manual override/revert/recalc, snapshot stability after master-data edit, capability rejection, field/workflow applicability, eggs/expected never change population, 50->40->37 = +37 once, retry/conflict, zero/unconfirmed outcome, mammal birth, reversal/correction/negative-ledger refusal, record guards, append-only/immutability, lifecycle/cancel/milestones, parents, closed cycle, farm isolation, role presets, client-supplied fields, listing/filters.
 
 **Phase 10 latest: 491 tests, 4818 assertions, all passing** (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). Targeted `--filter='HealthTest|phase_10'`: 21 tests, 538 assertions. Coverage: multi-medicine doses and single deduction per line, type-specific validation/closed vocabulary, cycle-kind and item-category compatibility, atomic rollback on insufficient stock (incl. dated history), retries/idempotency, DB-level one-movement-per-line, append-only guards, contextual package conversion and unit mismatch, lot requirement/expiry, withdrawal calculation/traceability/active filter, mortality link without a second population effect, reversal/correction/closed cycles, farm isolation, role presets incl. vet, listing and medicine endpoints. No true parallel-process concurrency test was run. Role/permission tests updated for `vet` and `health.*`.
 
@@ -378,8 +404,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 11 — Breeding (see `docs/implementations/22-PHASE-11-BREEDING.md`), ONLY after explicit user instruction.
+Phase 12 — Work/tasks/calendar (see `docs/implementations/23-PHASE-12-WORK.md`), ONLY after explicit user instruction.
 
 ## Recommended Next Commit
 
-`feat: add Phase 10 health records with multi-medicine inventory deduction, withdrawal tracking, vet role preset and medicine endpoints`
+`feat: add Phase 11 breeding projects with capability-driven incubation/pregnancy workflows, reference snapshots, exact/window expected dates and ledger-backed outcomes`

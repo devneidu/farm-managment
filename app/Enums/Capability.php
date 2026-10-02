@@ -39,8 +39,8 @@ enum Capability: string
 
     /**
      * A biological reference period: an optional single default (`<key>`), an optional inclusive range
-     * (`<key>_min` + `<key>_max`, only together), `approximate` (the source gives "about N") and a short `note`
-     * (e.g. "varies by caste"). A range is never collapsed to a midpoint; whether a default exists is explicit.
+     * (`<key>_min` + `<key>_max`, only together), `approximate` (the source gives "about N") a short human-readable `note`
+     * (never behaviour) and `automatic_expectation` (false = the period is stored but not applied as an expected date, e.g. caste-dependent). A range is never collapsed to a midpoint; whether a default exists is explicit.
      *
      * @return array<string, list<string>>
      */
@@ -51,6 +51,7 @@ enum Capability: string
             $key.'_min' => ['integer', 'min:1', 'max:'.$max, 'required_with:'.$key.'_max'],
             $key.'_max' => ['integer', 'min:1', 'max:'.$max, 'required_with:'.$key.'_min', 'gte:'.$key.'_min'],
             'approximate' => ['boolean'],
+            'automatic_expectation' => ['boolean'],
             'note' => ['string', 'max:255'],
         ];
     }

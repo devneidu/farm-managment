@@ -135,6 +135,9 @@ class RecordService
             if ($original->type === 'reversal' || $original->reversal !== null) {
                 throw new ApiHttpException(409, 'record_already_reversed', 'This record cannot be reversed again.');
             }
+            if ($original->type === 'breeding_outcome') {
+                throw new ApiHttpException(409, 'reverse_via_breeding_outcome', 'This population effect belongs to a breeding outcome; reverse the breeding outcome instead.');
+            }
             $when = $this->when($ctx, $cycle, $data['recorded_at']);
             if ($when->lessThan($original->recorded_at)) {
                 $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
@@ -147,6 +150,21 @@ class RecordService
 
             return $record->load(['reversal', 'attachments', 'inventoryMovement']);
         }, 3);
+    }
+
+    /**
+     * Breeding integration: the population effect of a breeding outcome (or its reversal) as an ordinary Phase 8 record + movement.
+     * The caller holds the farm and cycle locks and owns idempotency; the ledger is reconciled before and after.
+     */
+    public function appendForBreeding(FarmContext $ctx, ProductionCycle $cycle, array $details, int $delta, CarbonImmutable $when, string $key, string $hash, ?OperationalRecord $reverses = null): OperationalRecord
+    {
+        $this->ledger->reconcile($cycle);
+        $measurement = $reverses?->measurement ?? $this->quantities->normalize($ctx->farm, [['quantity' => (string) $delta, 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
+        $record = $this->insert($ctx, $cycle, ['type' => $reverses ? 'reversal' : 'breeding_outcome', 'reverses_record_id' => $reverses?->id, 'idempotency_key' => $key], $details, $measurement, $delta, $when, $hash);
+        $this->ledger->reconcile($cycle);
+        RecordCreated::dispatch($record);
+
+        return $record;
     }
 
     private function insert(FarmContext $ctx, ProductionCycle $cycle, array $data, array $details, ?array $measurement, int $delta, CarbonImmutable $when, string $hash): OperationalRecord
