@@ -58,6 +58,33 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('health_record_id', $spec['components']['schemas']['InventoryMovementResource']['properties']);
     }
 
+    public function test_phase_12_work_endpoints_schemas_permissions_and_errors_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /master/task-categories', 'get /tasks', 'post /tasks', 'get /tasks/{task}', 'patch /tasks/{task}', 'post /tasks/{task}/complete', 'post /tasks/{task}/cancel', 'get /tasks/{task}/record-prefill',
+            'get /schedules', 'post /schedules', 'get /schedules/{schedule}', 'post /schedules/{schedule}/end', 'get /calendar', 'get /work-templates', 'get /work-templates/recommended', 'post /work-templates',
+            'get /work-templates/{template}', 'patch /work-templates/{template}', 'post /work-templates/{template}/clone', 'post /work-templates/{template}/apply'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method];
+            $this->assertStringContainsString('task.', $operation['description'] ?? '', $endpoint.' documents its permission');
+            $this->assertArrayHasKey('401', $operation['responses']);
+            $this->assertArrayHasKey('403', $operation['responses']);
+        }
+        foreach (['201', '401', '403', '409', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/tasks']['post']['responses']);
+        }
+        $this->assertArrayHasKey('409', $spec['paths']['/tasks/{task}/complete']['post']['responses']);
+        $this->assertContains('idempotency_key', $spec['components']['schemas']['StoreTaskRequest']['required']);
+        $this->assertContains('idempotency_key', $spec['components']['schemas']['ApplyWorkTemplateRequest']['required']);
+        foreach (['StoreTaskRequest', 'StoreScheduleRequest'] as $schema) {
+            $this->assertArrayNotHasKey('farm_id', $spec['components']['schemas'][$schema]['properties']);
+            $this->assertArrayNotHasKey('status', $spec['components']['schemas'][$schema]['properties']);
+        }
+        foreach (['status', 'due_state', 'due_date', 'due_at', 'timezone', 'completion', 'assigned_user_id', 'linked_record_type'] as $field) {
+            $this->assertArrayHasKey($field, $spec['components']['schemas']['TaskResource']['properties']);
+        }
+    }
+
     public function test_phase_11_breeding_endpoints_schemas_permissions_and_errors_are_documented(): void
     {
         $spec = $this->spec();

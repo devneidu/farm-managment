@@ -61,6 +61,11 @@ enum Permission: string
     case BreedingCreate = 'breeding.create';
     case BreedingReverse = 'breeding.reverse';
 
+    // Phase 12 - work: see tasks/calendar (managers see everything, other roles their own/relevant work) / complete tasks / manage tasks, schedules and templates
+    case TaskView = 'task.view';
+    case TaskComplete = 'task.complete';
+    case TaskManage = 'task.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
     case FinanceExpenseCreate = 'finance.expense.create';

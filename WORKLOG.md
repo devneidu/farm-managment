@@ -11,13 +11,13 @@
 
 ## Current Status
 
-**Current Phase:** Phase 11 — Breeding
+**Current Phase:** Phase 12 — Tasks, Work & Calendar
 
-**Status:** Phase 11 implemented and verified; UNCOMMITTED (Phases 0-10 and the livestock catalogue correction are committed; HEAD `fbba4dc`). Targeted `BreedingTest`: **33 tests, 356 assertions**; ApiDocumentationTest 12 tests (incl. the Phase 11 spec test). Full suite: **534 tests, 5501 assertions**, all passing. Pint clean, `git diff --check` clean, OpenAPI regenerated without warnings (7 new paths / 9 operations, none removed; only `GET /records` changed: the `type` filter accepts `breeding_outcome`), test-DB rollback/reapply verified (see Phase 11 Architecture). Phase 12 not started.
+**Status:** Phase 12 implemented and verified; UNCOMMITTED (Phases 0-11 committed; HEAD `642a79a`). Targeted `WorkTest`: **33 tests, 461 assertions**; ApiDocumentationTest includes the Phase 12 spec test. Full suite: **570 tests, 6066 assertions**, all passing (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). Pint clean on changed files, `git diff --check` clean, OpenAPI regenerated without warnings (20 operations added, none removed or changed), migration `down()`/`up()` verified on `farm_management_test` (see Tests). Phase 13 not started.
 
 **Last Agent:** Claude Code
 
-**Last Updated:** 2026-10-01
+**Last Updated:** 2026-10-02
 
 ---
 
@@ -345,9 +345,35 @@
 
 **Deferred:** breeding reminders/tasks/calendar (Phase 12; expected dates are stored for it), offspring as a new batch/cycle or individual animals (offspring join the project's cycle only), caste/species-subtype model for honeybee/snail, mid-gestation milestone templates, staggered/partial hatches (one effective outcome per project), breeding reports/notifications.
 
+## Phase 12 Architecture (tasks, schedules, templates, calendar)
+
+**Concepts kept apart:** Task = work that SHOULD happen; Operational/health/breeding record = what DID happen. There is no separate "Schedule" module: work is Tasks + Calendar; `schedules` are only recurrence rules that generate tasks. No code path in `app/Services/Work` writes a record, population movement or inventory movement (asserted by tests: counts unchanged on create, generate, apply, plain completion, prefill and evidence completion).
+
+**Schema (migration `2026_10_12_100000_create_work`, reversible `down()` drops 5 tables; `..100100_provision_platform_work_templates` seeds 3 platform templates):** `work_templates` (farm_id null = platform; source, code, applies_to production_cycle|breeding_project, cycle_kind/operation/species/crop/breeding_workflow scope, version, is_active, cloned_from_id), `work_template_items` (anchor + offset_days, recurrence rule, due_time, reminder_offsets, assigned_role, linked_record_type, requires_evidence), `template_applications` (unique per template+target via `target_key`, counts, idempotency key), `schedules`, `tasks` (UUIDv7; reference `TSK-YYYY-00001`; composite farm FKs to cycles/projects/schedules; unique (schedule, occurrence_date) = generation dedupe; unique (farm, evidence_type, evidence_id) = one task per evidence). `task_reminders`/`task_completions` from the ERD were not created: reminder offsets are a JSON column (delivery = Phase 19) and completion fields live on the task.
+
+**Lifecycle / due state:** stored `status` open|completed|cancelled (no "missed"). `due_state` (upcoming|due_today|overdue|completed|cancelled) is derived from `due_at` + farm-local today (`DueState::derive`), never stored; list filter `due_state` uses the equivalent SQL. `due_date`/`due_time` are farm-local; `due_at` is UTC (due time, or start of the next local day when no time). If a farm timezone is changed later, existing `due_at` values are not recomputed (known limitation).
+
+**Recurrence (`Occurrences`):** none | daily (every N days) | weekly (every N weeks, ISO weekdays), optional `ends_on`/`occurrence_limit`. Rolling 30-day horizon (`ScheduleService::HORIZON_DAYS`), never generates past dates, idempotent; `php artisan work:generate-tasks` scheduled daily 00:30; generation pauses on closed cycles / non-active projects and resumes after reopening; bounded schedules become `ended`. Monthly/yearly not built.
+
+**Templates:** platform (read-only, `403 platform_template_readonly`) and farm (create/PATCH = version+1, clone = customise). Seeded: `chicken-starter`, `crop-starter`, `chicken-incubation`. Apply = independent schedules + first tasks, once per template/target (`409 template_already_applied`), anchors cycle_start/cycle_expected_end/breeding_start/breeding_expected/breeding_expected_to. Items with no anchor date are skipped (`skipped_no_anchor`); past occurrences skipped (`skipped_past`). `GET /work-templates/recommended` fits scope; nothing applies automatically; "skip" is not persisted.
+
+**Assignment / permissions:** `task.view|complete|manage`. Owner all; Manager all; Farm Worker/Vet/Finance view+complete. `task.manage` sees all tasks; others see tasks assigned to them or their role, created by them, plus `FarmRole::relevantTaskCategories()` (Vet health/breeding/growth; Finance payment/procurement/record_keeping); others 404. `assigned_user_id` must be an active farm member. Limiter `work-write` 240/h/user.
+
+**Completion vs records:** complete = plain close, or link evidence {operational_record|health_record|breeding_check|breeding_outcome, id} already saved through its own endpoint (must be same farm, not reversed, matching linked type/cycle/project, view permission, unused elsewhere). `GET /tasks/{id}/record-prefill` is read-only guidance. Completion requires an open cycle and a non-cancelled project (409); cancel is always allowed. New tasks/schedules/applications require an open cycle and active project (409 `cycle_closed`/`project_not_active`).
+
+**Breeding integration:** uses the stored expected date/window as anchors and calendar milestones; the project's reference snapshot and expectation are never modified (asserted).
+
+**Calendar (`GET /calendar`, max 92 days):** read model = visible tasks + milestones (cycle_start, cycle_expected_end, breeding_expected / breeding_expected_window, health_follow_up) read live from owning records; stores/duplicates nothing; milestones need the matching view permission.
+
+**Idempotency/locks:** farm-wide keys on task create, schedule create, template apply (replay returns original, changed payload 409); completion is replay-safe by evidence; lock order farm -> cycle -> project -> task. True parallel-process concurrency was not exercised (single-process PHPUnit).
+
+**Files:** migrations (2), seeder WorkTemplateSeeder, enums TaskCategory/TaskStatus/DueState/Recurrence/TemplateAnchor/EvidenceType, models Task/Schedule/WorkTemplate/WorkTemplateItem/TemplateApplication, `app/Services/Work/{WorkSupport,TaskService,ScheduleService,WorkTemplateService,CalendarService,Occurrences,LinkedRecords}.php`, controllers Task/Schedule/Calendar/WorkTemplate, `app/Http/Requests/Work/*`, resources Task/Schedule/WorkTemplate/TemplateApplication, command `GenerateScheduledTasks`, docs/api/PHASE-12-WORK.md, tests/Feature/Work/WorkTest.php. Modified: Permission, FarmRole (+relevantTaskCategories), AuthRateLimiters, routes (api + console), docs/api/README.md (section 25) + openapi.json, ApiDocumentationTest, RolePermissionTest.
+
+**Deferred:** notification delivery (Phase 19), monthly/quarterly/yearly recurrence, in-place schedule edit, reopening completed tasks, persisted template "skip", auto-recommendation hook on cycle creation (API only), `task_reminders` table.
+
 ## Last Completed Task
 
-Phase 11 — Breeding (see Phase 11 Architecture). Earlier: Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -364,6 +390,10 @@ Created: app/Enums/{FarmRole,Permission,MembershipStatus}.php; app/Events/Access
 Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResponsesExtension (documents farm permission / 404 / farm-context 403), bootstrap/app.php (aliases), routes/api/v1.php, config/identity.php, .env.example (FRONTEND_URL, INVITATION_TTL_DAYS), docs/api/{README.md,openapi.json}, ApiDocumentationTest, OnboardingTest (role is now the FarmRole enum), WORKLOG.md.
 
 ## Tests
+
+**Phase 12 latest: 570 tests, 6066 assertions, all passing.** `--filter=WorkTest`: 33 tests, 461 assertions. Coverage: create/update/complete/cancel and final states, derived due-state (incl. Africa/Lagos midnight and due-time boundaries driven with travelTo, list filter parity), completion without evidence creating no record/population/inventory effect, prefill read-only, evidence linking (operational/health/breeding check; type, cycle, reversed, foreign-farm, reuse, replay/conflict, required evidence), daily/weekly/biweekly/limit/end-date recurrence, 30-day horizon, dedupe via the command, past dates skipped, schedule end, platform read-only/clone/version/independence of applied schedules, apply (offsets, idempotency, once per target, fit validation, recommended), breeding template anchors incl. window/no-anchor with the project unchanged, cancelled project and closed cycle gates (+resume on reopen), assignment (member/role/foreign/removed), role visibility and permissions, calendar read model (milestones, window overlap, permissions, no duplication, range limit), farm isolation, idempotency. RolePermissionTest lists updated for `task.*`. Not exercised: true parallel-process concurrency.
+
+**Migration verification (Phase 12):** `migrate --pretend` reviewed (5 create tables + seed); dev `farm_management` normal `migrate` only; destructive check ONLY on `farm_management_test` (`SELECT DATABASE()` asserted): fixture 1 schedule + 1 task + 3 platform templates/11 items -> `migrate:rollback --step=2` dropped all 5 work tables, farms untouched; `migrate` restored empty tasks/schedules/applications and re-seeded the 3 platform templates; test DB then `migrate:fresh`ed. No fresh/refresh on development.
 
 **Phase 11 latest: 534 tests, 5501 assertions, all passing** (`php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit`). `--filter=BreedingTest`: 33 tests, 356 assertions. Coverage: chicken exact date, guinea fowl/camel windows, cattle exact default, snail none, honeybee qualified/none, manual override/revert/recalc, snapshot stability after master-data edit, capability rejection, field/workflow applicability, eggs/expected never change population, 50->40->37 = +37 once, retry/conflict, zero/unconfirmed outcome, mammal birth, reversal/correction/negative-ledger refusal, record guards, append-only/immutability, lifecycle/cancel/milestones, parents, closed cycle, farm isolation, role presets, client-supplied fields, listing/filters.
 
@@ -404,8 +434,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 12 — Work/tasks/calendar (see `docs/implementations/23-PHASE-12-WORK.md`), ONLY after explicit user instruction.
+Phase 13 — crops outputs/treatments (see `docs/implementations/24-PHASE-13-CROPS-OUTPUTS.md`), ONLY after explicit user instruction. Commit Phase 12 first.
 
 ## Recommended Next Commit
 
-`feat: add Phase 11 breeding projects with capability-driven incubation/pregnancy workflows, reference snapshots, exact/window expected dates and ledger-backed outcomes`
+`feat: add Phase 12 work module with tasks, daily/weekly schedules, platform and farm templates, evidence-linked completion and calendar read model`

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\BreedingProjectController;
+use App\Http\Controllers\Api\V1\CalendarController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\FarmController;
@@ -32,10 +33,13 @@ use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\ProductionCycleController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\StorageLocationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
+use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
+use App\Http\Controllers\Api\V1\WorkTemplateController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -219,6 +223,38 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/{project}/outcomes', [$c, 'outcome'])->middleware(['farm.permission:breeding.create', 'throttle:breeding-write'])->name('api.v1.breeding-projects.outcomes.store');
         Route::post('/{project}/outcomes/{outcome}/reverse', [$c, 'reverseOutcome'])->middleware(['farm.permission:breeding.reverse', 'throttle:breeding-write'])->name('api.v1.breeding-projects.outcomes.reverse');
     });
+    // Phase 12: tasks (work that should happen), schedules (recurrence rules that generate tasks), templates and the calendar read model.
+    // Tasks never create operational records; completion can only link an already saved record as evidence.
+    Route::get('/master/task-categories', [TaskController::class, 'categories'])->middleware('farm.permission:task.view')->name('api.v1.master.task-categories');
+    Route::prefix('tasks')->group(function () {
+        $c = TaskController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:task.view')->name('api.v1.tasks.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.store');
+        Route::get('/{task}', [$c, 'show'])->middleware('farm.permission:task.view')->name('api.v1.tasks.show');
+        Route::patch('/{task}', [$c, 'update'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.update');
+        Route::post('/{task}/complete', [$c, 'complete'])->middleware(['farm.permission:task.complete', 'throttle:work-write'])->name('api.v1.tasks.complete');
+        Route::post('/{task}/cancel', [$c, 'cancel'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.cancel');
+        Route::get('/{task}/record-prefill', [$c, 'recordPrefill'])->middleware('farm.permission:task.view')->name('api.v1.tasks.record-prefill');
+    });
+    Route::prefix('schedules')->middleware('farm.permission:task.manage')->group(function () {
+        $c = ScheduleController::class;
+        Route::get('/', [$c, 'index'])->name('api.v1.schedules.index');
+        Route::post('/', [$c, 'store'])->middleware('throttle:work-write')->name('api.v1.schedules.store');
+        Route::get('/{schedule}', [$c, 'show'])->name('api.v1.schedules.show');
+        Route::post('/{schedule}/end', [$c, 'end'])->middleware('throttle:work-write')->name('api.v1.schedules.end');
+    });
+    Route::get('/calendar', CalendarController::class)->middleware('farm.permission:task.view')->name('api.v1.calendar');
+    Route::prefix('work-templates')->group(function () {
+        $c = WorkTemplateController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:task.view')->name('api.v1.work-templates.index');
+        Route::get('/recommended', [$c, 'recommended'])->middleware('farm.permission:task.view')->name('api.v1.work-templates.recommended');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.store');
+        Route::get('/{template}', [$c, 'show'])->middleware('farm.permission:task.view')->name('api.v1.work-templates.show');
+        Route::patch('/{template}', [$c, 'update'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.update');
+        Route::post('/{template}/clone', [$c, 'clone'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.clone');
+        Route::post('/{template}/apply', [$c, 'apply'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.apply');
+    });
+
     Route::prefix('health')->group(function () {
         $c = HealthRecordController::class;
         Route::get('/withdrawals', [$c, 'withdrawals'])->middleware('farm.permission:health.view')->name('api.v1.health.withdrawals');

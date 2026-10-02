@@ -811,3 +811,7 @@ The complete frontend integration contract is [Phase 10 health](PHASE-10-HEALTH.
 ## 24. Breeding (Phase 11)
 
 The complete frontend integration contract is [Phase 11 breeding](PHASE-11-BREEDING.md): breeding projects (incubation and pregnancy workflows unlocked by species capabilities), the frozen biological reference, exact expected dates versus expected windows (never a midpoint; no fabricated dates for snail or honeybee), manual expectation overrides, checks, milestones, actual outcomes with the explicit population confirmation (50 eggs set, 40 expected, 37 hatched = +37 once), reversal/correction, permissions, retries and errors. These endpoints are also included in openapi.json.
+
+## 25. Work: tasks, schedules, templates and calendar (Phase 12)
+
+The complete frontend integration contract is [Phase 12 work](PHASE-12-WORK.md): tasks with a derived `due_state`, recurrence, templates, assignment, record-linked completion (completing never creates a record), the calendar read model, permissions and errors. These endpoints are also included in openapi.json.

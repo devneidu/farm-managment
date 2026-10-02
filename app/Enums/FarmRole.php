@@ -39,13 +39,28 @@ enum FarmRole: string
                 Permission::RecordView, Permission::RecordCreate, Permission::RecordReverse, Permission::RecordAdjust,
                 Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage,
                 Permission::BreedingView, Permission::BreedingCreate, Permission::BreedingReverse,
+                Permission::TaskView, Permission::TaskComplete, Permission::TaskManage,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
                 Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,
             ],
-            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse, Permission::HealthView, Permission::HealthCreate, Permission::BreedingView, Permission::BreedingCreate],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView],
-            self::Vet => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage, Permission::BreedingView, Permission::BreedingCreate],
+            self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse, Permission::HealthView, Permission::HealthCreate, Permission::BreedingView, Permission::BreedingCreate, Permission::TaskView, Permission::TaskComplete],
+            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::TaskView, Permission::TaskComplete],
+            self::Vet => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage, Permission::BreedingView, Permission::BreedingCreate, Permission::TaskView, Permission::TaskComplete],
+        };
+    }
+
+    /**
+     * Task categories this role also sees beyond tasks assigned to it (own/relevant work); roles with task.manage see every task.
+     *
+     * @return list<TaskCategory>
+     */
+    public function relevantTaskCategories(): array
+    {
+        return match ($this) {
+            self::Finance => [TaskCategory::Payment, TaskCategory::ProcurementOrders, TaskCategory::RecordKeeping],
+            self::Vet => [TaskCategory::VaccinationMedication, TaskCategory::BreedingReproduction, TaskCategory::GrowthMonitoring],
+            default => [],
         };
     }
 
