@@ -40,12 +40,13 @@ enum FarmRole: string
                 Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage,
                 Permission::BreedingView, Permission::BreedingCreate, Permission::BreedingReverse,
                 Permission::TaskView, Permission::TaskComplete, Permission::TaskManage,
+                Permission::ContactView, Permission::ContactManage, Permission::PurchaseView, Permission::PurchaseCreate, Permission::PurchaseCancel, Permission::FinanceView, Permission::FinanceCreate, Permission::FinanceReverse,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
                 Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,
             ],
             self::FarmWorker => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::RecordCreate, Permission::InventoryView, Permission::InventoryUse, Permission::HealthView, Permission::HealthCreate, Permission::BreedingView, Permission::BreedingCreate, Permission::TaskView, Permission::TaskComplete],
-            self::Finance => [Permission::FarmView, Permission::FinanceExpenseCreate, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::TaskView, Permission::TaskComplete],
+            self::Finance => [Permission::FarmView, Permission::ContactView, Permission::ContactManage, Permission::PurchaseView, Permission::PurchaseCreate, Permission::PurchaseCancel, Permission::FinanceView, Permission::FinanceCreate, Permission::FinanceReverse, Permission::SubscriptionView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::TaskView, Permission::TaskComplete],
             self::Vet => [Permission::FarmView, Permission::MasterDataView, Permission::MeasurementView, Permission::LocationView, Permission::ProductionCycleView, Permission::RecordView, Permission::InventoryView, Permission::HealthView, Permission::HealthCreate, Permission::HealthReverse, Permission::HealthManage, Permission::BreedingView, Permission::BreedingCreate, Permission::TaskView, Permission::TaskComplete],
         };
     }

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-/** Descriptive only: no purchasing, supplier or expense workflow exists in Phase 9. */
+/** Descriptive for manual stock-in; purchases (Phase 14) book their own "purchase" stock-in with a source link and expense. */
 enum StockInReason: string
 {
     case OpeningBalance = 'opening_balance';

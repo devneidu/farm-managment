@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\BreedingProjectController;
 use App\Http\Controllers\Api\V1\CalendarController;
+use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\CropProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\Api\V1\FarmController;
 use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\FarmOperationController;
 use App\Http\Controllers\Api\V1\FeedFormulaController;
+use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HealthRecordController;
 use App\Http\Controllers\Api\V1\InventoryController;
@@ -32,6 +34,7 @@ use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\ProductionCycleController;
+use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\ScheduleController;
@@ -289,6 +292,34 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/{formula}', [$c, 'show'])->middleware('farm.permission:inventory.view')->name('api.v1.feed-formulas.show');
         Route::patch('/{formula}', [$c, 'update'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.feed-formulas.update');
     });
+
+    // Phase 14: contacts, purchases and the money ledger. A purchase is the only path that books stock + expense together;
+    // finance transactions never touch stock.
+    Route::prefix('contacts')->group(function () {
+        $c = ContactController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:contact.view')->name('api.v1.contacts.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:contact.manage', 'throttle:finance-write'])->name('api.v1.contacts.store');
+        Route::get('/{contact}', [$c, 'show'])->middleware('farm.permission:contact.view')->name('api.v1.contacts.show');
+        Route::patch('/{contact}', [$c, 'update'])->middleware(['farm.permission:contact.manage', 'throttle:finance-write'])->name('api.v1.contacts.update');
+    });
+    Route::prefix('purchases')->group(function () {
+        $c = PurchaseController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:purchase.view')->name('api.v1.purchases.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:purchase.create', 'throttle:finance-write'])->name('api.v1.purchases.store');
+        Route::get('/{purchase}', [$c, 'show'])->middleware('farm.permission:purchase.view')->name('api.v1.purchases.show');
+        Route::post('/{purchase}/cancel', [$c, 'cancel'])->middleware(['farm.permission:purchase.cancel', 'throttle:finance-write'])->name('api.v1.purchases.cancel');
+    });
+    Route::prefix('finance')->group(function () {
+        $c = FinanceController::class;
+        Route::get('/categories', [$c, 'categories'])->middleware('farm.permission:finance.view')->name('api.v1.finance.categories');
+        Route::get('/summary', [$c, 'summary'])->middleware('farm.permission:finance.view')->name('api.v1.finance.summary');
+        Route::get('/transactions', [$c, 'index'])->middleware('farm.permission:finance.view')->name('api.v1.finance.transactions.index');
+        Route::post('/transactions', [$c, 'store'])->middleware(['farm.permission:finance.create', 'throttle:finance-write'])->name('api.v1.finance.transactions.store');
+        Route::get('/transactions/{transaction}', [$c, 'show'])->middleware('farm.permission:finance.view')->name('api.v1.finance.transactions.show');
+        Route::post('/transactions/{transaction}/reverse', [$c, 'reverse'])->middleware(['farm.permission:finance.reverse', 'throttle:finance-write'])->name('api.v1.finance.transactions.reverse');
+    });
+    Route::post('/expenses', [FinanceController::class, 'expense'])->middleware(['farm.permission:finance.create', 'throttle:finance-write'])->name('api.v1.expenses.store');
+    Route::post('/income', [FinanceController::class, 'income'])->middleware(['farm.permission:finance.create', 'throttle:finance-write'])->name('api.v1.income.store');
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

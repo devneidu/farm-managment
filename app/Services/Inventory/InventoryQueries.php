@@ -56,7 +56,7 @@ class InventoryQueries
             InventoryItem::ofFarm($ctx->farm)->findOrFail($itemId);
             $q->where('inventory_item_id', $itemId);
         }
-        foreach (['inventory_item_id', 'storage_location_id', 'inventory_lot_id', 'operational_record_id', 'health_record_id'] as $column) {
+        foreach (['inventory_item_id', 'storage_location_id', 'inventory_lot_id', 'operational_record_id', 'health_record_id', 'purchase_id'] as $column) {
             if (isset($f[$column])) {
                 $q->where($column, $f[$column]);
             }

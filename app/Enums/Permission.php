@@ -66,7 +66,16 @@ enum Permission: string
     case TaskComplete = 'task.complete';
     case TaskManage = 'task.manage';
 
+    // Phase 14 - contacts / purchasing / finance (Manager and Finance presets; Farm Worker and Vet have none)
+    case ContactView = 'contact.view';
+    case ContactManage = 'contact.manage';
+    case PurchaseView = 'purchase.view';
+    case PurchaseCreate = 'purchase.create';
+    case PurchaseCancel = 'purchase.cancel';
+    case FinanceView = 'finance.view';
+    case FinanceCreate = 'finance.create';
+    case FinanceReverse = 'finance.reverse';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
-    case FinanceExpenseCreate = 'finance.expense.create';
 }

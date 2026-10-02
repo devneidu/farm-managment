@@ -263,6 +263,9 @@ class InventoryService
             if ($original->health_record_id !== null) {
                 throw new ApiHttpException(409, 'reverse_via_health_record', 'This stock effect belongs to a health record; reverse the health record instead.');
             }
+            if ($original->purchase_id !== null) {
+                throw new ApiHttpException(409, 'reverse_via_purchase', 'This stock effect belongs to a purchase; cancel the purchase instead.');
+            }
             if ($original->operational_record_id !== null) {
                 throw new ApiHttpException(409, 'reverse_via_record', 'This stock effect belongs to an operational record; reverse the record instead.');
             }
@@ -437,6 +440,53 @@ class InventoryService
 
         return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $when, [
             'health_record_id' => $reversalRecordId, 'reverses_movement_id' => $movement->id, 'justification' => $reason,
+        ], guard: true);
+    }
+
+    // ----------------------------------------------- Phase 14 integration (purchasing)
+
+    /** Locks and returns the active item a stocked purchase line receives into. Called by PurchaseService inside its transaction. */
+    public function itemForPurchase(FarmContext $ctx, string $itemId, string $field): InventoryItem
+    {
+        return $this->activeItem($ctx, $itemId, $field);
+    }
+
+    /**
+     * Resolves where a stocked purchase line is received (before its row is written, so foreign ids fail as 404/409 rather
+     * than as a database constraint): an active storage location and the lot (opened from `lot` when new).
+     *
+     * @return array{0: StorageLocation, 1: InventoryLot|null}
+     */
+    public function purchaseDestination(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
+    {
+        $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $lot = $this->lot($ctx, $item, $link, create: true, field: $prefix.'.lot_id');
+        if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
+            throw new ApiHttpException(409, 'lot_expired', 'Stock cannot be received into a lot that had already expired on the purchase date.');
+        }
+
+        return [$location, $lot];
+    }
+
+    /** One stocked purchase line -> one stock_in (reason "purchase") in the purchase's transaction. */
+    public function receiveForPurchase(FarmContext $ctx, string $purchaseId, string $lineId, InventoryItem $item, StorageLocation $location, ?InventoryLot $lot, array $measurement, CarbonImmutable $when, string $prefix): InventoryMovement
+    {
+        $qty = $this->positive($measurement['normalized']['quantity'], $prefix.'.components');
+
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, 'purchase', $qty, $measurement, $when, ['purchase_id' => $purchaseId, 'purchase_item_id' => $lineId]);
+    }
+
+    /** Compensates the stock a cancelled purchase received (one reversal movement per stocked line). */
+    public function reverseForPurchase(FarmContext $ctx, string $lineId, string $purchaseId, CarbonImmutable $when, string $reason): ?InventoryMovement
+    {
+        $movement = InventoryMovement::where('farm_id', $ctx->farm->id)->where('purchase_item_id', $lineId)->lockForUpdate()->first();
+        if (! $movement) {
+            return null;
+        }
+        $item = $this->lockItem($ctx, $movement->inventory_item_id);
+
+        return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $when, [
+            'purchase_id' => $purchaseId, 'reverses_movement_id' => $movement->id, 'justification' => $reason,
         ], guard: true);
     }
 

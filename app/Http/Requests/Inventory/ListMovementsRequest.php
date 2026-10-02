@@ -21,6 +21,7 @@ class ListMovementsRequest extends InventoryRequest
             'type' => ['sometimes', Rule::enum(InventoryMovementType::class)],
             'operational_record_id' => ['sometimes', 'uuid'],
             'health_record_id' => ['sometimes', 'uuid'],
+            'purchase_id' => ['sometimes', 'uuid'],
             'recorded_from' => ['sometimes', 'date_format:Y-m-d'],
             'recorded_to' => ['sometimes', 'date_format:Y-m-d'],
             'page' => ['sometimes', 'integer', 'min:1'],

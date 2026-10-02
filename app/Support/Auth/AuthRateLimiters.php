@@ -71,6 +71,7 @@ class AuthRateLimiters
         RateLimiter::for('health-write', fn (Request $r) => [Limit::perHour(120)->by('health-write:'.self::actor($r))]);
         RateLimiter::for('breeding-write', fn (Request $r) => [Limit::perHour(120)->by('breeding-write:'.self::actor($r))]);
         RateLimiter::for('work-write', fn (Request $r) => [Limit::perHour(240)->by('work-write:'.self::actor($r))]);
+        RateLimiter::for('finance-write', fn (Request $r) => [Limit::perHour(240)->by('finance-write:'.self::actor($r))]);
         RateLimiter::for('inventory-write', fn (Request $r) => [Limit::perHour(240)->by('inventory-write:'.self::actor($r))]);
 
         RateLimiter::for('location-write', fn (Request $r) => [

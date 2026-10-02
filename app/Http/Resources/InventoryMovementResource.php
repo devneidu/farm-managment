@@ -34,7 +34,7 @@ class InventoryMovementResource extends JsonResource
              */
             'measurement' => $this->measurement,
             'recorded_at' => $this->recorded_at->toISOString(), 'notes' => $this->notes,
-            'operational_record_id' => $this->operational_record_id, 'health_record_id' => $this->health_record_id, 'health_record_medicine_id' => $this->health_record_medicine_id, 'transfer_group_id' => $this->transfer_group_id,
+            'operational_record_id' => $this->operational_record_id, 'health_record_id' => $this->health_record_id, 'health_record_medicine_id' => $this->health_record_medicine_id, 'purchase_id' => $this->purchase_id, 'purchase_item_id' => $this->purchase_item_id, 'transfer_group_id' => $this->transfer_group_id,
             'reverses_movement_id' => $this->reverses_movement_id, 'reversed_by_movement_id' => $this->reversal?->id,
             'created_by' => $this->created_by, 'created_at' => $this->created_at->toISOString(),
         ];

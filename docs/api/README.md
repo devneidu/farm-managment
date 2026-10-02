@@ -819,3 +819,7 @@ The complete frontend integration contract is [Phase 12 work](PHASE-12-WORK.md):
 ## 26. Crop operations and outputs (Phase 13)
 
 The complete frontend integration contract is [Phase 13 crop operations](PHASE-13-CROP-INPUTS.md): land preparation, planting, establishment/survival (50 planted, 47 established = 94%), growth stage, crop loss, crop harvest (optionally into `produce` stock), fertilizer and pesticide/herbicide applications with linked stock, the crop project detail `GET /production-cycles/{cycle}/crop`, plot-scoped record listing, package/lot rules, reversal/correction and errors. Everything except the detail endpoint is a record type on `/records`; these endpoints are also included in openapi.json.
+
+## 27. Contacts, purchasing and finance (Phase 14)
+
+The complete frontend integration contract is [Phase 14 contacts, purchasing and finance](PHASE-14-FINANCE.md): one contact with supplier/customer roles, purchases (stock lines → one Phase 9 stock-in each, non-stock lines → no movement, one linked expense), the append-only money ledger with expense/income categories, "record as expense/income" source links with duplicate prevention, cycle allocation and profitability, cancel/reverse/correct, decimal-string money, idempotency, permissions and errors. These endpoints are also included in openapi.json.
