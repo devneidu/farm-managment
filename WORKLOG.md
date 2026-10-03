@@ -11,15 +11,37 @@
 
 ## Current Status
 
-**Current Phase:** Phase 14 — Contacts, purchasing and finance (complete)
+**Current Phase:** Phase 15 — Sales, invoices and payments (complete)
 
-**Status:** Phase 14 (`25-PHASE-14-FINANCE-PURCHASING.md`: contacts, purchases + purchase items, income/expense categories, finance transactions, optional cycle allocation, canonical "record as expense/income" source links) implemented and verified; UNCOMMITTED (Phases 0-13 committed; HEAD `e67ae41`). One migration `2026_10_13_100000_create_finance` (reversible; rollback/reapply verified on `farm_management_test`, plain `migrate` on dev). Targeted `tests/Feature/Finance`: see Tests section for final counts. Pint clean, `git diff --check` clean, OpenAPI regenerated (115 -> 127 paths, none removed). Phase 15 not started.
+**Status:** Phase 15 (`26-PHASE-15-SALES-INVOICES.md`: sales + items, invoices + items + PDF, payments, balances) implemented and verified; UNCOMMITTED (Phases 0-14 committed; HEAD `7e68fb7`). One migration `2026_10_14_100000_create_sales_invoices_payments` (reversible; rollback/reapply verified on `farm_management_test`; dev migrated with plain `migrate`). New package `dompdf/dompdf` for the invoice PDF. Previous: Phase 14 (`25-PHASE-14-FINANCE-PURCHASING.md`: contacts, purchases + purchase items, income/expense categories, finance transactions, optional cycle allocation, canonical "record as expense/income" source links) implemented and verified; UNCOMMITTED (Phases 0-13 committed; HEAD `e67ae41`). One migration `2026_10_13_100000_create_finance` (reversible; rollback/reapply verified on `farm_management_test`, plain `migrate` on dev). Targeted `tests/Feature/Finance`: see Tests section for final counts. Pint clean, `git diff --check` clean, OpenAPI regenerated (115 -> 127 paths, none removed). Phase 15 not started.
 
 **Last Agent:** Claude Code
 
-**Last Updated:** 2026-10-02
+**Last Updated:** 2026-10-03
 
 ---
+
+## Phase 15 Architecture (sales, invoices, payments)
+
+**Scope:** the whole source phase (`26-PHASE-15-SALES-INVOICES.md` is a short brief: sales/items, inventory/population effects, invoices/items, PDF, payments, balances/status; acceptance = livestock sale reduces population, egg/produce sale reduces stock, partial payment, invoice PDF, cancellation/reversal policy). Marketplace, checkout, dashboards, reports and notification/WhatsApp delivery are NOT built.
+
+**Concepts kept apart:** Contact (Phase 14, `is_customer` role - no second customer system) / Sale (`sales`, `sale_items`: the event) / Invoice (`invoices`, `invoice_items`: the customer document, snapshotted at issue) / Payment (`payments`: money actually received, append-only) / Finance transaction (Phase 14 ledger) / Inventory movement (Phase 9) / Population movement (Phase 8). `Save & Create Invoice` = optional `invoice` block on `POST /sales`, same transaction, still two separate rows.
+
+**Side effects (one transaction, append-only, source-linked):** stock line (produce items only) -> ONE Phase 9 `stock_out` (reason `sale`, `inventory_movements.sale_id` + unique `sale_item_id`); livestock line -> ONE Phase 8 operational record `livestock_sale` (negative `population_delta`, key `sale:<line>`) + population movement via `RecordService::appendForSale` (ledger reconciled before/after, dated non-negative); other line -> nothing. Sale books NO income and NO invoice. Payment -> ONE income row in the Phase 14 ledger (`source_type payment`, unique `source_key payment:<id>`; booked first, payment row links to it). Cash basis: income never double-counted. Income is allocated to a cycle only if all sale lines share ONE still-open cycle (collecting after close stays possible, unallocated).
+
+**Invoices:** one live invoice per sale (DB unique `live_sale_key`, null when void); customer/seller/lines snapshotted at issue (contact edits, renames never change it); statuses `issued|void` separate from derived `payment_status unpaid|partially_paid|paid`; `GET /invoices/{id}/pdf` (dompdf, rendered from the snapshot + live paid/balance, `resources/views/invoices/pdf.blade.php`). Void refused while live payments exist.
+
+**Payments:** partial/multiple allowed, never over the total (409 `payment_exceeds_balance`); reversal = offsetting payment row + offsetting ledger row (`reverse_via_payment` on the finance reverse endpoint); balance = total - live payments (a reversal and its original both drop out).
+
+**Cancel policy:** `POST /sales/{id}/cancel` appends compensating stock movements and population records, voids the unpaid invoice, marks the sale cancelled. Refused with `sale_has_payments` while payments are live (money is reversed explicitly, never implied) and `cycle_closed` when a livestock cycle is closed. Sale stock-outs / records are not reversible individually (`reverse_via_sale`). Correction: new sale with `corrects_sale_id`, once.
+
+**Idempotency/locks:** farm-wide keys with request hash on sale create/cancel, invoice issue/void, payment record/reverse (replay returns original, changed payload 409). Lock order farm -> cycles (id order) -> invoice -> inventory items. True parallel-process concurrency NOT exercised (single-process PHPUnit).
+
+**Permissions:** `sale.view|create|cancel`, `invoice.view|create|void`, `payment.view|create|reverse` -> Owner, Manager, Finance; Farm Worker/Vet none. `finance-write` rate limit shared. Correction needs `sale.cancel`; invoice block needs `invoice.create`.
+
+**Files:** migration, models Sale/SaleItem/Invoice/InvoiceItem/Payment, `app/Services/Sales/{SaleService,InvoiceService,PaymentService}.php`, controllers Sale/Invoice/Payment, `app/Http/Requests/{Sales,Invoices,Payments}`, resources Sale/Invoice/Payment, events Sales/{SaleRecorded,InvoiceIssued,PaymentRecorded}, view `invoices/pdf`, docs/api/PHASE-15-SALES-INVOICES.md (README section 28), tests/Feature/Sales/SalesTest.php. Modified: Permission, FarmRole, InventoryService (+itemForSale/saleSource/issueForSale/reverseForSale, `reverse_via_sale`), InventoryQueries/ListMovementsRequest/InventoryMovementResource (sale_id), RecordService (+appendForSale, `reverse_via_sale`), FinanceService (+bookPayment/reversePayment, customer contact check, `reverse_via_payment`, FILTER_SOURCES), ContactService (customer role kept while sales exist), ListTransactionsRequest, Money::format, routes, RolePermissionTest, composer.json/lock (dompdf).
+
+**Deferred / not in the source:** emailing/WhatsApp-sending invoices (`POST /invoices/{id}/send` from the API conventions: delivery belongs to Phases 17/20), refunds as a payment type (reverse the payment), credit notes, discounts/tax lines, unit-price x quantity pricing (line totals are entered), payment gateways/marketplace.
 
 ## Phase 14 Architecture (contacts, purchasing, finance)
 
@@ -415,7 +437,7 @@
 
 ## Last Completed Task
 
-Phase 14 — Contacts, purchasing & finance (see Phase 14 Architecture; UNCOMMITTED). Earlier: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 15 — Sales, invoices & payments (see Phase 15 Architecture; UNCOMMITTED). Earlier: Phase 14 contacts, purchasing & finance (committed `7e68fb7`). Previous entries: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -432,6 +454,10 @@ Created: app/Enums/{FarmRole,Permission,MembershipStatus}.php; app/Events/Access
 Modified: FarmMembership, Farm, User, FarmPolicy, AuthRateLimiters, AuthFlowResponsesExtension (documents farm permission / 404 / farm-context 403), bootstrap/app.php (aliases), routes/api/v1.php, config/identity.php, .env.example (FRONTEND_URL, INVITATION_TTL_DAYS), docs/api/{README.md,openapi.json}, ApiDocumentationTest, OnboardingTest (role is now the FarmRole enum), WORKLOG.md.
 
 ## Tests
+
+**Phase 15 latest: full suite 645 tests, 7926 assertions; 641 pass, 4 fail - all four are pre-existing date-boundary tests (BreedingTest outcome_date, CropOperationsTest expired lot, InventoryTest recorded_from, ProductionCyclesTest future close) that compare UTC `now()` with the Africa/Lagos day and fail only in the 23:00-24:00 UTC window in which the run happened (UTC 2026-10-02 23:21 = Lagos 2026-10-03); not touched by Phase 15, to be re-run outside that window.** `tests/Feature/Sales/SalesTest.php`: 28 tests, 776 assertions, all passing (customer reuse/walk-in, produce stock-out + no income/invoice, package conversion, produce-only + atomic rollback, lots/locations/expiry, livestock population exit + dated bounds + cycle kind, mixed atomic sale, exact money, snapshotted invoices + one live invoice + void/re-issue + Save&Create, PDF, partial/multiple payments + one income each, payment idempotency + DB guard, payment reversal, cycle allocation, sale cancel compensation, no implied refunds, impossible reversals, correction once, sale idempotency, farm isolation, permissions, forbidden client fields, listing filters, events, append-only). Pint clean; git diff --check clean. Not exercised: true parallel-process concurrency.
+
+**Migration verification (Phase 15):** `migrate --pretend` reviewed; destructive check ONLY on `farm_management_test` (SELECT DATABASE() asserted): fixture 1 sale, 1 line, 1 invoice, 1 payment, 1 income row, 3 movements (2 unrelated) -> `migrate:rollback --step=1` dropped the 5 tables + 2 movement columns, removed the sale stock-out and the payment income row, kept the 2 unrelated movements; `migrate` restored empty tables; test DB then `migrate:fresh`ed. Rollback keeps livestock_sale operational records (append-only population history). Dev `farm_management` got plain `migrate`. OpenAPI regenerated: 127 -> 139 paths, none removed.
 
 **Phase 14 latest: full suite 617 tests, 7156 assertions, all passing; `tests/Feature/Finance`: 25 tests, 486 assertions (php -d memory_limit=1G -d xdebug.mode=off vendor/phpunit/phpunit/phpunit); Pint clean; git diff --check clean.** `--filter=FinanceTest` covers contacts (one row/two roles, duplicates, isolation, inactive/non-supplier/in-use), stocked purchase = stock-in + ONE expense with exact decimal totals and source links, default/override categories, package conversion (2 bag + 5 kg = 55 kg), lots/expiry, location/foreign-id validation with full rollback, strict money validation, record_expense=false then single manual booking, retry/conflict, DB-level one-movement-per-line and one-expense-per-purchase, cancel (compensating stock + ledger, replay, already-cancelled, correction once), cancel refused atomically when stock was used, reverse_via_purchase guards, categories, transaction validation/retry, record-as-expense (operational + health) with cycle inheritance and duplicate prevention, reversal + correction keeping one live entry per source, cycle profitability (netting, by-category/by-cycle, date windows, closed-cycle protection), append-only ledger, cross-farm isolation, role permissions. Not exercised: true parallel-process concurrency.
 
@@ -480,8 +506,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Phase 15 (see `docs/implementations/26-PHASE-15-SALES-INVOICES.md`: sales, invoices, payments; uses Phase 14 contacts as customers and the finance ledger), ONLY after explicit user instruction. Commit Phase 14 first. Note: notification delivery belongs to Phase 17 (notification centre) and Phase 20 (WhatsApp); Phase 19 is localization.
+Phase 16 (see `docs/implementations/`), ONLY after explicit user instruction. Commit Phase 15 first. Note: notification delivery belongs to Phase 17 (notification centre) and Phase 20 (WhatsApp); Phase 19 is localization.
 
 ## Recommended Next Commit
 
-`feat: add Phase 14 contacts, purchasing and finance with stock-in purchases, canonical expense/income ledger, source-linked record-as-expense, cycle allocation and profitability summary`
+`feat: add Phase 15 sales, invoices and payments with produce stock-out and livestock population exit, snapshotted invoices and PDF, partial payments booking one income each, and explicit cancel/void/reverse policy`

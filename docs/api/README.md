@@ -823,3 +823,7 @@ The complete frontend integration contract is [Phase 13 crop operations](PHASE-1
 ## 27. Contacts, purchasing and finance (Phase 14)
 
 The complete frontend integration contract is [Phase 14 contacts, purchasing and finance](PHASE-14-FINANCE.md): one contact with supplier/customer roles, purchases (stock lines → one Phase 9 stock-in each, non-stock lines → no movement, one linked expense), the append-only money ledger with expense/income categories, "record as expense/income" source links with duplicate prevention, cycle allocation and profitability, cancel/reverse/correct, decimal-string money, idempotency, permissions and errors. These endpoints are also included in openapi.json.
+
+## 28. Sales, invoices and payments (Phase 15)
+
+The complete frontend integration contract is [Phase 15 sales, invoices and payments](PHASE-15-SALES-INVOICES.md): sales (produce lines → one Phase 9 stock-out each, livestock lines → one population-ledger exit each, other lines → no physical effect), invoices as a separate snapshotted customer document with an on-demand PDF, payments as money actually received (partial and multiple payments, balances, one income entry in the Phase 14 ledger per payment), cancel/void/reverse policy (money is never implied), decimal-string money, idempotency, permissions and errors. These endpoints are also included in openapi.json.

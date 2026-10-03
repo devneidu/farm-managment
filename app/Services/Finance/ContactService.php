@@ -8,6 +8,7 @@ use App\Http\Requests\Contacts\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\Farm;
 use App\Models\Purchase;
+use App\Models\Sale;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -82,8 +83,12 @@ class ContactService
                 if ($contact->is_supplier && ! $supplier && Purchase::where('farm_id', $ctx->farm->id)->where('contact_id', $contact->id)->exists()) {
                     throw new ApiHttpException(409, 'contact_in_use', 'This contact has purchases; it stays a supplier. Deactivate it instead.');
                 }
+                $customer = in_array('customer', $data['roles'], true);
+                if ($contact->is_customer && ! $customer && Sale::where('farm_id', $ctx->farm->id)->where('contact_id', $contact->id)->exists()) {
+                    throw new ApiHttpException(409, 'contact_in_use', 'This contact has sales; it stays a customer. Deactivate it instead.');
+                }
                 $contact->is_supplier = $supplier;
-                $contact->is_customer = in_array('customer', $data['roles'], true);
+                $contact->is_customer = $customer;
             }
             foreach (['name' => fn ($v) => $this->clean($v), 'kind' => null, 'phone' => null, 'email' => null, 'address' => null, 'notes' => null, 'is_active' => null] as $field => $map) {
                 if (array_key_exists($field, $data)) {

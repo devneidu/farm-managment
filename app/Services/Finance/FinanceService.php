@@ -37,6 +37,9 @@ class FinanceService
 {
     public const SOURCES = ['operational_record', 'health_record', 'purchase'];
 
+    /** Sources the ledger can be filtered by: the client-bookable ones plus the entries other modules book themselves. */
+    public const FILTER_SOURCES = [...self::SOURCES, 'payment'];
+
     private const RELATIONS = ['category', 'contact', 'reversal'];
 
     public function categories(FarmContext $ctx, array $filters = [])
@@ -123,6 +126,9 @@ class FinanceService
             if ($original->source_type === 'purchase') {
                 throw new ApiHttpException(409, 'reverse_via_purchase', 'This expense belongs to a purchase; cancel the purchase instead.');
             }
+            if ($original->source_type === 'payment') {
+                throw new ApiHttpException(409, 'reverse_via_payment', 'This income belongs to a customer payment; reverse the payment instead.');
+            }
             $when = isset($data['occurred_on']) ? $data['occurred_on'] : CarbonImmutable::now($ctx->farm->timezone)->toDateString();
 
             return $this->appendReversal($ctx, $original, $data['reason'], $when, $data['idempotency_key'], $hash);
@@ -157,6 +163,29 @@ class FinanceService
         return $this->appendReversal($ctx, $original, $reason, $when->setTimezone($ctx->farm->timezone)->toDateString(), null, null);
     }
 
+    // ----------------------------------------------- Phase 15 integration (payments)
+
+    /**
+     * The income ONE customer payment books, in the payment's own transaction (farm and cycle already locked). Cash basis: a sale or an
+     * invoice books nothing; only money actually received does. The unique source key makes a second booking for the same payment impossible.
+     */
+    public function bookPayment(FarmContext $ctx, string $paymentId, string $amount, string $receivedOn, CarbonImmutable $recordedAt, FinanceCategory $category, ?string $contactId, ?string $cycleId, string $description): FinanceTransaction
+    {
+        return $this->insert($ctx, [
+            'entry_type' => FinanceTransaction::ENTRY, 'direction' => 'income', 'finance_category_id' => $category->id, 'amount' => $amount,
+            'occurred_on' => $receivedOn, 'recorded_at' => $recordedAt, 'contact_id' => $contactId, 'production_cycle_id' => $cycleId,
+            'description' => $description, 'source_type' => 'payment', 'source_id' => $paymentId, 'source_key' => 'payment:'.$paymentId,
+        ]);
+    }
+
+    /** Offsets the income of a reversed payment. */
+    public function reversePayment(FarmContext $ctx, string $transactionId, CarbonImmutable $when, string $reason): FinanceTransaction
+    {
+        $original = FinanceTransaction::where('farm_id', $ctx->farm->id)->lockForUpdate()->findOrFail($transactionId);
+
+        return $this->appendReversal($ctx, $original, $reason, $when->setTimezone($ctx->farm->timezone)->toDateString(), null, null);
+    }
+
     /** The platform expense category for a code (used for derived purchase categories). */
     public function platformCategory(string $code, string $direction = 'expense'): FinanceCategory
     {
@@ -184,7 +213,7 @@ class FinanceService
     }
 
     /** Validates an optional contact of this farm (404 for foreign ids) and returns its id. */
-    public function contact(FarmContext $ctx, ?string $id, bool $supplier = false): ?string
+    public function contact(FarmContext $ctx, ?string $id, bool $supplier = false, bool $customer = false): ?string
     {
         if ($id === null) {
             return null;
@@ -195,6 +224,9 @@ class FinanceService
         }
         if ($supplier && ! $contact->is_supplier) {
             $this->invalid('contact_id', 'This contact is not a supplier.');
+        }
+        if ($customer && ! $contact->is_customer) {
+            $this->invalid('contact_id', 'This contact is not a customer.');
         }
 
         return $contact->id;

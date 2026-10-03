@@ -166,6 +166,9 @@ class RecordService
             if ($original->type === 'breeding_outcome') {
                 throw new ApiHttpException(409, 'reverse_via_breeding_outcome', 'This population effect belongs to a breeding outcome; reverse the breeding outcome instead.');
             }
+            if ($original->type === 'livestock_sale') {
+                throw new ApiHttpException(409, 'reverse_via_sale', 'This population effect belongs to a sale; cancel the sale instead.');
+            }
             $when = $this->when($ctx, $cycle, $data['recorded_at']);
             if ($when->lessThan($original->recorded_at)) {
                 $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
@@ -189,6 +192,22 @@ class RecordService
         $this->ledger->reconcile($cycle);
         $measurement = $reverses?->measurement ?? $this->quantities->normalize($ctx->farm, [['quantity' => (string) $delta, 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
         $record = $this->insert($ctx, $cycle, ['type' => $reverses ? 'reversal' : 'breeding_outcome', 'reverses_record_id' => $reverses?->id, 'idempotency_key' => $key], $details, $measurement, $delta, $when, $hash);
+        $this->ledger->reconcile($cycle);
+        RecordCreated::dispatch($record);
+
+        return $record;
+    }
+
+    /**
+     * Sales integration: animals leaving the farm by sale (or returning when the sale is cancelled) as an ordinary Phase 8 record + population
+     * movement, so the ledger explains every head. The caller holds the farm and cycle locks and owns idempotency; the ledger is reconciled
+     * before and after (a sale that would make the dated population negative fails here).
+     */
+    public function appendForSale(FarmContext $ctx, ProductionCycle $cycle, array $details, int $delta, CarbonImmutable $when, string $key, string $hash, ?OperationalRecord $reverses = null): OperationalRecord
+    {
+        $this->ledger->reconcile($cycle);
+        $measurement = $reverses?->measurement ?? $this->quantities->normalize($ctx->farm, [['quantity' => (string) abs($delta), 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
+        $record = $this->insert($ctx, $cycle, ['type' => $reverses ? 'reversal' : 'livestock_sale', 'reverses_record_id' => $reverses?->id, 'idempotency_key' => $key], $details, $measurement, $delta, $when, $hash);
         $this->ledger->reconcile($cycle);
         RecordCreated::dispatch($record);
 

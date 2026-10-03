@@ -266,6 +266,9 @@ class InventoryService
             if ($original->purchase_id !== null) {
                 throw new ApiHttpException(409, 'reverse_via_purchase', 'This stock effect belongs to a purchase; cancel the purchase instead.');
             }
+            if ($original->sale_id !== null) {
+                throw new ApiHttpException(409, 'reverse_via_sale', 'This stock effect belongs to a sale; cancel the sale instead.');
+            }
             if ($original->operational_record_id !== null) {
                 throw new ApiHttpException(409, 'reverse_via_record', 'This stock effect belongs to an operational record; reverse the record instead.');
             }
@@ -487,6 +490,59 @@ class InventoryService
 
         return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $when, [
             'purchase_id' => $purchaseId, 'reverses_movement_id' => $movement->id, 'justification' => $reason,
+        ], guard: true);
+    }
+
+    // ----------------------------------------------- Phase 15 integration (sales)
+
+    /** Locks and returns the active produce item a sale line sells. Called by SaleService inside its transaction. */
+    public function itemForSale(FarmContext $ctx, string $itemId, string $field): InventoryItem
+    {
+        $item = $this->activeItem($ctx, $itemId, $field);
+        if ($item->category !== InventoryCategory::Produce) {
+            $this->invalid($field, 'Only produce stock can be sold; record other stock leaving the farm with a stock-out.');
+        }
+
+        return $item;
+    }
+
+    /**
+     * Resolves where a sold stock line leaves from (before any row is written, so foreign ids fail as 404/409 rather than as a
+     * database constraint): a storage location and, for lot-tracked items, the named lot. Expired lots cannot be sold.
+     *
+     * @return array{0: StorageLocation, 1: InventoryLot|null}
+     */
+    public function saleSource(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
+    {
+        $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: $prefix.'.lot_id');
+        if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
+            throw new ApiHttpException(409, 'lot_expired', 'Expired stock cannot be sold.');
+        }
+
+        return [$location, $lot];
+    }
+
+    /** One stocked sale line -> one stock_out (reason "sale") in the sale's transaction. Never lets the bucket go negative, now or in dated history. */
+    public function issueForSale(FarmContext $ctx, string $saleId, string $lineId, InventoryItem $item, StorageLocation $location, ?InventoryLot $lot, array $measurement, CarbonImmutable $when, string $prefix): InventoryMovement
+    {
+        $qty = $this->positive($measurement['normalized']['quantity'], $prefix.'.components');
+        $this->assertAvailable($item, $location->id, $lot?->id, $qty);
+
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockOut, 'sale', Decimal::sub('0', $qty), $measurement, $when, ['sale_id' => $saleId, 'sale_item_id' => $lineId], guard: true);
+    }
+
+    /** Compensates the stock a cancelled sale issued (one reversal movement per stocked line). */
+    public function reverseForSale(FarmContext $ctx, string $lineId, string $saleId, CarbonImmutable $when, string $reason): ?InventoryMovement
+    {
+        $movement = InventoryMovement::where('farm_id', $ctx->farm->id)->where('sale_item_id', $lineId)->lockForUpdate()->first();
+        if (! $movement) {
+            return null;
+        }
+        $item = $this->lockItem($ctx, $movement->inventory_item_id);
+
+        return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $when, [
+            'sale_id' => $saleId, 'reverses_movement_id' => $movement->id, 'justification' => $reason,
         ], guard: true);
     }
 

@@ -25,6 +25,16 @@ final class Money
         return bcadd($value, '0', self::SCALE);
     }
 
+    /** Display text with thousands separators ("1,234,567.50"); string arithmetic only, never a float. */
+    public static function format(string $amount): string
+    {
+        $amount = bcadd($amount, '0', self::SCALE);
+        $negative = str_starts_with($amount, '-');
+        [$whole, $fraction] = explode('.', ltrim($amount, '-'));
+
+        return ($negative ? '-' : '').preg_replace('/\B(?=(\d{3})+(?!\d))/', ',', $whole).'.'.$fraction;
+    }
+
     public static function add(string $a, string $b): string
     {
         return bcadd($a, $b, self::SCALE);

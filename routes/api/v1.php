@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HealthRecordController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
+use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\MasterDataController;
@@ -31,12 +32,14 @@ use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OperationalRecordController;
 use App\Http\Controllers\Api\V1\PackageConversionController;
+use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\ProductionCycleController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
 use App\Http\Controllers\Api\V1\RoleController;
+use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\StorageLocationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
@@ -320,6 +323,30 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     });
     Route::post('/expenses', [FinanceController::class, 'expense'])->middleware(['farm.permission:finance.create', 'throttle:finance-write'])->name('api.v1.expenses.store');
     Route::post('/income', [FinanceController::class, 'income'])->middleware(['farm.permission:finance.create', 'throttle:finance-write'])->name('api.v1.income.store');
+    // Phase 15: sales (the event), invoices (the customer document) and payments (money received) are three separate resources.
+    Route::prefix('sales')->group(function () {
+        $c = SaleController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:sale.view')->name('api.v1.sales.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:sale.create', 'throttle:finance-write'])->name('api.v1.sales.store');
+        Route::get('/{sale}', [$c, 'show'])->middleware('farm.permission:sale.view')->name('api.v1.sales.show');
+        Route::post('/{sale}/cancel', [$c, 'cancel'])->middleware(['farm.permission:sale.cancel', 'throttle:finance-write'])->name('api.v1.sales.cancel');
+        Route::post('/{sale}/invoice', [$c, 'invoice'])->middleware(['farm.permission:invoice.create', 'throttle:finance-write'])->name('api.v1.sales.invoice');
+    });
+    Route::prefix('invoices')->group(function () {
+        $c = InvoiceController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:invoice.create', 'throttle:finance-write'])->name('api.v1.invoices.store');
+        Route::get('/{invoice}', [$c, 'show'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.show');
+        Route::get('/{invoice}/pdf', [$c, 'pdf'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.pdf');
+        Route::post('/{invoice}/void', [$c, 'void'])->middleware(['farm.permission:invoice.void', 'throttle:finance-write'])->name('api.v1.invoices.void');
+        Route::post('/{invoice}/payments', [$c, 'pay'])->middleware(['farm.permission:payment.create', 'throttle:finance-write'])->name('api.v1.invoices.payments.store');
+    });
+    Route::prefix('payments')->group(function () {
+        $c = PaymentController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:payment.view')->name('api.v1.payments.index');
+        Route::get('/{payment}', [$c, 'show'])->middleware('farm.permission:payment.view')->name('api.v1.payments.show');
+        Route::post('/{payment}/reverse', [$c, 'reverse'])->middleware(['farm.permission:payment.reverse', 'throttle:finance-write'])->name('api.v1.payments.reverse');
+    });
 
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');

@@ -76,6 +76,17 @@ enum Permission: string
     case FinanceCreate = 'finance.create';
     case FinanceReverse = 'finance.reverse';
 
+    // Phase 15 - sales / invoices / payments (Manager and Finance presets; Farm Worker and Vet have none)
+    case SaleView = 'sale.view';
+    case SaleCreate = 'sale.create';
+    case SaleCancel = 'sale.cancel';
+    case InvoiceView = 'invoice.view';
+    case InvoiceCreate = 'invoice.create';
+    case InvoiceVoid = 'invoice.void';
+    case PaymentView = 'payment.view';
+    case PaymentCreate = 'payment.create';
+    case PaymentReverse = 'payment.reverse';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
 }
