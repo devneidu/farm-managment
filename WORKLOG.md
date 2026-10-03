@@ -11,9 +11,11 @@
 
 ## Current Status
 
-**Current Phase:** Phase 17 — Reports, exports, notifications & audit (complete)
+**Current Phase:** Phase 18 — Platform administration (complete, UNCOMMITTED on top of HEAD `07f491c` which contains Phases 16-17)
 
-**Status:** Phase 17 (`28-PHASE-17-REPORTS-NOTIFICATIONS.md` + endpoint list in `04-API-CONVENTIONS` + `08-REPORTING`) implemented and verified; UNCOMMITTED (Phase 16 is also still uncommitted on top of HEAD `2c7ca60`). One migration `2026_10_15_100000_create_reports_notifications_audit` (reversible; tables `report_exports`, `notifications`, `audit_logs` + 2 report indexes; rollback/reapply verified on `farm_management_test`, dev migrated with plain `migrate`). No new package (own ZipArchive XLSX writer; Dompdf already present). Phase 18 not started; WhatsApp/AI (Phase 20) not touched.
+**Status:** Phase 18 (`29-PHASE-18-ADMIN.md` + `04-API-CONVENTIONS` platform-admin list) implemented and verified; UNCOMMITTED. One migration `2026_10_16_100000_create_platform_administration`. `/api/v1/platform-admin/*` (35 routes). Phase 19 NOT started; Phase 20 deferred. See Phase 18 Architecture below.
+
+**Previous status (Phase 17):** Phase 17 (`28-PHASE-17-REPORTS-NOTIFICATIONS.md` + endpoint list in `04-API-CONVENTIONS` + `08-REPORTING`) implemented and verified; UNCOMMITTED (Phase 16 is also still uncommitted on top of HEAD `2c7ca60`). One migration `2026_10_15_100000_create_reports_notifications_audit` (reversible; tables `report_exports`, `notifications`, `audit_logs` + 2 report indexes; rollback/reapply verified on `farm_management_test`, dev migrated with plain `migrate`). No new package (own ZipArchive XLSX writer; Dompdf already present). Phase 18 not started; WhatsApp/AI (Phase 20) not touched.
 
 **Previous status:** Phase 16 (`27-PHASE-16-DASHBOARD.md` + `35-DASHBOARD-UI-CONTRACT.md`: `GET /dashboard`, `GET /dashboard/calendar`, `GET /insights`) implemented and verified; UNCOMMITTED (Phases 0-15 committed; HEAD `2c7ca60`). NO migration, NO new table, NO new permission, NO new package: the dashboard is a pure read model over existing modules. Phase 17 not started. Previous status text for Phase 15 follows.
 
@@ -27,6 +29,19 @@
 
 ---
 
+## Phase 18 Architecture (platform administration)
+
+**Access:** table `platform_admins` (user_id unique, role `admin`=read+write | `support`=read-only, granted_by). Created/removed ONLY by `php artisan platform:grant-admin {email} --role=` / `platform:revoke-admin {email}` (audited, actor null); no API mints or escalates a grant. Middleware `platform.admin[:write]` (`RequirePlatformAdmin`) on `auth:sanctum, account.active, email.verified`; writes also `throttle:platform-admin-write`. Farm roles confer nothing there; platform roles confer nothing on farm routes (`ResolveFarmContext` untouched). `AuthStateResource.user.platform_role` added.
+
+**Audit:** reuses Phase 17 `audit_logs` (`farm_id` now NULLABLE, new `created_at` index). `PlatformAudit` (services/Platform) writes `platform.*` rows with only changed before/after fields, drops credential-like keys, called inside the change transaction. Farm audit queries filter by farm_id so platform rows never reach a farm. Table stays append-only.
+
+**Services (`app/Services/Platform`)**: `PlatformPlanService` (plans on the Phase 3 tables; create inactive; deactivate blocked for default / plans with active-past_due subscribers; make-default idempotent, must be active+free; default plan cannot carry active prices; prices upsert in kobo; entitlements validated against Feature/Limit enums; farm plan change via `SubscriptionService::changePlan` with admin actor), `PlatformMasterDataService` (operation types, species, crop types, SYSTEM breeds/varieties, reference values; code/category/tracking_model/parent immutable; no delete; parent-active rules; capability set via `SpeciesCapabilityService` + dependency/in-use checks against active breeding projects), `PlatformTemplateService` (draft -> published -> archived; `work_templates.published_at`; `WorkTemplateService::visible()` now hides unpublished platform templates; publish re-validates shape, references, species workflow capability; editing published bumps version), `PlatformConfigService` (closed settings registry `support_email|support_whatsapp|announcement`; feature flags never deleted; `setting()`/`flag()` accessors), `PlatformSupportService` (user/farm search + read models, reversible user suspension with reason, platform audit list). `WorkTemplateService` assertShape/columns/saveItems/itemData made public for reuse.
+
+**Support visibility:** identity, memberships, plan, limits+usage counts, subscription events only. No population/stock/finance/sales/health/breeding data. Lists paginated with aggregate subqueries/eager loads; test asserts constant query counts as farms/users/audit rows grow.
+
+**Not done / deferred:** impersonation, farm suspension (no existing mechanism), billing provider, per-farm entitlement overrides, flags targeting individual farms, creating platform work-template items outside the template payload, true parallel-process concurrency tests (state transitions use row locks, single-process PHPUnit only). Settings/flags have no farm-facing consumer yet.
+
+**Docs:** docs/api/PHASE-18-PLATFORM-ADMIN.md, README section 31, openapi.json 152 -> 180 paths (only the 2 known Phase 14 PD001 warnings). **Tests:** tests/Feature/Platform/PlatformAdminTest.php (35) + ApiDocumentationTest phase 18.
 ## Phase 17 Architecture (reports, exports, notifications, audit)
 
 **Reports** (`app/Services/Reports/`): 16 read-only reports, each a `Report` class (`Reports/*Report.php`) with a `ReportDefinition` (code, family, ALL-required data permissions, optional anyOf, filters, plan feature, livestock|crop kind) and a typed `ReportResult` (columns, rows, exact-decimal summary, notes). `ReportService` = catalogue (permission-filtered, `relevant` operation flag, `available` plan flag), authorise (report.view + data permissions -> 403; `advanced_reports` entitlement -> 403 feature_not_available), run. `ReportFilters` resolves farm-local `from/to/as_of` (default last 30 days) to UTC bounds via `DashboardClock`. Nothing is stored (asserted: no totals tables; running a report creates no export or notification). Reuses `FinanceQueries::summary`, `StockLedger::display`, `WorkSupport::visible`. Reversals: operational/health records via NOT EXISTS reversal; population reversals attributed to the reversed event type (net); stock reversals netted by joining the original movement; cancelled sales/purchases, void invoices and reversed payments excluded. Quantities are canonical normalised units (g/ml/piece), never summed across units. One grouped query per source (query-count test: constant in cycle count).
@@ -60,6 +75,19 @@
 **Deferred:** per-farm configurable insight thresholds, dismiss/snooze of insights, insight history, notification delivery of insights (Phase 17), reports/exports (Phase 17), customisable dashboard layout, aquaculture-specific cards (fish are population-tracked livestock cycles here).
 
 **Known limits:** `mortality_7d`/insights use `operational_records.type = 'mortality'` only (health records link to, never create, mortality). Quick Record is capped at 6 in registry order (no usage-based ranking). The compact calendar embedded in `/dashboard` is always the default 7 days.
+## Phase 18 Architecture (platform administration)
+
+**Access:** table `platform_admins` (user_id unique, role `admin`=read+write | `support`=read-only, granted_by). Created/removed ONLY by `php artisan platform:grant-admin {email} --role=` / `platform:revoke-admin {email}` (audited, actor null); no API mints or escalates a grant. Middleware `platform.admin[:write]` (`RequirePlatformAdmin`) on `auth:sanctum, account.active, email.verified`; writes also `throttle:platform-admin-write`. Farm roles confer nothing there; platform roles confer nothing on farm routes (`ResolveFarmContext` untouched). `AuthStateResource.user.platform_role` added.
+
+**Audit:** reuses Phase 17 `audit_logs` (`farm_id` now NULLABLE, new `created_at` index). `PlatformAudit` (services/Platform) writes `platform.*` rows with only changed before/after fields, drops credential-like keys, called inside the change transaction. Farm audit queries filter by farm_id so platform rows never reach a farm. Table stays append-only.
+
+**Services (`app/Services/Platform`)**: `PlatformPlanService` (plans on the Phase 3 tables; create inactive; deactivate blocked for default / plans with active-past_due subscribers; make-default idempotent, must be active+free; default plan cannot carry active prices; prices upsert in kobo; entitlements validated against Feature/Limit enums; farm plan change via `SubscriptionService::changePlan` with admin actor), `PlatformMasterDataService` (operation types, species, crop types, SYSTEM breeds/varieties, reference values; code/category/tracking_model/parent immutable; no delete; parent-active rules; capability set via `SpeciesCapabilityService` + dependency/in-use checks against active breeding projects), `PlatformTemplateService` (draft -> published -> archived; `work_templates.published_at`; `WorkTemplateService::visible()` now hides unpublished platform templates; publish re-validates shape, references, species workflow capability; editing published bumps version), `PlatformConfigService` (closed settings registry `support_email|support_whatsapp|announcement`; feature flags never deleted; `setting()`/`flag()` accessors), `PlatformSupportService` (user/farm search + read models, reversible user suspension with reason, platform audit list). `WorkTemplateService` assertShape/columns/saveItems/itemData made public for reuse.
+
+**Support visibility:** identity, memberships, plan, limits+usage counts, subscription events only. No population/stock/finance/sales/health/breeding data. Lists paginated with aggregate subqueries/eager loads; test asserts constant query counts as farms/users/audit rows grow.
+
+**Not done / deferred:** impersonation, farm suspension (no existing mechanism), billing provider, per-farm entitlement overrides, flags targeting individual farms, creating platform work-template items outside the template payload, true parallel-process concurrency tests (state transitions use row locks, single-process PHPUnit only). Settings/flags have no farm-facing consumer yet.
+
+**Docs:** docs/api/PHASE-18-PLATFORM-ADMIN.md, README section 31, openapi.json 152 -> 180 paths (only the 2 known Phase 14 PD001 warnings). **Tests:** tests/Feature/Platform/PlatformAdminTest.php (35) + ApiDocumentationTest phase 18.
 ## Phase 17 Architecture (reports, exports, notifications, audit)
 
 **Reports** (`app/Services/Reports/`): 16 read-only reports, each a `Report` class (`Reports/*Report.php`) with a `ReportDefinition` (code, family, ALL-required data permissions, optional anyOf, filters, plan feature, livestock|crop kind) and a typed `ReportResult` (columns, rows, exact-decimal summary, notes). `ReportService` = catalogue (permission-filtered, `relevant` operation flag, `available` plan flag), authorise (report.view + data permissions -> 403; `advanced_reports` entitlement -> 403 feature_not_available), run. `ReportFilters` resolves farm-local `from/to/as_of` (default last 30 days) to UTC bounds via `DashboardClock`. Nothing is stored (asserted: no totals tables; running a report creates no export or notification). Reuses `FinanceQueries::summary`, `StockLedger::display`, `WorkSupport::visible`. Reversals: operational/health records via NOT EXISTS reversal; population reversals attributed to the reversed event type (net); stock reversals netted by joining the original movement; cancelled sales/purchases, void invoices and reversed payments excluded. Quantities are canonical normalised units (g/ml/piece), never summed across units. One grouped query per source (query-count test: constant in cycle count).
@@ -509,7 +537,7 @@
 
 ## Last Completed Task
 
-Phase 17 - Reports, exports, notifications & audit (see Phase 17 Architecture; UNCOMMITTED). Earlier: Phase 16 - Dashboard & insights (see Phase 16 Architecture; UNCOMMITTED). Earlier: Phase 15 sales, invoices & payments (committed `2c7ca60`). Phase 15 — Sales, invoices & payments (see Phase 15 Architecture; UNCOMMITTED). Earlier: Phase 14 contacts, purchasing & finance (committed `7e68fb7`). Previous entries: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 18 - Platform administration (UNCOMMITTED; see Phase 18 Architecture). Earlier: Phase 17 - Reports, exports, notifications & audit (see Phase 17 Architecture; UNCOMMITTED). Earlier: Phase 16 - Dashboard & insights (see Phase 16 Architecture; UNCOMMITTED). Earlier: Phase 15 sales, invoices & payments (committed `2c7ca60`). Phase 15 — Sales, invoices & payments (see Phase 15 Architecture; UNCOMMITTED). Earlier: Phase 14 contacts, purchasing & finance (committed `7e68fb7`). Previous entries: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -583,8 +611,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Commit Phases 16 and 17, then Phase 18 (platform administration) ONLY after explicit user instruction.
+Commit Phase 18, then Phase 19 (localization/accessibility) ONLY after explicit user instruction. Phase 20 stays deferred.
 
 ## Recommended Next Commit
 
-`feat: add Phase 17 reports, queued private exports, notification centre and audit trail with permission-aware farm-scoped reports, CSV/XLSX/PDF exports, deduplicated insight and task-reminder notifications with preferences, and a read-model audit view over append-only records`
+`feat: add Phase 18 platform administration with console-granted platform admin/support roles, plan price and entitlement management, reference-data and capability administration with compatibility checks, draft/publish platform work templates, settings and feature flags, cross-farm support read models and a platform audit trail`

@@ -23,7 +23,7 @@ class AuthStateResource extends JsonResource
      *     onboarded: bool,
      *     has_active_farm: bool,
      *     next_action: 'verify_email'|'complete_farm_setup'|'no_active_farm'|'none',
-     *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, providers: string[]},
+     *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, platform_role: 'admin'|'support'|null, providers: string[]},
      *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null
      * }
      */
@@ -50,6 +50,7 @@ class AuthStateResource extends JsonResource
                 'name' => $user->name,
                 'email_verified_at' => $user->email_verified_at?->toIso8601String(),
                 'has_password' => $user->password !== null,
+                'platform_role' => $user->platformRole()?->value,
                 'providers' => $user->socialAccounts()->pluck('provider')->all(),
             ],
             'farm' => $farm ? [

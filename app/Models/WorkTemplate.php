@@ -19,7 +19,7 @@ class WorkTemplate extends Model
 
     protected function casts(): array
     {
-        return ['version' => 'integer', 'is_active' => 'boolean'];
+        return ['version' => 'integer', 'is_active' => 'boolean', 'published_at' => 'datetime'];
     }
 
     protected static function booted(): void

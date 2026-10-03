@@ -38,7 +38,8 @@ class WorkTemplateService
 
     private function visible(FarmContext $ctx): Builder
     {
-        return WorkTemplate::where(fn ($q) => $q->whereNull('farm_id')->orWhere('farm_id', $ctx->farm->id));
+        // Platform templates are visible only once published; a draft being prepared in Platform Admin never reaches a farm.
+        return WorkTemplate::where(fn ($q) => $q->where(fn ($p) => $p->whereNull('farm_id')->whereNotNull('published_at'))->orWhere('farm_id', $ctx->farm->id));
     }
 
     public function find(FarmContext $ctx, string $id): WorkTemplate
@@ -235,7 +236,7 @@ class WorkTemplateService
         }
     }
 
-    private function assertShape(array $data, string $appliesTo, bool $partial = false): void
+    public function assertShape(array $data, string $appliesTo, bool $partial = false): void
     {
         $project = $appliesTo === 'breeding_project';
         if (! $project && ! empty($data['breeding_workflow'])) {
@@ -278,7 +279,7 @@ class WorkTemplateService
         }
     }
 
-    private function columns(array $data): array
+    public function columns(array $data): array
     {
         $out = [];
         foreach (['name', 'description', 'applies_to', 'cycle_kind', 'operation_type_id', 'species_id', 'crop_type_id', 'breeding_workflow', 'is_active'] as $field) {
@@ -290,7 +291,7 @@ class WorkTemplateService
         return $out;
     }
 
-    private function saveItems(WorkTemplate $template, array $items): void
+    public function saveItems(WorkTemplate $template, array $items): void
     {
         foreach (array_values($items) as $position => $item) {
             WorkTemplateItem::create([
@@ -304,7 +305,7 @@ class WorkTemplateService
         }
     }
 
-    private function itemData(WorkTemplateItem $i): array
+    public function itemData(WorkTemplateItem $i): array
     {
         return [
             'title' => $i->title, 'category' => $i->category->value, 'instructions' => $i->instructions, 'anchor' => $i->anchor->value, 'offset_days' => $i->offset_days,

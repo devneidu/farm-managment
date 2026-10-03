@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\PlatformRole;
 use App\Models\Concerns\HasUuidV7;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -63,6 +65,17 @@ class User extends Authenticatable
         return $this->belongsToMany(Farm::class, 'farm_memberships')
             ->withPivot('role')
             ->wherePivot('status', 'active');
+    }
+
+    public function platformAdmin(): HasOne
+    {
+        return $this->hasOne(PlatformAdmin::class);
+    }
+
+    /** The platform role granted to this user, if any. Independent of every farm membership. */
+    public function platformRole(): ?PlatformRole
+    {
+        return $this->platformAdmin?->role;
     }
 
     public function socialAccounts(): HasMany

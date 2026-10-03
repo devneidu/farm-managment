@@ -376,4 +376,27 @@ class ApiDocumentationTest extends TestCase
         }
         $this->assertArrayHasKey('422', $spec['paths']['/master/units']['get']['responses']);
     }
+
+    public function test_phase_18_platform_admin_endpoints_are_documented_with_roles_and_errors(): void
+    {
+        $spec = $this->spec();
+        $platform = array_filter(array_keys($spec['paths']), fn ($p) => str_starts_with($p, '/platform-admin'));
+        $this->assertGreaterThanOrEqual(25, count($platform));
+
+        foreach (['get /platform-admin/plans', 'post /platform-admin/plans', 'put /platform-admin/plans/{plan}/entitlements', 'get /platform-admin/master/{kind}', 'post /platform-admin/work-templates/{template}/publish',
+            'put /platform-admin/master/species/{species}/capabilities/{capability}', 'post /platform-admin/users/{user}/suspend', 'get /platform-admin/farms', 'get /platform-admin/audit-logs'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method] ?? $this->fail("Missing {$endpoint}");
+            $this->assertArrayHasKey('401', $operation['responses'], $endpoint);
+            $this->assertArrayHasKey('403', $operation['responses'], $endpoint);
+        }
+        foreach (['201', '422', '429'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/platform-admin/plans']['post']['responses']);
+        }
+        $this->assertStringContainsString('plan_in_use', $spec['paths']['/platform-admin/plans/{plan}']['patch']['description']);
+        $this->assertStringContainsString('capability_in_use', $spec['paths']['/platform-admin/master/species/{species}/capabilities/{capability}']['put']['description']);
+        $this->assertStringContainsString('platform.user_suspended', $spec['paths']['/platform-admin/users/{user}/suspend']['post']['description']);
+        $this->assertArrayNotHasKey('delete', $spec['paths']['/platform-admin/plans/{plan}']);
+        $this->assertArrayNotHasKey('farm_id', $spec['components']['schemas']['StorePlanRequest']['properties'] ?? []);
+    }
 }

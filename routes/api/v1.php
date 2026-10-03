@@ -38,6 +38,12 @@ use App\Http\Controllers\Api\V1\OperationalRecordController;
 use App\Http\Controllers\Api\V1\PackageConversionController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlanController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAdminController;
+use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
+use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
+use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
+use App\Http\Controllers\Api\V1\Platform\PlatformTemplateController;
 use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\ProductionCycleController;
 use App\Http\Controllers\Api\V1\PurchaseController;
@@ -53,6 +59,7 @@ use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
 use App\Http\Controllers\Api\V1\WorkTemplateController;
+use App\Services\Platform\PlatformMasterDataService;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -380,4 +387,62 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');
     Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.update');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Platform administration (Phase 18)
+|--------------------------------------------------------------------------
+| NOT farm routes: no farm context, no farm permission. Access needs a platform_admins grant (`platform.admin`); every write needs the
+| `admin` platform role (`platform.admin:write`). Farm roles such as Owner/Manager confer nothing here.
+*/
+Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', 'email.verified', 'platform.admin'])->group(function () {
+    $write = ['platform.admin:write', 'throttle:platform-admin-write'];
+    $kinds = implode('|', array_keys(PlatformMasterDataService::KINDS));
+
+    Route::get('/me', [PlatformAdminController::class, 'me'])->name('api.v1.platform.me');
+
+    // Plans, prices, entitlements, farm plan changes
+    Route::get('/entitlements', [PlatformPlanController::class, 'registry'])->name('api.v1.platform.entitlements');
+    Route::get('/plans', [PlatformPlanController::class, 'index'])->name('api.v1.platform.plans.index');
+    Route::get('/plans/{plan}', [PlatformPlanController::class, 'show'])->whereUuid('plan')->name('api.v1.platform.plans.show');
+    Route::post('/plans', [PlatformPlanController::class, 'store'])->middleware($write)->name('api.v1.platform.plans.store');
+    Route::patch('/plans/{plan}', [PlatformPlanController::class, 'update'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.plans.update');
+    Route::post('/plans/{plan}/make-default', [PlatformPlanController::class, 'makeDefault'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.plans.make-default');
+    Route::put('/plans/{plan}/prices', [PlatformPlanController::class, 'prices'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.plans.prices');
+    Route::put('/plans/{plan}/entitlements', [PlatformPlanController::class, 'entitlements'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.plans.entitlements');
+
+    // Reference data and capability schemas
+    Route::get('/master/capabilities', [PlatformMasterDataController::class, 'capabilitySchemas'])->name('api.v1.platform.master.capabilities');
+    Route::get('/master/species/{species}/capabilities', [PlatformMasterDataController::class, 'speciesCapabilities'])->whereUuid('species')->name('api.v1.platform.master.species-capabilities');
+    Route::put('/master/species/{species}/capabilities/{capability}', [PlatformMasterDataController::class, 'setCapability'])->whereUuid('species')->middleware($write)->name('api.v1.platform.master.species-capabilities.set');
+    Route::get('/master/{kind}', [PlatformMasterDataController::class, 'index'])->where('kind', $kinds)->name('api.v1.platform.master.index');
+    Route::post('/master/{kind}', [PlatformMasterDataController::class, 'store'])->where('kind', $kinds)->middleware($write)->name('api.v1.platform.master.store');
+    Route::get('/master/{kind}/{id}', [PlatformMasterDataController::class, 'show'])->where('kind', $kinds)->whereUuid('id')->name('api.v1.platform.master.show');
+    Route::patch('/master/{kind}/{id}', [PlatformMasterDataController::class, 'update'])->where('kind', $kinds)->whereUuid('id')->middleware($write)->name('api.v1.platform.master.update');
+
+    // Platform work templates
+    Route::get('/work-templates', [PlatformTemplateController::class, 'index'])->name('api.v1.platform.templates.index');
+    Route::get('/work-templates/{template}', [PlatformTemplateController::class, 'show'])->whereUuid('template')->name('api.v1.platform.templates.show');
+    Route::post('/work-templates', [PlatformTemplateController::class, 'store'])->middleware($write)->name('api.v1.platform.templates.store');
+    Route::patch('/work-templates/{template}', [PlatformTemplateController::class, 'update'])->whereUuid('template')->middleware($write)->name('api.v1.platform.templates.update');
+    Route::post('/work-templates/{template}/publish', [PlatformTemplateController::class, 'publish'])->whereUuid('template')->middleware($write)->name('api.v1.platform.templates.publish');
+    Route::post('/work-templates/{template}/archive', [PlatformTemplateController::class, 'archive'])->whereUuid('template')->middleware($write)->name('api.v1.platform.templates.archive');
+
+    // Settings and feature flags
+    Route::get('/settings', [PlatformConfigController::class, 'settings'])->name('api.v1.platform.settings.index');
+    Route::put('/settings/{key}', [PlatformConfigController::class, 'putSetting'])->middleware($write)->name('api.v1.platform.settings.put');
+    Route::get('/feature-flags', [PlatformConfigController::class, 'flags'])->name('api.v1.platform.flags.index');
+    Route::post('/feature-flags', [PlatformConfigController::class, 'storeFlag'])->middleware($write)->name('api.v1.platform.flags.store');
+    Route::patch('/feature-flags/{key}', [PlatformConfigController::class, 'updateFlag'])->middleware($write)->name('api.v1.platform.flags.update');
+
+    // Support: users, farms, audit
+    Route::get('/users', [PlatformSupportController::class, 'users'])->name('api.v1.platform.users.index');
+    Route::get('/users/{user}', [PlatformSupportController::class, 'user'])->whereUuid('user')->name('api.v1.platform.users.show');
+    Route::post('/users/{user}/suspend', [PlatformSupportController::class, 'suspend'])->whereUuid('user')->middleware($write)->name('api.v1.platform.users.suspend');
+    Route::post('/users/{user}/restore', [PlatformSupportController::class, 'restore'])->whereUuid('user')->middleware($write)->name('api.v1.platform.users.restore');
+    Route::get('/farms', [PlatformSupportController::class, 'farms'])->name('api.v1.platform.farms.index');
+    Route::get('/farms/{farm}', [PlatformSupportController::class, 'farm'])->whereUuid('farm')->name('api.v1.platform.farms.show');
+    Route::post('/farms/{farm}/subscription/plan', [PlatformSupportController::class, 'changePlan'])->whereUuid('farm')->middleware($write)->name('api.v1.platform.farms.plan');
+    Route::get('/audit-logs', [PlatformSupportController::class, 'audit'])->name('api.v1.platform.audit');
 });

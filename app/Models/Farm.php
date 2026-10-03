@@ -32,6 +32,11 @@ class Farm extends Model
         return $this->hasMany(FarmMembership::class);
     }
 
+    public function ownerMembership(): HasOne
+    {
+        return $this->hasOne(FarmMembership::class)->where('role', FarmMembership::ROLE_OWNER)->where('status', 'active');
+    }
+
     public function invitations(): HasMany
     {
         return $this->hasMany(FarmInvitation::class);
