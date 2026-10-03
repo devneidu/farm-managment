@@ -7,6 +7,7 @@ use App\Models\FarmNotification;
 use App\Notifications\FarmAlertNotification;
 use App\Support\Access\NotificationPreferences;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -32,15 +33,18 @@ class NotificationService
             if (! NotificationPreferences::typeEnabled($stored, $intent->type)) {
                 continue;
             }
-            $record = $this->store($membership, $intent, $channels['in_app']);
-            if ($record === null) {
-                continue;
-            }
-            $created++;
-            if ($channels['email'] && $membership->user?->email) {
-                $record->forceFill(['email_status' => 'queued'])->save();
-                $membership->user->notify(new FarmAlertNotification($record->id));
-            }
+            $created += DB::transaction(function () use ($membership, $intent, $channels) {
+                $record = $this->store($membership, $intent, $channels['in_app']);
+                if ($record === null) {
+                    return 0;
+                }
+                if ($channels['email'] && $membership->user?->email) {
+                    $record->forceFill(['email_status' => 'queued'])->save();
+                    $membership->user->notify(new FarmAlertNotification($record->id));
+                }
+
+                return 1;
+            });
         }
 
         return $created;

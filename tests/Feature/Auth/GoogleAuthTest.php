@@ -10,6 +10,7 @@ use App\Services\Auth\Google\GoogleAuthUnavailableException;
 use App\Services\Auth\Google\GoogleIdentity;
 use App\Services\Auth\Google\GoogleIdentityVerifier;
 use App\Services\Auth\Google\InvalidGoogleCredentialException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -128,6 +129,20 @@ class GoogleAuthTest extends AuthTestCase
         $this->google()->assertUnauthorized()->assertJsonPath('code', 'invalid_google_credential');
         $this->assertSame(0, User::count());
         $this->assertGuest('web');
+    }
+
+    public function test_linking_unverified_account_revokes_registrant_sessions_and_tokens(): void
+    {
+        config(['session.driver' => 'database']);
+        $user = User::factory()->unverified()->create(['email' => 'farmer@gmail.com', 'remember_token' => 'untrusted-remember-token']);
+        DB::table('sessions')->insert(['id' => 'untrusted-session', 'user_id' => $user->id, 'payload' => base64_encode(''), 'last_activity' => time()]);
+        $user->createToken('untrusted-device');
+        $this->fakeGoogle($this->identity());
+        $this->google()->assertOk();
+        $this->assertDatabaseMissing('sessions', ['id' => 'untrusted-session']);
+        $this->assertSame(0, $user->tokens()->count());
+        $this->assertNull($user->fresh()->remember_token);
+        $this->assertAuthenticatedAs($user, 'web');
     }
 
     public function test_unverified_or_missing_google_email_is_rejected(): void

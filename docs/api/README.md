@@ -843,3 +843,15 @@ The complete contract is [Phase 18 platform administration](PHASE-18-PLATFORM-AD
 ## Phase 19 - Localization & accessibility
 
 The complete contract is [Phase 19 localization](PHASE-19-LOCALIZATION.md): public `GET /locales` and `GET /translations/{locale}` (UI text bundles with per-key English fallback and `fallback_keys`), and `GET|PATCH /me/preferences` (user-level `locale`). English is the only available language; Hausa/Yoruba/Igbo/Pidgin are registered but `pending_terminology_review`. `locale` is added to `GET /account` and `data.user.locale` of the auth-state payload. Locale never changes stored values, codes, exact decimal money, canonical quantities or UTC timestamps; user-entered farm records are not translated. Existing API messages remain English; machine `code`s are language-independent.
+
+## 32. Phase 21 launch hardening
+
+See [production runbook](../operations/LAUNCH.md) and [audit/verification](../operations/PHASE-21-VERIFICATION.md). No new public endpoint or request field.
+
+- All `/api/v1/*` responses, including errors, include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and private/no-store cache control. Retain `X-Request-Id` for support.
+- `GET /invoices/{invoice}/pdf` now shares `report-download`'s 30 requests/minute/user budget with export downloads. Exceeding it returns HTTP 429 with the usual `too_many_requests`, `message`, `request_id` envelope and Retry-After header. Authentication and `invoice.view` are unchanged.
+- Notification lists, unread counts and mark-read operations now respect the member's **current** data permissions. Alerts no longer visible after a role change are omitted; marking such an id read returns 404. Role upgrades can make retained alerts visible again. Queued emails also check active membership, verified/unsuspended account and current preferences at send time.
+- Google linking of an unverified password account invalidates prior database sessions/API tokens/remember token, then creates the legitimate Google session. Verified-account linking semantics are unchanged.
+- Export generation rechecks requester suspension/verification. Concurrent duplicate delivery is ignored; failed storage or worker failure cannot advertise a completed file. A failed export keeps the existing generic failure contract; request a new export with a new key. Requests/audit/database queue insertion are transactional; configuring a separate queue database is unsupported for this guarantee.
+
+Production readiness is conditional on the deployment gates; Phase 20 (WhatsApp and AI-assisted parsing) is intentionally deferred from V1.

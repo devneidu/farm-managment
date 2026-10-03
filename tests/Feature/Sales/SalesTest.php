@@ -19,6 +19,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Species;
 use App\Support\Finance\Money;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
@@ -30,6 +31,8 @@ class SalesTest extends TeamTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // UTC/Lagos date expectations must not depend on the hour the suite runs.
+        $this->travelTo(CarbonImmutable::parse('2026-10-14 12:00:00', 'UTC'));
         $this->signInAs($this->owner);
     }
 

@@ -16,6 +16,10 @@ class GenerateFarmNotifications implements ShouldQueue
 
     public int $tries = 2;
 
+    public int $backoff = 30;
+
+    public int $timeout = 60;
+
     public function __construct(public readonly string $farmId) {}
 
     public function handle(NotificationGenerator $generator): void

@@ -57,7 +57,11 @@ class GoogleAuthService
             if (! $user->hasVerifiedEmail()) {
                 // Pre-hijack defence: an unverified password account may have been registered by
                 // someone who does not own the mailbox, so its password is discarded.
-                $user->forceFill(['password' => null])->save();
+                $user->forceFill(['password' => null, 'remember_token' => null])->save();
+                $user->tokens()->delete();
+                if (config('session.driver') === 'database') {
+                    DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();
+                }
                 $this->otps->invalidate($user, OtpPurpose::EmailVerification);
             }
 

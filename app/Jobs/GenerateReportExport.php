@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\ReportExport;
 use App\Services\Reports\ExportService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,10 +22,19 @@ class GenerateReportExport implements ShouldQueue
 
     public int $timeout = 300;
 
+    public bool $failOnTimeout = true;
+
     public function __construct(public readonly string $exportId) {}
 
     public function handle(ExportService $exports): void
     {
         $exports->generate($this->exportId);
+    }
+
+    public function failed(?\Throwable $exception): void
+    {
+        ReportExport::whereKey($this->exportId)->whereIn('status', [ReportExport::QUEUED, ReportExport::PROCESSING])
+            ->update(['status' => ReportExport::FAILED, 'error_code' => 'export_failed',
+                'error_message' => 'The export could not be generated. Please try again.', 'failed_at' => now()]);
     }
 }

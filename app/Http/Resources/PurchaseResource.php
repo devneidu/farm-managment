@@ -21,7 +21,6 @@ class PurchaseResource extends JsonResource
             'production_cycle_id' => $this->production_cycle_id, 'supplier_reference' => $this->supplier_reference,
             'recorded_at' => $this->recorded_at->toISOString(),
             'total_amount' => (string) $this->total_amount, 'currency' => $this->currency,
-            /** @var array{id: string, code: string, name: string}|null */
             'finance_category' => $this->category ? ['id' => $this->category->id, 'code' => $this->category->code, 'name' => $this->category->name] : null,
             'records_expense' => $this->records_expense,
             /** The one expense this purchase booked (null when none was booked), and the entry that offsets it after a cancellation. */

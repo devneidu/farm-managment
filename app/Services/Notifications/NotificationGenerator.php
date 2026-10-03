@@ -21,6 +21,9 @@ class NotificationGenerator
         $created = 0;
         $members = FarmMembership::where('farm_id', $farm->id)->where('status', MembershipStatus::Active->value)->with('user')->orderBy('created_at')->orderBy('id')->get();
         foreach ($members as $membership) {
+            if ($membership->user === null || $membership->user->isSuspended() || ! $membership->user->hasVerifiedEmail()) {
+                continue;
+            }
             $membership->setRelation('farm', $farm);
             $created += $this->notifications->deliver($membership, $this->decider->decide(new FarmContext($farm, $membership), $clock));
         }

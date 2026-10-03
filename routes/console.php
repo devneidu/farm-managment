@@ -12,3 +12,5 @@ Schedule::command('subscriptions:close-lapsed')->hourly()->withoutOverlapping();
 Schedule::command('work:generate-tasks')->dailyAt('00:30')->withoutOverlapping();
 Schedule::command('notifications:generate')->hourly()->withoutOverlapping();
 Schedule::command('reports:prune-exports')->dailyAt('02:00')->withoutOverlapping();
+Schedule::command('queue:monitor database:default --max=100')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('queue:prune-failed --hours=720')->dailyAt('02:30')->withoutOverlapping();

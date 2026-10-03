@@ -122,3 +122,7 @@ reconciliation, deployment runbook.
 
 Do not combine phases merely to reduce file count. Each phase must
 finish migrations/models/services/API/policies/tests before moving on.
+
+## V1 launch status (Phase 21)
+
+Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented and locally verified; see [audit and acceptance record](../operations/PHASE-21-VERIFICATION.md) and [deployment runbook](../operations/LAUNCH.md) for final test evidence and remaining infrastructure gates. No unconditional production-readiness claim until restore, reconciliation, staging smoke and representative concurrent load gates are signed off. Phase 20 — Deferred from V1 / post-launch enhancement (WhatsApp integration, AI-assisted parsing); it is not a V1 launch blocker.

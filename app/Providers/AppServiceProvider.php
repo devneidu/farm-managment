@@ -12,7 +12,10 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\QueueBusy;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -25,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         AuthRateLimiters::register();
+
+        Event::listen(JobFailed::class, function (JobFailed $event) {
+            Log::error('queue.job_failed', ['connection' => $event->connectionName, 'job_id' => $event->job->getJobId(), 'job' => $event->job->resolveName()]);
+        });
+        Event::listen(QueueBusy::class, function (QueueBusy $event) {
+            Log::warning('queue.backlog', ['connection' => $event->connection, 'queue' => $event->queue, 'size' => $event->size]);
+        });
 
         // Phase 17: audit entries for the Access events; delivery state of notification emails.
         Event::subscribe(AuditSubscriber::class);

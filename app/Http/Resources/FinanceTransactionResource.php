@@ -15,7 +15,6 @@ class FinanceTransactionResource extends JsonResource
             'entry_type' => $this->entry_type,
             /** @var 'income'|'expense' */
             'direction' => $this->direction,
-            /** @var array{id: string, code: string, name: string} */
             'category' => ['id' => $this->category->id, 'code' => $this->category->code, 'name' => $this->category->name],
             /** Always positive; a reversal row offsets the original in every total. */
             'amount' => (string) $this->amount, 'currency' => $this->currency,

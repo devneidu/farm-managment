@@ -11,6 +11,22 @@
 
 ## Current Status
 
+**Current Phase:** Phase 21 — Launch hardening (implemented and locally verified; commit authorized by the user; production acceptance gates remain).
+**Base:** Phase 19 is committed at `f1e51e5`; the historical "uncommitted" statuses below are superseded. Initial working tree was clean.
+**Last Agent:** Codex. **Last Updated:** 2026-10-03.
+
+**Changes:** revoked unverified-account Google pre-link sessions/tokens; current-permission notification inbox and queued email checks; suspended/verified export requester checks; transactional database queue insertion for exports/notifications; atomic export claim/current-read replay, storage-write verification, cleanup retry and worker-failure state; queue retry-after 360 (>300 timeout), notification timeout/backoff, safe failure/backlog logs and scheduled monitoring/failed-job pruning; API security/no-store headers; invoice PDF throttle; deterministic Health withdrawal and Sales UTC/Lagos clocks; PHPUnit 1G tooling memory; two redundant Scramble annotations removed. No migration, package, product feature or new public endpoint.
+
+**Reconciliation:** `php artisan app:reconcile [--farm=<uuid>]` is console-only/read-only, locks one farm at a time, checks population/crop baselines, chronological stock, record/health/purchase/sale/breeding source links, reversals, finance/payment/invoice totals. Nonzero on discrepancies; never auto-repairs. Database queue must share the application connection for atomic dispatch.
+
+**Documentation:** `docs/operations/LAUNCH.md`, `docs/operations/PHASE-21-VERIFICATION.md`, API README section 32, regenerated OpenAPI, project README, `.env.example`, implementation master plan. **Phase 20 — Deferred from V1 / post-launch enhancement:** WhatsApp and AI-assisted parsing remain untouched.
+
+**Final verification:** complete suite **823 tests / 11,483 assertions, all passing** (356.312s, peak 226 MB; direct PHPUnit with 1G/Xdebug off). Latest Launch+Exports **32/393**, Sales **28/781**, earlier changed-area **84/1216**, all green. Real database queue retry verified. MySQL dump/restore ONLY on `farm_management_test`: **77 tables / 331 rows** matched fingerprints; private-file checksum and restored reconciliation passed (156.04s). OpenAPI **183 paths / 232 API route entries**, none missing, **zero warnings**. Locked production dependency audit: no advisories. Pint on all changed/new PHP and `git diff --check` pass. No migration/package/dev database change. Detailed evidence and capacity limits: `docs/operations/PHASE-21-VERIFICATION.md`.
+
+**Acceptance limits:** repository-local recovery and sequential workload tests do not certify production-like concurrent capacity, real SPA/SMTP/Google integration or the production backup service. Production dataset reconciliation, provider restore, host configuration and staging E2E/load sign-off remain launch gates. Do not claim every Phase 21 acceptance criterion or unconditional production readiness. See the runbook; no Phase 20 implementation required.
+
+## Historical status (superseded)
+
 **Current Phase:** Phase 19 — Localization & accessibility (complete, UNCOMMITTED on top of HEAD `516a7ff`, which contains Phase 18)
 
 **Status:** Phase 19 (`30-PHASE-19-LOCALIZATION.md`) implemented and verified; UNCOMMITTED. One migration `2026_10_17_100000_add_locale_to_users` (nullable `users.locale`, reversible). Public `GET /locales`, `GET /translations/{locale}`; verified-user `GET|PATCH /me/preferences`; `SetRequestLocale` middleware (user choice > Accept-Language > default; `Content-Language`/`Vary`); `config/localization.php` registry (en launched; ha/yo/ig/pcm registered, `pending_terminology_review`, not selectable/served); `lang/en/ui.php` bundle; `LocaleCatalogue` service (per-key English fallback, `fallback_keys`, never blank). `locale` added additively to account + auth-state user. No change to money/quantities/timestamps/farm locale (farm locale stays non-writable `en`). Contract: `docs/api/PHASE-19-LOCALIZATION.md`. OpenAPI 180 -> 183 paths. Phase 20 — Deferred from V1 / post-launch enhancement; Phase 21 not started.
@@ -612,8 +628,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Commit Phase 19. Phase 20 — Deferred from V1 / post-launch enhancement. Phase 21 (launch hardening) ONLY after explicit user instruction.
+Complete the production/staging gates in `docs/operations/LAUNCH.md`. Phase 20 remains deferred from V1. Do not start another phase or commit without explicit instruction.
 
 ## Recommended Next Commit
 
-`feat: add Phase 19 localization with locale registry, per-user language preference, translation bundles with per-key English fallback, locale-independent money, quantity and UTC data contracts, and accessibility API guidance`
+`fix: harden V1 authentication, private jobs, reconciliation and launch operations`

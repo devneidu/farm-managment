@@ -44,6 +44,7 @@ class NotificationInbox
 
     private function mine(FarmContext $ctx): Builder
     {
-        return FarmNotification::inboxOf($ctx->farm->id, $ctx->membership->user_id);
+        return FarmNotification::inboxOf($ctx->farm->id, $ctx->membership->user_id)
+            ->whereIn('type', array_keys(NotificationCatalogue::availableTo($ctx)));
     }
 }

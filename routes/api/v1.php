@@ -363,7 +363,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/', [$c, 'index'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.index');
         Route::post('/', [$c, 'store'])->middleware(['farm.permission:invoice.create', 'throttle:finance-write'])->name('api.v1.invoices.store');
         Route::get('/{invoice}', [$c, 'show'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.show');
-        Route::get('/{invoice}/pdf', [$c, 'pdf'])->middleware('farm.permission:invoice.view')->name('api.v1.invoices.pdf');
+        Route::get('/{invoice}/pdf', [$c, 'pdf'])->middleware(['farm.permission:invoice.view', 'throttle:report-download'])->name('api.v1.invoices.pdf');
         Route::post('/{invoice}/void', [$c, 'void'])->middleware(['farm.permission:invoice.void', 'throttle:finance-write'])->name('api.v1.invoices.void');
         Route::post('/{invoice}/payments', [$c, 'pay'])->middleware(['farm.permission:payment.create', 'throttle:finance-write'])->name('api.v1.invoices.payments.store');
     });

@@ -348,6 +348,7 @@ class HealthTest extends TeamTestCase
 
     public function test_withdrawal_is_computed_per_line_and_traceable_to_the_event(): void
     {
+        $this->freezeTime();
         $a = $this->medicineItem(['name' => 'Withdrawal A']);
         $b = $this->medicineItem(['name' => 'No withdrawal B']);
         $c = $this->medicineItem(['name' => 'Override C']);

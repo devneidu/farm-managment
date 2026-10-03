@@ -24,6 +24,12 @@ class AssignRequestId
 
         $response = $next($request);
         $response->headers->set('X-Request-Id', $id);
+        if ($request->is('api/*')) {
+            $response->headers->set('X-Content-Type-Options', 'nosniff');
+            $response->headers->set('X-Frame-Options', 'DENY');
+            $response->headers->set('Referrer-Policy', 'no-referrer');
+            $response->headers->set('Cache-Control', 'no-store, private');
+        }
 
         return $response;
     }
