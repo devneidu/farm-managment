@@ -113,7 +113,7 @@ support/audit.
 Translation infrastructure, Nigerian language packs as validated,
 responsive/accessibility QA.
 
-**Phase 20 --- Integrations**\
+**Phase 20 --- Integrations (Deferred from V1 / post-launch enhancement)**\
 WhatsApp reports/alerts, AI draft parsing, provider abstractions.
 
 **Phase 21 --- Performance, security, reconciliation and launch**\

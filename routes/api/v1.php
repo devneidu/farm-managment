@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\InsightController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\MasterDataController;
@@ -58,6 +59,7 @@ use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TaskController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
+use App\Http\Controllers\Api\V1\UserPreferenceController;
 use App\Http\Controllers\Api\V1\WorkTemplateController;
 use App\Services\Platform\PlatformMasterDataService;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +75,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', HealthController::class)->name('api.v1.health');
+
+Route::get('/locales', [LocaleController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.locales.index');
+Route::get('/translations/{locale}', [LocaleController::class, 'bundle'])->middleware('throttle:60,1')->name('api.v1.translations.show');
 
 Route::get('/public/plans', [PlanController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.plans');
 
@@ -103,6 +108,10 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
 
     // Joining a farm by invitation does not need farm setup (the user may not have a farm yet).
     Route::post('/invitations/accept', InvitationAcceptanceController::class)->middleware('throttle:invitation-accept')->name('api.v1.invitations.accept');
+
+    // My UI preferences (user-level): language
+    Route::get('/me/preferences', [UserPreferenceController::class, 'show'])->name('api.v1.me.preferences.show');
+    Route::patch('/me/preferences', [UserPreferenceController::class, 'update'])->name('api.v1.me.preferences.update');
 
     // My Account (user-level, not farm-scoped)
     Route::prefix('account')->group(function () {

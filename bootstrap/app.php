@@ -8,6 +8,7 @@ use App\Http\Middleware\RequireEntitlement;
 use App\Http\Middleware\RequireFarmPermission;
 use App\Http\Middleware\RequirePlatformAdmin;
 use App\Http\Middleware\ResolveFarmContext;
+use App\Http\Middleware\SetRequestLocale;
 use App\Support\Api\ApiExceptionRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Sanctum first-party SPA: cookie session + CSRF for requests from stateful frontend origins.
         $middleware->statefulApi();
+        $middleware->appendToGroup('api', SetRequestLocale::class);
 
         $middleware->alias([
             'account.active' => EnsureAccountIsActive::class,

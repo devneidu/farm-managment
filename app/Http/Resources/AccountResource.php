@@ -12,7 +12,7 @@ class AccountResource extends JsonResource
     public static $wrap = null;
 
     /**
-     * @return array{id: string, name: string|null, email: string, email_verified_at: string|null, has_password: bool, providers: string[]}
+     * @return array{id: string, name: string|null, email: string, email_verified_at: string|null, has_password: bool, providers: string[], locale: string|null}
      */
     public function toArray(Request $request): array
     {
@@ -23,6 +23,7 @@ class AccountResource extends JsonResource
             'email_verified_at' => $this->email_verified_at?->toIso8601String(),
             'has_password' => $this->password !== null,
             'providers' => $this->socialAccounts()->pluck('provider')->all(),
+            'locale' => $this->locale,
         ];
     }
 }

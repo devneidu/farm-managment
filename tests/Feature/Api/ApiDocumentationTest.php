@@ -399,4 +399,18 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayNotHasKey('delete', $spec['paths']['/platform-admin/plans/{plan}']);
         $this->assertArrayNotHasKey('farm_id', $spec['components']['schemas']['StorePlanRequest']['properties'] ?? []);
     }
+
+    public function test_phase_19_localization_endpoints_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /locales', 'get /translations/{locale}', 'get /me/preferences', 'patch /me/preferences'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], $endpoint);
+        }
+        $this->assertStringContainsString('locale_unavailable', $spec['paths']['/translations/{locale}']['get']['description']);
+        $this->assertArrayHasKey('401', $spec['paths']['/me/preferences']['patch']['responses']);
+        $this->assertArrayHasKey('422', $spec['paths']['/me/preferences']['patch']['responses']);
+        $this->assertArrayHasKey('locale', $spec['components']['schemas']['UpdatePreferencesRequest']['properties']);
+        $this->assertArrayHasKey('locale', $spec['components']['schemas']['AccountResource']['properties']);
+    }
 }

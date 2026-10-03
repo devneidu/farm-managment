@@ -839,3 +839,7 @@ The complete frontend integration contract is [Phase 17 reports, exports, notifi
 ## 31. Platform administration (Phase 18)
 
 The complete contract is [Phase 18 platform administration](PHASE-18-PLATFORM-ADMIN.md): `/platform-admin/*` for platform admins only (a separate grant created by console command; farm roles confer nothing, platform roles confer nothing on farm routes): plan/price/entitlement management on the Phase 3 catalogue, reference-data and species-capability administration with compatibility checks, platform work-template draft/publish/archive, a closed settings registry and feature flags, cross-farm user/farm support read models with reversible user suspension, and a platform audit trail. `GET /auth/me` now includes `user.platform_role`. No endpoint deletes anything or edits a farm business record.
+
+## Phase 19 - Localization & accessibility
+
+The complete contract is [Phase 19 localization](PHASE-19-LOCALIZATION.md): public `GET /locales` and `GET /translations/{locale}` (UI text bundles with per-key English fallback and `fallback_keys`), and `GET|PATCH /me/preferences` (user-level `locale`). English is the only available language; Hausa/Yoruba/Igbo/Pidgin are registered but `pending_terminology_review`. `locale` is added to `GET /account` and `data.user.locale` of the auth-state payload. Locale never changes stored values, codes, exact decimal money, canonical quantities or UTC timestamps; user-entered farm records are not translated. Existing API messages remain English; machine `code`s are language-independent.

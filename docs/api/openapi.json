@@ -17429,6 +17429,318 @@
                 }
             }
         },
+        "/locales": {
+            "get": {
+                "operationId": "v1.locales.index",
+                "description": "Public. Every registered language with `available` (selectable and served) and `status` (`launched` or\n`pending_terminology_review`). English is the only launched language; Hausa, Yoruba, Igbo and Nigerian Pidgin are registered\nbut unavailable until native-speaker terminology review. `number_input` is the same for every language: authoritative numbers and\nmoney are dot-decimal strings, so clients should use a decimal keypad (`input_mode`) and send canonical values.",
+                "summary": "List supported languages",
+                "tags": [
+                    "Locale"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "default": {
+                                                    "type": "string"
+                                                },
+                                                "fallback": {
+                                                    "type": "string"
+                                                },
+                                                "locales": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "native_name": {
+                                                                "type": "string"
+                                                            },
+                                                            "direction": {
+                                                                "type": "string"
+                                                            },
+                                                            "available": {
+                                                                "type": "boolean"
+                                                            },
+                                                            "status": {
+                                                                "type": "string"
+                                                            },
+                                                            "is_default": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "name",
+                                                            "native_name",
+                                                            "direction",
+                                                            "available",
+                                                            "status",
+                                                            "is_default"
+                                                        ]
+                                                    }
+                                                },
+                                                "number_input": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "decimal_separator": {
+                                                            "type": "string"
+                                                        },
+                                                        "thousands_separator": {
+                                                            "type": [
+                                                                "string",
+                                                                "null"
+                                                            ]
+                                                        },
+                                                        "input_mode": {
+                                                            "type": "string"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "decimal_separator",
+                                                        "thousands_separator",
+                                                        "input_mode"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "default",
+                                                "fallback",
+                                                "locales",
+                                                "number_input"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/translations/{locale}": {
+            "get": {
+                "operationId": "v1.translations.show",
+                "description": "Public. Flat dot-keyed UI strings (navigation, form hints, task-state labels, accessibility phrases). Any key a language does not yet\ntranslate is served in the fallback language and listed in `fallback_keys`, so no key is ever blank; `complete` is true when\nnothing fell back. `version` changes whenever the content does (cache key). A language that is unknown or not yet available is\n`404 locale_unavailable`. These are interface strings only: user-entered farm records, master-data codes and stored values are\nnever translated.",
+                "summary": "Get the UI text bundle for a language",
+                "tags": [
+                    "Locale"
+                ],
+                "parameters": [
+                    {
+                        "name": "locale",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "locale": {
+                                                    "type": "string"
+                                                },
+                                                "fallback_locale": {
+                                                    "type": "string"
+                                                },
+                                                "direction": {
+                                                    "type": "string"
+                                                },
+                                                "version": {
+                                                    "type": "string"
+                                                },
+                                                "complete": {
+                                                    "type": "boolean"
+                                                },
+                                                "fallback_keys": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "messages": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "locale",
+                                                "fallback_locale",
+                                                "direction",
+                                                "version",
+                                                "complete",
+                                                "fallback_keys",
+                                                "messages"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Error: locale_unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "locale_unavailable"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/locations": {
             "get": {
                 "operationId": "v1.locations.index",
@@ -44355,6 +44667,288 @@
                 }
             }
         },
+        "/me/preferences": {
+            "get": {
+                "operationId": "v1.me.preferences.show",
+                "description": "Verified user (no farm required). `locale` is YOUR explicit UI language (`null` = not chosen); `effective_locale` is what the API is\nusing for you now (your choice, else `Accept-Language`, else the platform default). `farm_locale` and the farm's\ncurrency/timezone are not changed by this: language only affects interface text. Units are a farm preference (`/measurements/unit-preferences`),\nnotifications are `/notification-preferences`.",
+                "summary": "Get my preferences",
+                "tags": [
+                    "UserPreference"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "locale": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "effective_locale": {
+                                                    "type": "string"
+                                                },
+                                                "default_locale": {
+                                                    "type": "string"
+                                                },
+                                                "fallback_locale": {
+                                                    "type": "string"
+                                                },
+                                                "farm_locale": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "available_locales": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "locale",
+                                                "effective_locale",
+                                                "default_locale",
+                                                "fallback_locale",
+                                                "farm_locale",
+                                                "available_locales"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "v1.me.preferences.update",
+                "description": "Body: `{ \"locale\": \"en\" }`, or `{ \"locale\": null }` to clear the explicit choice. Only available languages are accepted\n(`422` for registered-but-unreviewed ones such as `ha`, `yo`, `ig`, `pcm`, and for unknown codes). Omitted fields are unchanged. Never changes\nstored farm records, money, quantities or timestamps.",
+                "summary": "Update my preferences",
+                "tags": [
+                    "UserPreference"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "locale": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "effective_locale": {
+                                                    "type": "string"
+                                                },
+                                                "default_locale": {
+                                                    "type": "string"
+                                                },
+                                                "fallback_locale": {
+                                                    "type": "string"
+                                                },
+                                                "farm_locale": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "available_locales": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "locale",
+                                                "effective_locale",
+                                                "default_locale",
+                                                "fallback_locale",
+                                                "farm_locale",
+                                                "available_locales"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/work-templates": {
             "get": {
                 "operationId": "v1.work-templates.index",
@@ -45849,6 +46443,9 @@
                     "providers": {
                         "type": "object",
                         "additionalProperties": {}
+                    },
+                    "locale": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -45857,7 +46454,8 @@
                     "email",
                     "email_verified_at",
                     "has_password",
-                    "providers"
+                    "providers",
+                    "locale"
                 ],
                 "title": "AccountResource"
             },
@@ -46053,6 +46651,9 @@
                             "providers": {
                                 "type": "object",
                                 "additionalProperties": {}
+                            },
+                            "locale": {
+                                "type": "string"
                             }
                         },
                         "required": [
@@ -46062,7 +46663,8 @@
                             "email_verified_at",
                             "has_password",
                             "platform_role",
-                            "providers"
+                            "providers",
+                            "locale"
                         ]
                     },
                     "farm": {
@@ -55570,6 +56172,23 @@
                     }
                 },
                 "title": "UpdatePlatformTemplateRequest"
+            },
+            "UpdatePreferencesRequest": {
+                "type": "object",
+                "properties": {
+                    "locale": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "null clears the explicit choice (follow Accept-Language / the platform default).",
+                        "enum": [
+                            "en",
+                            null
+                        ]
+                    }
+                },
+                "title": "UpdatePreferencesRequest"
             },
             "UpdateProductionAreaRequest": {
                 "type": "object",

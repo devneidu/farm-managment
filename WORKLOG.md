@@ -11,9 +11,10 @@
 
 ## Current Status
 
-**Current Phase:** Phase 18 — Platform administration (complete, UNCOMMITTED on top of HEAD `07f491c` which contains Phases 16-17)
+**Current Phase:** Phase 19 — Localization & accessibility (complete, UNCOMMITTED on top of HEAD `516a7ff`, which contains Phase 18)
 
-**Status:** Phase 18 (`29-PHASE-18-ADMIN.md` + `04-API-CONVENTIONS` platform-admin list) implemented and verified; UNCOMMITTED. One migration `2026_10_16_100000_create_platform_administration`. `/api/v1/platform-admin/*` (35 routes). Phase 19 NOT started; Phase 20 deferred. See Phase 18 Architecture below.
+**Status:** Phase 19 (`30-PHASE-19-LOCALIZATION.md`) implemented and verified; UNCOMMITTED. One migration `2026_10_17_100000_add_locale_to_users` (nullable `users.locale`, reversible). Public `GET /locales`, `GET /translations/{locale}`; verified-user `GET|PATCH /me/preferences`; `SetRequestLocale` middleware (user choice > Accept-Language > default; `Content-Language`/`Vary`); `config/localization.php` registry (en launched; ha/yo/ig/pcm registered, `pending_terminology_review`, not selectable/served); `lang/en/ui.php` bundle; `LocaleCatalogue` service (per-key English fallback, `fallback_keys`, never blank). `locale` added additively to account + auth-state user. No change to money/quantities/timestamps/farm locale (farm locale stays non-writable `en`). Contract: `docs/api/PHASE-19-LOCALIZATION.md`. OpenAPI 180 -> 183 paths. Phase 20 — Deferred from V1 / post-launch enhancement; Phase 21 not started.
+**Previous status (Phase 18):** Phase 18 (`29-PHASE-18-ADMIN.md` + `04-API-CONVENTIONS` platform-admin list) implemented and verified; UNCOMMITTED. One migration `2026_10_16_100000_create_platform_administration`. `/api/v1/platform-admin/*` (35 routes). Phase 19 NOT started; Phase 20 deferred. See Phase 18 Architecture below.
 
 **Previous status (Phase 17):** Phase 17 (`28-PHASE-17-REPORTS-NOTIFICATIONS.md` + endpoint list in `04-API-CONVENTIONS` + `08-REPORTING`) implemented and verified; UNCOMMITTED (Phase 16 is also still uncommitted on top of HEAD `2c7ca60`). One migration `2026_10_15_100000_create_reports_notifications_audit` (reversible; tables `report_exports`, `notifications`, `audit_logs` + 2 report indexes; rollback/reapply verified on `farm_management_test`, dev migrated with plain `migrate`). No new package (own ZipArchive XLSX writer; Dompdf already present). Phase 18 not started; WhatsApp/AI (Phase 20) not touched.
 
@@ -537,7 +538,7 @@
 
 ## Last Completed Task
 
-Phase 18 - Platform administration (UNCOMMITTED; see Phase 18 Architecture). Earlier: Phase 17 - Reports, exports, notifications & audit (see Phase 17 Architecture; UNCOMMITTED). Earlier: Phase 16 - Dashboard & insights (see Phase 16 Architecture; UNCOMMITTED). Earlier: Phase 15 sales, invoices & payments (committed `2c7ca60`). Phase 15 — Sales, invoices & payments (see Phase 15 Architecture; UNCOMMITTED). Earlier: Phase 14 contacts, purchasing & finance (committed `7e68fb7`). Previous entries: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
+Phase 19 - Localization & accessibility (UNCOMMITTED). Earlier: Phase 18 - Platform administration (committed `516a7ff`). Earlier: Phase 17 - Reports, exports, notifications & audit (see Phase 17 Architecture; UNCOMMITTED). Earlier: Phase 16 - Dashboard & insights (see Phase 16 Architecture; UNCOMMITTED). Earlier: Phase 15 sales, invoices & payments (committed `2c7ca60`). Phase 15 — Sales, invoices & payments (see Phase 15 Architecture; UNCOMMITTED). Earlier: Phase 14 contacts, purchasing & finance (committed `7e68fb7`). Previous entries: Phase 13 crop operations (committed `e67ae41`). Previous entry: Phase 12 — Tasks, work & calendar (see Phase 12 Architecture; UNCOMMITTED). Earlier: Phase 11 breeding (committed `642a79a`), Phase 10 health (committed `fdd6ca8`), Phase 9 inventory (committed `baab4eb`), Phase 8 operational records (uncommitted), Phase 7 production cycles (committed).
 
 ## Endpoints (all under `/api/v1`)
 
@@ -611,8 +612,8 @@ None installed. `ext-bcmath` declared in composer.json `require` (PHP extension 
 
 ## Next Task
 
-Commit Phase 18, then Phase 19 (localization/accessibility) ONLY after explicit user instruction. Phase 20 stays deferred.
+Commit Phase 19. Phase 20 — Deferred from V1 / post-launch enhancement. Phase 21 (launch hardening) ONLY after explicit user instruction.
 
 ## Recommended Next Commit
 
-`feat: add Phase 18 platform administration with console-granted platform admin/support roles, plan price and entitlement management, reference-data and capability administration with compatibility checks, draft/publish platform work templates, settings and feature flags, cross-farm support read models and a platform audit trail`
+`feat: add Phase 19 localization with locale registry, per-user language preference, translation bundles with per-key English fallback, locale-independent money, quantity and UTC data contracts, and accessibility API guidance`
