@@ -14,9 +14,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 /** Read side: farm-scoped, view-permission-gated listings. Balances are always SUMs over the ledger. */
 class InventoryQueries
 {
-    private const ITEM_TOTAL = '(select COALESCE(SUM(m.quantity_delta), 0) from inventory_movements m where m.inventory_item_id = inventory_items.id)';
+    public const ITEM_TOTAL = '(select COALESCE(SUM(m.quantity_delta), 0) from inventory_movements m where m.inventory_item_id = inventory_items.id)';
 
-    private const LOT_TOTAL = '(select COALESCE(SUM(m.quantity_delta), 0) from inventory_movements m where m.inventory_lot_id = inventory_lots.id)';
+    public const LOT_TOTAL = '(select COALESCE(SUM(m.quantity_delta), 0) from inventory_movements m where m.inventory_lot_id = inventory_lots.id)';
 
     public function item(FarmContext $ctx, string $id): InventoryItem
     {

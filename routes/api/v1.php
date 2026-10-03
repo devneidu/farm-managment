@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\Auth\CsrfCookieController;
 use App\Http\Controllers\Api\V1\Auth\EmailVerificationController;
 use App\Http\Controllers\Api\V1\Auth\GoogleAuthController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\CropProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\FarmController;
 use App\Http\Controllers\Api\V1\FarmInvitationController;
 use App\Http\Controllers\Api\V1\FarmOperationController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\Api\V1\FeedFormulaController;
 use App\Http\Controllers\Api\V1\FinanceController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\HealthRecordController;
+use App\Http\Controllers\Api\V1\InsightController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\InvoiceController;
@@ -28,6 +31,7 @@ use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
 use App\Http\Controllers\Api\V1\MeasurementContextController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\NotificationPreferenceController;
 use App\Http\Controllers\Api\V1\OnboardingController;
 use App\Http\Controllers\Api\V1\OperationalRecordController;
@@ -38,6 +42,8 @@ use App\Http\Controllers\Api\V1\ProductionAreaController;
 use App\Http\Controllers\Api\V1\ProductionCycleController;
 use App\Http\Controllers\Api\V1\PurchaseController;
 use App\Http\Controllers\Api\V1\QuantityNormalizationController;
+use App\Http\Controllers\Api\V1\ReportController;
+use App\Http\Controllers\Api\V1\ReportExportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SaleController;
 use App\Http\Controllers\Api\V1\ScheduleController;
@@ -252,6 +258,10 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/{schedule}/end', [$c, 'end'])->middleware('throttle:work-write')->name('api.v1.schedules.end');
     });
     Route::get('/calendar', CalendarController::class)->middleware('farm.permission:task.view')->name('api.v1.calendar');
+    // Phase 16: dashboard and insights are read models for any active member; each block is gated by the viewer's own permissions.
+    Route::get('/dashboard', [DashboardController::class, 'show'])->name('api.v1.dashboard');
+    Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->middleware('farm.permission:task.view')->name('api.v1.dashboard.calendar');
+    Route::get('/insights', [InsightController::class, 'index'])->name('api.v1.insights');
     Route::prefix('work-templates')->group(function () {
         $c = WorkTemplateController::class;
         Route::get('/', [$c, 'index'])->middleware('farm.permission:task.view')->name('api.v1.work-templates.index');
@@ -348,6 +358,25 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/{payment}/reverse', [$c, 'reverse'])->middleware(['farm.permission:payment.reverse', 'throttle:finance-write'])->name('api.v1.payments.reverse');
     });
 
+    // Phase 17: reports (read-only derivations; each also needs the permissions of the data it reads), queued private exports, the notification centre and the audit trail.
+    Route::get('/reports', [ReportController::class, 'index'])->middleware('farm.permission:report.view')->name('api.v1.reports.index');
+    Route::prefix('reports/exports')->group(function () {
+        $c = ReportExportController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:report.export')->name('api.v1.reports.exports.index');
+        Route::post('/', [$c, 'store'])->middleware(['farm.permission:report.export', 'throttle:report-export'])->name('api.v1.reports.exports.store');
+        Route::get('/{export}', [$c, 'show'])->middleware('farm.permission:report.export')->name('api.v1.reports.exports.show');
+        Route::get('/{export}/download', [$c, 'download'])->middleware(['farm.permission:report.export', 'throttle:report-download'])->name('api.v1.reports.exports.download');
+    });
+    Route::get('/reports/{report}', [ReportController::class, 'show'])->middleware(['farm.permission:report.view', 'throttle:report-run'])->name('api.v1.reports.show');
+    Route::prefix('notifications')->group(function () {
+        $c = NotificationController::class;
+        Route::get('/', [$c, 'index'])->name('api.v1.notifications.index');
+        Route::post('/read-all', [$c, 'readAll'])->name('api.v1.notifications.read-all');
+        Route::post('/{notification}/read', [$c, 'read'])->name('api.v1.notifications.read');
+    });
+    Route::get('/notification-preferences', [NotificationPreferenceController::class, 'current'])->name('api.v1.notification-preferences.show');
+    Route::patch('/notification-preferences', [NotificationPreferenceController::class, 'patch'])->name('api.v1.notification-preferences.update');
+    Route::get('/audit', [AuditController::class, 'index'])->middleware('farm.permission:audit.view')->name('api.v1.audit.index');
     // Per-user, per-farm notification switches (shell only)
     Route::get('/settings/notifications', [NotificationPreferenceController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.show');
     Route::put('/settings/notifications', [NotificationPreferenceController::class, 'update'])->middleware('farm.permission:farm.view')->name('api.v1.settings.notifications.update');

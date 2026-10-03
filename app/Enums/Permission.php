@@ -87,6 +87,11 @@ enum Permission: string
     case PaymentCreate = 'payment.create';
     case PaymentReverse = 'payment.reverse';
 
+    // Phase 17 - reports (the catalogue and running reports; every report ALSO needs the permissions of the data it reads) / queued exports / audit trail
+    case ReportView = 'report.view';
+    case ReportExport = 'report.export';
+    case AuditView = 'audit.view';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
 }
