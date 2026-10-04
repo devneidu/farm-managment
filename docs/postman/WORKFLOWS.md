@@ -1,0 +1,722 @@
+# Postman workflows
+
+Executable end-to-end flows in the Postman folder **99 — Workflows**. Each flow is built from the same requests (and the same bodies/Tests scripts) as the reference folders, in the order below, and was **executed against the real application on a fresh database** to prove it runs and to capture the saved examples. Flows share one environment, so run them **in order** the first time (Collection Runner, environment *Farm Management — Local*). Manual inputs: the emailed OTP codes (`otp_code`, `reset_otp_code`) and the invitation token (`invitation_token`) — with `MAIL_MAILER=log` read them from `storage/logs/laravel.log`.
+
+Quick rules: `login-admin`/`login-farmer` requests switch the cookie session between the platform admin and the farm owner; every request carries `Origin` + `X-XSRF-TOKEN` through the collection script; ids are captured into environment variables automatically.
+
+| # | Flow | Requests | Prerequisites |
+|---|---|---|---|
+| 1 | Email registration & onboarding | 8 | None (fresh environment). |
+| 2 | Login & farm context | 7 | Flow 1. |
+| S | Demo farm setup (run once after Flow 1) | 22 | Flow 1 (platform admin account optional for the first four requests). |
+| 3 | Livestock batch & daily activity | 11 | Flows 1-2 and Flow S (needs `breed_id`, `area_id`). |
+| 4 | Crop project | 14 | Flow S (`store_id`, `item_seed_id`, `item_fert_id`, `item_yam_id`). |
+| 5 | Inventory | 10 | Flow S (`store_id`). |
+| 6 | Health & medicine | 13 | Flow S (`item_med_id`, `lot_med_id`, `store_id`) and Flow 3 (`cycle_id`). |
+| 7 | Breeding | 9 | Flow 3 (`cycle_id`). |
+| 8 | Tasks & templates | 11 | Flows 1 and 3 (`user_id`, `cycle_id`). |
+| 9 | Purchase → inventory → finance | 9 | Flows 3 and 5 (`item_feed_id`, `cycle_id`, `store_id`). |
+| 10 | Sale → invoice → payment | 12 | Flows S and 3 (`item_eggs_id`, `store_id`, `cycle_id`). |
+| 11 | Reports & export | 5 | Flows 9-10 (data for the reports) and the `farm-business` plan from Flow S. |
+| 12 | Notifications | 4 | Flow 11, plus `php artisan notifications:generate` (and a queue worker) run on the server. |
+| 13 | Team invitation | 13 | Flow 1 and the plan change from Flow S (Free allows only 3 team members). |
+
+## Flow 1 — Email registration & onboarding
+
+**Goal.** Create an account, verify the email, create the first farm and land on the dashboard.
+
+**Prerequisites.** None (fresh environment).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Initialise CSRF cookie | `GET /auth/csrf-cookie` (204) |  |
+| 2 | Register with email and password | `POST /auth/register` (201) |  |
+| 3 | Verify email with OTP | `POST /auth/email/verify` (200) |  |
+| 4 | Get current auth state (me) | `GET /auth/me` (200) |  |
+| 5 | Complete farm setup (onboarding) | `POST /onboarding/farm` (201) | `farm_id`, `user_id` |
+| 6 | Get current user after onboarding | `GET /auth/me` (200) |  |
+| 7 | Get current farm (with my role and permissions) | `GET /farm` (200) | `membership_owner_id` |
+| 8 | Get the dashboard | `GET /dashboard` (200) |  |
+
+**Variables produced.** `farm_id`, `user_id`, `membership_owner_id`.
+
+**Chain of effects**
+
+```
+Register -> user (unverified) + session + OTP email
+   -> Verify OTP -> email verified
+   -> Onboard (farm name) -> farm + Owner membership + Free subscription
+   -> Dashboard (empty state)
+```
+
+**Expected state changes**
+
+- A user account is created (unverified) and the browser session starts at registration.
+- Verification sets the email as verified; onboarding creates the farm, an Owner membership and a default Free-plan subscription and marks the user onboarded (permanently).
+- The dashboard of a brand-new farm has no KPI cards and an `empty_state` with suggested actions.
+
+**Business rules to notice**
+
+- `next_action` goes `verify_email` -> `complete_farm_setup` -> `none`; farm endpoints answer 403 (`email_verification_required`, `onboarding_required`) until each step is done.
+- OTP: 6 digits, 10 minutes, single use, 5 wrong attempts invalidate it; resend has a 60 s cooldown (so the flow skips the resend request; it is documented in the reference folder).
+- Only the farm name is asked at onboarding; country, timezone, currency and language are defaults.
+
+**What the frontend should learn**
+
+- Route on `data.next_action` after every auth call.
+- The CSRF cookie and a stateful `Origin` are required before the first POST.
+- Permissions arrive from `GET /farm`, not from `/auth/me`.
+
+## Flow 2 — Login & farm context
+
+**Goal.** Sign back in, read the auth state, resolve the active farm (and see how X-Farm-Id works) and load the dashboard.
+
+**Prerequisites.** Flow 1.
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Initialise CSRF cookie | `GET /auth/csrf-cookie` (204) |  |
+| 2 | Log out | `POST /auth/logout` (200) |  |
+| 3 | Log in with email and password | `POST /auth/login` (200) |  |
+| 4 | Get current user after login | `GET /auth/me` (200) |  |
+| 5 | Get current farm (with my role and permissions) | `GET /farm` (200) | `membership_owner_id` |
+| 6 | Get the farm with an explicit X-Farm-Id | `GET /farm` (200) |  |
+| 7 | Get the dashboard | `GET /dashboard` (200) |  |
+
+**Variables produced.** `membership_owner_id`.
+
+**Chain of effects**
+
+```
+Logout -> session ended
+   -> Login -> session + auth state
+   -> /auth/me -> /farm (role + permissions) -> /farm with X-Farm-Id -> Dashboard
+```
+
+**Expected state changes**
+
+- Logout invalidates the session cookie; login creates a new one.
+- No data changes.
+
+**Business rules to notice**
+
+- Wrong credentials are `401 invalid_credentials` for both unknown email and wrong password.
+- Without `X-Farm-Id` the oldest ACTIVE membership is the farm; with it you choose among your active memberships (a farm you do not belong to is `403 farm_access_denied`).
+- V1 has no endpoint to list your farms or to switch the active farm: multi-farm is only this header.
+
+**What the frontend should learn**
+
+- On load: csrf-cookie -> `GET /auth/me` -> route -> `GET /farm`.
+- Store the farm id you want to act on and send it as `X-Farm-Id` on every request for that farm.
+
+## Flow S — Demo farm setup (run once after Flow 1)
+
+**Goal.** Upgrade the demo farm (platform admin), then create the places, stores, inventory items and opening stock the later flows use.
+
+**Prerequisites.** Flow 1 (platform admin account optional for the first four requests).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Log in as the platform admin | `POST /auth/login` (200) |  |
+| 2 | List plans | `GET /platform-admin/plans` (200) | `plan_business_id`, `plan_free_id`, `plan_pro_id` |
+| 3 | Change a farm's plan | `POST /platform-admin/farms/{farm_id}/subscription/plan` (200) |  |
+| 4 | Log in as the farm owner again | `POST /auth/login` (200) |  |
+| 5 | List farm operations (production types) | `GET /master/farm-operations` (200) | `op_poultry_id`, `op_crops_id` |
+| 6 | List species | `GET /master/species` (200) | `species_chicken_id` |
+| 7 | List crops | `GET /master/crops` (200) | `crop_yam_id` |
+| 8 | Create a custom breed | `POST /custom-breeds` (201) | `breed_id` |
+| 9 | Create a location | `POST /locations` (201) | `location_id` |
+| 10 | Create a production area | `POST /production-areas` (201) | `area_id` |
+| 11 | Create a storage location | `POST /storage-locations` (201) | `store_id` |
+| 12 | Create a second storage location | `POST /storage-locations` (201) | `store2_id` |
+| 13 | Create an inventory item (lot-tracked medicine) | `POST /inventory/items` (201) | `item_med_id` |
+| 14 | Receive stock (lot-tracked, with expiry) | `POST /inventory/stock-in` (201) | `movement_med_in_id` |
+| 15 | List lots with stock on hand | `GET /inventory/lots` (200) | `lot_med_id` |
+| 16 | Create an inventory item (produce) | `POST /inventory/items` (201) | `item_eggs_id` |
+| 17 | Receive stock (produce) | `POST /inventory/stock-in` (201) |  |
+| 18 | Create an inventory item (fertilizer) | `POST /inventory/items` (201) | `item_fert_id` |
+| 19 | Receive stock (fertilizer) | `POST /inventory/stock-in` (201) |  |
+| 20 | Create an inventory item (planting material) | `POST /inventory/items` (201) | `item_seed_id` |
+| 21 | Receive stock (planting material) | `POST /inventory/stock-in` (201) |  |
+| 22 | Create an inventory item (harvest produce) | `POST /inventory/items` (201) | `item_yam_id` |
+
+**Variables produced.** `plan_business_id`, `plan_free_id`, `plan_pro_id`, `op_poultry_id`, `op_crops_id`, `species_chicken_id`, `crop_yam_id`, `breed_id`, `location_id`, `area_id`, `store_id`, `store2_id`, `item_med_id`, `movement_med_in_id`, `lot_med_id`, `item_eggs_id`, `item_fert_id`, `item_seed_id`, `item_yam_id`.
+
+**Chain of effects**
+
+```
+Platform admin -> change the farm plan (Farm Business)
+   -> places: location, production area, storage locations
+   -> inventory items + opening stock (each a stock_in movement)
+   -> produce / planting-material / fertilizer / medicine items ready for later flows
+```
+
+**Expected state changes**
+
+- The demo farm moves to the `farm-business` plan (data export + unlimited cycles/members).
+- A breed, a location, a production area and two storage locations exist.
+- Items exist with opening stock: vaccine lot NCD-2026-01 (500 ml, expires in 90 days), 600 eggs, 100 kg fertilizer, 200 kg seed tubers; a produce item for yam harvests has zero stock.
+
+**Business rules to notice**
+
+- Plan changes are Platform Admin only (no checkout in V1). If you have no platform admin account skip the first four requests: reports and exports will then be limited by the Free plan.
+- Every stock-in is a ledger movement; there is no quantity field on an item.
+- Places are optional and have no DELETE; the `parent_id` of an area must be a location of this farm.
+
+**What the frontend should learn**
+
+- Setup data is created with the same endpoints the UI uses.
+- The Platform Admin session is a different login: switch back to the farm owner afterwards.
+
+## Flow 3 — Livestock batch & daily activity
+
+**Goal.** Load master data, start a livestock batch, record feed and mortality, reconcile the population and check the derived population and history.
+
+**Prerequisites.** Flows 1-2 and Flow S (needs `breed_id`, `area_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | List farm operations (production types) | `GET /master/farm-operations` (200) | `op_poultry_id`, `op_crops_id` |
+| 2 | List species | `GET /master/species` (200) | `species_chicken_id` |
+| 3 | Get species capabilities | `GET /master/species/{species_chicken_id}/capabilities` (200) |  |
+| 4 | Start a livestock batch | `POST /production-cycles` (201) | `cycle_id`, `cycle_reference` |
+| 5 | Show a production cycle | `GET /production-cycles/{cycle_id}` (200) |  |
+| 6 | Record feed use (not linked to stock) | `POST /records` (201) |  |
+| 7 | Record mortality | `POST /records` (201) | `record_mortality_id` |
+| 8 | Reconcile population (population adjustment) | `POST /records` (201) | `record_adjust_id` |
+| 9 | Re-read the cycle after records | `GET /production-cycles/{cycle_id}` (200) |  |
+| 10 | List operational records | `GET /records` (200) |  |
+| 11 | Production summary | `GET /production-cycles/{cycle_id}/summary` (200) |  |
+
+**Variables produced.** `op_poultry_id`, `op_crops_id`, `species_chicken_id`, `cycle_id`, `cycle_reference`, `record_mortality_id`, `record_adjust_id`.
+
+**Chain of effects**
+
+```
+Create livestock batch (500 head)
+   -> opening population movement +500
+   -> Feed use (no population effect)
+   -> Mortality -5   -> population movement
+   -> Reconciliation -2 (actual 493 vs expected 495)
+   -> current_population = 500 - 5 - 2 = 493 (derived), initial_population stays 500
+```
+
+**Expected state changes**
+
+- A production cycle (reference `BAT-2026-00001`) with a population ledger starting at +500.
+- Feed use: record only. Mortality appends -5; the manager reconciliation appends -2 (actual 493 - expected 495).
+- `current_population` is read from the ledger: 493. `initial_population` is still 500.
+
+**Business rules to notice**
+
+- Population can never be written directly; only records, breeding outcomes, sales and reversals move it.
+- `recorded_at` is the event time (between the cycle start and now); `created_at` is separate; `idempotency_key` makes retries safe.
+- A population adjustment needs `record.adjust` and the `expected_population` must equal the current ledger value (`409 population_changed` otherwise).
+
+**What the frontend should learn**
+
+- Show `current_population` from the API, never `initial_population - deaths` computed in the client.
+- Refetch the cycle after every record that can move population.
+- Record forms come from `GET /master/record-types` + species capabilities.
+
+## Flow 4 — Crop project
+
+**Goal.** Load crop master data, start a crop project and follow it from planting through harvest to the crop project summary.
+
+**Prerequisites.** Flow S (`store_id`, `item_seed_id`, `item_fert_id`, `item_yam_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | List farm operations (production types) | `GET /master/farm-operations` (200) | `op_poultry_id`, `op_crops_id` |
+| 2 | List crops | `GET /master/crops` (200) | `crop_yam_id` |
+| 3 | List varieties of a crop | `GET /master/crops/{crop_yam_id}/varieties` (200) |  |
+| 4 | Planting reference lists | `GET /master/planting-reference` (200) |  |
+| 5 | Create a custom crop variety | `POST /custom-varieties` (201) | `variety_id` |
+| 6 | Start a crop project | `POST /production-cycles` (201) | `crop_cycle_id` |
+| 7 | Record land preparation | `POST /records` (201) |  |
+| 8 | Record planting | `POST /records` (201) | `record_planting_id` |
+| 9 | Record establishment check | `POST /records` (201) |  |
+| 10 | Record growth stage | `POST /records` (201) |  |
+| 11 | Record fertilizer application | `POST /records` (201) |  |
+| 12 | Record crop loss | `POST /records` (201) |  |
+| 13 | Record harvest (into produce stock) | `POST /records` (201) | `record_harvest_id` |
+| 14 | Get crop project detail | `GET /production-cycles/{crop_cycle_id}/crop` (200) |  |
+
+**Variables produced.** `op_poultry_id`, `op_crops_id`, `crop_yam_id`, `variety_id`, `crop_cycle_id`, `record_planting_id`, `record_harvest_id`.
+
+**Chain of effects**
+
+```
+Crop project (800 heaps over 2 ha)
+   -> land preparation (area only)
+   -> planting 800 heaps + 120 kg seed tubers -> stock_out 120 kg   (units != material)
+   -> establishment 752/800 -> failed 48, survival "94"
+   -> fertilizer 20 kg on 1 ha -> stock_out 20 kg
+   -> crop loss 12 units (audit only, no population)
+   -> harvest 300 kg -> stock_in 300 kg of produce
+   -> Crop project summary (derived read model)
+```
+
+**Expected state changes**
+
+- A crop cycle (reference `CRP-2026-00002`) with baseline `initial_planting_units: 800` and area 2 hectare (stored as 20000 sq_m).
+- Planting consumes 120 kg of seed tubers from stock; fertilizer consumes 20 kg; the harvest adds 300 kg to the produce item `Fresh Yam Tubers`.
+- Crop detail shows planted 800 / remaining 0, survival 94 %, losses 12 by cause, harvest totals in grams (300000 g).
+
+**Business rules to notice**
+
+- Planting units, material quantity and land area are three separate measurements: 800 heaps is not 800 tubers is not 2 hectares.
+- Cumulative planting units cannot exceed the baseline; establishment and loss are bounded by it; crops have no population ledger (`population_delta` is 0).
+- Stock links are optional; with them each event is one record + one stock movement in one transaction.
+
+**What the frontend should learn**
+
+- Never convert planting units into seed quantity in the UI.
+- The crop detail endpoint is a derived read model: refetch it instead of summing records.
+- Harvest totals are per canonical unit and are never added across dimensions.
+
+## Flow 5 — Inventory
+
+**Goal.** Create an item, receive stock (with a package conversion), view derived stock, consume stock and read the movement history.
+
+**Prerequisites.** Flow S (`store_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Inventory option catalogue | `GET /master/inventory-options` (200) |  |
+| 2 | Create an inventory item (feed) | `POST /inventory/items` (201) | `item_feed_id` |
+| 3 | Create a package conversion (inventory item) | `POST /settings/package-conversions` (201) | `conversion_feed_id` |
+| 4 | Receive stock (stock-in) | `POST /inventory/stock-in` (201) | `movement_feed_in_id` |
+| 5 | List inventory items with derived stock | `GET /inventory/items` (200) |  |
+| 6 | Show an inventory item with stock by location and lot | `GET /inventory/items/{item_feed_id}` (200) |  |
+| 7 | Issue stock (stock-out) | `POST /inventory/stock-out` (201) | `movement_out_id` |
+| 8 | Re-read the item after the stock-out | `GET /inventory/items/{item_feed_id}` (200) |  |
+| 9 | Movement history of one item | `GET /inventory/items/{item_feed_id}/movements` (200) |  |
+| 10 | Reverse a movement | `POST /inventory/movements/{movement_out_id}/reverse` (201) |  |
+
+**Variables produced.** `item_feed_id`, `conversion_feed_id`, `movement_feed_in_id`, `movement_out_id`.
+
+**Chain of effects**
+
+```
+Create item (no quantity)
+   -> package conversion: 1 bag = 25 kg (this item)
+   -> stock-in 12 bag + 18 kg -> movement +318 kg
+   -> item stock (derived) 318 kg
+   -> stock-out 25 kg -> movement -25 kg -> 293 kg
+   -> movement history -> reverse the stock-out -> reversal movement +25 kg
+```
+
+**Expected state changes**
+
+- Item "Layer Grower Mash" (feed, kg). Ledger: +318 kg, -25 kg, then a +25 kg reversal.
+- Derived stock follows the ledger (318 -> 293 -> 318).
+
+**Business rules to notice**
+
+- An item has no balance column; the balance is the sum of movements and can never go negative, not even at a past `recorded_at`.
+- Package units resolve only through the item's own conversion; without it `422 conversion_not_configured`.
+- A reversal never edits history: it appends a movement; a movement created by a record, health event, purchase or sale must be reversed through that parent.
+
+**What the frontend should learn**
+
+- Display `stock.quantity` + unit from the API.
+- Generate one idempotency key per form submit and reuse it for retries.
+- Compound entry (12 bag + 18 kg) is what the user types; `normalized` is canonical.
+
+## Flow 6 — Health & medicine
+
+**Goal.** Set a withdrawal profile, record a vaccination that consumes medicine stock, verify the stock effect and inspect the withdrawal windows.
+
+**Prerequisites.** Flow S (`item_med_id`, `lot_med_id`, `store_id`) and Flow 3 (`cycle_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | List health record types and field contracts | `GET /master/health-record-types` (200) |  |
+| 2 | Set a medicine's default withdrawal period | `PUT /health/medicines/{item_med_id}/profile` (200) |  |
+| 3 | List medicines with derived stock and withdrawal profile | `GET /health/medicines` (200) |  |
+| 4 | Show a medicine with stock by location and lot | `GET /health/medicines/{item_med_id}` (200) |  |
+| 5 | Record a vaccination (consumes medicine stock) | `POST /health-records` (201) | `health_record_id` |
+| 6 | Re-read the medicine after the vaccination | `GET /health/medicines/{item_med_id}` (200) |  |
+| 7 | List withdrawal windows | `GET /health/withdrawals` (200) |  |
+| 8 | Record a disease issue (no medicines) | `POST /health-records` (201) |  |
+| 9 | Record a medication (second medicine record) | `POST /health-records` (201) | `health_med2_id` |
+| 10 | Reverse a health record | `POST /health-records/{health_med2_id}/reverse` (201) |  |
+| 11 | Re-read the medicine after the reversal | `GET /health/medicines/{item_med_id}` (200) |  |
+| 12 | List health records | `GET /health-records` (200) |  |
+| 13 | Show a health record with its medicine lines | `GET /health-records/{health_record_id}` (200) |  |
+
+**Variables produced.** `health_record_id`, `health_med2_id`.
+
+**Chain of effects**
+
+```
+Medicine item + lot (500 ml, Flow S)
+   -> default withdrawal profile (7 days)
+   -> Vaccination (health record)
+        -> stock_out 250 ml from the lot (same transaction)
+        -> withdrawal window stored on the line (ends_at)
+   -> medicine stock 250 ml  -> withdrawal list
+   -> second medication (50 ml) -> reversal -> compensating stock +50 ml, window stops counting
+```
+
+**Expected state changes**
+
+- Vaccination record with one medicine line; the lot balance drops 500 -> 250 ml.
+- A medication record consumes 50 ml; its reversal returns 50 ml to the same lot and its withdrawal window no longer appears.
+- Withdrawal windows list `days`, `source` (`explicit` or `item_default`) and `ends_at`.
+
+**Business rules to notice**
+
+- A health record is something that happened; it never changes population (record mortality separately and optionally link it).
+- Medicine lines consume stock through the inventory ledger atomically; any failure leaves no record and no movement.
+- Lot-tracked items require `lot_id`; expired lots are refused (`409 lot_expired`); the profile's default withdrawal applies to FUTURE lines only.
+
+**What the frontend should learn**
+
+- Refetch the medicine and the withdrawal list after saving.
+- The API does not block sales/harvest during a withdrawal: the UI should warn from the active-window list.
+
+## Flow 7 — Breeding
+
+**Goal.** Start an incubation project, record a candling check and the hatch outcome, and verify the population effect; reverse an outcome.
+
+**Prerequisites.** Flow 3 (`cycle_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Start a breeding project (incubation) | `POST /breeding-projects` (201) | `breeding_project_id` |
+| 2 | Show a breeding project | `GET /breeding-projects/{breeding_project_id}` (200) |  |
+| 3 | Project milestones | `GET /breeding-projects/{breeding_project_id}/milestones` (200) |  |
+| 4 | Record a pregnancy check / incubation candling | `POST /breeding-projects/{breeding_project_id}/checks` (201) |  |
+| 5 | Record the actual outcome (hatch / birth) | `POST /breeding-projects/{breeding_project_id}/outcomes` (201) | `outcome_id` |
+| 6 | Re-read the cycle after the hatch | `GET /production-cycles/{cycle_id}` (200) |  |
+| 7 | Start a breeding project (second attempt) | `POST /breeding-projects` (201) | `breeding_project_b_id` |
+| 8 | Record an outcome (second project) | `POST /breeding-projects/{breeding_project_b_id}/outcomes` (201) | `outcome_b_id` |
+| 9 | Reverse a breeding outcome | `POST /breeding-projects/{breeding_project_b_id}/outcomes/{outcome_b_id}/reverse` (201) |  |
+
+**Variables produced.** `breeding_project_id`, `outcome_id`, `breeding_project_b_id`, `outcome_b_id`.
+
+**Chain of effects**
+
+```
+Breeding project (50 eggs set, 40 expected) -> expectation from the chicken reference (exact date)
+   -> candling check (positive, 44 fertile)
+   -> outcome 37 live -> ONE breeding_outcome record -> population +37
+   -> cycle population 493 -> 530
+   -> second project: outcome 20 -> reversal -> compensating -20 -> project active again
+```
+
+**Expected state changes**
+
+- Project `BRD-2026-00001` completes with the outcome; the cycle population rises by exactly 37 (493 -> 530).
+- The second project's outcome (+20) is reversed (-20): net zero, project returns to `active`.
+
+**Business rules to notice**
+
+- Eggs set and `expected_offspring` are estimates; only a recorded live outcome changes population, once.
+- The expected date is a biological reference (exact date or window, never a midpoint), not a guarantee.
+- A project holds one effective outcome; the generated record can only be reversed through the outcome.
+
+**What the frontend should learn**
+
+- Show expectation vs actual separately.
+- Refetch the cycle for population after an outcome.
+
+## Flow 8 — Tasks & templates
+
+**Goal.** Apply a template, create a task that needs evidence, save the actual record, complete the task with that evidence and check the calendar.
+
+**Prerequisites.** Flows 1 and 3 (`user_id`, `cycle_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Recommended templates for a cycle | `GET /work-templates/recommended` (200) | `template_platform_id` |
+| 2 | Apply a template to a cycle | `POST /work-templates/{template_platform_id}/apply` (201) |  |
+| 3 | Create a farm template | `POST /work-templates` (201) | `template_farm_id` |
+| 4 | Create a task | `POST /tasks` (201) | `task_id` |
+| 5 | List tasks | `GET /tasks` (200) |  |
+| 6 | Record form prefill for a task | `GET /tasks/{task_id}/record-prefill` (200) |  |
+| 7 | Save the actual record that evidences the task | `POST /records` (201) | `record_evidence_id` |
+| 8 | Complete a task (with evidence) | `POST /tasks/{task_id}/complete` (200) |  |
+| 9 | Verify the completed task | `GET /tasks/{task_id}` (200) |  |
+| 10 | Create a recurring schedule | `POST /schedules` (201) | `schedule_id` |
+| 11 | Calendar (tasks and milestones) | `GET /calendar` (200) |  |
+
+**Variables produced.** `template_platform_id`, `template_farm_id`, `task_id`, `record_evidence_id`, `schedule_id`.
+
+**Chain of effects**
+
+```
+Recommended template -> Apply -> schedules + tasks (no records)
+   Create task (should happen, requires evidence)
+   -> record-prefill (read-only)
+   -> save the ACTUAL record (weight) via POST /records
+   -> Complete task with evidence {type, id} -> task completed, evidence linked
+```
+
+**Expected state changes**
+
+- Applying the platform template creates schedules and the first 30 days of tasks; nothing is created in the record tables.
+- The task is completed with the saved weight record as evidence; the record exists independently.
+
+**Business rules to notice**
+
+- A task is work that SHOULD happen; completion never creates a record, stock movement or finance entry.
+- Evidence must belong to the farm, not be reversed, match the linked type and cycle, and can evidence only one task; `requires_evidence` tasks cannot complete without it.
+- Templates apply once per target (`409 template_already_applied`).
+
+**What the frontend should learn**
+
+- Open the record form from `record-prefill`, save the record, THEN complete the task.
+- Calendar combines tasks and milestones; range max 92 days.
+
+## Flow 9 — Purchase → inventory → finance
+
+**Goal.** Create a supplier, record a purchase and verify both the stock-in and the expense it created.
+
+**Prerequisites.** Flows 3 and 5 (`item_feed_id`, `cycle_id`, `store_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Create a contact (supplier) | `POST /contacts` (201) | `supplier_id` |
+| 2 | List income and expense categories | `GET /finance/categories` (200) | `cat_labour_id`, `cat_utilities_id`, `cat_other_income_id` |
+| 3 | Record a purchase (stock + expense) | `POST /purchases` (201) | `purchase_id` |
+| 4 | Show a purchase with its lines | `GET /purchases/{purchase_id}` (200) |  |
+| 5 | Movements caused by a purchase | `GET /inventory/movements` (200) |  |
+| 6 | Transactions caused by a purchase | `GET /finance/transactions` (200) |  |
+| 7 | Record a purchase without booking the expense | `POST /purchases` (201) | `purchase_b_id` |
+| 8 | Record an expense linked to a purchase | `POST /expenses` (201) |  |
+| 9 | Finance summary and cycle profitability | `GET /finance/summary` (200) |  |
+
+**Variables produced.** `supplier_id`, `cat_labour_id`, `cat_utilities_id`, `cat_other_income_id`, `purchase_id`, `purchase_b_id`.
+
+**Chain of effects**
+
+```
+Supplier contact
+   -> Purchase (2 bag + 5 kg feed, delivery line)
+        -> ONE stock_in +55 kg (reason purchase)
+        -> ONE expense 10,250.45 (source: purchase)
+   -> verify stock (movements?purchase_id) and finance (transactions?source_type=purchase)
+   -> Purchase without expense (record_expense=false) -> later POST /expenses {source: purchase} for exactly the total
+```
+
+**Expected state changes**
+
+- Purchase `PUR-2026-00001`: total 10,250.45 (9,000.00 + 1,250.45); feed stock +55 kg; one expense in the ledger linked to the purchase.
+- A second purchase books no expense until `POST /expenses` references it with exactly its total (3,500.00); a duplicate is `409 finance_already_recorded`.
+
+**Business rules to notice**
+
+- A stocked purchase is the only path that writes stock and money together, in one transaction (idempotent by key).
+- Money is two-decimal strings; the API sums the lines exactly.
+- One live finance transaction per source; cancelling a purchase appends compensating rows (it fails with `insufficient_stock` if the stock was used).
+
+**What the frontend should learn**
+
+- Do not create a separate expense for a purchase that already booked one.
+- Refetch inventory and finance after saving.
+
+## Flow 10 — Sale → invoice → payment
+
+**Goal.** Record a sale (stock + livestock), issue its invoice, receive partial then final payments and verify the finance effect.
+
+**Prerequisites.** Flows S and 3 (`item_eggs_id`, `store_id`, `cycle_id`).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Create a contact (customer) | `POST /contacts` (201) | `customer_id` |
+| 2 | Record a sale (stock + livestock lines) | `POST /sales` (201) | `sale_id` |
+| 3 | Show a sale with its lines | `GET /sales/{sale_id}` (200) |  |
+| 4 | Re-read the cycle after the sale | `GET /production-cycles/{cycle_id}` (200) |  |
+| 5 | Issue the invoice for a sale | `POST /sales/{sale_id}/invoice` (201) | `invoice_id`, `invoice_reference` |
+| 6 | Show an invoice | `GET /invoices/{invoice_id}` (200) |  |
+| 7 | Download the invoice as a PDF | `GET /invoices/{invoice_id}/pdf` (200) |  |
+| 8 | Record a payment (partial) | `POST /invoices/{invoice_id}/payments` (201) | `payment_id` |
+| 9 | Record the final payment | `POST /invoices/{invoice_id}/payments` (201) |  |
+| 10 | Income caused by payments | `GET /finance/transactions` (200) |  |
+| 11 | Re-read the sale after payment | `GET /sales/{sale_id}` (200) |  |
+| 12 | Finance summary after payment | `GET /finance/summary` (200) |  |
+
+**Variables produced.** `customer_id`, `sale_id`, `invoice_id`, `invoice_reference`, `payment_id`.
+
+**Chain of effects**
+
+```
+Customer contact
+   -> Sale (90 eggs + 12 spent layers = 87,000.00)
+        -> stock_out 90 pieces
+        -> population exit -12 (livestock_sale record)
+        -> NO invoice, NO income yet
+   -> Invoice (separate document, snapshot) -> unpaid, outstanding 87,000.00
+   -> Payment 30,000.00 -> income row 30,000.00 -> partially paid
+   -> Payment 57,000.00 -> income row 57,000.00 -> paid
+```
+
+**Expected state changes**
+
+- Sale `SAL-2026-00001` (87,000.00): egg stock -90, cycle population -12.
+- Invoice `INV-2026-00001` snapshots customer, seller and lines.
+- Two payments create two income rows (30,000.00 and 57,000.00); the sale reads `paid`, outstanding `0.00`; the finance summary includes the income.
+
+**Business rules to notice**
+
+- Sale, invoice and payment are separate resources; ONLY a payment books income (cash basis).
+- A payment can never exceed the outstanding amount (`409 payment_exceeds_balance`); cancelling a sale with live payments is `409 sale_has_payments` (reverse the payments first).
+- Stock lines sell produce items only; livestock lines remove animals through the population ledger.
+
+**What the frontend should learn**
+
+- Show payment state from the sale/invoice (`payment_status`, `outstanding`), not from your own sums.
+- Refetch invoice, sale and finance summary after a payment.
+- PDFs are fetched with credentials as a blob.
+
+## Flow 11 — Reports & export
+
+**Goal.** Browse the report catalogue, run a report, request a queued export, poll its status and download it.
+
+**Prerequisites.** Flows 9-10 (data for the reports) and the `farm-business` plan from Flow S.
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | List reports (catalogue) | `GET /reports` (200) | `report_code` |
+| 2 | Run a report (income & expense) | `GET /reports/income_expense` (200) |  |
+| 3 | Request a report export | `POST /reports/exports` (202) | `report_export_id` |
+| 4 | Get an export (status) | `GET /reports/exports/{report_export_id}` (200) |  |
+| 5 | Download an export | `GET /reports/exports/{report_export_id}/download` (200) |  |
+
+**Variables produced.** `report_code`, `report_export_id`.
+
+**Chain of effects**
+
+```
+Report catalogue -> run report (JSON) -> request export (202 queued)
+   -> queue job renders private file -> poll status -> completed -> download (access re-checked)
+```
+
+**Expected state changes**
+
+- An export row is created and a background job writes a private CSV; the saved download is the real file.
+
+**Business rules to notice**
+
+- Exports need `report.export`, the report's own permissions and the `data_export` plan feature; the same idempotency key + payload returns the same export (200).
+- Files are private to the requesting user and expire after 7 days.
+
+**What the frontend should learn**
+
+- Poll with backoff or listen for the `export_ready` notification.
+- Download as a blob; handle 409/410 error JSON.
+
+## Flow 12 — Notifications
+
+**Goal.** Read the notification centre, mark one read, mark all read and verify the unread count.
+
+**Prerequisites.** Flow 11, plus `php artisan notifications:generate` (and a queue worker) run on the server.
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | List my notifications | `GET /notifications` (200) | `notification_id` |
+| 2 | Mark a notification read | `POST /notifications/{notification_id}/read` (200) |  |
+| 3 | Mark all my notifications read | `POST /notifications/read-all` (200) |  |
+| 4 | Verify the unread count | `GET /notifications` (200) |  |
+
+**Variables produced.** `notification_id`.
+
+**Chain of effects**
+
+```
+Scheduler: notifications:generate -> notifications in the inbox (deduplicated)
+   -> list unread -> mark one read -> mark all read -> unread_count = 0
+```
+
+**Expected state changes**
+
+- Notifications are created by the background job, never by an API call; reading changes only `read_at`.
+
+**Business rules to notice**
+
+- Boolean query parameters are `1`/`0`; `unread=true` is rejected with `422`.
+- A condition is announced at most once per farm-local day (critical/warning) or week (info) per user.
+
+**What the frontend should learn**
+
+- Poll `meta.unread_count` for the badge; there is no push in V1.
+- Notifications point at their source; they never change it.
+
+## Flow 13 — Team invitation
+
+**Goal.** Invite a member, accept the invitation as the invitee, list and change the member, and see the removed-member state.
+
+**Prerequisites.** Flow 1 and the plan change from Flow S (Free allows only 3 team members).
+
+**Request sequence**
+
+| # | Request | Call | Captures |
+|---|---|---|---|
+| 1 | Invite a team member | `POST /farm/invitations` (201) | `invitation_id` |
+| 2 | List open invitations | `GET /farm/invitations` (200) |  |
+| 3 | Resend an invitation | `POST /farm/invitations/{invitation_id}/resend` (200) |  |
+| 4 | Register the invitee | `POST /auth/register` (201) |  |
+| 5 | Verify the invitee's email | `POST /auth/email/verify` (200) |  |
+| 6 | Accept a farm invitation | `POST /invitations/accept` (200) | `user_chidi_id` |
+| 7 | Get auth state as the invited member | `GET /auth/me` (200) |  |
+| 8 | Log in as the farm owner again | `POST /auth/login` (200) |  |
+| 9 | List team members | `GET /farm/members` (200) | `membership_chidi_id` |
+| 10 | Change a member's role | `PATCH /farm/members/{membership_chidi_id}` (200) |  |
+| 11 | Remove a member | `DELETE /farm/members/{membership_chidi_id}` (200) |  |
+| 12 | Log in as the invited member | `POST /auth/login` (200) |  |
+| 13 | Get auth state after losing every farm | `GET /auth/me` (200) |  |
+
+**Variables produced.** `invitation_id`, `user_chidi_id`, `membership_chidi_id`.
+
+**Chain of effects**
+
+```
+Invite (email + token) -> invitee registers with the SAME email + verifies
+   -> accept token -> membership created, user onboarded
+   -> owner lists members -> changes role -> removes member
+   -> member: next_action = no_active_farm
+```
+
+**Expected state changes**
+
+- An invitation is created, accepted (membership created) and the member's role changed; after removal the user is still authenticated/onboarded but has no active farm.
+
+**Business rules to notice**
+
+- The token is emailed only (7 days, single use); the invited email must equal the account email (`403 invitation_email_mismatch`).
+- Pending invitations count toward the plan's `team_members` limit; owner can never be assigned.
+- The path id of member endpoints is the MEMBERSHIP id.
+
+**What the frontend should learn**
+
+- Build the role picker from `GET /roles` (`assignable`).
+- Handle `no_active_farm` as a first-class screen.

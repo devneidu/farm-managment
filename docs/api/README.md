@@ -20,10 +20,22 @@ php artisan scramble:export --path=docs/api/openapi.json
 
 Re-run and commit `docs/api/openapi.json` whenever an endpoint changes.
 
+## Frontend handoff package (start here)
+
+| Resource | Purpose |
+|---|---|
+| [`API-CONTRACT.md`](API-CONTRACT.md) | The frontend-facing contract: auth/CSRF, `next_action`, farm context, roles/permissions, identifiers, envelopes, pagination, idempotency, dates, money, measurements, master data, Platform Admin, rate limits, error codes. |
+| [`FRONTEND-INTEGRATION.md`](FRONTEND-INTEGRATION.md) | How to use the API from the React app (client setup, startup, routing, permissions, errors, idempotency, refresh-after-write, downloads, exports, notifications). |
+| [`../postman/Farm-Management-API.postman_collection.json`](../postman/Farm-Management-API.postman_collection.json) | Postman collection (v2.1): every route documented with bodies, rules, side effects and real saved responses, plus executable workflows. |
+| [`../postman/Farm-Management-Local.postman_environment.json`](../postman/Farm-Management-Local.postman_environment.json) | Local environment (placeholders only, no credentials). |
+| [`../postman/WORKFLOWS.md`](../postman/WORKFLOWS.md) | The 14 Postman flows: sequence, produced variables, state changes, business rules. |
+| [`../postman/COVERAGE.md`](../postman/COVERAGE.md) | Route coverage, verification results, docs/code discrepancies and frontend integration gaps. |
+
 ## Postman
 
-Postman → Import → select `docs/api/openapi.json` (or paste the `/docs/api.json` URL). The server base URL is
-`{APP_URL}/api/v1`; paths in the spec are relative to it (e.g. `/health`).
+Use the curated collection above (**Import** `docs/postman/Farm-Management-API.postman_collection.json` and the local environment). Importing `docs/api/openapi.json` also works but gives only generated request stubs, none of the cookie/CSRF handling, captured variables, saved responses or flows. The server base URL is `{APP_URL}/api/v1`; paths in the spec are relative to it (e.g. `/health`).
+
+> **Where this README and the code differ, `API-CONTRACT.md` and `docs/postman/COVERAGE.md` (discrepancy list) win.** Known stale spots in the sections below: the role/permission tables (the code has five roles including `vet` and 58 permissions), and boolean query parameters (send `1`/`0`; `true`/`false` is rejected on most endpoints).
 
 ## Response conventions
 

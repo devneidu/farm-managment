@@ -9,6 +9,16 @@
 
 ---
 
+## Latest task — Frontend API handoff package (documentation only, UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-04. **No application code, route, migration, test or package changed** (Phase 20 untouched).
+
+**Added:** `docs/postman/Farm-Management-API.postman_collection.json` (Postman v2.1; all 232 `/api/v1` routes in folders 00–22 and 90 Platform Admin, plus 14 executable workflows in 99), `docs/postman/Farm-Management-Local.postman_environment.json` (placeholders only), `docs/postman/WORKFLOWS.md`, `docs/postman/COVERAGE.md` (coverage, verification, docs/code discrepancies D1–D9, Frontend Integration Gaps G1–G9), `docs/api/API-CONTRACT.md`, `docs/api/FRONTEND-INTEGRATION.md`; `docs/api/README.md` gained a handoff-package section and a stale-sections note.
+
+**How it was verified:** a throwaway harness (not committed) executed the whole scenario against `farm_management_test` as real users: every saved response is real; the 14 flows were also run in their own order on a fresh database; Sanctum cookie/CSRF/Origin behaviour was confirmed over real HTTP. Findings worth knowing: no `GET /permissions`, no list-my-farms/switch-farm endpoint (only `X-Farm-Id`), `/auth/me` carries `farm.role` but permissions come from `GET /farm`; boolean query params must be `1`/`0`; OpenAPI statuses/types are wrong for several action endpoints (see COVERAGE D2).
+
+---
+
 ## Current Status
 
 **Current Phase:** Phase 21 — Launch hardening (implemented and locally verified; commit authorized by the user; production acceptance gates remain).
