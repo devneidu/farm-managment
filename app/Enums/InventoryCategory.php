@@ -12,6 +12,22 @@ enum InventoryCategory: string
     case GeneralSupply = 'general_supply';
     case Produce = 'produce';
 
+    /**
+     * Whether stock of this category can be sold through POST /sales. A category rule, not a free-for-all: produce (eggs, milk,
+     * harvests) and feed (surplus sold to another farm or a distributor). Medicine, seed, agrochemicals and general supplies
+     * leave the farm with a stock-out instead.
+     */
+    public function isSellable(): bool
+    {
+        return in_array($this, self::sellable(), true);
+    }
+
+    /** @return list<self> */
+    public static function sellable(): array
+    {
+        return [self::Produce, self::Feed];
+    }
+
     public function label(): string
     {
         return match ($this) {

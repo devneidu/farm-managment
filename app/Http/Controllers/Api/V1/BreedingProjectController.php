@@ -51,9 +51,14 @@ class BreedingProjectController extends Controller
      * manual expected_date / expected_from+expected_to is supplied. Nothing here changes population.
      * Closed cycles are rejected (409 cycle_closed). The required idempotency_key is farm-wide: an identical retry returns the
      * original project (201), a changed payload is 409.
+     *
+     * Incubation with `consume_egg_stock: true` also takes `eggs_set` eggs out of the farm's available egg stock in the same transaction (needs inventory.use):
+     * one stock-out (reason incubation) linked to the project and its cycle, from `egg_storage_location_id` (optional when the farm has one active store).
+     * Too few eggs is 409 insufficient_stock and nothing - project included - is written. Omit the flag to leave stock untouched. `egg_stock` on the project
+     * is derived from its stock movements.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\BreedingProjectResource, meta: object, message:string}')]
-    #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"idempotency_conflict", request_id:string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"idempotency_conflict"|"insufficient_stock", request_id:string}')]
     public function store(StoreBreedingProjectRequest $request, FarmContext $ctx, BreedingService $service): JsonResponse
     {
         return ApiResponse::success($this->project($service->create($ctx, $request->validated()), $request), message: 'Breeding project started.', status: 201);
@@ -77,6 +82,8 @@ class BreedingProjectController extends Controller
      * Requires breeding.create. Only while the project is active (409 project_not_active otherwise) and its cycle is open.
      * Changing start_date recalculates a reference-derived expectation from the stored snapshot; a manual expectation is kept
      * (validated against the new start) unless revert_to_reference is true. Workflow, cycle and the biological reference never change.
+     * On a project that took eggs from stock, raising eggs_set takes the extra eggs (409 insufficient_stock when short); lowering it changes stock only when
+     * eggs_returned_to_stock (at most the reduction) says so - eggs are never assumed to be usable again.
      */
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"project_not_active", request_id:string}')]
     public function update(UpdateBreedingProjectRequest $request, FarmContext $ctx, BreedingService $service, string $project): JsonResponse
@@ -100,6 +107,8 @@ class BreedingProjectController extends Controller
      * Cancel an active breeding project
      *
      * Requires breeding.create. The project is kept (never deleted) with its reason; it can no longer receive checks or outcomes.
+     * Eggs the project took from stock return to available stock only when `eggs_returned_to_stock` says how many (at most what it took and has not returned;
+     * needs inventory.use): a stock-in (reason returned) linked to the project, into `egg_storage_location_id` or the store they came from. No instruction = no inventory increase.
      */
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"project_not_active", request_id:string}')]
     public function cancel(CancelBreedingProjectRequest $request, FarmContext $ctx, BreedingService $service, string $project): JsonResponse

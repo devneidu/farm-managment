@@ -81,12 +81,17 @@ class MasterDataSeeder extends Seeder
                 [Capability::SupportsBreeding, null],
             ],
             'cattle' => [
+                [Capability::ProducesMilk, null],
                 [Capability::SupportsPregnancy, ['gestation_days' => 283]],
                 [Capability::SupportsBreeding, null],
             ],
             'goat' => [
+                [Capability::ProducesMilk, null],
                 [Capability::SupportsPregnancy, null], // gestation reference intentionally not seeded (unconfirmed)
                 [Capability::SupportsBreeding, null],
+            ],
+            'sheep' => [
+                [Capability::ProducesMilk, null],
             ],
             'fish' => [
                 [Capability::SupportsHarvest, null],

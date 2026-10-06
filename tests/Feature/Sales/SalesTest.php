@@ -224,9 +224,9 @@ class SalesTest extends TeamTestCase
         $this->assertSame('100', $this->stock($other));
     }
 
-    public function test_only_produce_can_be_sold_and_insufficient_stock_rolls_everything_back(): void
+    public function test_only_sellable_categories_can_be_sold_and_insufficient_stock_rolls_everything_back(): void
     {
-        $feed = $this->produce('kg', [], 'feed');
+        $feed = $this->produce('kg', [], 'medicine');
         $eggs = $this->produce();
         $loc = $this->store();
         $this->receive($feed, $loc, '50', 'kg');

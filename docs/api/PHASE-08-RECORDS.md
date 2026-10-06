@@ -41,8 +41,8 @@ All fields listed as required below are required within `details`. Text names id
 | Type | Kind/capability | Required details | Optional details | Effect |
 |---|---|---|---|---|
 | `feed_use` | Livestock/fish, `supports_feed_records` | `feed_name` ≤200; weight `components` | `context` (not allowed with `inventory`), `inventory` {item_id, storage_location_id, lot_id} | Feed-use history; with `details.inventory` also one stock-out movement (Phase 9) |
-| `egg_collection` | Livestock, `produces_eggs` | Count `components` convertible to `piece` | `context` | Output history only |
-| `milk` | Livestock, `produces_milk` | Volume `components` | `context` | Output history only |
+| `egg_collection` | Livestock, `produces_eggs` | Count `components` convertible to `piece` | `context`, `inventory` {storage_location_id} | Output history **and** one automatic stock-in (+quantity, reason `production`) on the farm's Eggs item, in the same transaction — see [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md) |
+| `milk` | Livestock, `produces_milk` | Volume `components` | `context`, `inventory` {storage_location_id} | Output history **and** one automatic stock-in on the farm's Milk item (same rules as `egg_collection`) |
 | `mortality` | Livestock/fish, `supports_mortality` | Positive whole `quantity`; `cause` ≤500 | — | Negative head movement |
 | `weight` | Livestock/fish, `supports_live_weight` | Positive whole `sample_size`; weight `components` | `context` | Observed sample weight, no population effect |
 | `temperature` | Livestock/fish | Exactly one temperature component | `context` | Measurement only |

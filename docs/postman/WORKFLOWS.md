@@ -2,7 +2,7 @@
 
 Executable end-to-end flows in the Postman folder **99 — Workflows**. Each flow is built from the same requests (and the same bodies/Tests scripts) as the reference folders, in the order below, and was **executed against the real application on a fresh database** to prove it runs and to capture the saved examples. Flows share one environment, so run them **in order** the first time (Collection Runner, environment *Farm Management — Local*). Manual inputs: the emailed OTP codes (`otp_code`, `reset_otp_code`) and the invitation token (`invitation_token`) — with `MAIL_MAILER=log` read them from `storage/logs/laravel.log`.
 
-Quick rules: `login-admin`/`login-farmer` requests switch the cookie session between the platform admin and the farm owner; every request carries `Origin` + `X-XSRF-TOKEN` through the collection script; ids are captured into environment variables automatically.
+Quick rules: `login-admin`/`login-farmer` requests switch the cookie session between the platform admin and the farm owner; CSRF is automatic (run **Initialise CSRF cookie** once; every request then carries the visible headers `Origin: {{frontend_origin}}` and, on writes, `X-XSRF-TOKEN: {{xsrf_token}}`, filled from the cookie by the collection pre-request script - nothing to paste); ids are captured into environment variables automatically.
 
 | # | Flow | Requests | Prerequisites |
 |---|---|---|---|
@@ -20,6 +20,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 11 | Reports & export | 5 | Flows 9-10 (data for the reports) and the `farm-business` plan from Flow S. |
 | 12 | Notifications | 4 | Flow 11, plus `php artisan notifications:generate` (and a queue worker) run on the server. |
 | 13 | Team invitation | 13 | Flow 1 and the plan change from Flow S (Free allows only 3 team members). |
+| 14 | Feed, eggs and milk stock | 11 | Flows S, 3 and 5 (`cycle_id`, `context_id` with crate = 30 pieces, `store_id`, `item_feed_id`). |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -586,7 +587,7 @@ Customer contact
 
 - Sale, invoice and payment are separate resources; ONLY a payment books income (cash basis).
 - A payment can never exceed the outstanding amount (`409 payment_exceeds_balance`); cancelling a sale with live payments is `409 sale_has_payments` (reverse the payments first).
-- Stock lines sell produce items only; livestock lines remove animals through the population ledger.
+- Stock lines sell produce or feed items (the `sellable_categories`); livestock lines remove animals through the population ledger.
 
 **What the frontend should learn**
 
@@ -720,3 +721,54 @@ Invite (email + token) -> invitee registers with the SAME email + verifies
 
 - Build the role picker from `GET /roles` (`assignable`).
 - Handle `no_active_farm` as a first-class screen.
+
+## Flow 14 — Feed, eggs and milk stock
+
+**Goal.** One real-world event, one entry, every effect: collect eggs, receive a donation, put eggs into incubation, give some away, cancel the incubation returning some, then donate and sell feed. See `docs/api/FEED-EGGS-MILK-STOCK.md`.
+
+**Prerequisites.** Flows S, 3 and 5 (`cycle_id`, `context_id` for the "Eggs" measurement context with crate = 30 pieces, `store_id`, `item_feed_id`).
+
+**Request sequence**
+
+| # | Request | Endpoint | Captures |
+|---|---|---|---|
+| 1 | Inventory option catalogue | `GET /master/inventory-options` | – (read `reasons.by_item_kind`) |
+| 2 | Record egg collection (compound quantity) | `POST /records` | `record_eggs_id`, `record_eggs_movement_id` |
+| 3 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | `egg_item_id`, `milk_item_id` |
+| 4 | Receive donated eggs (stock-in, no item setup) | `POST /inventory/stock-in` (`output: eggs`) | `movement_egg_in_id` |
+| 5 | Start incubation taking eggs from stock | `POST /breeding-projects` (`consume_egg_stock`) | `breeding_project_egg_id` |
+| 6 | Give away eggs (stock-out, no sale) | `POST /inventory/stock-out` (`output: eggs`) | `movement_egg_out_id` |
+| 7 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | – |
+| 8 | Egg movement history | `GET /inventory/movements?inventory_item_id=` | – |
+| 9 | Cancel incubation returning eggs to stock | `POST /breeding-projects/{id}/cancel` | – |
+| 10 | Donate feed (stock-out) | `POST /inventory/stock-out` | – |
+| 11 | Record a sale of surplus feed | `POST /sales` | `sale_feed_id` |
+
+**Data flow**
+
+```text
+egg_collection (3 crates + 14 pieces)
+   -> record (104 pieces)  +  stock_in +104 (reason production)  [one entry]
+donation of 20            -> stock_in +20 (NO egg_collection record)
+incubation of 40          -> breeding project  +  stock_out -40 (reason incubation)  [one entry]
+1 crate given away        -> stock_out -30 (reason donation; no sale, no income)
+cancel, 10 eggs returned  -> stock_in +10 (reason returned, linked to the project)
+available = 104 + 20 - 40 - 30 + 10 = 64   (production total stays 104)
+```
+
+**Expected state changes**
+
+- One Eggs item and, if the farm had none, a "Main Store" exist; every movement carries its reason, its source (record / breeding project / manual) and the cycle.
+- `GET /inventory/output-balances` reports the derived balance; the dashboard / reports still report 104 produced.
+
+**Business rules to notice**
+
+- Donated, purchased or received eggs are never an `egg_collection`.
+- `sale`, `production_use` and `incubation` are refused on the manual stock-out (422): each event has one authoritative endpoint.
+- Cancelling an incubation returns eggs only when `eggs_returned_to_stock` says so.
+
+**What the frontend should learn**
+
+- Build the In/Out screens from `reasons.by_item_kind`; call each entry's `route`.
+- Show "available" from `output-balances` and "produced" from records/reports - they are different numbers.
+- Refetch the balance, movements and the breeding project after each step.

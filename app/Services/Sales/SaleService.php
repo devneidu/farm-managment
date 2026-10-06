@@ -3,6 +3,7 @@
 namespace App\Services\Sales;
 
 use App\Enums\CycleKind;
+use App\Enums\InventoryCategory;
 use App\Enums\Permission;
 use App\Events\Sales\SaleRecorded;
 use App\Http\Requests\Sales\CancelSaleRequest;
@@ -10,6 +11,7 @@ use App\Http\Requests\Sales\StoreSaleRequest;
 use App\Models\Contact;
 use App\Models\Farm;
 use App\Models\FinanceCategory;
+use App\Models\InventoryItem;
 use App\Models\ProductionCycle;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -29,7 +31,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * The only writer of sales. A sale is the commercial/operational event: what left the farm, to whom, for how much. Recording one is
- * a single transaction that creates the sale and its lines, ONE Phase 9 stock-out (reason sale, linked to the line) per produce line
+ * a single transaction that creates the sale and its lines, ONE Phase 9 stock-out (reason sale, linked to the line) per stock line (produce or feed)
  * and ONE population-ledger exit (an operational record of type livestock_sale with a negative population_delta, linked to the line)
  * per livestock line; other lines have no physical effect. Nothing here writes a balance, an invoice or a payment - an invoice is
  * issued separately (or alongside, as a convenience) and income is booked when a payment is received. Any failure rolls everything back.
@@ -326,12 +328,13 @@ class SaleService
         }
     }
 
-    /** One category when every line agrees (livestock -> livestock_sales, produce -> crop_sales), else other_income. */
+    /** One category when every line agrees (livestock -> livestock_sales, produce -> crop_sales), else other_income. Feed is not produce: surplus feed is other income. */
     private function derivedCategory(array $lines): FinanceCategory
     {
         $kinds = collect($lines)->pluck('kind')->unique();
+        $onlyProduce = $kinds->first() !== 'stock' || ! InventoryItem::whereIn('id', collect($lines)->where('kind', 'stock')->pluck('inventory_item_id')->all())->where('category', '!=', InventoryCategory::Produce->value)->exists();
         $code = $kinds->count() === 1 ? match ($kinds->first()) {
-            'livestock' => 'livestock_sales', 'stock' => 'crop_sales', default => 'other_income',
+            'livestock' => 'livestock_sales', 'stock' => $onlyProduce ? 'crop_sales' : 'other_income', default => 'other_income',
         } : 'other_income';
 
         return $this->finance->platformCategory($code, 'income');

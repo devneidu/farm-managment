@@ -51,6 +51,12 @@ class BreedingProject extends Model
         return $this->hasMany(BreedingCheck::class)->orderBy('checked_on')->orderBy('id');
     }
 
+    /** Stock movements this project caused (eggs taken into incubation / explicitly returned). */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(InventoryMovement::class)->orderBy('recorded_at')->orderBy('id');
+    }
+
     public function outcomes(): HasMany
     {
         return $this->hasMany(BreedingOutcome::class)->orderBy('recorded_at')->orderBy('id');

@@ -24,6 +24,12 @@ use Illuminate\Validation\ValidationException;
  */
 class LivestockCatalogueSeeder extends Seeder
 {
+    /**
+     * Species of this catalogue that are milked. `produces_milk` is a biological capability (never a commercial purpose);
+     * application behaviour reads the capability, not this list - it only establishes the platform defaults.
+     */
+    public const MILK_SPECIES = ['cattle', 'goat', 'sheep', 'camel', 'water_buffalo'];
+
     private const COMMON = [
         Capability::SupportsGroupTracking, Capability::SupportsMortality,
         Capability::SupportsFeedRecords, Capability::SupportsLiveWeight,
@@ -136,6 +142,9 @@ class LivestockCatalogueSeeder extends Seeder
                 $wanted[] = [Capability::SupportsBreeding, null];
                 if ($group === LivestockGroup::Poultry) { // egg production is a biological capability, not a commercial purpose
                     $wanted[] = [Capability::ProducesEggs, null];
+                }
+                if (in_array($code, self::MILK_SPECIES, true)) {
+                    $wanted[] = [Capability::ProducesMilk, null];
                 }
                 $wanted[] = $this->reproduction()[$code];
 

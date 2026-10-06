@@ -420,7 +420,7 @@ class FinanceTest extends TeamTestCase
         $feed = $this->item('feed', 'kg');
         $loc = $this->store();
         $p = $this->purchase([$this->stockLine($feed, $loc, '100', 'kg', '8000')])->assertCreated()->json('data');
-        $this->postJson('/api/v1/inventory/stock-out', ['inventory_item_id' => $feed, 'storage_location_id' => $loc, 'reason' => 'use', 'components' => [['quantity' => '60', 'unit' => 'kg']],
+        $this->postJson('/api/v1/inventory/stock-out', ['inventory_item_id' => $feed, 'storage_location_id' => $loc, 'reason' => 'spoiled', 'components' => [['quantity' => '60', 'unit' => 'kg']],
             'recorded_at' => $this->at(1), 'idempotency_key' => $this->key()])->assertCreated();
 
         $this->postJson('/api/v1/purchases/'.$p['id'].'/cancel', ['reason' => 'x', 'recorded_at' => $this->at(0), 'idempotency_key' => $this->key()])->assertStatus(409)->assertJsonPath('code', 'insufficient_stock');

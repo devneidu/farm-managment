@@ -80,7 +80,7 @@ POST /breeding-projects/{id}/outcomes
 ```
 
 - Eggs set and `expected_offspring` never change population. Live offspring join the project's own cycle automatically (there is no client flag): `live_count > 0` appends one Phase 8 operational record of type `breeding_outcome` (`population_delta = +live_count`) and its population movement in the same transaction. **50 eggs set, 40 expected, 37 hatched → population +37**, once.
-- `live_count: 0` records an unsuccessful attempt and adds nothing. For incubation `live_count + loss_count ≤ eggs_set`.
+- **Eggs from stock (optional).** An incubation project started with `consume_egg_stock: true` (+ optional `egg_storage_location_id`) takes `eggs_set` eggs out of the farm's available egg stock in the same transaction (stock-out reason `incubation`, linked to the project; needs `inventory.use`; `409 insufficient_stock` creates no project). Editing `eggs_set` reconciles the ledger; cancelling returns eggs **only** when `eggs_returned_to_stock` says so. Recording a hatch never changes egg stock. Details: [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md).\n- `live_count: 0` records an unsuccessful attempt and adds nothing. For incubation `live_count + loss_count ≤ eggs_set`.
 - `recorded_at` needs an explicit offset and lies between the project start and now; `outcome_date` is its farm-local day, kept separate from the expected date/window and from `created_at`.
 - Same `idempotency_key` + same payload returns the original outcome (201) with no second movement; a changed payload is `409 idempotency_conflict`.
 - A project holds one effective outcome: a second one is `409 project_not_active`.

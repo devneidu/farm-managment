@@ -8,8 +8,8 @@ An inventory item has **no quantity field**. Current stock is always `SUM(invent
 
 | Movement `type` | Sign | Created by |
 |---|---|---|
-| `stock_in` | + | `POST /inventory/stock-in` (reason `opening_balance`, `purchase`, `donation`, `other`) |
-| `stock_out` | − | `POST /inventory/stock-out` (reason `use`, `damaged`, `expired`, `wasted`, `other`) and linked feed-use records (reason `use`) |
+| `stock_in` | + | `POST /inventory/stock-in` (reason `opening_balance`, `purchase`, `donation`, `aid`, `received`, `production` (not for produce), `other`); egg/milk/crop production and eggs returned from a cancelled incubation are written by their own workflow (reasons `production`, `harvest`, `returned`) |
+| `stock_out` | − | `POST /inventory/stock-out` (reason `donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`; legacy `use` (not for feed), `expired`, `wasted`), linked feed-use records (reason `production_use`), sales (`sale`) and incubation (`incubation`) |
 | `adjustment` | ± or 0 | `POST /inventory/adjustments` (physical count reconciliation) |
 | `transfer_out` / `transfer_in` | − / + | `POST /inventory/transfers` (always a linked pair) |
 | `reversal` | opposite of the original | `POST /inventory/movements/{id}/reverse`, or reversing a linked operational record |
@@ -18,7 +18,8 @@ An inventory item has **no quantity field**. Current stock is always `SUM(invent
 
 | Method | Path | Permission | Success |
 |---|---|---|---|
-| GET | `/master/inventory-options` | `inventory.view` | 200 categories, movement types, reason codes |
+| GET | `/master/inventory-options` | `inventory.view` | 200 categories, sellable categories, movement types, reason codes and the labelled per-item-kind `reasons` catalogue |
+| GET | `/inventory/output-balances` | `inventory.view` | 200 read-only available eggs / milk (never creates items) |
 | GET | `/inventory/items` | `inventory.view` | 200 paginated items with derived stock |
 | POST | `/inventory/items` | `inventory.manage` | 201 |
 | GET | `/inventory/items/{item}` | `inventory.view` | 200 with `balances` by location and lot |
@@ -115,7 +116,7 @@ POST /inventory/stock-in
 ```
 
 ### Stock-out
-`POST /inventory/stock-out` with `reason` (`use`, `damaged`, `expired`, `wasted`, `other`) — same body shape. Stock can **never go negative**: under a per-farm lock the affected (item, location, lot) bucket is re-checked, and the whole dated history is replayed so a back-dated issue that would have been negative at that moment is also rejected. `409 insufficient_stock` carries `details.available` and `details.requested`; nothing is written.
+`POST /inventory/stock-out` with `reason` (`donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`, legacy `use` (`422` for feed items: use a `feed_use` record) / `expired` / `wasted`; `sale`, `production_use` and `incubation` are owned by `/sales`, `feed_use` records and breeding projects and are `422` here) — same body shape. `output: eggs|milk` may replace `inventory_item_id` (see the Feed, eggs and milk contract). Stock can **never go negative**: under a per-farm lock the affected (item, location, lot) bucket is re-checked, and the whole dated history is replayed so a back-dated issue that would have been negative at that moment is also rejected. `409 insufficient_stock` carries `details.available` and `details.requested`; nothing is written.
 
 ### Adjustments (physical counts)
 ```json
@@ -151,10 +152,10 @@ POST /records
 ```
 
 - Requires `record.create` **and** `inventory.use`. The item must be an active **feed** item measured by **weight**; `lot_id` follows the lot rules above. `details.context` must be omitted — the quantity is measured against the inventory item (its own bag conversion applies).
-- In the same transaction the record and exactly one `stock_out` movement (reason `use`, `operational_record_id` = the record, same `recorded_at` and measurement snapshot) are written. The record resource exposes `inventory_movement_id`. A retry with the same record `idempotency_key` returns the original record and writes nothing more.
+- In the same transaction the record and exactly one `stock_out` movement (reason `production_use` — it was `use` before the reason catalogue was extended — `operational_record_id` = the record, same `recorded_at` and measurement snapshot) are written. The record resource exposes `inventory_movement_id`. A retry with the same record `idempotency_key` returns the original record and writes nothing more.
 - Insufficient stock, an expired lot, an inactive item/location mismatch or any validation error rolls the whole record back.
 - Reversing the record (`POST /records/{record}/reverse`) appends a compensating `reversal` movement linked to the reversal record. Correcting uses the existing reverse + `corrects_record_id` flow; the replacement consumes stock again.
-- A `feed_use` without `details.inventory` stays a pure record with no stock effect. Egg and milk output stock are **not** created. Crop harvest stock-in is owned by Phase 13 (`crop_harvest` records into `produce` items).
+- A `feed_use` without `details.inventory` stays a pure record with no stock effect. Crop harvest stock-in is owned by Phase 13 (`crop_harvest` records into `produce` items). **Egg and milk production now also stock in automatically** through `egg_collection` / `milk` records, with an automatic Eggs/Milk item — see [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md) (which also defines the full reason catalogue, `output` shorthand, incubation consumption and feed sales).
 
 ## Feed formulas
 
@@ -189,4 +190,4 @@ Phase 8 record errors (`cycle_closed`, `idempotency_conflict`, ...) apply unchan
 
 ## Deliberately not in this phase
 
-Purchasing, suppliers and expenses; sales and produce stock; egg/milk/harvest output stock; medicine packaging, dose and withdrawal (Health); automatic FIFO/FEFO or expiry write-offs; physical store capacity; stock valuation/costing; low-stock notifications (an `InventoryMovementRecorded` event is dispatched after commit for later phases).
+Purchasing, suppliers and expenses; sales and produce stock; medicine packaging, dose and withdrawal (Health); automatic FIFO/FEFO or expiry write-offs; physical store capacity; stock valuation/costing; low-stock notifications (an `InventoryMovementRecorded` event is dispatched after commit for later phases).

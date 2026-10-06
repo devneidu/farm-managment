@@ -20,8 +20,12 @@ use App\Models\BreedingOutcome;
 use App\Models\BreedingParent;
 use App\Models\BreedingProject;
 use App\Models\Farm;
+use App\Models\InventoryItem;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
+use App\Services\Inventory\InventoryService;
+use App\Services\Inventory\OutputStockService;
+use App\Services\Inventory\StockReasonCatalogue;
 use App\Services\Records\RecordService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -41,9 +45,9 @@ use Illuminate\Validation\ValidationException;
  */
 class BreedingService
 {
-    private const RELATIONS = ['parents', 'checks', 'outcomes.reversal'];
+    private const RELATIONS = ['parents', 'checks', 'outcomes.reversal', 'stockMovements'];
 
-    public function __construct(private BreedingReference $reference, private RecordService $records) {}
+    public function __construct(private BreedingReference $reference, private RecordService $records, private InventoryService $inventory, private OutputStockService $outputs) {}
 
     public function find(FarmContext $ctx, string $id): BreedingProject
     {
@@ -75,6 +79,9 @@ class BreedingService
         $ctx->authorize(Permission::BreedingCreate);
         $data = Validator::make($input, (new StoreBreedingProjectRequest)->rules())->validate();
         $workflow = BreedingWorkflow::from($data['workflow']);
+        if (! empty($data['consume_egg_stock'])) {
+            $ctx->authorize(Permission::InventoryUse); // the eggs leave stock: no bypass of inventory permissions through the breeding endpoint
+        }
 
         return DB::transaction(function () use ($ctx, $data, $workflow) {
             Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
@@ -95,6 +102,12 @@ class BreedingService
                 $this->invalid('workflow', 'This species does not support the '.$workflow->value.' breeding workflow.');
             }
             $this->assertWorkflowFields($workflow, $data, creating: true);
+            if ((! empty($data['consume_egg_stock']) || isset($data['egg_storage_location_id'])) && $workflow !== BreedingWorkflow::Incubation) {
+                $this->invalid('consume_egg_stock', 'Only an incubation project takes eggs from stock.');
+            }
+            if (isset($data['egg_storage_location_id']) && empty($data['consume_egg_stock'])) {
+                $this->invalid('egg_storage_location_id', 'Choose a storage location only together with consume_egg_stock.');
+            }
             $this->assertStart($ctx, $cycle, $data['start_date']);
             $snapshot = $this->reference->snapshot($cycle, $workflow, $row, CarbonImmutable::now());
             $expectation = $this->expectation($snapshot, $data['start_date'], $data);
@@ -110,6 +123,10 @@ class BreedingService
             ]);
             foreach ($parents as $parent) {
                 BreedingParent::create(['farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id] + $parent);
+            }
+            if (! empty($data['consume_egg_stock'])) {
+                // One real-world event (eggs put into the incubator) -> the project AND the stock-out, atomically; too few eggs rolls both back.
+                $this->takeEggs($ctx, $project, $cycle, (int) $data['eggs_set'], $data['egg_storage_location_id'] ?? null, $this->setAt($ctx, $data['start_date']));
             }
 
             return $project->load(self::RELATIONS);
@@ -155,6 +172,7 @@ class BreedingService
                     $changed[$field] = $data[$field];
                 }
             }
+            $this->reconcileEggStock($ctx, $project, $cycle, $data);
             $project->update($changed);
 
             return $project->load(self::RELATIONS);
@@ -198,6 +216,8 @@ class BreedingService
             [$cycle, $project] = $this->lockProject($ctx, $id);
             $this->activeCycle($cycle);
             $this->activeProject($project);
+            // Eggs are never assumed to be usable again: only an explicit quantity goes back to available stock.
+            $this->returnEggs($ctx, $project, $cycle, $data);
             $project->update(['status' => BreedingStatus::Cancelled, 'cancelled_at' => now(), 'cancel_reason' => $data['reason']]);
 
             return $project->load(self::RELATIONS);
@@ -327,6 +347,78 @@ class BreedingService
         $project = BreedingProject::where('farm_id', $ctx->farm->id)->lockForUpdate()->findOrFail($id);
 
         return [$cycle, $project];
+    }
+
+    /** When the eggs went into the incubator: now for a start today, otherwise the end of the start day so same-day collections precede it. */
+    private function setAt(FarmContext $ctx, string $startDate): CarbonImmutable
+    {
+        $endOfDay = CarbonImmutable::parse($startDate, $ctx->farm->timezone)->endOfDay()->utc();
+
+        return $endOfDay->isFuture() ? CarbonImmutable::now() : $endOfDay;
+    }
+
+    /** The farm's egg stock item (never created here: nothing to take from a farm that never had eggs) and the store the eggs leave. */
+    private function takeEggs(FarmContext $ctx, BreedingProject $project, ProductionCycle $cycle, int $eggs, ?string $locationId, CarbonImmutable $when): void
+    {
+        $item = $this->outputs->find($ctx, StockReasonCatalogue::KIND_EGGS, forUpdate: true);
+        $location = $item ? $this->outputs->issuingLocation($ctx, $locationId, 'egg_storage_location_id') : null;
+        if ($item === null || $location === null) {
+            throw new ApiHttpException(409, 'insufficient_stock', 'There are no eggs in stock to put into incubation.', details: ['available' => ['quantity' => '0', 'unit' => 'piece'], 'requested' => ['quantity' => (string) $eggs, 'unit' => 'piece']]);
+        }
+        $this->inventory->consumeForBreeding($ctx, $project->id, $cycle->id, $item, $location, $eggs, $when);
+    }
+
+    /** Editing eggs_set of a stock-linked project keeps the ledger explained: more eggs set = more taken; fewer = only what the farmer says returned. */
+    private function reconcileEggStock(FarmContext $ctx, BreedingProject $project, ProductionCycle $cycle, array $data): void
+    {
+        $stock = $this->inventory->incubationStock($ctx, $project->id);
+        $diff = isset($data['eggs_set']) ? (int) $data['eggs_set'] - (int) $project->eggs_set : 0;
+        if (isset($data['egg_storage_location_id']) && ! isset($data['eggs_returned_to_stock'])) {
+            $this->invalid('egg_storage_location_id', 'Choose a storage location only together with eggs_returned_to_stock.');
+        }
+        if ($stock['consumed'] === 0) {
+            if (isset($data['eggs_returned_to_stock'])) {
+                $this->invalid('eggs_returned_to_stock', 'No eggs were taken from stock for this project.');
+            }
+
+            return;
+        }
+        if ($diff > 0) {
+            if (isset($data['eggs_returned_to_stock'])) {
+                $this->invalid('eggs_returned_to_stock', 'Eggs are returned only when eggs_set is reduced.');
+            }
+            $ctx->authorize(Permission::InventoryUse);
+            $this->takeEggs($ctx, $project, $cycle, $diff, $stock['storage_location_id'], CarbonImmutable::now());
+        } elseif (isset($data['eggs_returned_to_stock'])) {
+            if ($diff >= 0 || (int) $data['eggs_returned_to_stock'] > -$diff) {
+                $this->invalid('eggs_returned_to_stock', 'Cannot return more eggs than eggs_set was reduced by.');
+            }
+            $this->returnEggs($ctx, $project, $cycle, $data);
+        }
+    }
+
+    /** Writes the explicit return (if any): at most what the project still holds out of stock, to the named store or where the eggs came from. */
+    private function returnEggs(FarmContext $ctx, BreedingProject $project, ProductionCycle $cycle, array $data): void
+    {
+        $returned = $data['eggs_returned_to_stock'] ?? null;
+        if ($returned === null) {
+            if (isset($data['egg_storage_location_id'])) {
+                $this->invalid('egg_storage_location_id', 'Choose a storage location only together with eggs_returned_to_stock.');
+            }
+
+            return; // no instruction = no inventory increase
+        }
+        $ctx->authorize(Permission::InventoryUse);
+        $stock = $this->inventory->incubationStock($ctx, $project->id);
+        if ($stock['consumed'] === 0) {
+            $this->invalid('eggs_returned_to_stock', 'No eggs were taken from stock for this project.');
+        }
+        if ((int) $returned > $stock['net']) {
+            $this->invalid('eggs_returned_to_stock', 'Cannot return more eggs than this project took from stock (still out: '.$stock['net'].').');
+        }
+        $item = InventoryItem::ofFarm($ctx->farm)->with('stockUnit.dimension')->lockForUpdate()->findOrFail($stock['inventory_item_id']);
+        $location = $this->outputs->returnLocation($ctx, $data['egg_storage_location_id'] ?? null, $stock['storage_location_id']);
+        $this->inventory->returnForBreeding($ctx, $project->id, $cycle->id, $item, $location, (int) $returned, CarbonImmutable::now());
     }
 
     /** @return array{source: string, date: ?string, from: ?string, to: ?string} manual override if supplied, else derived from the snapshot. */

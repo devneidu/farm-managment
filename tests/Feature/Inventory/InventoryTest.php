@@ -43,7 +43,7 @@ class InventoryTest extends TeamTestCase
 
     private function item(array $extra = []): string
     {
-        return $this->postJson('/api/v1/inventory/items', array_replace(['name' => 'Layer Mash '.Str::random(5), 'category' => 'feed', 'stock_unit' => 'kg'], $extra))->assertCreated()->json('data.id');
+        return $this->postJson('/api/v1/inventory/items', array_replace(['name' => 'Layer Mash '.Str::random(5), 'category' => 'fertilizer_agrochemical', 'stock_unit' => 'kg'], $extra))->assertCreated()->json('data.id');
     }
 
     private function inPayload(string $item, string $loc, string $qty = '100', string $unit = 'kg', array $extra = []): array
@@ -547,7 +547,7 @@ class InventoryTest extends TeamTestCase
     public function test_feed_use_record_consumes_stock_once_and_retries_do_not_double_deduct(): void
     {
         $cycle = $this->cycle();
-        $item = $this->item();
+        $item = $this->item(['category' => 'feed']);
         $loc = $this->store();
         $this->receive($item, $loc, '100');
         $payload = ['production_cycle_id' => $cycle, 'type' => 'feed_use', 'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid(),
@@ -556,7 +556,7 @@ class InventoryTest extends TeamTestCase
         $this->assertSame('75', $this->stock($item));
         $movement = InventoryMovement::where('operational_record_id', $record['id'])->sole();
         $this->assertSame($record['id'], $movement->operational_record_id);
-        $this->assertSame('use', $movement->reason);
+        $this->assertSame('production_use', $movement->reason);
         $this->assertSame($movement->id, $record['inventory_movement_id']);
         $this->assertSame($record['recorded_at'], $movement->recorded_at->toISOString());
         $this->assertEquals($record['measurement'], $movement->measurement);
@@ -575,7 +575,7 @@ class InventoryTest extends TeamTestCase
     public function test_reversing_a_feed_record_compensates_stock_and_correction_deducts_again(): void
     {
         $cycle = $this->cycle();
-        $item = $this->item();
+        $item = $this->item(['category' => 'feed']);
         $loc = $this->store();
         $this->receive($item, $loc, '100');
         $record = $this->feedRecord($cycle, $item, $loc, '30')->assertCreated()->json('data');
@@ -595,7 +595,7 @@ class InventoryTest extends TeamTestCase
     public function test_feed_record_failures_roll_back_the_record_and_leave_stock_untouched(): void
     {
         $cycle = $this->cycle();
-        $item = $this->item();
+        $item = $this->item(['category' => 'feed']);
         $loc = $this->store();
         $this->receive($item, $loc, '10');
         $this->feedRecord($cycle, $item, $loc, '11')->assertStatus(409)->assertJsonPath('code', 'insufficient_stock');
@@ -603,7 +603,7 @@ class InventoryTest extends TeamTestCase
         $this->assertSame('10', $this->stock($item));
         $medicine = $this->item(['name' => 'Tonic', 'category' => 'medicine']);
         $this->feedRecord($cycle, $medicine, $loc, '1')->assertStatus(422)->assertJsonValidationErrors('details.inventory.item_id');
-        $volume = $this->item(['name' => 'Liquid feed', 'stock_unit' => 'l']);
+        $volume = $this->item(['name' => 'Liquid feed', 'category' => 'feed', 'stock_unit' => 'l']);
         $this->feedRecord($cycle, $volume, $loc, '1')->assertStatus(422)->assertJsonValidationErrors('details.inventory.item_id');
         $this->feedRecord($cycle, $item, $loc, '1', extra: ['details' => ['context' => ['type' => 'crop_type', 'id' => (string) Str::uuid()]]])->assertStatus(422);
         $this->feedRecord($cycle, (string) Str::uuid(), $loc)->assertNotFound();
@@ -620,7 +620,7 @@ class InventoryTest extends TeamTestCase
     public function test_feed_record_uses_the_items_own_package_conversion_and_lot_rules(): void
     {
         $cycle = $this->cycle();
-        $item = $this->item(['tracks_lots' => true, 'tracks_expiry' => true]);
+        $item = $this->item(['category' => 'feed', 'tracks_lots' => true, 'tracks_expiry' => true]);
         $loc = $this->store();
         $lot = $this->receive($item, $loc, '200', extra: ['lot' => ['code' => 'F1', 'expires_on' => $this->expiryDate(60)]])['inventory_lot_id'];
         $this->feedRecord($cycle, $item, $loc, '1')->assertStatus(422)->assertJsonValidationErrors('details.inventory.lot_id');
@@ -636,7 +636,7 @@ class InventoryTest extends TeamTestCase
     public function test_worker_can_link_feed_use_but_only_with_inventory_use(): void
     {
         $cycle = $this->cycle();
-        $item = $this->item();
+        $item = $this->item(['category' => 'feed']);
         $loc = $this->store();
         $this->receive($item, $loc, '10');
         $this->signInAs($this->member(FarmRole::FarmWorker));

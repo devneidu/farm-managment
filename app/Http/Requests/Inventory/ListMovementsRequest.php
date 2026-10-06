@@ -23,6 +23,10 @@ class ListMovementsRequest extends InventoryRequest
             'health_record_id' => ['sometimes', 'uuid'],
             'purchase_id' => ['sometimes', 'uuid'],
             'sale_id' => ['sometimes', 'uuid'],
+            'production_cycle_id' => ['sometimes', 'uuid'],
+            'breeding_project_id' => ['sometimes', 'uuid'],
+            /** A stored reason code (e.g. donation, incubation, production, sale). */
+            'reason' => ['sometimes', 'string', 'max:30'],
             'recorded_from' => ['sometimes', 'date_format:Y-m-d'],
             'recorded_to' => ['sometimes', 'date_format:Y-m-d'],
             'page' => ['sometimes', 'integer', 'min:1'],

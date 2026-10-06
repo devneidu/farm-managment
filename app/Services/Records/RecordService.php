@@ -13,6 +13,7 @@ use App\Models\OperationalRecord;
 use App\Models\PopulationMovement;
 use App\Models\ProductionCycle;
 use App\Services\Inventory\InventoryService;
+use App\Services\Inventory\OutputStockService;
 use App\Services\Measurement\PackageConversionService;
 use App\Services\Measurement\QuantityNormalizer;
 use App\Support\Access\FarmContext;
@@ -25,7 +26,7 @@ use Illuminate\Validation\ValidationException;
 
 class RecordService
 {
-    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory) {}
+    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory, private OutputStockService $outputs) {}
 
     public function find(FarmContext $ctx, string $id): OperationalRecord
     {
@@ -94,7 +95,7 @@ class RecordService
             } elseif (isset($details['components'])) {
                 $context = isset($details['context']) ? new ConversionContext(ConversionContextType::from($details['context']['type']), $details['context']['id']) : null;
                 $stock = $definition['stock'] ?? null;
-                if (isset($details['inventory'])) {
+                if (isset($details['inventory']) && ! isset($definition['output'])) {
                     // Linked stock: the quantity is measured against the inventory item, so its packages (and only its packages) apply.
                     $ctx->authorize(Permission::InventoryUse);
                     $stockItem = $stock !== null ? $this->inventory->cropStockItemForRecord($ctx, $details['inventory'], $stock) : $this->inventory->feedItemForRecord($ctx, $details['inventory']);
@@ -110,6 +111,15 @@ class RecordService
                             $details['input_name'] ??= $stockItem->name;
                         }
                     }
+                }
+                if (isset($definition['output'])) {
+                    // Eggs / milk produced on the farm: one record -> one stock-in on the farm's own output item (created on first use).
+                    // An explicit measurement context still wins; otherwise packages (crates, ...) resolve through the output item.
+                    $ctx->authorize(Permission::InventoryUse);
+                    $outputItem = $this->outputs->resolve($ctx, $definition['output']);
+                    $outputLocation = $this->outputs->receivingLocation($ctx, $details['inventory']['storage_location_id'] ?? null, 'details.inventory.storage_location_id');
+                    $context ??= new ConversionContext(ConversionContextType::InventoryItem, $outputItem->id);
+                    $details['inventory'] = ['item_id' => $outputItem->id, 'storage_location_id' => $outputLocation->id]; // where the stock went, kept on the record
                 }
                 if ($context !== null) {
                     $context = app(PackageConversionService::class)->resolveContext($ctx->farm, $context->type, $context->id);
@@ -136,8 +146,11 @@ class RecordService
                 if (($definition['stock']['direction'] ?? 'out') === 'in') {
                     $this->inventory->receiveForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when);
                 } else {
-                    $this->inventory->consumeForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when);
+                    $this->inventory->consumeForRecord($ctx, $record, $stockItem, $details['inventory'], $measurement, $when, $data['type'] === 'feed_use' ? 'production_use' : 'use');
                 }
+            } elseif (isset($outputItem) && $measurement['normalized']['quantity'] !== '0') {
+                // A zero collection is a true production datum ("collected none today") but moves no stock.
+                $this->inventory->receiveForRecord($ctx, $record, $outputItem, ['storage_location_id' => $outputLocation->id], $measurement, $when, 'production');
             }
             $this->ledger->reconcile($cycle);
             RecordCreated::dispatch($record);

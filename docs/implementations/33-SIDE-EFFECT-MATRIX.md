@@ -44,16 +44,31 @@ responsive web/mobile-capable frontend.
   -----------------------------------------------------------------------
   User action                         Required system effects
   ----------------------------------- -----------------------------------
-  Egg collection                      normalize quantity; production
-                                      history; inventory increase where
-                                      enabled; analytics
+  Egg collection / milk record        normalize quantity; production
+                                      history; automatic stock-in on the
+                                      farm's Eggs / Milk item (reason
+                                      production, same transaction);
+                                      analytics
+
+  Eggs / milk / feed donated,         inventory increase ONLY (no
+  purchased or received               egg_collection / milk record)
+
+  Eggs put into incubation            breeding project + stock-out
+                                      (reason incubation) in one
+                                      transaction; cancel returns eggs
+                                      only when the user says so
+
+  Eggs / milk / feed given away,      inventory decrease ONLY (no sale,
+  spoiled, lost or used at home       no income)
 
   Mortality                           population decrease; mortality
                                       metrics; alert evaluation; audit
 
-  Feeding                             feed stock decrease when linked;
-                                      consumption history; cost
-                                      allocation if configured
+  Feeding                             feed_use record + feed stock
+                                      decrease (reason production_use)
+                                      in one entry; consumption
+                                      history; cost allocation if
+                                      configured
 
   Crop harvest                        produce inventory increase;
                                       yield/progress update
@@ -61,7 +76,8 @@ responsive web/mobile-capable frontend.
   Livestock sale/exit                 population decrease; sale/finance
                                       link
 
-  Produce/output sale                 inventory decrease; sale/finance
+  Produce/output/feed sale            inventory decrease (one sale
+                                      stock-out per line); sale/finance
                                       link
 
   Purchase/stock-in                   inventory increase; optional

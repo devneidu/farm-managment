@@ -23,6 +23,10 @@ class StoreBreedingProjectRequest extends FormRequest
             'start_date' => ['required', 'date_format:Y-m-d'],
             /** Incubation only (required there, rejected for pregnancy). Eggs set are not live population. */
             'eggs_set' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:999999999'],
+            /** Incubation only. true takes eggs_set eggs out of the farm's available egg stock in the same request (stock-out reason incubation, linked to this project). 409 insufficient_stock when too few; needs inventory.use. Omit to leave stock untouched. */
+            'consume_egg_stock' => ['sometimes', 'boolean'],
+            /** Store the eggs are taken from. Optional when the farm has exactly one active storage location; required when it has several. */
+            'egg_storage_location_id' => ['sometimes', 'uuid'],
             /** Pregnancy only: how many females were bred. */
             'females_bred' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:999999999'],
             /** Expected offspring is an estimate and never changes population. */

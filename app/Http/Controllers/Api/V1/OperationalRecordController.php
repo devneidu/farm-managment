@@ -69,6 +69,12 @@ class OperationalRecordController extends Controller
      * recorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.
      * Required idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.
      * Measurements use Phase 5 components/context; feed_use and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may link stock via details.inventory (see Phase 9 and Phase 13).
+     * feed_use with details.inventory is the one entry for "feed used for livestock": it writes the record and the stock-out (reason production_use) together.
+     * egg_collection and milk (eggs / milk produced by this cycle's livestock) ALWAYS add the quantity to the farm's own Eggs / Milk stock in the same transaction
+     * (stock-in reason production, linked to the record and cycle; needs inventory.use). The item and, on a farm with no store, a "Main Store" are created on first use.
+     * details.inventory.storage_location_id optionally picks the store (required when several are active, 422). Packages (crate...) resolve through details.context
+     * if given, else through the Eggs / Milk item's own conversions. A zero quantity records production but moves no stock. Reversing the record compensates the stock
+     * (409 insufficient_stock while those eggs / milk have since left). Donated, purchased or received eggs and milk are never records: use POST /inventory/stock-in with `output`.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\OperationalRecordResource, meta: object, message:string}')]
     #[Response(status: 404, type: 'array{message:string, code:"not_found", request_id:string}')]

@@ -216,6 +216,9 @@ The server derives population, stock, money and statuses; refetch what the actio
 |---|---|
 | Record mortality / population adjustment / reverse | the cycle (`current_population`), records list, dashboard, insights |
 | Feed use linked to stock; harvest linked to produce; planting/fertilizer with stock | the inventory item(s) and movements, the cycle/crop detail, dashboard |
+| Egg collection / milk record / reverse | records, **`GET /inventory/output-balances`** (available eggs/milk), movements, dashboard — production totals and available stock are different numbers |
+| Put eggs into incubation (`consume_egg_stock`) / edit eggs set / cancel with return | breeding project (`egg_stock`), `GET /inventory/output-balances`, movements |
+| Donation / spoilage / internal use of eggs, milk or feed | the item or `GET /inventory/output-balances`, movements |
 | Stock-in/out/adjust/transfer/reverse | item (`stock`), lots, movements, medicines list (if medicine), dashboard `low_stock` |
 | Health record / reverse | health records, withdrawals, the medicine (stock by lot), dashboard |
 | Breeding outcome / reverse | breeding project (+milestones), cycle population, dashboard |

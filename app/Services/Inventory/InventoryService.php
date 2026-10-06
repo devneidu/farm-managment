@@ -55,6 +55,7 @@ class InventoryService
         private readonly StockLedger $ledger,
         private readonly PlaceService $places,
         private readonly UnitCatalogue $units,
+        private readonly OutputStockService $outputs,
     ) {}
 
     // ---------------------------------------------------------------- items
@@ -147,8 +148,11 @@ class InventoryService
         $data = $this->validated(StockInRequest::class, $input);
 
         return $this->atomic($ctx, 'stock_in', $data, function (string $hash) use ($ctx, $data) {
-            $item = $this->activeItem($ctx, $data['inventory_item_id']);
-            $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+            $item = isset($data['output']) ? $this->outputs->resolve($ctx, $data['output']) : $this->activeItem($ctx, $data['inventory_item_id']);
+            $this->assertManualInReason($item, $data['reason']);
+            $location = isset($data['output'])
+                ? $this->outputs->receivingLocation($ctx, $data['storage_location_id'] ?? null, 'storage_location_id')
+                : $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
             $when = $this->when($data['recorded_at']);
             $lot = $this->lot($ctx, $item, $data, create: true);
             if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
@@ -169,8 +173,18 @@ class InventoryService
         $data = $this->validated(StockOutRequest::class, $input);
 
         return $this->atomic($ctx, 'stock_out', $data, function (string $hash) use ($ctx, $data) {
-            $item = $this->activeItem($ctx, $data['inventory_item_id']);
-            $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+            if (isset($data['output'])) {
+                // Never creates the item: a farm that never stocked eggs/milk has none to take out.
+                $item = $this->outputs->find($ctx, $data['output'], forUpdate: true);
+                $location = $item ? $this->outputs->issuingLocation($ctx, $data['storage_location_id'] ?? null, 'storage_location_id') : null;
+                if ($item === null || $location === null) {
+                    throw new ApiHttpException(409, 'insufficient_stock', 'There is no '.$data['output'].' in stock.', details: ['available' => ['quantity' => '0', 'unit' => $data['output'] === 'eggs' ? 'piece' : 'l']]);
+                }
+            } else {
+                $item = $this->activeItem($ctx, $data['inventory_item_id']);
+                $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+            }
+            $this->assertManualOutReason($item, $data['reason']);
             $when = $this->when($data['recorded_at']);
             $lot = $this->lot($ctx, $item, $data, create: false);
             if ($data['reason'] === 'use') {
@@ -341,7 +355,7 @@ class InventoryService
      * Phase 13: one harvest record -> one stock_in (reason "harvest") of produce, in the record's transaction. A new lot may be
      * opened from details.inventory.lot; the receiving location must be an active storage location.
      */
-    public function receiveForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when): InventoryMovement
+    public function receiveForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when, string $reason = 'harvest'): InventoryMovement
     {
         $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
         $lot = $this->lot($ctx, $item, $link, create: true, field: 'details.inventory.lot_id');
@@ -350,10 +364,10 @@ class InventoryService
         }
         $qty = $this->positive($measurement['normalized']['quantity'], 'details.components');
 
-        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, 'harvest', $qty, $measurement, $when, ['operational_record_id' => $record->id]);
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, $reason, $qty, $measurement, $when, ['operational_record_id' => $record->id, 'production_cycle_id' => $record->production_cycle_id]);
     }
 
-    public function consumeForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when): InventoryMovement
+    public function consumeForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when, string $reason = 'use'): InventoryMovement
     {
         $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
         $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: 'details.inventory.lot_id');
@@ -361,7 +375,7 @@ class InventoryService
         $qty = $this->positive($measurement['normalized']['quantity'], 'details.components');
         $this->assertAvailable($item, $location->id, $lot?->id, $qty);
 
-        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockOut, 'use', Decimal::sub('0', $qty), $measurement, $when, ['operational_record_id' => $record->id], guard: true);
+        return $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockOut, $reason, Decimal::sub('0', $qty), $measurement, $when, ['operational_record_id' => $record->id, 'production_cycle_id' => $record->production_cycle_id], guard: true);
     }
 
     /** Compensates the stock effect of a reversed record (if it had one). */
@@ -374,8 +388,59 @@ class InventoryService
         $item = $this->lockItem($ctx, $movement->inventory_item_id);
 
         return $this->insert($ctx, $item, $movement->storage_location_id, $movement->lot, InventoryMovementType::Reversal, null, Decimal::sub('0', Decimal::trim((string) $movement->quantity_delta)), $movement->measurement, $reversal->recorded_at, [
-            'operational_record_id' => $reversal->id, 'reverses_movement_id' => $movement->id, 'justification' => $reversal->details['reason'] ?? null,
+            'operational_record_id' => $reversal->id, 'production_cycle_id' => $movement->production_cycle_id, 'reverses_movement_id' => $movement->id, 'justification' => $reversal->details['reason'] ?? null,
         ], guard: true);
+    }
+
+    // ----------------------------------------------- Breeding integration (incubation)
+
+    /**
+     * Eggs set for incubation leave available stock: one stock_out (reason "incubation") linked to the project, in the project's
+     * transaction (farm and cycle already locked). Never lets the bucket go negative, now or in dated history.
+     */
+    public function consumeForBreeding(FarmContext $ctx, string $projectId, string $cycleId, InventoryItem $item, StorageLocation $location, int $eggs, CarbonImmutable $when): InventoryMovement
+    {
+        $measurement = $this->pieces($ctx, $eggs);
+        $qty = $this->positive($measurement['normalized']['quantity'], 'eggs_set');
+        $this->assertAvailable($item, $location->id, null, $qty);
+
+        return $this->insert($ctx, $item, $location->id, null, InventoryMovementType::StockOut, 'incubation', Decimal::sub('0', $qty), $measurement, $when, ['breeding_project_id' => $projectId, 'production_cycle_id' => $cycleId], guard: true);
+    }
+
+    /** Eggs the farmer explicitly says go back to available stock (cancelled or reduced incubation): a stock_in (reason "returned") linked to the project. */
+    public function returnForBreeding(FarmContext $ctx, string $projectId, string $cycleId, InventoryItem $item, StorageLocation $location, int $eggs, CarbonImmutable $when): InventoryMovement
+    {
+        $measurement = $this->pieces($ctx, $eggs);
+
+        return $this->insert($ctx, $item, $location->id, null, InventoryMovementType::StockIn, 'returned', $this->positive($measurement['normalized']['quantity'], 'eggs_returned_to_stock'), $measurement, $when, ['breeding_project_id' => $projectId, 'production_cycle_id' => $cycleId]);
+    }
+
+    /**
+     * What a project has taken from stock, derived from its movements: consumed, returned and the net still counted as in incubation,
+     * plus where the first consumption came from (the default destination of a return).
+     *
+     * @return array{consumed: int, returned: int, net: int, storage_location_id: string|null, inventory_item_id: string|null}
+     */
+    public function incubationStock(FarmContext $ctx, string $projectId): array
+    {
+        $rows = InventoryMovement::where('farm_id', $ctx->farm->id)->where('breeding_project_id', $projectId)->orderBy('recorded_at')->orderBy('id')->get(['inventory_item_id', 'storage_location_id', 'reason', 'quantity_delta']);
+        $consumed = '0';
+        $returned = '0';
+        foreach ($rows as $row) {
+            $delta = Decimal::trim((string) $row->quantity_delta);
+            if ($row->reason === 'incubation') {
+                $consumed = Decimal::add($consumed, Decimal::sub('0', $delta));
+            } else {
+                $returned = Decimal::add($returned, $delta);
+            }
+        }
+
+        return ['consumed' => (int) $consumed, 'returned' => (int) $returned, 'net' => (int) Decimal::sub($consumed, $returned), 'storage_location_id' => $rows->first()?->storage_location_id, 'inventory_item_id' => $rows->first()?->inventory_item_id];
+    }
+
+    private function pieces(FarmContext $ctx, int $eggs): array
+    {
+        return $this->quantities->normalize($ctx->farm, [['quantity' => (string) $eggs, 'unit' => 'piece']], null, 'piece', ['count'])->toArray();
     }
 
     // ----------------------------------------------- Phase 10 integration (health)
@@ -495,12 +560,12 @@ class InventoryService
 
     // ----------------------------------------------- Phase 15 integration (sales)
 
-    /** Locks and returns the active produce item a sale line sells. Called by SaleService inside its transaction. */
+    /** Locks and returns the active sellable (produce or feed) item a sale line sells. Called by SaleService inside its transaction. */
     public function itemForSale(FarmContext $ctx, string $itemId, string $field): InventoryItem
     {
         $item = $this->activeItem($ctx, $itemId, $field);
-        if ($item->category !== InventoryCategory::Produce) {
-            $this->invalid($field, 'Only produce stock can be sold; record other stock leaving the farm with a stock-out.');
+        if (! $item->category->isSellable()) {
+            $this->invalid($field, 'Only '.implode(' or ', array_map(fn (InventoryCategory $c) => strtolower($c->label()), InventoryCategory::sellable())).' stock can be sold; record other stock leaving the farm with a stock-out.');
         }
 
         return $item;
@@ -598,6 +663,25 @@ class InventoryService
             throw new ApiHttpException(409, 'insufficient_stock', 'There is not enough stock in this location'.($lotId ? ' and lot' : '').'.', details: [
                 'available' => $this->ledger->display($item, $available), 'requested' => $this->ledger->display($item, $qty),
             ]);
+        }
+    }
+
+    /**
+     * "Produced on farm" is a manual stock-in only for stock no operational record explains (home-mixed feed...). Produce comes
+     * from its record - egg_collection, milk, crop_harvest - so a manual production IN would create stock with no production.
+     */
+    /** Feed eaten by livestock is entered once, as a feed_use record; the generic "use" reason would decrement it a second time. */
+    private function assertManualOutReason(InventoryItem $item, string $reason): void
+    {
+        if ($reason === 'use' && $item->category === InventoryCategory::Feed) {
+            $this->invalid('reason', 'Feed used for livestock is recorded through POST /records (type feed_use) so the event is entered once; the generic "use" reason is not accepted for feed. Use donation, spoiled, lost, disposal, internal_use or other for feed leaving the farm in another way.');
+        }
+    }
+
+    private function assertManualInReason(InventoryItem $item, string $reason): void
+    {
+        if ($reason === 'production' && ($item->category === InventoryCategory::Produce || $item->system_key !== null)) {
+            $this->invalid('reason', 'Produce is stocked by recording the production (POST /records: egg_collection, milk or crop_harvest), so stock and production cannot disagree. Use donation, purchase, received, opening_balance or other for produce that was not produced on this farm.');
         }
     }
 

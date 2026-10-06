@@ -280,7 +280,7 @@ class ReportsTest extends TeamTestCase
         $loc = $this->store();
         $feed = $this->item('feed', 'kg', ['name' => 'Starter mash', 'low_stock_threshold' => ['quantity' => '50', 'unit' => 'kg']]);
         $this->receive($feed, $loc, '200', 'kg', ['recorded_at' => $this->at(100)]);
-        $this->postJson('/api/v1/inventory/stock-out', ['inventory_item_id' => $feed, 'storage_location_id' => $loc, 'reason' => 'use', 'components' => [['quantity' => '160', 'unit' => 'kg']], 'recorded_at' => $this->at(2), 'idempotency_key' => $this->key()])->assertCreated();
+        $this->postJson('/api/v1/inventory/stock-out', ['inventory_item_id' => $feed, 'storage_location_id' => $loc, 'reason' => 'spoiled', 'components' => [['quantity' => '160', 'unit' => 'kg']], 'recorded_at' => $this->at(2), 'idempotency_key' => $this->key()])->assertCreated();
 
         $now = collect($this->rows('inventory_stock'))->firstWhere('item', 'Starter mash');
         $this->assertSame('40', $now['quantity']);

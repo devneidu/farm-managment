@@ -22,6 +22,8 @@ use App\Http\Resources\InventoryLotResource;
 use App\Http\Resources\InventoryMovementResource;
 use App\Services\Inventory\InventoryQueries;
 use App\Services\Inventory\InventoryService;
+use App\Services\Inventory\OutputStockService;
+use App\Services\Inventory\StockReasonCatalogue;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiResponse;
 use Dedoc\Scramble\Attributes\Response;
@@ -39,18 +41,40 @@ class InventoryController extends Controller
     /**
      * Inventory option catalogue
      *
-     * Requires inventory.view. Item categories, movement types and the stock-in / stock-out reason codes.
+     * Requires inventory.view. Item categories, movement types, the stock-in / stock-out reason codes and `reasons`: the human labels and
+     * routing the frontend needs. `reasons.by_item_kind` (feed, eggs, milk, general) lists, in display order, the actions a farmer can take for that
+     * kind of stock; each entry says whether the reason is accepted on the manual stock endpoints (`manual`), whether it creates an operational
+     * record, and the authoritative `route` that records the event (sale -> POST /sales, used for livestock -> POST /records feed_use, put into
+     * incubation -> POST /breeding-projects, produced on farm -> POST /records egg_collection|milk). System-only reasons are refused on the manual
+     * endpoints (422), so one event is never entered twice. `sellable_categories` are the categories a sale stock line may use.
      *
-     * @response array{data: array{categories: array<int, array{code: string, label: string}>, movement_types: string[], stock_in_reasons: string[], stock_out_reasons: string[]}, meta: object, message: null}
+     * @response array{data: array{categories: array<int, array{code: string, label: string}>, sellable_categories: string[], movement_types: string[], stock_in_reasons: string[], stock_out_reasons: string[], reasons: array{in: array<int, array<string, mixed>>, out: array<int, array<string, mixed>>, by_item_kind: array<string, array{in: array<int, array<string, mixed>>, out: array<int, array<string, mixed>>}>}}, meta: object, message: null}
      */
-    public function options(): JsonResponse
+    public function options(StockReasonCatalogue $reasons): JsonResponse
     {
         return ApiResponse::success([
             'categories' => array_map(fn (InventoryCategory $c) => ['code' => $c->value, 'label' => $c->label()], InventoryCategory::cases()),
+            'sellable_categories' => array_map(fn (InventoryCategory $c) => $c->value, InventoryCategory::sellable()),
+            'reasons' => $reasons->options(),
             'movement_types' => array_column(InventoryMovementType::cases(), 'value'),
             'stock_in_reasons' => array_column(StockInReason::cases(), 'value'),
             'stock_out_reasons' => array_column(StockOutReason::cases(), 'value'),
         ]);
+    }
+
+    /**
+     * Egg and milk balances (read-only)
+     *
+     * Requires inventory.view. The farm's available eggs and milk, derived from the movement ledger - never from production totals
+     * (104 collected and 44 available are both true). Nothing is created: a farm that has never recorded eggs or milk gets
+     * `exists: false` and a zero balance. `by_storage_location` lists non-zero stores; use the ids to sell, give away or incubate.
+     * `inventory_item_id` is the item to configure package conversions on (POST /settings/package-conversions, context_type inventory_item).
+     *
+     * @response array{data: array{eggs: array<string, mixed>, milk: array<string, mixed>}, meta: object, message: null}
+     */
+    public function outputBalances(FarmContext $ctx, OutputStockService $outputs): JsonResponse
+    {
+        return ApiResponse::success($outputs->balances($ctx));
     }
 
     /**
@@ -161,7 +185,13 @@ class InventoryController extends Controller
     /**
      * Receive stock (stock-in)
      *
-     * Requires inventory.manage. Appends a stock_in movement (reasons: opening_balance, purchase, donation, other; no supplier/expense effect in this phase).
+     * Requires inventory.manage. Appends a stock_in movement. Reasons accepted here: opening_balance, purchase, donation, aid, received, other, and production
+     * ("produced on farm") for stock no record explains, such as home-mixed feed. Produced eggs, milk and crops are NOT stocked here: record the production
+     * (POST /records egg_collection | milk | crop_harvest) and the stock-in is written with it, so stock and production cannot disagree (422 on reason production
+     * for produce). `returned` is written only by the breeding workflow. This endpoint has no supplier/expense effect (use POST /purchases for that).
+     * Send `output: eggs|milk` instead of `inventory_item_id` to stock the farm's own egg / milk item without any item setup; `storage_location_id` is then optional
+     * (the only active store, a "Main Store" created on first use when the farm has none, 422 when several stores exist). Donated or purchased eggs/milk never create a
+     * production record.
      * `components` are entered parts such as 12 bag + 18 kg; bag/crate/bottle resolve only through the item's own package conversion
      * (POST /settings/package-conversions with context_type inventory_item), otherwise 422 conversion_not_configured.
      * Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The storage location must be active with active ancestors.
@@ -177,7 +207,11 @@ class InventoryController extends Controller
     /**
      * Issue stock (stock-out)
      *
-     * Requires inventory.use. Appends a negative stock_out movement (reasons: use, damaged, expired, wasted, other). Stock can never go negative:
+     * Requires inventory.use. Appends a negative stock_out movement. Reasons accepted here: donation, internal_use, damaged, spoiled, lost, disposal, expired,
+     * wasted, other, and use (legacy "other use"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,
+     * production_use (feed used for livestock) -> POST /records type feed_use, incubation -> POST /breeding-projects, so one event is never entered twice.
+     * Send `output: eggs|milk` instead of `inventory_item_id` for the farm's own egg / milk stock (never created here: 409 insufficient_stock when there is none;
+     * `storage_location_id` optional when the farm has a single active store). Stock can never go negative:
      * the (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id
      * (no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.
      */

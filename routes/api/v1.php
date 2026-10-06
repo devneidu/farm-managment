@@ -300,6 +300,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     Route::get('/master/inventory-options', [InventoryController::class, 'options'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.options');
     Route::prefix('inventory')->group(function () {
         $c = InventoryController::class;
+        Route::get('/output-balances', [$c, 'outputBalances'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.output-balances');
         Route::get('/items', [$c, 'items'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.items.index');
         Route::post('/items', [$c, 'storeItem'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.items.store');
         Route::get('/items/{item}', [$c, 'showItem'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.items.show');

@@ -958,7 +958,7 @@
             },
             "post": {
                 "operationId": "v1.breeding-projects.store",
-                "description": "Requires breeding.create. The workflow must be supported by the species capabilities of the cycle's species\n(incubation -> supports_incubation, pregnancy -> supports_pregnancy, both need supports_breeding), else 422 on workflow.\nThe biological reference is frozen on the project. Expectation: an exact reference gives expectation.type=exact\n(start + days); a ranged reference gives expectation.type=window (start + min .. start + max, never a midpoint);\na species without a numeric reference, or whose reference_config sets automatic_expectation=false (e.g. honeybee, caste-dependent), gets type=none unless a\nmanual expected_date / expected_from+expected_to is supplied. Nothing here changes population.\nClosed cycles are rejected (409 cycle_closed). The required idempotency_key is farm-wide: an identical retry returns the\noriginal project (201), a changed payload is 409.\n\n**Requires farm permission:** `breeding.create`.",
+                "description": "Requires breeding.create. The workflow must be supported by the species capabilities of the cycle's species\n(incubation -> supports_incubation, pregnancy -> supports_pregnancy, both need supports_breeding), else 422 on workflow.\nThe biological reference is frozen on the project. Expectation: an exact reference gives expectation.type=exact\n(start + days); a ranged reference gives expectation.type=window (start + min .. start + max, never a midpoint);\na species without a numeric reference, or whose reference_config sets automatic_expectation=false (e.g. honeybee, caste-dependent), gets type=none unless a\nmanual expected_date / expected_from+expected_to is supplied. Nothing here changes population.\nClosed cycles are rejected (409 cycle_closed). The required idempotency_key is farm-wide: an identical retry returns the\noriginal project (201), a changed payload is 409.\n\nIncubation with `consume_egg_stock: true` also takes `eggs_set` eggs out of the farm's available egg stock in the same transaction (needs inventory.use):\none stock-out (reason incubation) linked to the project and its cycle, from `egg_storage_location_id` (optional when the farm has one active store).\nToo few eggs is 409 insufficient_stock and nothing - project included - is written. Omit the flag to leave stock untouched. `egg_stock` on the project\nis derived from its stock movements.\n\n**Requires farm permission:** `breeding.create`.",
                 "summary": "Start a breeding project",
                 "tags": [
                     "BreedingProject"
@@ -1017,7 +1017,8 @@
                                             "type": "string",
                                             "enum": [
                                                 "cycle_closed",
-                                                "idempotency_conflict"
+                                                "idempotency_conflict",
+                                                "insufficient_stock"
                                             ]
                                         },
                                         "request_id": {
@@ -1347,7 +1348,7 @@
             },
             "patch": {
                 "operationId": "v1.breeding-projects.update",
-                "description": "Requires breeding.create. Only while the project is active (409 project_not_active otherwise) and its cycle is open.\nChanging start_date recalculates a reference-derived expectation from the stored snapshot; a manual expectation is kept\n(validated against the new start) unless revert_to_reference is true. Workflow, cycle and the biological reference never change.\n\n**Requires farm permission:** `breeding.create`.",
+                "description": "Requires breeding.create. Only while the project is active (409 project_not_active otherwise) and its cycle is open.\nChanging start_date recalculates a reference-derived expectation from the stored snapshot; a manual expectation is kept\n(validated against the new start) unless revert_to_reference is true. Workflow, cycle and the biological reference never change.\nOn a project that took eggs from stock, raising eggs_set takes the extra eggs (409 insufficient_stock when short); lowering it changes stock only when\neggs_returned_to_stock (at most the reduction) says so - eggs are never assumed to be usable again.\n\n**Requires farm permission:** `breeding.create`.",
                 "summary": "Update an active breeding project",
                 "tags": [
                     "BreedingProject"
@@ -2100,7 +2101,7 @@
         "/breeding-projects/{project}/cancel": {
             "post": {
                 "operationId": "v1.breeding-projects.cancel",
-                "description": "Requires breeding.create. The project is kept (never deleted) with its reason; it can no longer receive checks or outcomes.\n\n**Requires farm permission:** `breeding.create`.",
+                "description": "Requires breeding.create. The project is kept (never deleted) with its reason; it can no longer receive checks or outcomes.\nEggs the project took from stock return to available stock only when `eggs_returned_to_stock` says how many (at most what it took and has not returned;\nneeds inventory.use): a stock-in (reason returned) linked to the project, into `egg_storage_location_id` or the store they came from. No instruction = no inventory increase.\n\n**Requires farm permission:** `breeding.create`.",
                 "summary": "Cancel an active breeding project",
                 "tags": [
                     "BreedingProject"
@@ -12765,7 +12766,7 @@
         "/master/inventory-options": {
             "get": {
                 "operationId": "v1.inventory.options",
-                "description": "Requires inventory.view. Item categories, movement types and the stock-in / stock-out reason codes.\n\n**Requires farm permission:** `inventory.view`.",
+                "description": "Requires inventory.view. Item categories, movement types, the stock-in / stock-out reason codes and `reasons`: the human labels and\nrouting the frontend needs. `reasons.by_item_kind` (feed, eggs, milk, general) lists, in display order, the actions a farmer can take for that\nkind of stock; each entry says whether the reason is accepted on the manual stock endpoints (`manual`), whether it creates an operational\nrecord, and the authoritative `route` that records the event (sale -> POST /sales, used for livestock -> POST /records feed_use, put into\nincubation -> POST /breeding-projects, produced on farm -> POST /records egg_collection|milk). System-only reasons are refused on the manual\nendpoints (422), so one event is never entered twice. `sellable_categories` are the categories a sale stock line may use.\n\n**Requires farm permission:** `inventory.view`.",
                 "summary": "Inventory option catalogue",
                 "tags": [
                     "Inventory"
@@ -12799,6 +12800,12 @@
                                                         ]
                                                     }
                                                 },
+                                                "sellable_categories": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
                                                 "movement_types": {
                                                     "type": "array",
                                                     "items": {
@@ -12816,13 +12823,194 @@
                                                     "items": {
                                                         "type": "string"
                                                     }
+                                                },
+                                                "reasons": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "in": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object",
+                                                                "additionalProperties": {}
+                                                            }
+                                                        },
+                                                        "out": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "object",
+                                                                "additionalProperties": {}
+                                                            }
+                                                        },
+                                                        "by_item_kind": {
+                                                            "type": "object",
+                                                            "additionalProperties": {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "in": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "object",
+                                                                            "additionalProperties": {}
+                                                                        }
+                                                                    },
+                                                                    "out": {
+                                                                        "type": "array",
+                                                                        "items": {
+                                                                            "type": "object",
+                                                                            "additionalProperties": {}
+                                                                        }
+                                                                    }
+                                                                },
+                                                                "required": [
+                                                                    "in",
+                                                                    "out"
+                                                                ]
+                                                            }
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "in",
+                                                        "out",
+                                                        "by_item_kind"
+                                                    ]
                                                 }
                                             },
                                             "required": [
                                                 "categories",
+                                                "sellable_categories",
                                                 "movement_types",
                                                 "stock_in_reasons",
-                                                "stock_out_reasons"
+                                                "stock_out_reasons",
+                                                "reasons"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/inventory/output-balances": {
+            "get": {
+                "operationId": "v1.inventory.output-balances",
+                "description": "Requires inventory.view. The farm's available eggs and milk, derived from the movement ledger - never from production totals\n(104 collected and 44 available are both true). Nothing is created: a farm that has never recorded eggs or milk gets\n`exists: false` and a zero balance. `by_storage_location` lists non-zero stores; use the ids to sell, give away or incubate.\n`inventory_item_id` is the item to configure package conversions on (POST /settings/package-conversions, context_type inventory_item).\n\n**Requires farm permission:** `inventory.view`.",
+                "summary": "Egg and milk balances (read-only)",
+                "tags": [
+                    "Inventory"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "eggs": {
+                                                    "type": "object",
+                                                    "additionalProperties": {}
+                                                },
+                                                "milk": {
+                                                    "type": "object",
+                                                    "additionalProperties": {}
+                                                }
+                                            },
+                                            "required": [
+                                                "eggs",
+                                                "milk"
                                             ]
                                         },
                                         "meta": {
@@ -13854,6 +14042,31 @@
                         }
                     },
                     {
+                        "name": "production_cycle_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "breeding_project_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "reason",
+                        "in": "query",
+                        "description": "A stored reason code (e.g. donation, incubation, production, sale).",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 30
+                        }
+                    },
+                    {
                         "name": "recorded_from",
                         "in": "query",
                         "schema": {
@@ -14126,6 +14339,31 @@
                         "schema": {
                             "type": "string",
                             "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "production_cycle_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "breeding_project_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "reason",
+                        "in": "query",
+                        "description": "A stored reason code (e.g. donation, incubation, production, sale).",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 30
                         }
                     },
                     {
@@ -14915,7 +15153,7 @@
         "/inventory/stock-in": {
             "post": {
                 "operationId": "v1.inventory.stock-in",
-                "description": "Requires inventory.manage. Appends a stock_in movement (reasons: opening_balance, purchase, donation, other; no supplier/expense effect in this phase).\n`components` are entered parts such as 12 bag + 18 kg; bag/crate/bottle resolve only through the item's own package conversion\n(POST /settings/package-conversions with context_type inventory_item), otherwise 422 conversion_not_configured.\nLot-tracked items need `lot_id` or `lot {code, expires_on}`. The storage location must be active with active ancestors.\nRequired idempotency_key is farm-wide: the same key and payload returns the original movement (201); a changed payload is 409.\n\n**Requires farm permission:** `inventory.manage`.",
+                "description": "Requires inventory.manage. Appends a stock_in movement. Reasons accepted here: opening_balance, purchase, donation, aid, received, other, and production\n(\"produced on farm\") for stock no record explains, such as home-mixed feed. Produced eggs, milk and crops are NOT stocked here: record the production\n(POST /records egg_collection | milk | crop_harvest) and the stock-in is written with it, so stock and production cannot disagree (422 on reason production\nfor produce). `returned` is written only by the breeding workflow. This endpoint has no supplier/expense effect (use POST /purchases for that).\nSend `output: eggs|milk` instead of `inventory_item_id` to stock the farm's own egg / milk item without any item setup; `storage_location_id` is then optional\n(the only active store, a \"Main Store\" created on first use when the farm has none, 422 when several stores exist). Donated or purchased eggs/milk never create a\nproduction record.\n`components` are entered parts such as 12 bag + 18 kg; bag/crate/bottle resolve only through the item's own package conversion\n(POST /settings/package-conversions with context_type inventory_item), otherwise 422 conversion_not_configured.\nLot-tracked items need `lot_id` or `lot {code, expires_on}`. The storage location must be active with active ancestors.\nRequired idempotency_key is farm-wide: the same key and payload returns the original movement (201); a changed payload is 409.\n\n**Requires farm permission:** `inventory.manage`.",
                 "summary": "Receive stock (stock-in)",
                 "tags": [
                     "Inventory"
@@ -15147,7 +15385,7 @@
         "/inventory/stock-out": {
             "post": {
                 "operationId": "v1.inventory.stock-out",
-                "description": "Requires inventory.use. Appends a negative stock_out movement (reasons: use, damaged, expired, wasted, other). Stock can never go negative:\nthe (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id\n(no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.\n\n**Requires farm permission:** `inventory.use`.",
+                "description": "Requires inventory.use. Appends a negative stock_out movement. Reasons accepted here: donation, internal_use, damaged, spoiled, lost, disposal, expired,\nwasted, other, and use (legacy \"other use\"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,\nproduction_use (feed used for livestock) -> POST /records type feed_use, incubation -> POST /breeding-projects, so one event is never entered twice.\nSend `output: eggs|milk` instead of `inventory_item_id` for the farm's own egg / milk stock (never created here: 409 insufficient_stock when there is none;\n`storage_location_id` optional when the farm has a single active store). Stock can never go negative:\nthe (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id\n(no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.\n\n**Requires farm permission:** `inventory.use`.",
                 "summary": "Issue stock (stock-out)",
                 "tags": [
                     "Inventory"
@@ -22878,7 +23116,7 @@
             },
             "post": {
                 "operationId": "v1.records.store",
-                "description": "Requires record.create; population_adjustment additionally record.adjust, correction links record.reverse.\nSee /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.\nrecorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.\nRequired idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.\nMeasurements use Phase 5 components/context; feed_use and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may link stock via details.inventory (see Phase 9 and Phase 13).\n\n**Requires farm permission:** `record.create`.",
+                "description": "Requires record.create; population_adjustment additionally record.adjust, correction links record.reverse.\nSee /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.\nrecorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.\nRequired idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.\nMeasurements use Phase 5 components/context; feed_use and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may link stock via details.inventory (see Phase 9 and Phase 13).\nfeed_use with details.inventory is the one entry for \"feed used for livestock\": it writes the record and the stock-out (reason production_use) together.\negg_collection and milk (eggs / milk produced by this cycle's livestock) ALWAYS add the quantity to the farm's own Eggs / Milk stock in the same transaction\n(stock-in reason production, linked to the record and cycle; needs inventory.use). The item and, on a farm with no store, a \"Main Store\" are created on first use.\ndetails.inventory.storage_location_id optionally picks the store (required when several are active, 422). Packages (crate...) resolve through details.context\nif given, else through the Eggs / Milk item's own conversions. A zero quantity records production but moves no stock. Reversing the record compensates the stock\n(409 insufficient_stock while those eggs / milk have since left). Donated, purchased or received eggs and milk are never records: use POST /inventory/stock-in with `output`.\n\n**Requires farm permission:** `record.create`.",
                 "summary": "Record a real farm event",
                 "tags": [
                     "OperationalRecord"
@@ -47087,6 +47325,60 @@
                             "captured_at"
                         ]
                     },
+                    "egg_stock": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "description": "Eggs this project took from available stock (incubation workflow with consume_egg_stock), derived from its stock movements.\nnull when it never touched stock. returned counts only eggs the farmer explicitly sent back; net_out is what is still counted as in incubation.",
+                        "properties": {
+                            "consumed": {
+                                "type": "integer"
+                            },
+                            "returned": {
+                                "type": "integer"
+                            },
+                            "net_out": {
+                                "type": "integer"
+                            },
+                            "movements": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "type": {
+                                            "type": "string"
+                                        },
+                                        "reason": {
+                                            "type": "string"
+                                        },
+                                        "quantity": {
+                                            "type": "string"
+                                        },
+                                        "recorded_at": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "type",
+                                        "reason",
+                                        "quantity",
+                                        "recorded_at"
+                                    ]
+                                }
+                            }
+                        },
+                        "required": [
+                            "consumed",
+                            "returned",
+                            "net_out",
+                            "movements"
+                        ]
+                    },
                     "parents": {
                         "type": "array",
                         "items": {
@@ -47247,6 +47539,7 @@
                     "expected_offspring",
                     "expectation",
                     "biological_reference",
+                    "egg_stock",
                     "parents",
                     "checks",
                     "outcomes",
@@ -47285,6 +47578,17 @@
                     "reason": {
                         "type": "string",
                         "maxLength": 2000
+                    },
+                    "eggs_returned_to_stock": {
+                        "type": "integer",
+                        "description": "How many eggs go back to available stock. Omit = nothing returns (the eggs are not assumed usable). At most what the project took and has not returned. Needs inventory.use.",
+                        "minimum": 1,
+                        "maximum": 999999999
+                    },
+                    "egg_storage_location_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Store the returned eggs go to; defaults to the store they were taken from."
                     }
                 },
                 "required": [
@@ -48655,6 +48959,13 @@
                             "null"
                         ]
                     },
+                    "reason_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Human label of reason (e.g. \"Put into incubation\"); null when the movement has no reason."
+                    },
                     "justification": {
                         "type": [
                             "string",
@@ -48756,6 +49067,41 @@
                             "null"
                         ]
                     },
+                    "production_cycle_id": {
+                        "type": "string",
+                        "description": "Production cycle and breeding project this movement belongs to (record-driven and incubation movements); null otherwise."
+                    },
+                    "breeding_project_id": {
+                        "type": "string"
+                    },
+                    "source": {
+                        "type": "object",
+                        "description": "The domain event that explains this movement, so history reads as events rather than numbers.",
+                        "properties": {
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "operational_record",
+                                    "sale",
+                                    "purchase",
+                                    "health_record",
+                                    "breeding_project",
+                                    "transfer",
+                                    "manual"
+                                ]
+                            },
+                            "id": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "type",
+                            "id"
+                        ]
+                    },
                     "reverses_movement_id": {
                         "type": [
                             "string",
@@ -48786,6 +49132,7 @@
                     "lot",
                     "type",
                     "reason",
+                    "reason_label",
                     "justification",
                     "quantity_delta",
                     "quantity_delta_display",
@@ -48800,6 +49147,9 @@
                     "sale_id",
                     "sale_item_id",
                     "transfer_group_id",
+                    "production_cycle_id",
+                    "breeding_project_id",
+                    "source",
                     "reverses_movement_id",
                     "reversed_by_movement_id",
                     "created_by",
@@ -52240,11 +52590,15 @@
             },
             "StockInReason": {
                 "type": "string",
-                "description": "Descriptive for manual stock-in; purchases (Phase 14) book their own \"purchase\" stock-in with a source link and expense.\n",
+                "description": "Stable, domain-level reasons for stock coming IN. The manual endpoint accepts every case except the system-only ones; purchases (Phase 14) book their own \"purchase\" stock-in with a source link and expense, crop harvests / egg collections / milk records book their own stock-in through the operational record that explains it.\n| |\n|---|\n| `opening_balance` <br/>  |\n| `purchase` <br/>  |\n| `donation` <br/>  |\n| `aid` <br/>  |\n| `received` <br/>  |\n| `production` <br/> Produced on the farm. Manual only for stock no record explains (e.g. home-mixed feed); produce comes from its record. |\n| `returned` <br/> Eggs handed back to stock when an incubation is cancelled or reduced. Written only by the breeding workflow. |\n| `other` <br/>  |",
                 "enum": [
                     "opening_balance",
                     "purchase",
                     "donation",
+                    "aid",
+                    "received",
+                    "production",
+                    "returned",
                     "other"
                 ],
                 "title": "StockInReason"
@@ -52254,11 +52608,21 @@
                 "properties": {
                     "inventory_item_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "description": "The item receiving stock. Omit when `output` is used."
+                    },
+                    "output": {
+                        "type": "string",
+                        "description": "eggs | milk: the farm's own egg / milk stock (created automatically on first use), so no item has to be set up. For stock that was NOT produced on this farm (purchase, donation, received, opening balance, other); produced-on-farm eggs and milk are recorded with POST /records.",
+                        "enum": [
+                            "eggs",
+                            "milk"
+                        ]
                     },
                     "storage_location_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "description": "Required, except with `output`: then the only active storage location is used, a farm with none gets a \"Main Store\", and several active locations need a choice (422)."
                     },
                     "lot_id": {
                         "type": [
@@ -52332,8 +52696,6 @@
                     }
                 },
                 "required": [
-                    "inventory_item_id",
-                    "storage_location_id",
                     "reason",
                     "components",
                     "recorded_at",
@@ -52343,12 +52705,21 @@
             },
             "StockOutReason": {
                 "type": "string",
+                "description": "Stable, domain-level reasons for stock going OUT (never channel-specific codes such as \"farmers_market\": those belong to the sale). `use`, `expired` and `wasted` are kept for existing clients and records. System-only reasons are written by the workflow that owns the real-world event and are refused on POST /inventory/stock-out so one event can never be entered twice: sale -> POST /sales, production_use -> POST /records (feed_use), incubation -> POST /breeding-projects.\n",
                 "enum": [
                     "use",
                     "damaged",
                     "expired",
                     "wasted",
-                    "other"
+                    "other",
+                    "sale",
+                    "production_use",
+                    "incubation",
+                    "donation",
+                    "internal_use",
+                    "spoiled",
+                    "lost",
+                    "disposal"
                 ],
                 "title": "StockOutReason"
             },
@@ -52357,11 +52728,21 @@
                 "properties": {
                     "inventory_item_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "description": "The item leaving stock. Omit when `output` is used."
+                    },
+                    "output": {
+                        "type": "string",
+                        "description": "eggs | milk: the farm's own egg / milk stock, so no item id is needed. Sales, incubation and feed use are recorded through their own workflows.",
+                        "enum": [
+                            "eggs",
+                            "milk"
+                        ]
                     },
                     "storage_location_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "format": "uuid",
+                        "description": "Required, except with `output`: then the only active storage location is used and several active locations need a choice (422)."
                     },
                     "lot_id": {
                         "type": [
@@ -52413,8 +52794,6 @@
                     }
                 },
                 "required": [
-                    "inventory_item_id",
-                    "storage_location_id",
                     "reason",
                     "components",
                     "recorded_at",
@@ -52536,6 +52915,15 @@
                         "description": "Incubation only (required there, rejected for pregnancy). Eggs set are not live population.",
                         "minimum": 1,
                         "maximum": 999999999
+                    },
+                    "consume_egg_stock": {
+                        "type": "boolean",
+                        "description": "Incubation only. true takes eggs_set eggs out of the farm's available egg stock in the same request (stock-out reason incubation, linked to this project). 409 insufficient_stock when too few; needs inventory.use. Omit to leave stock untouched."
+                    },
+                    "egg_storage_location_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Store the eggs are taken from. Optional when the farm has exactly one active storage location; required when it has several."
                     },
                     "females_bred": {
                         "type": [
@@ -55411,8 +55799,20 @@
                     },
                     "eggs_set": {
                         "type": "integer",
+                        "description": "On a project that took eggs from stock: raising it takes the extra eggs; lowering it returns nothing unless eggs_returned_to_stock says so.",
                         "minimum": 1,
                         "maximum": 999999999
+                    },
+                    "eggs_returned_to_stock": {
+                        "type": "integer",
+                        "description": "Only when eggs_set is reduced: how many of the removed eggs go back to available stock (at most the reduction). Omit = no inventory increase.",
+                        "minimum": 1,
+                        "maximum": 999999999
+                    },
+                    "egg_storage_location_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Store the returned eggs go to; defaults to the store they were taken from."
                     },
                     "females_bred": {
                         "type": [

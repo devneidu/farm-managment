@@ -33,7 +33,7 @@ All 21: `supports_group_tracking`, `supports_mortality`, `supports_feed_records`
 | Snail | `supports_incubation` (no number) | no | yes |
 | Honeybee | `supports_incubation` (range + caste note) | no | **no** |
 
-`supports_individual_tracking`, `produces_milk` and `supports_harvest` (fish only) are not enabled for any livestock species; milk has no product decision yet.
+`supports_individual_tracking` and `supports_harvest` (fish only) are not enabled for any livestock species. `produces_milk` is seeded (insert-only, never overwriting a platform edit) for **cattle, goat, sheep, camel and water buffalo** so milk can be recorded; horse and donkey are intentionally left out for V1. Milk behaviour is capability-driven: a platform admin can enable or disable `produces_milk` per species and the `milk` record type follows.
 
 ## Biological reference values (`reference`)
 

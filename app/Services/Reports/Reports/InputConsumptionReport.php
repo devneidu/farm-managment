@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Stock consumed (feed, crop inputs, planting material, medicine) per item, cycle and origin, from stock-out movements with reason
- * "use". A reversal movement is netted against the movement it reverses. Quantities are shown in each item's own unit and are never
+ * "use" or "production_use" (feed used for livestock). A reversal movement is netted against the movement it reverses. Quantities are shown in each item's own unit and are never
  * added across items.
  */
 class InputConsumptionReport extends Report
@@ -43,7 +43,7 @@ class InputConsumptionReport extends Report
             ."CASE WHEN COALESCE(m.operational_record_id, o.operational_record_id) IS NOT NULL THEN 'records' WHEN COALESCE(m.health_record_id, o.health_record_id) IS NOT NULL THEN 'medicine' ELSE 'other' END as origin, "
             .'-SUM(m.quantity_delta) as quantity FROM inventory_movements m LEFT JOIN inventory_movements o ON o.id = m.reverses_movement_id '
             .'LEFT JOIN operational_records rec ON rec.id = COALESCE(m.operational_record_id, o.operational_record_id) LEFT JOIN health_records hr ON hr.id = COALESCE(m.health_record_id, o.health_record_id) '
-            ."WHERE m.farm_id = ? AND m.recorded_at >= ? AND m.recorded_at < ? AND COALESCE(o.type, m.type) = 'stock_out' AND COALESCE(o.reason, m.reason) = 'use'$cycleSql "
+            ."WHERE m.farm_id = ? AND m.recorded_at >= ? AND m.recorded_at < ? AND COALESCE(o.type, m.type) = 'stock_out' AND COALESCE(o.reason, m.reason) IN ('use', 'production_use')$cycleSql "
             .'GROUP BY m.inventory_item_id, COALESCE(rec.production_cycle_id, hr.production_cycle_id), origin', $bindings);
 
         $items = InventoryItem::ofFarm($ctx->farm)->with('stockUnit.dimension')->whereIn('id', array_unique(array_column($data, 'inventory_item_id')))->get()->keyBy('id');

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\BreedingOutcome;
+use App\Support\Measurement\Decimal;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -42,6 +43,19 @@ class BreedingProjectResource extends JsonResource
              * @var array{workflow: string, capability: string, species_id: string, species_code: string, kind: 'exact'|'range'|'none', days: int|null, days_min: int|null, days_max: int|null, approximate: bool, note: string|null, automatic_expectation: bool, no_automatic_reason: string|null, captured_at: string}
              */
             'biological_reference' => $snapshot,
+            /**
+             * Eggs this project took from available stock (incubation workflow with consume_egg_stock), derived from its stock movements.
+             * null when it never touched stock. returned counts only eggs the farmer explicitly sent back; net_out is what is still counted as in incubation.
+             *
+             * @var array{consumed: int, returned: int, net_out: int, movements: array<int, array{id: string, type: string, reason: string, quantity: string, recorded_at: string}>}|null
+             */
+            'egg_stock' => $this->stockMovements->isEmpty() ? null : (function () {
+                $consumed = $this->stockMovements->where('reason', 'incubation')->sum(fn ($m) => -(float) $m->quantity_delta);
+                $returned = $this->stockMovements->where('reason', 'returned')->sum(fn ($m) => (float) $m->quantity_delta);
+
+                return ['consumed' => (int) $consumed, 'returned' => (int) $returned, 'net_out' => (int) ($consumed - $returned),
+                    'movements' => $this->stockMovements->map(fn ($m) => ['id' => $m->id, 'type' => $m->type->value, 'reason' => $m->reason, 'quantity' => ltrim(Decimal::trim((string) $m->quantity_delta), '-'), 'recorded_at' => $m->recorded_at->toISOString()])->all()];
+            })(),
             'parents' => $this->parents->map(fn ($p) => ['id' => $p->id, 'role' => $p->role, 'production_cycle_id' => $p->parent_cycle_id, 'head_count' => $p->head_count])->all(),
             'checks' => $this->checks->map(fn ($c) => ['id' => $c->id, 'checked_on' => $c->checked_on->toDateString(), 'result' => $c->result, 'fertile_count' => $c->fertile_count, 'notes' => $c->notes])->all(),
             /** Outcome rows including reversals, oldest first. */

@@ -12,12 +12,15 @@ class RecordTypeRegistry
     /** Crop treatment context kept apart from the quantity applied: the area treated and the mix strength are never the stock quantity. */
     private const CROP_INPUT_FIELDS = ['treated_area' => ['sometimes', 'nullable', 'array:quantity,unit'], 'concentration' => 'sometimes|nullable|string|max:200'];
 
+    /** Egg / milk production lands in the farm's automatic output stock; the farmer may only choose WHICH store (optional). */
+    private const OUTPUT_INVENTORY = ['sometimes', 'array:storage_location_id'];
+
     public function definitions(): array
     {
         return [
             'feed_use' => ['kind' => 'livestock', 'capability' => 'supports_feed_records', 'dimension' => 'weight', 'unit' => 'kg', 'fields' => ['feed_name' => 'required|string|max:200', 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
-            'egg_collection' => ['kind' => 'livestock', 'capability' => 'produces_eggs', 'dimension' => 'count', 'unit' => 'piece', 'fields' => []],
-            'milk' => ['kind' => 'livestock', 'capability' => 'produces_milk', 'dimension' => 'volume', 'unit' => 'l', 'fields' => []],
+            'egg_collection' => ['kind' => 'livestock', 'capability' => 'produces_eggs', 'dimension' => 'count', 'unit' => 'piece', 'output' => 'eggs', 'fields' => ['inventory' => self::OUTPUT_INVENTORY]],
+            'milk' => ['kind' => 'livestock', 'capability' => 'produces_milk', 'dimension' => 'volume', 'unit' => 'l', 'output' => 'milk', 'fields' => ['inventory' => self::OUTPUT_INVENTORY]],
             'mortality' => ['kind' => 'livestock', 'capability' => 'supports_mortality', 'fields' => ['quantity' => ['required', new PositiveWholeCount], 'cause' => 'required|string|max:500']],
             'weight' => ['kind' => 'livestock', 'capability' => 'supports_live_weight', 'dimension' => 'weight', 'unit' => 'kg', 'fields' => ['sample_size' => ['required', new PositiveWholeCount]]],
             'temperature' => ['kind' => 'livestock', 'dimension' => 'temperature', 'unit' => 'celsius', 'fields' => []],
@@ -82,6 +85,9 @@ class RecordTypeRegistry
                 ];
             }
         }
+        if (isset($d['output'])) {
+            $rules += ['details.inventory.storage_location_id' => ['required_with:details.inventory', 'uuid']];
+        }
         if (isset($d['dimension'])) {
             $rules += [
                 'details.components' => [($d['optional_measurement'] ?? false) ? (isset($d['stock']) ? 'required_with:details.context,details.inventory' : 'required_with:details.context') : 'required', 'array', 'min:1', $d['dimension'] === 'temperature' ? 'max:1' : 'max:10'],
@@ -116,10 +122,12 @@ class RecordTypeRegistry
             'population_effect' => match ($type) {
                 'mortality' => 'decrease', 'population_adjustment' => 'actual_minus_expected', default => 'none'
             },
-            'permission' => $type === 'population_adjustment' ? 'record.adjust' : 'record.create', 'inventory_effect_enabled' => $type === 'feed_use' || isset($d['stock']),
-            'inventory_category' => $type === 'feed_use' ? 'feed' : ($d['stock']['category'] ?? null),
-            'inventory_direction' => $type === 'feed_use' ? 'out' : ($d['stock']['direction'] ?? null),
+            'permission' => $type === 'population_adjustment' ? 'record.adjust' : 'record.create', 'inventory_effect_enabled' => $type === 'feed_use' || isset($d['stock']) || isset($d['output']),
+            'inventory_category' => $type === 'feed_use' ? 'feed' : (isset($d['output']) ? 'produce' : ($d['stock']['category'] ?? null)),
+            'inventory_direction' => $type === 'feed_use' ? 'out' : (isset($d['output']) ? 'in' : ($d['stock']['direction'] ?? null)),
             'inventory_required' => ($d['stock']['required'] ?? false) === true,
-            'inventory_dimensions' => $type === 'feed_use' ? ['weight'] : ($d['stock']['dimensions'] ?? null)];
+            'inventory_dimensions' => $type === 'feed_use' ? ['weight'] : (isset($d['output']) ? [$d['dimension']] : ($d['stock']['dimensions'] ?? null)),
+            /** Eggs and milk: the stock-in is automatic (the farm's own Eggs / Milk output item); details.inventory only picks the store. */
+            'inventory_automatic' => isset($d['output']), 'inventory_output' => $d['output'] ?? null];
     }
 }

@@ -187,3 +187,21 @@ None of these blocks single-farm frontend development; they were **not** fixed (
 * The collection, saved responses and docs were generated from a scenario that was executed against a disposable `farm_management_test` database by a throwaway harness (a PHPUnit file that drives the Laravel test client). The harness is **not** committed; no application code, route, migration or test was changed.
 * When an endpoint changes: edit the affected Postman request (body, Tests capture, description), re-send it (or re-run its flow) against a development server to refresh the saved example, re-export the OpenAPI file (`php artisan scramble:export --path=docs/api/openapi.json`; it needs `memory_limit` of about 1 GB and takes a couple of minutes) and update this report.
 * The workflows are the regression check for the package: run **99 — Workflows** in order on a fresh database after any API change; every request carries Tests assertions on its status.
+
+## Addendum — Feed, eggs and milk stock (2026-10-06)
+
+The collection was extended for the one-event / one-entry stock work described in `docs/api/FEED-EGGS-MILK-STOCK.md`. Everything above remains true except the deltas below.
+
+| Metric | Before | After |
+|---|---|---|
+| Laravel API routes (`/api/v1`) | 232 | **233** (`GET /inventory/output-balances`); 233 / 233 covered |
+| Reference requests (folders 00-22, 90) | 264 | **273** (+9: output balances, donate eggs IN, give away eggs OUT, donate feed OUT, egg movement history, record milk, start incubation taking eggs, cancel incubation returning eggs, sell surplus feed) |
+| Workflows | 14 (Flows 1-13 + S) | **15** (+ Flow 14 — Feed, eggs and milk stock, 11 requests) |
+| Workflow requests | 148 | **159** |
+| Total requests | 412 | **432** |
+| Environment variables (values in the environment file) | 99 | **108** (`egg_item_id`, `milk_item_id`, `movement_egg_in_id`, `movement_egg_out_id`, `breeding_project_egg_id`, `sale_feed_id`, `record_milk_id`, `record_eggs_movement_id`, `dairy_cycle_id`; plus the existing set) |
+
+* Saved responses of the nine new requests (and the refreshed `Inventory option catalogue` and `Record egg collection` examples) were produced by running the real scenario through the Laravel test client as the real authenticated users (not hand-written). The scenario is verified through real HTTP/API integration tests (`tests/Feature/Inventory/OutputStockTest.php`); Flow 14 is **prepared** but was **not** executed in Postman or the Postman runner. Its steps use the same variables and prerequisites as Flows 3 and 5.
+* Behaviour changes that affect existing requests: `Record egg collection (compound quantity)` now also creates the stock-in (it sends `details.inventory.storage_location_id = {{store_id}}` because Flow S creates two stores); The feed examples of `Issue stock (stock-out)` now use reason `spoiled` (generic `use` is refused for feed items: `422`, use a `feed_use` record). `Issue stock (stock-out)` / `Receive stock (stock-in)` gained `output` and the new reason sets; a feed_use movement is now reason `production_use`; sale stock lines accept feed.
+* New collection variable `date_today` (farm-local day) was added to the pre-request script for the incubation start date.
+* The Flow 10 "sale of eggs" still sells the manual `Table Eggs` item from Flow S; the farm's own `Eggs` item (created by the first egg collection) is a separate produce item, so the existing flow is unaffected.

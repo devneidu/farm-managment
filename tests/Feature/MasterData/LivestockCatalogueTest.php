@@ -117,7 +117,8 @@ class LivestockCatalogueTest extends MasterDataTestCase
         foreach (array_merge(...array_values(self::GROUPS)) as $code) {
             $this->assertTrue($this->has($code, Capability::SupportsGroupTracking), $code);
             $this->assertFalse($this->has($code, Capability::SupportsIndividualTracking), $code);
-            $this->assertFalse($this->has($code, Capability::ProducesMilk), $code, 'milk is not decided by the catalogue');
+            // produces_milk is a seeded default for the milked species only; behaviour follows the capability, never the species name.
+            $this->assertSame(in_array($code, ['cattle', 'goat', 'sheep', 'camel', 'water_buffalo'], true), $this->has($code, Capability::ProducesMilk), $code);
         }
     }
 

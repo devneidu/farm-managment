@@ -149,7 +149,7 @@ Standard envelope `{message, code, request_id, errors?}`. Codes you should branc
 `/auth/csrf-cookie` and retry once), `too_many_requests` (429, honour `Retry-After`), `google_unavailable` (503).
 OTP failures are deliberately uniform: `422` with `errors.code` = "The code is invalid or has expired."
 
-Password rules: 8-72 characters, at least one letter and one number, `password_confirmation` must match.
+Password rules: 6-72 characters (no letter/number composition rules), `password_confirmation` must match.
 
 ## 4. Local email
 
@@ -867,3 +867,7 @@ See [production runbook](../operations/LAUNCH.md) and [audit/verification](../op
 - Export generation rechecks requester suspension/verification. Concurrent duplicate delivery is ignored; failed storage or worker failure cannot advertise a completed file. A failed export keeps the existing generic failure contract; request a new export with a new key. Requests/audit/database queue insertion are transactional; configuring a separate queue database is unsupported for this guarantee.
 
 Production readiness is conditional on the deployment gates; Phase 20 (WhatsApp and AI-assisted parsing) is intentionally deferred from V1.
+
+## 33. Feed, eggs and milk stock
+
+The complete frontend integration contract is [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md): one event → one entry → every effect. `egg_collection` and `milk` records stock-in automatically on a farm-owned Eggs/Milk item (no inventory setup; a "Main Store" is created when the farm has no store), `feed_use` is the single entry for feed used for livestock, a breeding project can take eggs from stock (`consume_egg_stock`) with explicit returns on cancel, `POST /sales` can sell feed as well as produce, donated/purchased/received eggs and milk are stock-only (never a production record), the reason catalogue with labels and authoritative routes is served by `GET /master/inventory-options`, `GET /inventory/output-balances` is the read-only balance card, and `output: eggs|milk` replaces the item id on manual stock-in/out. These endpoints are also included in openapi.json.

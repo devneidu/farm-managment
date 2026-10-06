@@ -6,6 +6,7 @@ use App\Enums\FarmRole;
 use App\Models\CropType;
 use App\Models\OperationType;
 use App\Models\Species;
+use App\Models\StorageLocation;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -72,7 +73,9 @@ class DashboardTest extends TeamTestCase
 
     private function eggs(string $cycle, int $count, int $hoursAgo = 2): void
     {
-        $this->record($cycle, 'egg_collection', ['components' => [['quantity' => $count, 'unit' => 'piece']]], $hoursAgo)->assertCreated();
+        // Eggs are stocked in the farm's own egg item; once a farm has several stores the store is chosen (here: its oldest).
+        $store = StorageLocation::where('farm_id', $this->farm->id)->where('is_active', true)->orderBy('id')->value('id');
+        $this->record($cycle, 'egg_collection', ['components' => [['quantity' => $count, 'unit' => 'piece']]] + ($store ? ['inventory' => ['storage_location_id' => $store]] : []), $hoursAgo)->assertCreated();
     }
 
     private function harvest(string $cycle, string $quantity, string $unit = 'kg', int $hoursAgo = 2): array

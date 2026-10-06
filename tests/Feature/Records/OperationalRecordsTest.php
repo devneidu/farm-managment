@@ -5,6 +5,7 @@ namespace Tests\Feature\Records;
 use App\Enums\FarmRole;
 use App\Events\Production\RecordCreated;
 use App\Models\CropType;
+use App\Models\InventoryMovement;
 use App\Models\MasterCapability;
 use App\Models\OperationalRecord;
 use App\Models\OperationType;
@@ -235,7 +236,7 @@ class OperationalRecordsTest extends TeamTestCase
         $this->postJson('/api/v1/records', $this->payload('egg_collection', ['components' => [['quantity' => 1, 'unit' => 'head']]]))->assertUnprocessable();
         $this->postJson('/api/v1/records', $this->payload('egg_collection', ['components' => [['quantity' => 0.5, 'unit' => 'piece']]]))->assertUnprocessable();
         $this->postJson('/api/v1/records', $this->payload('milk', ['components' => [['quantity' => 1, 'unit' => 'l']]]))->assertUnprocessable();
-        $this->postJson('/api/v1/records', $this->payload('egg_collection', ['components' => [['quantity' => 1, 'unit' => 'crate']]]))->assertUnprocessable()->assertJsonPath('code', 'conversion_context_required');
+        $this->postJson('/api/v1/records', $this->payload('egg_collection', ['components' => [['quantity' => 1, 'unit' => 'crate']]]))->assertUnprocessable()->assertJsonPath('code', 'conversion_not_configured');
     }
 
     public function test_crop_shells_do_not_change_planting_baseline_or_population(): void
@@ -345,7 +346,8 @@ class OperationalRecordsTest extends TeamTestCase
         $this->assertEquals($record['measurement'], $this->record($payload)['measurement']);
         $snapshot = app(MeasurementConverter::class)->replay($record['measurement']['snapshot']);
         $this->assertSame('104', $snapshot->normalized->value);
-        $this->assertDatabaseCount('inventory_movements', 0);
+        $this->assertDatabaseCount('inventory_movements', 1); // the retry replays the record: one record, one stock-in, never two
+        $this->assertSame('production', InventoryMovement::sole()->reason);
     }
 
     public function test_fish_population_and_milk_capability_work_without_species_conditionals(): void
