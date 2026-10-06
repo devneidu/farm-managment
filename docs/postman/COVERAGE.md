@@ -4,22 +4,25 @@ Package: `docs/postman/Farm-Management-API.postman_collection.json` (Postman Col
 
 ## 1. Summary
 
+Figures below were measured on the final collection after the frontend-handoff correction pass (GAP-01 … GAP-08, see the addendum at the end); earlier versions of this report carried approximate counts.
+
 | Metric | Value |
 |---|---|
-| Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **232** (GET 120, PATCH 23, PUT 9, POST 78, DELETE 2; `HEAD` aliases of `GET` not counted) |
+| Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **233** (GET 121, PATCH 23, PUT 9, POST 78, DELETE 2; `HEAD` aliases of `GET` not counted) |
+| OpenAPI (`docs/api/openapi.json`) | **184 paths, 233 operations** |
 | Routes intentionally excluded | 0 of the `/api/v1` routes (see §2 for the 7 non-API framework routes) |
-| Postman requests in the reference folders (00-22, 90) | **264** |
-| Postman requests inside workflows (99) | 148 (copies of reference requests, same bodies and scripts) |
-| Total Postman requests | 412 |
-| Endpoint coverage (distinct method+route in the reference folders) | **232 / 232 = 100.0 %** (Platform Admin routes: 35, all included in folder 90) |
-| Requests with a saved success example | 261 |
-| Requests with at least one saved error example | 74 |
-| Saved example responses (all real) | 376 |
-| Workflows | **14** (Flows 1-13 plus Flow S, the demo-farm setup) = 148 requests |
-| Environment variables | 98 |
+| Postman requests in the reference folders (00-22, 90) | **283** |
+| Postman requests inside workflows (99) | **170** (copies of reference requests plus the Flow 14 steps) |
+| Total Postman requests | **453** |
+| Endpoint coverage (distinct method+route in the reference folders, matched against `route:list`) | **233 / 233 = 100.0 %**; 0 requests point at an unknown route |
+| Requests with a saved success example | 450 (of 453) |
+| Requests with at least one saved error example | 94 |
+| Saved example responses | 622 |
+| Workflows | **14** (Flows 1-13 plus Flow S, the demo-farm setup) = 170 requests |
+| Environment variables | **111** |
 | Undocumented endpoints | **none** |
 
-All saved responses were produced by executing the scenario against the real application (a throwaway harness drove the Laravel test client as the real authenticated users; 424 requests including 114 error/alternate probes) — none was written by hand. The workflows were additionally executed in their own order on a fresh database (148 requests, 0 failures).
+Saved responses come from executing the scenario against the real application (earlier packages: a throwaway Laravel-test-client harness; this pass: Newman against a live local server and real HTTP, driven by an uncommitted script). The only exceptions are seven Auth-state examples that were not re-executed (the reference-folder copies of register, verify email, login (two examples) and onboarding, plus `Accept a farm invitation` in folder 03 and in Flow 13): their `farms[]` field was derived mechanically from the example's own `farm` object (single-farm users), see the addendum. The workflows were executed in their own order on a fresh database: 170 requests, 361 assertions, 0 failures (addendum).
 
 ## 2. Routes and exclusions
 
@@ -39,25 +42,25 @@ Phase 20 (WhatsApp / AI parsing) is deferred and has no routes. The word *WhatsA
 | Folder | Requests | Distinct endpoints | With a success example | With an error example |
 |---|---:|---:|---:|---:|
 | 00 — Setup & Health | 1 | 1 | 1 | 0 |
-| 01 — Authentication | 11 | 11 | 11 | 9 |
+| 01 — Authentication | 11 | 11 | 10 | 9 |
 | 02 — Onboarding & Account | 4 | 4 | 4 | 3 |
 | 03 — Farms, Team & Access | 12 | 12 | 12 | 6 |
-| 04 — Plans & Subscription | 6 | 6 | 6 | 2 |
+| 04 — Plans & Subscription | 6 | 6 | 4 | 2 |
 | 05 — Master Data | 15 | 15 | 15 | 1 |
 | 06 — Measurements & Units | 12 | 11 | 12 | 4 |
 | 07 — Locations & Farm Structure | 13 | 13 | 13 | 1 |
 | 08 — Production Cycles | 9 | 8 | 9 | 3 |
-| 09 — Operational Records | 16 | 8 | 16 | 5 |
-| 10 — Inventory | 21 | 18 | 21 | 6 |
+| 09 — Operational Records | 18 | 9 | 18 | 5 |
+| 10 — Inventory | 32 | 19 | 32 | 12 |
 | 11 — Health | 10 | 9 | 10 | 2 |
-| 12 — Breeding | 9 | 9 | 9 | 1 |
+| 12 — Breeding | 11 | 9 | 11 | 2 |
 | 13 — Tasks, Templates & Calendar | 20 | 20 | 20 | 5 |
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
-| 15 — Contacts & Purchasing | 9 | 8 | 9 | 3 |
+| 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
 | 16 — Finance | 8 | 8 | 8 | 2 |
-| 17 — Sales, Invoices & Payments | 15 | 14 | 15 | 6 |
+| 17 — Sales, Invoices & Payments | 18 | 14 | 18 | 8 |
 | 18 — Dashboard & Insights | 3 | 3 | 3 | 0 |
-| 19 — Reports & Exports | 11 | 6 | 11 | 3 |
+| 19 — Reports & Exports | 11 | 11 | 11 | 3 |
 | 20 — Notifications | 7 | 7 | 7 | 0 |
 | 21 — Audit | 1 | 1 | 1 | 1 |
 | 22 — Localization & Preferences | 4 | 4 | 4 | 2 |
@@ -78,6 +81,7 @@ Phase 20 (WhatsApp / AI parsing) is deferred and has no routes. The word *WhatsA
 | No credentials or secrets | no bearer tokens, API keys, JWT/session cookies or literal OTPs; the only emails are `@example.*`; the single reset token in a response is replaced by `<single-use reset token>`; environment passwords are placeholders (`Example-Passw0rd`, `Example-NewPassw0rd`), `admin_password`, `otp_code`, `invitation_token`, `reset_token` are empty |
 | Phase 20 not documented | pass (see §2) |
 | Live Sanctum check over HTTP (built-in PHP server against the disposable test DB) | pass: csrf cookie, stateful Origin requirement (`400`/`401` without it), CSRF `419`, register/verify/onboard/me/farm/logout, CORS preflight |
+| Newman execution of every flow on the final collection (live server, fresh MySQL database) | pass: 170 requests, 361 assertions, 0 failures (addendum) |
 | OpenAPI / documentation tests | see §10 |
 | `git diff --check` | see §10 |
 
@@ -143,7 +147,7 @@ The collection and contract document the **running code**; these differences exi
 ## 7. Roles and permissions findings
 
 * Five farm roles: `owner`, `manager`, `farm_worker`, `finance`, `vet`; 58 permission strings (one reserved: `livestock.batch.create`, granted to owner/manager, used by no route).
-* There is **no `GET /permissions`**. The frontend gets the caller's permission list from `GET /farm` (`membership.permissions`), and every role preset's list from `GET /roles` (needs `team.view`). `GET /auth/me` returns only `farm.role` and `user.platform_role` — **no permissions**.
+* There is **no `GET /permissions`**. The frontend gets the caller's permission list from `GET /farm` (`membership.permissions`), and every role preset's list from `GET /roles` (needs `team.view`). `GET /auth/me` returns `farm.role`, `farms[]` (`{id, name, role}` per active membership) and `user.platform_role` — **no permissions** (by design: they stay on `GET /farm → membership.permissions`).
 * Requests never carry permission strings; each endpoint's required permission is middleware (`farm.permission:<perm>`) and is stated in every request description.
 * Team rules: Owner assigns manager/farm_worker/finance/vet; Manager only farm_worker/finance/vet; nobody assigns `owner`, changes their own role or removes the last owner.
 * Platform Admin (`admin` read+write, `support` read-only) is a separate, operator-granted system with no farm context; farm roles confer nothing there.
@@ -154,18 +158,18 @@ The collection and contract document the **running code**; these differences exi
 * Sanctum first-party SPA cookie auth; **no bearer tokens** are issued by any endpoint. Required: CSRF cookie + `X-XSRF-TOKEN` on writes + a stateful `Origin` on **every** request (an existing session cookie without it gets `401`; register without it `400 stateful_request_required`; missing CSRF `419 session_expired`). Verified over real HTTP.
 * Session cookie `farm_management_api_session` (HttpOnly, SameSite=Lax, 120 min); `XSRF-TOKEN` readable.
 * `next_action` ∈ `verify_email`, `complete_farm_setup`, `no_active_farm`, `none` (computed in that order). `onboarded` is never cleared.
-* Farm context: oldest ACTIVE membership by default, optional `X-Farm-Id` header (`403 farm_access_denied` for a farm you do not actively belong to, `403 no_active_farm` when none). No switch endpoint and no "list my farms" endpoint.
+* Farm context: oldest ACTIVE membership by default, optional `X-Farm-Id` header (`403 farm_access_denied` for a farm you do not actively belong to, `403 no_active_farm` when none). `GET /auth/me → data.farms[]` lists the farms you actively belong to (GAP-07, resolved); there is still no switch endpoint (the header is the switch).
 * OTP/invitation tokens exist only in email; locally they are in `storage/logs/laravel.log`.
 * A suspended account gets `403 account_suspended` on every request and its session is ended.
 
 ## 9. Frontend Integration Gaps
 
-None of these blocks single-farm frontend development; they were **not** fixed (documentation task only).
+None of these blocked frontend development. **G1 was resolved in the frontend-handoff pass** (`farms[]` in the auth state); the others were not changed.
 
 | # | Missing capability | Affected frontend workflow | Recommended backend change | Severity |
 |---|---|---|---|---|
-| G1 | No endpoint lists the farms a user belongs to and none switches the active farm; only the optional `X-Farm-Id` header exists | Farm switcher / multi-farm users; a user invited to a second farm cannot discover its id except from `meta.accepted_farm_id` | Add `GET /farms` (my active memberships: id, name, role) or include `farms[]` in the auth state; keep `X-Farm-Id` for selection | Medium (blocking only if multi-farm UX is in V1 scope) |
-| G2 | `GET /auth/me` does not return `membership.permissions` | App startup needs two calls (`/auth/me` then `/farm`) | Include `farm.permissions` in the auth state, or keep the documented two-step startup | Low |
+| G1 | ~~No endpoint lists the farms a user belongs to~~ **Resolved (GAP-07):** `GET /auth/me → data.farms[]` = `{id, name, role}` of every ACTIVE membership; selection stays the `X-Farm-Id` header (no switch endpoint) | Farm switcher / multi-farm users | — | Resolved |
+| G2 | `GET /auth/me` does not return `membership.permissions` — **kept by design**: permissions are per selected farm and stay authoritative on `GET /farm` | App startup needs two calls (`/auth/me` then `/farm`) | none (documented two-step startup; with several farms the second call follows the selection) | Low |
 | G3 | No `GET /permissions` catalogue (blueprint listed it) | Permission-matrix admin screens | Only needed if a role editor is planned; `GET /roles` already returns the preset lists | Low |
 | G4 | Boolean query parameters accept `true`/`false` on master-data lists only; elsewhere only `1`/`0` | Filters/toggles; docs and generated clients disagree | Normalise booleans in a shared FormRequest trait | Low (documented) |
 | G5 | Notifications are pull-only (generated hourly, no push/websocket) | Real-time bell | Acceptable for V1; add polling guidance (done) or SSE later | Low |
@@ -176,8 +180,8 @@ None of these blocks single-farm frontend development; they were **not** fixed (
 
 ## 10. OpenAPI and documentation checks
 
-* `php artisan scramble:export` regenerated from the current code is **byte-identical** to the committed `docs/api/openapi.json` (183 paths): the spec is current; its inaccuracies are listed in D1/D2/D7.
-* Documentation/OpenAPI tests (`ApiDocumentationTest`, `ApiErrorFormatTest`, `UuidV7ConventionTest`, `HealthEndpointTest`): **26 tests, 684 assertions, all passing**.
+* `php artisan scramble:export` was re-run on the final code and the result committed to `docs/api/openapi.json` (**184 paths, 233 operations**; the earlier "183 paths" figure was stale). The inaccuracies in D1/D2/D7 are unchanged. The regeneration also refreshed two unrelated nullable types of the inventory-movement resource (pre-existing drift, no code change).
+* Full Feature suite after the frontend-handoff pass (`php artisan test --testsuite=Feature`, MySQL 8): **872 tests, 11,983 assertions, 0 failures** (the previous 4 clock-boundary failures did not occur: they only appear when the UTC and Lagos days differ). The new `tests/Feature/Api/FrontendHandoffGapsTest.php` has 19 tests / 688 assertions.
 * Full suite (informational, nothing in the application was changed): 823 tests, 11,465 assertions, **4 failures**, all clock-boundary tests that compare the UTC day with the Lagos day (`BreedingTest::test_50_eggs_expected_40_actual_37_adds_exactly_37_once`, `CropOperationsTest::test_harvest_lots_and_receiving_location_rules`, `FinanceTest::test_package_conversion_lots_and_expiry_flow_through_the_purchase`, `InventoryTest::test_movement_filters_pagination_and_validation`). They ran at 23:xx UTC / 00:xx Lagos, when "today" differs between the two zones; this is an existing clock sensitivity unrelated to this task.
 * `git diff --check`: clean (tracked changes and every new file).
 
@@ -190,7 +194,7 @@ None of these blocks single-farm frontend development; they were **not** fixed (
 
 ## Addendum — Feed, eggs and milk stock (2026-10-06)
 
-The collection was extended for the one-event / one-entry stock work described in `docs/api/FEED-EGGS-MILK-STOCK.md`. Everything above remains true except the deltas below.
+The collection was extended for the one-event / one-entry stock work described in `docs/api/FEED-EGGS-MILK-STOCK.md`. Everything above remains true except the deltas below (historical counts; the current ones are in §1).
 
 | Metric | Before | After |
 |---|---|---|
@@ -201,7 +205,32 @@ The collection was extended for the one-event / one-entry stock work described i
 | Total requests | 412 | **432** |
 | Environment variables (values in the environment file) | 99 | **108** (`egg_item_id`, `milk_item_id`, `movement_egg_in_id`, `movement_egg_out_id`, `breeding_project_egg_id`, `sale_feed_id`, `record_milk_id`, `record_eggs_movement_id`, `dairy_cycle_id`; plus the existing set) |
 
-* Saved responses of the nine new requests (and the refreshed `Inventory option catalogue` and `Record egg collection` examples) were produced by running the real scenario through the Laravel test client as the real authenticated users (not hand-written). The scenario is verified through real HTTP/API integration tests (`tests/Feature/Inventory/OutputStockTest.php`); Flow 14 is **prepared** but was **not** executed in Postman or the Postman runner. Its steps use the same variables and prerequisites as Flows 3 and 5.
+* Saved responses of the nine new requests (and the refreshed `Inventory option catalogue` and `Record egg collection` examples) were produced by running the real scenario through the Laravel test client as the real authenticated users (not hand-written). The scenario is verified through real HTTP/API integration tests (`tests/Feature/Inventory/OutputStockTest.php`); Flow 14 was **prepared** but not executed at that time — **corrected by the next addendum:** when it was first executed (against the final behaviour) it failed because it depended on a `context_id` created only in folder 06; it is now self-contained and passes. Its steps use the same variables and prerequisites as Flows 3 and 5.
 * Behaviour changes that affect existing requests: `Record egg collection (compound quantity)` now also creates the stock-in (it sends `details.inventory.storage_location_id = {{store_id}}` because Flow S creates two stores); The feed examples of `Issue stock (stock-out)` now use reason `spoiled` (generic `use` is refused for feed items: `422`, use a `feed_use` record). `Issue stock (stock-out)` / `Receive stock (stock-in)` gained `output` and the new reason sets; a feed_use movement is now reason `production_use`; sale stock lines accept feed.
 * New collection variable `date_today` (farm-local day) was added to the pre-request script for the incubation start date.
 * The Flow 10 "sale of eggs" still sells the manual `Table Eggs` item from Flow S; the farm's own `Eggs` item (created by the first egg collection) is a separate produce item, so the existing flow is unaffected.
+
+## Addendum — Frontend-handoff correction pass, GAP-01 … GAP-08 (2026-10-06)
+
+Backend additions (all additive; see `docs/api/API-CONTRACT.md` §13.1): `permissions_required`, `inventory` and `area_fields` on record schemas; `available_record_types[]` on the cycle detail; `kind` / `is_system_managed` on inventory items; `manual_for_kinds` and `flat_lists` on the reason catalogue; `url` beside `path` on every metadata route and `url`/`path` beside `endpoint` on `record-prefill` and `quick_add[]`; `farms[]` in the auth state; `output: eggs|milk` on sale and purchase stock lines. **GAP-09 was not implemented.**
+
+| Metric | Before | After |
+|---|---|---|
+| Laravel routes | 233 | **233** (no route added or removed) |
+| OpenAPI | 184 paths / 233 operations | **184 / 233** (schemas and descriptions changed) |
+| Reference requests (00-22, 90) | 273 | **283** (+10) |
+| Workflow requests | 159 | **170** (Flow 14: 11 → 22) |
+| Total requests | 432 | **453** |
+| Environment variables | 108 | **111** (`purchase_egg_id`, `sale_egg_id`, `sale_milk_id`) |
+
+New reference requests (each also a Flow 14 step except the schema request): `Show the egg stock item (kind, is_system_managed)`, `Receive eggs from other sources (stock-in reasons)`, `Receive milk (stock-in, no item setup)`, `Receive feed from other sources (stock-in reasons)`, `Write off or use eggs (stock-out reasons)`, `Write off or use milk (stock-out reasons)`, `Record a purchase of eggs (by output)`, `Record a sale of eggs (by output)`, `Record a sale of milk (by output)`, `Get the egg collection record type schema`. Flow 14 also gained two prerequisite steps (measurement context + crate conversion) so it no longer depends on folder 06.
+
+* **P1 (milk):** `Receive milk` (examples `opening_balance`, `donation`, `purchase`, `production` → 422), `Write off or use milk`, `Record a sale of milk (by output)`.
+* **P2 (IN reasons):** eggs `received` / `purchase` / `other` (and `production` → 422), feed `aid` / `production` / `donation` / `received`.
+* **P3 (OUT reasons):** eggs `damaged` / `spoiled` / `internal_use` / `lost` (+ `sale` → 422, too many → 409), milk `spoiled` / `internal_use` / `donation` / `lost` (+ `sale` → 422).
+* **P4 (output sales):** `Record a sale of eggs (by output)` and `… milk …` (+ `409 insufficient_stock`, `422` several stores); purchase by output (+ `422` both / neither / no store).
+* **Descriptions and Tests** of the affected existing requests were extended (auth state, cycle detail, record types, inventory items, option catalogue, prefill, dashboard, sales, purchases) with assertions for the new fields.
+* **Saved examples:** every example of the new requests and the refreshed ones (auth-state calls in Flows 1, 2, S, 13; cycle detail/summary; inventory items; record types; option catalogue; prefill; dashboard) was captured from the real response of the live run. Seven Auth-state examples that were not re-executed (reference-folder copies of register, verify email, login ×2 and onboarding; `Accept a farm invitation` in folder 03 and Flow 13) had `farms[]` derived from their own `farm` object (`[]` when `farm` is null) — mechanical, not hand-written content, but not a fresh capture.
+* **Execution (Flow 14 and all others):** Newman against `php artisan serve` on a fresh MySQL 8 database (migrate + seed, a platform admin granted by `platform:grant-admin`), flows in the order 1, 2, S, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 13: **170 requests, 361 assertions, 0 failures.** Flow 11 needs a running queue worker (the harness started `queue:work` and spaced the requests 1.5 s) and Flow 12 needs `notifications:generate`; without them Flow 11 `Download an export` answers `409` (not ready) and Flow 12 `Mark a notification read` `404` — both are the documented prerequisites, not regressions. The OTP and invitation token were read from `storage/logs/laravel.log` between requests.
+* **Not re-verified:** validation against the official Postman Collection v2.1 JSON Schema (the schema host is not reachable from the build sandbox). The collection loads and runs in Newman, and every new item is a structural clone of an existing valid item.
+* The tool used for the capture/verification run is a throwaway script and is **not** committed.

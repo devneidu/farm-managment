@@ -6,6 +6,7 @@ use App\Enums\Capability;
 use App\Enums\CycleKind;
 use App\Enums\Permission;
 use App\Services\Records\RecordTypeRegistry;
+use App\Support\Api\ApiRoute;
 use Illuminate\Support\Str;
 
 /**
@@ -49,7 +50,7 @@ class QuickActions
         return array_slice($out, 0, self::QUICK_RECORD_LIMIT);
     }
 
-    /** @return list<array{code: string, label: string, permission: string, method: string, endpoint: string}> */
+    /** @return list<array{code: string, label: string, permission: string, method: string, endpoint: string, url: string, path: string}> */
     public function quickAdd(DashboardFacts $f): array
     {
         $livestock = $f->livestockCycles() !== [];
@@ -68,7 +69,7 @@ class QuickActions
         $out = [];
         foreach ($actions as [$code, $label, $permission, $endpoint, $relevant]) {
             if ($relevant && $f->ctx->can($permission)) {
-                $out[] = ['code' => $code, 'label' => $label, 'permission' => $permission->value, 'method' => 'POST', 'endpoint' => $endpoint];
+                $out[] = ['code' => $code, 'label' => $label, 'permission' => $permission->value, 'method' => 'POST', 'endpoint' => $endpoint, 'url' => ApiRoute::url($endpoint), 'path' => ApiRoute::path($endpoint)];
             }
         }
 

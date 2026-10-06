@@ -23,6 +23,7 @@ use App\Models\ProductionCycle;
 use App\Models\Task;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
+use App\Support\Api\ApiRoute;
 use App\Support\Idempotency\RequestHash;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -216,9 +217,11 @@ class TaskService
         $linked = $task->linked_record_type;
         $evidence = LinkedRecords::evidenceType($linked);
         $now = CarbonImmutable::now();
+        $endpoint = LinkedRecords::endpoint($linked, $task->breeding_project_id);
 
         return [
-            'task_id' => $task->id, 'evidence_type' => $evidence->value, 'method' => 'POST', 'endpoint' => LinkedRecords::endpoint($linked, $task->breeding_project_id),
+            'task_id' => $task->id, 'evidence_type' => $evidence->value, 'method' => 'POST', 'endpoint' => $endpoint,
+            'url' => ApiRoute::url($endpoint), 'path' => ApiRoute::path($endpoint),
             'prefill' => array_filter([
                 'production_cycle_id' => $task->production_cycle_id, 'breeding_project_id' => $task->breeding_project_id,
                 'type' => $evidence === EvidenceType::OperationalRecord ? $linked : null,

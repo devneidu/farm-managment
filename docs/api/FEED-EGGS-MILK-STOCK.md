@@ -97,7 +97,7 @@ Eggs and milk are each **one inventory item per farm**, created automatically th
 * **Adoption.** A farmer's own item named `Eggs` / `Milk` is adopted (only `system_key` is set; name, description, threshold… are untouched) when it is in the same farm, category `produce`, active, not lot/expiry-tracked, and in the right unit family (`piece` / volume). Otherwise it is left alone and a separate item named `Eggs (farm output)` / `Milk (farm output)` is created.
 * **Sale restrictions work unchanged**: the item is `produce`, so it is sellable.
 * **Reads never create anything.** `GET /inventory/output-balances` reports `exists: false` and a zero balance for a farm that never stocked eggs/milk.
-* Frontend shorthand: `output: "eggs" | "milk"` replaces `inventory_item_id` on `POST /inventory/stock-in` and `POST /inventory/stock-out`. `stock-out` with `output` never creates the item (409 `insufficient_stock` if there is none).
+* Frontend shorthand: `output: "eggs" | "milk"` replaces `inventory_item_id` on `POST /inventory/stock-in`, `POST /inventory/stock-out` and, as an item-line field, on sale and purchase stock lines (below). Every inventory item resource exposes `kind` (`feed | eggs | milk | general`) and `is_system_managed`, and the flat `reasons.in/out` of `GET /master/inventory-options` are deprecated in favour of `by_item_kind` (flat entries carry `manual_for_kinds`). `stock-out` with `output` never creates the item (409 `insufficient_stock` if there is none).
 
 ### Storage location
 
@@ -131,7 +131,7 @@ Eggs and milk are each **one inventory item per farm**, created automatically th
 * A quantity of `0` records production but moves no stock.
 * The capability still gates the type: `egg_collection` needs `produces_eggs`, `milk` needs **`produces_milk`** (`422 type` otherwise). Behaviour is capability-driven; the default seed enables `produces_milk` for cattle, goat, sheep, camel and water buffalo (see §8).
 * Reversal: `POST /records/{id}/reverse` appends a compensating movement. It is `409 insufficient_stock` while those eggs/milk have since left stock — undo the downstream movement first (cancel the sale, etc.). The movement itself cannot be reversed through `/inventory/movements/{id}/reverse` (`409 reverse_via_record`).
-* `GET /master/record-types` and `/record-types/{type}/schema` now report `inventory_effect_enabled: true`, `inventory_category: "produce"`, `inventory_direction: "in"`, `inventory_automatic: true`, `inventory_output: "eggs" | "milk"`.
+* `GET /master/record-types` and `/record-types/{type}/schema` now report `inventory_effect_enabled: true`, `inventory_category: "produce"`, `inventory_direction: "in"`, `inventory_automatic: true`, `inventory_output: "eggs" | "milk"`, and (frontend-handoff pass) the structured `inventory: {mode: "automatic_output", direction: "in", output, item_category: "produce", dimensions, optional: false, creates_item: true, object: "details.inventory", fields: {storage_location_id: "optional"}}` and `permissions_required: {always: ["record.create", "inventory.use"], …}`.
 
 ### `POST /records` — `feed_use` (unchanged contract, new movement reason)
 
@@ -171,6 +171,14 @@ The project resource gains `egg_stock: { consumed, returned, net_out, movements[
 * **Recording the hatch** (`POST …/outcomes`) never changes egg stock — the eggs left stock when they were set.
 * **Editing `eggs_set`** (`PATCH`) on a stock-linked project: raising it takes the extra eggs (409 if short); lowering it **returns nothing** unless `eggs_returned_to_stock` (≤ the reduction) says so.
 * **Cancelling** (`POST …/cancel`): **no instruction = no inventory increase**. Eggs are never assumed to be usable again. To return some or all, send `eggs_returned_to_stock` (≥ 1, ≤ what the project took and has not returned) and optionally `egg_storage_location_id` (default: where they came from). It writes a `stock_in` reason `returned` linked to the project (needs `inventory.use`). `422` when the project never took eggs from stock or more is returned than taken.
+
+### `POST /sales` and `POST /purchases` — output-named stock lines
+
+A stock line names its stock with **exactly one** of `inventory_item_id` (always supported) or `output: "eggs" | "milk"` (both or neither → `422`; `output` on a non-stock line → `422`).
+
+* **Purchase** (`purchase.create`): the farm's output item is resolved — or created — exactly as `stock-in {output}` does; `storage_location_id` is optional (only active store; none → "Main Store" is created; several → `422 items.N.storage_location_id`). One `purchase` stock-in per line + the expense; identical retries replay the same purchase.
+* **Sale** (`sale.create`): the EXISTING output item only. A sale never creates the item, a store or stock: a farm that never stocked the output gets `409 insufficient_stock` (`details.available` = 0) and nothing is written. `storage_location_id` optional (only active store; several → `422`). Insufficient stock is the normal `409`.
+* The resolved `inventory_item_id` / `storage_location_id` appear on the saved lines; the request hash for idempotency is computed over what the client sent.
 
 ### `POST /sales` — feed is sellable; `/sales` stays authoritative
 

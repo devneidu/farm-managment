@@ -33640,7 +33640,7 @@
         "/production-cycles/{cycle}": {
             "get": {
                 "operationId": "v1.production-cycles.show",
-                "description": "Requires production_cycle.view. Includes closed cycles and inactive historical catalogue/location selections.\n\n**Requires farm permission:** `production_cycle.view`.",
+                "description": "Requires production_cycle.view. Includes closed cycles and inactive historical catalogue/location selections.\nDetail only: `available_record_types` lists the record types POST /records accepts for this cycle now (same cycle-kind and species-capability\nrules as record creation; empty for a closed cycle), each with its `permissions_required`. List and write responses do not carry it.\n\n**Requires farm permission:** `production_cycle.view`.",
                 "summary": "Show livestock batch or crop project",
                 "tags": [
                     "ProductionCycle"
@@ -43597,7 +43597,7 @@
         "/tasks/{task}/record-prefill": {
             "get": {
                 "operationId": "v1.tasks.record-prefill",
-                "description": "Requires task.view. Read-only: returns the endpoint and the cycle/project/date context for the actual record this task is linked to.\nNothing is saved. Flow: GET this -> POST the record to the returned endpoint -> POST /tasks/{id}/complete with the saved record as evidence.\n409 task_has_no_linked_record when the task has no linked_record_type.\n\n**Requires farm permission:** `task.view`.",
+                "description": "Requires task.view. Read-only: returns the endpoint (`endpoint` = `url`, absolute /api/v1/...; `path` = the same route relative to /api/v1) and the cycle/project/date context for the actual record this task is linked to.\nNothing is saved. Flow: GET this -> POST the record to the returned endpoint -> POST /tasks/{id}/complete with the saved record as evidence.\n409 task_has_no_linked_record when the task has no linked_record_type.\n\n**Requires farm permission:** `task.view`.",
                 "summary": "Record form prefill for a task",
                 "tags": [
                     "Task"
@@ -43635,6 +43635,12 @@
                                                 "endpoint": {
                                                     "type": "string"
                                                 },
+                                                "url": {
+                                                    "type": "string"
+                                                },
+                                                "path": {
+                                                    "type": "string"
+                                                },
                                                 "prefill": {
                                                     "type": "object",
                                                     "additionalProperties": {}
@@ -43648,6 +43654,8 @@
                                                 "evidence_type",
                                                 "method",
                                                 "endpoint",
+                                                "url",
+                                                "path",
                                                 "prefill",
                                                 "instructions"
                                             ]
@@ -46984,6 +46992,29 @@
                             "locale",
                             "role"
                         ]
+                    },
+                    "farms": {
+                        "type": "array",
+                        "description": "Every farm the user ACTIVELY belongs to (oldest membership first, the same order the default farm is chosen by). Send a farm's `id` as the\n`X-Farm-Id` header to work in it; permissions are never listed here - they come from GET /farm \u2192 membership.permissions for the selected farm.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "role": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name",
+                                "role"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -46993,7 +47024,8 @@
                     "has_active_farm",
                     "next_action",
                     "user",
-                    "farm"
+                    "farm",
+                    "farms"
                 ],
                 "title": "AuthStateResource"
             },
@@ -48737,6 +48769,20 @@
                             "null"
                         ]
                     },
+                    "kind": {
+                        "type": "string",
+                        "description": "Stable semantic kind: decides which stock reasons apply (GET /master/inventory-options \u2192 by_item_kind[kind]). Never infer it from the name.",
+                        "enum": [
+                            "feed",
+                            "eggs",
+                            "milk",
+                            "general"
+                        ]
+                    },
+                    "is_system_managed": {
+                        "type": "boolean",
+                        "description": "true for the farm's automatic Eggs / Milk output items (resolved by the system, `output: eggs|milk`); they cannot be mistaken for a farmer-defined item by name."
+                    },
                     "stock_unit": {
                         "type": "string"
                     },
@@ -48827,6 +48873,8 @@
                     "name",
                     "category",
                     "description",
+                    "kind",
+                    "is_system_managed",
                     "stock_unit",
                     "dimension",
                     "tracks_lots",
@@ -49068,11 +49116,17 @@
                         ]
                     },
                     "production_cycle_id": {
-                        "type": "string",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
                         "description": "Production cycle and breeding project this movement belongs to (record-driven and incubation movements); null otherwise."
                     },
                     "breeding_project_id": {
-                        "type": "string"
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "source": {
                         "type": "object",
@@ -49691,6 +49745,20 @@
                             "null"
                         ]
                     },
+                    "kind": {
+                        "type": "string",
+                        "description": "Stable semantic kind: decides which stock reasons apply (GET /master/inventory-options \u2192 by_item_kind[kind]). Never infer it from the name.",
+                        "enum": [
+                            "feed",
+                            "eggs",
+                            "milk",
+                            "general"
+                        ]
+                    },
+                    "is_system_managed": {
+                        "type": "boolean",
+                        "description": "true for the farm's automatic Eggs / Milk output items (resolved by the system, `output: eggs|milk`); they cannot be mistaken for a farmer-defined item by name."
+                    },
                     "stock_unit": {
                         "type": "string"
                     },
@@ -49806,6 +49874,8 @@
                     "name",
                     "category",
                     "description",
+                    "kind",
+                    "is_system_managed",
                     "stock_unit",
                     "dimension",
                     "tracks_lots",
@@ -51118,6 +51188,50 @@
                             "string",
                             "null"
                         ]
+                    },
+                    "available_record_types": {
+                        "type": "array",
+                        "description": "Detail only. The record types POST /records accepts for this cycle right now: the same cycle-kind, species-capability and open-cycle rules the\ncreate endpoint applies (a closed cycle accepts none). Not filtered by the member's permissions - match `permissions_required` against GET /farm \u2192 membership.permissions.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "type": "string"
+                                },
+                                "permissions_required": {
+                                    "type": "object",
+                                    "properties": {
+                                        "always": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "when_inventory_linked": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "when_correcting": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "always",
+                                        "when_inventory_linked",
+                                        "when_correcting"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "type",
+                                "permissions_required"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -54244,11 +54358,20 @@
                                 "inventory_item_id": {
                                     "type": "string",
                                     "format": "uuid",
-                                    "description": "stock only."
+                                    "description": "stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise)."
+                                },
+                                "output": {
+                                    "type": "string",
+                                    "description": "stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Purchase resolves (or creates) the item and, with no storage_location_id, uses the stock-in store rules (only active store, else Main Store; several = 422). Never needs the item id.",
+                                    "enum": [
+                                        "eggs",
+                                        "milk"
+                                    ]
                                 },
                                 "storage_location_id": {
                                     "type": "string",
-                                    "format": "uuid"
+                                    "format": "uuid",
+                                    "description": "Required with inventory_item_id; optional with output."
                                 },
                                 "lot_id": {
                                     "type": [
@@ -54307,6 +54430,7 @@
                                 "kind",
                                 "description",
                                 "inventory_item_id",
+                                "output",
                                 "storage_location_id",
                                 "lot_id",
                                 "lot",
@@ -54505,11 +54629,20 @@
                                 "inventory_item_id": {
                                     "type": "string",
                                     "format": "uuid",
-                                    "description": "stock only."
+                                    "description": "stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise)."
+                                },
+                                "output": {
+                                    "type": "string",
+                                    "description": "stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Sale takes the existing item only - a farm that never stocked it gets 409 insufficient_stock, nothing is created. With no storage_location_id the only active store is used (several = 422).",
+                                    "enum": [
+                                        "eggs",
+                                        "milk"
+                                    ]
                                 },
                                 "storage_location_id": {
                                     "type": "string",
-                                    "format": "uuid"
+                                    "format": "uuid",
+                                    "description": "Required with inventory_item_id; optional with output."
                                 },
                                 "lot_id": {
                                     "type": [
@@ -54560,6 +54693,7 @@
                                 "kind",
                                 "description",
                                 "inventory_item_id",
+                                "output",
                                 "storage_location_id",
                                 "lot_id",
                                 "components",

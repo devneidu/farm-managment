@@ -55,11 +55,8 @@ class RecordService
             $cycle = ProductionCycle::ofFarm($ctx->farm)->lockForUpdate()->findOrFail($data['production_cycle_id']);
             $this->active($cycle);
             $definition = $this->types->definition($data['type']);
-            if ($definition['kind'] !== null && $definition['kind'] !== $cycle->kind->value) {
-                $this->invalid('type', 'This record type is not applicable to this kind of cycle.');
-            }
-            if (isset($definition['capability']) && ! $cycle->livestock?->species->speciesCapabilities()->where('enabled', true)->whereHas('capability', fn ($q) => $q->where('code', $definition['capability']))->exists()) {
-                $this->invalid('type', 'The species does not support this record capability.');
+            if ($reason = $this->types->inapplicableReason($cycle, $data['type'])) {
+                $this->invalid('type', $reason);
             }
             $details = Validator::make(['details' => $data['details']], $this->types->detailRules($data['type']))->validate()['details'];
             $when = $this->when($ctx, $cycle, $data['recorded_at']);

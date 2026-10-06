@@ -32,13 +32,16 @@ class StorePurchaseRequest extends FormRequest
             ...InventoryRules::event(),
             /** 1-30 lines. Total = sum of line amounts. */
             'items' => ['required', 'array', 'min:1', 'max:30'],
-            'items.*' => ['required', 'array:kind,description,inventory_item_id,storage_location_id,lot_id,lot,components,amount'],
+            'items.*' => ['required', 'array:kind,description,inventory_item_id,output,storage_location_id,lot_id,lot,components,amount'],
             /** stock = received into inventory through a stock-in; non_stock = a cost with no physical stock (services, transport...). */
             'items.*.kind' => ['required', Rule::in(['stock', 'non_stock'])],
             /** Required for non_stock lines; stock lines use the item name. */
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:190'],
-            /** stock only. */
+            /** stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise). */
             'items.*.inventory_item_id' => ['sometimes', 'uuid'],
+            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Purchase resolves (or creates) the item and, with no storage_location_id, uses the stock-in store rules (only active store, else Main Store; several = 422). Never needs the item id. */
+            'items.*.output' => ['sometimes', Rule::in(['eggs', 'milk']), 'prohibits:items.*.inventory_item_id'],
+            /** Required with inventory_item_id; optional with output. */
             'items.*.storage_location_id' => ['sometimes', 'uuid'],
             'items.*.lot_id' => ['sometimes', 'nullable', 'uuid', 'prohibits:items.*.lot'],
             'items.*.lot' => ['sometimes', 'array:code,expires_on'],

@@ -34,13 +34,16 @@ class StoreSaleRequest extends FormRequest
             'invoice.notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
             /** 1-30 lines. Total = exact sum of line amounts. */
             'items' => ['required', 'array', 'min:1', 'max:30'],
-            'items.*' => ['required', 'array:kind,description,inventory_item_id,storage_location_id,lot_id,components,production_cycle_id,head_count,amount'],
+            'items.*' => ['required', 'array:kind,description,inventory_item_id,output,storage_location_id,lot_id,components,production_cycle_id,head_count,amount'],
             /** stock = produce leaving inventory through a Phase 9 stock-out; livestock = animals leaving a livestock cycle through the population ledger; other = no physical effect. */
             'items.*.kind' => ['required', Rule::in(['stock', 'livestock', 'other'])],
             /** Required for other lines; stock and livestock lines are named from the item/cycle (an optional label is kept for livestock). */
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:190'],
-            /** stock only. */
+            /** stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise). */
             'items.*.inventory_item_id' => ['sometimes', 'uuid'],
+            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Sale takes the existing item only - a farm that never stocked it gets 409 insufficient_stock, nothing is created. With no storage_location_id the only active store is used (several = 422). */
+            'items.*.output' => ['sometimes', Rule::in(['eggs', 'milk']), 'prohibits:items.*.inventory_item_id'],
+            /** Required with inventory_item_id; optional with output. */
             'items.*.storage_location_id' => ['sometimes', 'uuid'],
             'items.*.lot_id' => ['sometimes', 'nullable', 'uuid'],
             ...InventoryRules::components('items.*.components', required: false),

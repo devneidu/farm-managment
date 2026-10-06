@@ -20,7 +20,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 11 | Reports & export | 5 | Flows 9-10 (data for the reports) and the `farm-business` plan from Flow S. |
 | 12 | Notifications | 4 | Flow 11, plus `php artisan notifications:generate` (and a queue worker) run on the server. |
 | 13 | Team invitation | 13 | Flow 1 and the plan change from Flow S (Free allows only 3 team members). |
-| 14 | Feed, eggs and milk stock | 11 | Flows S, 3 and 5 (`cycle_id`, `context_id` with crate = 30 pieces, `store_id`, `item_feed_id`). |
+| 14 | Feed, eggs and milk stock | 22 | Flows 1, S, 3 and 5 (`cycle_id`, `store_id`, `item_feed_id` with stock). Creates its own measurement context and crate conversion. |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -107,7 +107,7 @@ Logout -> session ended
 
 - Wrong credentials are `401 invalid_credentials` for both unknown email and wrong password.
 - Without `X-Farm-Id` the oldest ACTIVE membership is the farm; with it you choose among your active memberships (a farm you do not belong to is `403 farm_access_denied`).
-- V1 has no endpoint to list your farms or to switch the active farm: multi-farm is only this header.
+- `GET /auth/me → data.farms[]` (`{id, name, role}`) lists the farms you actively belong to; there is no switch endpoint: take a `farms[].id`, send it as `X-Farm-Id`, then refetch `GET /farm` and `GET /subscription/entitlements` and clear farm-scoped data. Permissions are not in `/auth/me`.
 
 **What the frontend should learn**
 
@@ -724,25 +724,36 @@ Invite (email + token) -> invitee registers with the SAME email + verifies
 
 ## Flow 14 — Feed, eggs and milk stock
 
-**Goal.** One real-world event, one entry, every effect: collect eggs, receive a donation, put eggs into incubation, give some away, cancel the incubation returning some, then donate and sell feed. See `docs/api/FEED-EGGS-MILK-STOCK.md`.
+**Goal.** One real-world event, one entry, every effect: collect eggs, receive eggs from other sources, put eggs into incubation, give some away and write some off, cancel the incubation returning some, sell and buy eggs by `output` (no item id), receive, write off and sell milk by `output`, receive feed from other sources, then donate and sell feed. See `docs/api/FEED-EGGS-MILK-STOCK.md`.
 
-**Prerequisites.** Flows S, 3 and 5 (`cycle_id`, `context_id` for the "Eggs" measurement context with crate = 30 pieces, `store_id`, `item_feed_id`).
+**Prerequisites.** Flows 1, S, 3 and 5 (`cycle_id` — a chicken batch, `store_id`/`store2_id`, `item_feed_id` with stock). The flow creates its own measurement context and crate conversion (request 1-2), so it no longer depends on folder 06.
 
 **Request sequence**
 
 | # | Request | Endpoint | Captures |
 |---|---|---|---|
-| 1 | Inventory option catalogue | `GET /master/inventory-options` | – (read `reasons.by_item_kind`) |
-| 2 | Record egg collection (compound quantity) | `POST /records` | `record_eggs_id`, `record_eggs_movement_id` |
-| 3 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | `egg_item_id`, `milk_item_id` |
-| 4 | Receive donated eggs (stock-in, no item setup) | `POST /inventory/stock-in` (`output: eggs`) | `movement_egg_in_id` |
-| 5 | Start incubation taking eggs from stock | `POST /breeding-projects` (`consume_egg_stock`) | `breeding_project_egg_id` |
-| 6 | Give away eggs (stock-out, no sale) | `POST /inventory/stock-out` (`output: eggs`) | `movement_egg_out_id` |
-| 7 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | – |
-| 8 | Egg movement history | `GET /inventory/movements?inventory_item_id=` | – |
-| 9 | Cancel incubation returning eggs to stock | `POST /breeding-projects/{id}/cancel` | – |
-| 10 | Donate feed (stock-out) | `POST /inventory/stock-out` | – |
-| 11 | Record a sale of surplus feed | `POST /sales` | `sale_feed_id` |
+| 1 | Create a measurement context (egg crates) | `POST /settings/measurement-contexts` | `context_id` |
+| 2 | Create a package conversion (crate = 30 pieces) | `POST /settings/package-conversions` | `conversion_id` |
+| 3 | Inventory option catalogue | `GET /master/inventory-options` | – (read `reasons.by_item_kind`, `manual_for_kinds`, route `url`) |
+| 4 | Record egg collection (compound quantity) | `POST /records` | `record_eggs_id`, `record_eggs_movement_id` |
+| 5 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | `egg_item_id`, `milk_item_id` |
+| 6 | Show the egg stock item (kind, is_system_managed) | `GET /inventory/items/{egg_item_id}` | – (`kind: eggs`, `is_system_managed: true`) |
+| 7 | Receive donated eggs (stock-in, no item setup) | `POST /inventory/stock-in` (`output: eggs`) | `movement_egg_in_id` |
+| 8 | Receive eggs from other sources (stock-in reasons) | `POST /inventory/stock-in` (`reason: received`; examples `purchase`, `other`, `production` → 422) | `movement_egg_other_id` |
+| 9 | Start incubation taking eggs from stock | `POST /breeding-projects` (`consume_egg_stock`) | `breeding_project_egg_id` |
+| 10 | Give away eggs (stock-out, no sale) | `POST /inventory/stock-out` (`output: eggs`) | `movement_egg_out_id` |
+| 11 | Write off or use eggs (stock-out reasons) | `POST /inventory/stock-out` (`reason: damaged`; examples `spoiled`, `internal_use`, `lost`, `sale` → 422, too many → 409) | `movement_egg_damaged_id` |
+| 12 | Egg and milk available balances (read-only) | `GET /inventory/output-balances` | – |
+| 13 | Egg movement history | `GET /inventory/movements?inventory_item_id=` | – |
+| 14 | Cancel incubation returning eggs to stock | `POST /breeding-projects/{id}/cancel` | – |
+| 15 | Record a sale of eggs (by output) | `POST /sales` (`items[].output: eggs`; examples `409 insufficient_stock`, `422` several stores) | `sale_egg_id` |
+| 16 | Record a purchase of eggs (by output) | `POST /purchases` (`items[].output: eggs`; examples `422` both/neither/no store) | `purchase_egg_id` |
+| 17 | Receive milk (stock-in, no item setup) | `POST /inventory/stock-in` (`output: milk`, `opening_balance`; examples `donation`, `purchase`, `production` → 422) | `movement_milk_in_id` |
+| 18 | Write off or use milk (stock-out reasons) | `POST /inventory/stock-out` (`reason: spoiled`; examples `internal_use`, `donation`, `lost`, `sale` → 422) | `movement_milk_out_id` |
+| 19 | Record a sale of milk (by output) | `POST /sales` (`items[].output: milk`; example `409 insufficient_stock`) | `sale_milk_id` |
+| 20 | Donate feed (stock-out) | `POST /inventory/stock-out` | – |
+| 21 | Receive feed from other sources (stock-in reasons) | `POST /inventory/stock-in` (`reason: aid`; examples `production`, `donation`, `received`) | `movement_feed_aid_id` |
+| 22 | Record a sale of surplus feed | `POST /sales` | `sale_feed_id` |
 
 **Data flow**
 
@@ -750,25 +761,35 @@ Invite (email + token) -> invitee registers with the SAME email + verifies
 egg_collection (3 crates + 14 pieces)
    -> record (104 pieces)  +  stock_in +104 (reason production)  [one entry]
 donation of 20            -> stock_in +20 (NO egg_collection record)
+received 12               -> stock_in +12 (reason received)
 incubation of 40          -> breeding project  +  stock_out -40 (reason incubation)  [one entry]
 1 crate given away        -> stock_out -30 (reason donation; no sale, no income)
-cancel, 10 eggs returned  -> stock_in +10 (reason returned, linked to the project)
-available = 104 + 20 - 40 - 30 + 10 = 64   (production total stays 104)
+2 cracked                 -> stock_out -2  (reason damaged)
+available (request 12)    = 104 + 20 + 12 - 40 - 30 - 2 = 64   (production total stays 104)
+cancel, 10 eggs returned  -> stock_in +10 (reason returned, linked to the project)         -> 74
+sale of 12 by output      -> sale + stock_out -12 (reason sale)                              -> 62
+purchase of 30 by output  -> purchase + stock_in +30 (reason purchase) + expense             -> 92
+milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                                    -> 33 l
 ```
 
 **Expected state changes**
 
-- One Eggs item and, if the farm had none, a "Main Store" exist; every movement carries its reason, its source (record / breeding project / manual) and the cycle.
-- `GET /inventory/output-balances` reports the derived balance; the dashboard / reports still report 104 produced.
+- One Eggs item and one Milk item exist (created by the first collection / the first milk stock-in or purchase); every movement carries its reason, its source (record / breeding project / sale / purchase / manual) and the cycle where one applies.
+- `GET /inventory/output-balances` reports the derived balances; the dashboard / reports still report 104 produced.
+- A sale by `output` never creates stock; a purchase by `output` resolves/creates the item (the farm has two stores here, so the examples pass `storage_location_id`; omitting it is the documented `422`).
 
 **Business rules to notice**
 
 - Donated, purchased or received eggs are never an `egg_collection`.
-- `sale`, `production_use` and `incubation` are refused on the manual stock-out (422): each event has one authoritative endpoint.
+- `sale`, `production_use` and `incubation` are refused on the manual stock-out (422): each event has one authoritative endpoint; `production` is refused for eggs/milk on stock-in (422).
+- A stock line names exactly one of `inventory_item_id` / `output`.
 - Cancelling an incubation returns eggs only when `eggs_returned_to_stock` says so.
 
 **What the frontend should learn**
 
-- Build the In/Out screens from `reasons.by_item_kind`; call each entry's `route`.
+- Build the In/Out screens from `reasons.by_item_kind` (not the deprecated flat lists); call each entry's `route.url`.
 - Show "available" from `output-balances` and "produced" from records/reports - they are different numbers.
+- Egg and milk screens need no item id: send `output`.
 - Refetch the balance, movements and the breeding project after each step.
+
+**Execution.** Executed with Newman against a live local server on a fresh MySQL database, together with every other flow, in the order 1, 2, S, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 13: 170 requests, 361 assertions, 0 failures (Flow 11 needs a queue worker and Flow 12 needs `notifications:generate`, both run by the harness).

@@ -120,11 +120,11 @@ class TaskController extends Controller
     /**
      * Record form prefill for a task
      *
-     * Requires task.view. Read-only: returns the endpoint and the cycle/project/date context for the actual record this task is linked to.
+     * Requires task.view. Read-only: returns the endpoint (`endpoint` = `url`, absolute /api/v1/...; `path` = the same route relative to /api/v1) and the cycle/project/date context for the actual record this task is linked to.
      * Nothing is saved. Flow: GET this -> POST the record to the returned endpoint -> POST /tasks/{id}/complete with the saved record as evidence.
      * 409 task_has_no_linked_record when the task has no linked_record_type.
      *
-     * @response array{data: array{task_id: string, evidence_type: string, method: string, endpoint: string, prefill: array<string, mixed>, instructions: string}, meta: object, message: null}
+     * @response array{data: array{task_id: string, evidence_type: string, method: string, endpoint: string, url: string, path: string, prefill: array<string, mixed>, instructions: string}, meta: object, message: null}
      */
     public function recordPrefill(FarmContext $ctx, TaskService $service, string $task): JsonResponse
     {

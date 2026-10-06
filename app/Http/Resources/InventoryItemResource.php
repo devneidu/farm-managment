@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Services\Inventory\StockLedger;
+use App\Services\Inventory\StockReasonCatalogue;
 use App\Support\Measurement\Decimal;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -26,6 +27,14 @@ class InventoryItemResource extends JsonResource
         $threshold = $this->low_stock_threshold === null ? null : Decimal::trim((string) $this->low_stock_threshold);
         $out = [
             'id' => $this->id, 'name' => $this->name, 'category' => $this->category->value, 'description' => $this->description,
+            /**
+             * Stable semantic kind: decides which stock reasons apply (GET /master/inventory-options → by_item_kind[kind]). Never infer it from the name.
+             *
+             * @var 'feed'|'eggs'|'milk'|'general'
+             */
+            'kind' => StockReasonCatalogue::kindOf($this->resource),
+            /** true for the farm's automatic Eggs / Milk output items (resolved by the system, `output: eggs|milk`); they cannot be mistaken for a farmer-defined item by name. */
+            'is_system_managed' => $this->system_key !== null,
             'stock_unit' => $this->stockUnit->code, 'dimension' => $this->stockUnit->dimension->code,
             'tracks_lots' => $this->tracks_lots, 'tracks_expiry' => $this->tracks_expiry, 'is_active' => $this->is_active,
             /**

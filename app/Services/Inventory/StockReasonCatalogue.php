@@ -6,6 +6,7 @@ use App\Enums\InventoryCategory;
 use App\Enums\StockInReason;
 use App\Enums\StockOutReason;
 use App\Models\InventoryItem;
+use App\Support\Api\ApiRoute;
 
 /**
  * The single place that says which stock reasons exist, what they are called, and which authoritative endpoint records
@@ -54,6 +55,13 @@ class StockReasonCatalogue
     /** Where a system-only OUT reason is recorded instead (null = it is accepted on the manual endpoint). */
     public static function outRoute(StockOutReason $reason): ?array
     {
+        $route = self::rawOutRoute($reason);
+
+        return $route === null ? null : ApiRoute::withUrl($route);
+    }
+
+    private static function rawOutRoute(StockOutReason $reason): ?array
+    {
         return match ($reason) {
             StockOutReason::Sale => self::sale(),
             StockOutReason::ProductionUse => self::feedUse(),
@@ -64,22 +72,45 @@ class StockReasonCatalogue
 
     public static function inRoute(StockInReason $reason): ?array
     {
-        return $reason === StockInReason::Returned ? self::incubation() : null;
+        return $reason === StockInReason::Returned ? ApiRoute::withUrl(self::incubation()) : null;
     }
 
     /** @return array<string, mixed> */
     public function options(): array
     {
-        return [
-            'in' => array_map(fn (StockInReason $r) => ['code' => $r->value, 'label' => $r->label(), 'manual' => ! $r->isSystemOnly(), 'legacy' => false, 'route' => self::inRoute($r)], StockInReason::cases()),
-            'out' => array_map(fn (StockOutReason $r) => ['code' => $r->value, 'label' => $r->label(), 'manual' => ! $r->isSystemOnly(), 'legacy' => $r->isLegacy(), 'route' => self::outRoute($r)], StockOutReason::cases()),
-            'by_item_kind' => [
-                self::KIND_FEED => ['in' => $this->feedIn(), 'out' => $this->feedOut()],
-                self::KIND_EGGS => ['in' => $this->outputIn('egg_collection'), 'out' => $this->eggsOut()],
-                self::KIND_MILK => ['in' => $this->outputIn('milk'), 'out' => $this->milkOut()],
-                self::KIND_GENERAL => ['in' => $this->generalIn(), 'out' => $this->generalOut()],
-            ],
+        $byKind = [
+            self::KIND_FEED => ['in' => $this->feedIn(), 'out' => $this->feedOut()],
+            self::KIND_EGGS => ['in' => $this->outputIn('egg_collection'), 'out' => $this->eggsOut()],
+            self::KIND_MILK => ['in' => $this->outputIn('milk'), 'out' => $this->milkOut()],
+            self::KIND_GENERAL => ['in' => $this->generalIn(), 'out' => $this->generalOut()],
         ];
+
+        return [
+            /**
+             * The flat `in` / `out` lists are kept for compatibility and are NOT item-aware: `manual` there only says the reason is not
+             * system-only. Use `by_item_kind` (authoritative, item-aware); `manual_for_kinds` says for which item kinds a flat reason is
+             * really enterable by hand (e.g. `production` is manual for feed only, never for eggs / milk).
+             */
+            'in' => array_map(fn (StockInReason $r) => ['code' => $r->value, 'label' => $r->label(), 'manual' => ! $r->isSystemOnly(), 'manual_for_kinds' => self::manualKinds($byKind, 'in', $r->value), 'legacy' => false, 'route' => self::inRoute($r)], StockInReason::cases()),
+            'out' => array_map(fn (StockOutReason $r) => ['code' => $r->value, 'label' => $r->label(), 'manual' => ! $r->isSystemOnly(), 'manual_for_kinds' => self::manualKinds($byKind, 'out', $r->value), 'legacy' => $r->isLegacy(), 'route' => self::outRoute($r)], StockOutReason::cases()),
+            'flat_lists' => ['deprecated' => true, 'authoritative' => 'by_item_kind'],
+            'by_item_kind' => $byKind,
+        ];
+    }
+
+    /** Item kinds for which `by_item_kind` lists the reason as a manual (enterable) one: derived, so the two views cannot drift. */
+    private static function manualKinds(array $byKind, string $direction, string $code): array
+    {
+        $kinds = [];
+        foreach ($byKind as $kind => $lists) {
+            foreach ($lists[$direction] as $entry) {
+                if ($entry['code'] === $code && $entry['manual'] === true) {
+                    $kinds[] = $kind;
+                }
+            }
+        }
+
+        return $kinds;
     }
 
     // ----------------------------------------------------------- per kind
@@ -87,7 +118,7 @@ class StockReasonCatalogue
     private function feedIn(): array
     {
         return [
-            $this->in(StockInReason::Purchase, 'Purchased', extra: ['also' => [['kind' => 'purchase', 'method' => 'POST', 'path' => '/purchases', 'note' => 'Books the expense together with the stock.']]]),
+            $this->in(StockInReason::Purchase, 'Purchased', extra: ['also' => [ApiRoute::withUrl(['kind' => 'purchase', 'method' => 'POST', 'path' => '/purchases', 'note' => 'Books the expense together with the stock.'])]]),
             $this->in(StockInReason::Donation, 'Donation / Sharing'),
             $this->in(StockInReason::Production, 'Produced on farm'),
             $this->in(StockInReason::Aid, 'Aid / Support'),
@@ -117,8 +148,8 @@ class StockReasonCatalogue
     {
         return [
             ['code' => StockInReason::Production->value, 'label' => 'Produced on farm', 'manual' => false, 'creates_operational_record' => true,
-                'route' => ['kind' => 'record', 'method' => 'POST', 'path' => '/records', 'record_type' => $recordType]],
-            $this->in(StockInReason::Purchase, 'Purchased', extra: ['also' => [['kind' => 'purchase', 'method' => 'POST', 'path' => '/purchases', 'note' => 'Books the expense together with the stock.']]]),
+                'route' => ApiRoute::withUrl(['kind' => 'record', 'method' => 'POST', 'path' => '/records', 'record_type' => $recordType])],
+            $this->in(StockInReason::Purchase, 'Purchased', extra: ['also' => [ApiRoute::withUrl(['kind' => 'purchase', 'method' => 'POST', 'path' => '/purchases', 'note' => 'Books the expense together with the stock.'])]]),
             $this->in(StockInReason::Donation, 'Gift / Donation'),
             $this->in(StockInReason::Received, 'Received'),
             $this->in(StockInReason::OpeningBalance, 'Opening balance'),
@@ -189,13 +220,13 @@ class StockReasonCatalogue
     private function in(StockInReason $reason, string $label, array $extra = []): array
     {
         return ['code' => $reason->value, 'label' => $label, 'manual' => ! $reason->isSystemOnly(), 'creates_operational_record' => false,
-            'route' => self::inRoute($reason) ?? ['kind' => 'inventory', 'method' => 'POST', 'path' => '/inventory/stock-in']] + $extra;
+            'route' => self::inRoute($reason) ?? ApiRoute::withUrl(['kind' => 'inventory', 'method' => 'POST', 'path' => '/inventory/stock-in'])] + $extra;
     }
 
     private function out(StockOutReason $reason, string $label, bool $record = false): array
     {
         return ['code' => $reason->value, 'label' => $label, 'manual' => ! $reason->isSystemOnly(), 'creates_operational_record' => $record,
-            'route' => self::outRoute($reason) ?? ['kind' => 'inventory', 'method' => 'POST', 'path' => '/inventory/stock-out']];
+            'route' => self::outRoute($reason) ?? ApiRoute::withUrl(['kind' => 'inventory', 'method' => 'POST', 'path' => '/inventory/stock-out'])];
     }
 
     /** Transfers and counts are movement types, not reasons; they are listed so the frontend has one place to look. */
@@ -203,9 +234,9 @@ class StockReasonCatalogue
     {
         return [
             ['code' => $direction === 'in' ? 'transfer_in' : 'transfer_out', 'label' => 'Moved between stores', 'manual' => false, 'creates_operational_record' => false,
-                'route' => ['kind' => 'transfer', 'method' => 'POST', 'path' => '/inventory/transfers']],
+                'route' => ApiRoute::withUrl(['kind' => 'transfer', 'method' => 'POST', 'path' => '/inventory/transfers'])],
             ['code' => 'adjustment', 'label' => 'Stock count correction', 'manual' => false, 'creates_operational_record' => false,
-                'route' => ['kind' => 'adjustment', 'method' => 'POST', 'path' => '/inventory/adjustments']],
+                'route' => ApiRoute::withUrl(['kind' => 'adjustment', 'method' => 'POST', 'path' => '/inventory/adjustments'])],
         ];
     }
 

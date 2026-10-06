@@ -99,12 +99,15 @@ A platform admin can suspend a user (`POST /platform-admin/users/{user}/suspend`
       "providers": [],
       "locale": null
     },
-    "farm": null
+    "farm": null,
+    "farms": []
   },
   "meta": {},
   "message": null
 }
 ```
+
+A user with a farm returns, for example, `"farm": {"id": "…", "name": "Okafor Integrated Farms", "country_code": "NG", "currency": "NGN", "timezone": "Africa/Lagos", "locale": "en", "role": "owner"}` and `"farms": [{"id": "…", "name": "Okafor Integrated Farms", "role": "owner"}]`.
 
 | Field | Meaning |
 |---|---|
@@ -116,6 +119,7 @@ A platform admin can suspend a user (`POST /platform-admin/users/{user}/suspend`
 | `user.platform_role` | `admin`, `support` or `null` — shows the Platform Admin area (a different system, §14) |
 | `user.providers` | linked social providers (`["google"]`) |
 | `farm.role` | the caller's role id on the default farm. **Permissions are not here** (see §5). |
+| `farms[]` | every farm the user ACTIVELY belongs to, `{id, name, role}`, oldest membership first (the first one is the default `farm`). Empty when there is no active membership. Removed memberships never appear. It is the discovery list for `X-Farm-Id` (§4); it carries no permissions and no farm settings. |
 
 `next_action` values (computed in this order):
 
@@ -136,7 +140,7 @@ Saved responses for each state are in the collection folder **01 — Authenticat
 * **Default**: the caller's oldest active membership.
 * **`X-Farm-Id: <farm uuid>`** (optional request header) selects another farm the caller **actively** belongs to. It can never grant access: any other value is `403 farm_access_denied`.
 * No active membership: `403 no_active_farm` (or `403 onboarding_required` if the user never set up a farm).
-* **There is no "switch farm" endpoint and no "list my farms" endpoint** in V1: multi-farm use is only the header, and the frontend must remember the farm ids it learned from `data.farm.id`, `GET /farm` and `meta.accepted_farm_id` of an accepted invitation. (Recorded as a frontend integration gap.)
+* **Discovering farms (multi-farm V1):** `GET /auth/me → data.farms[]` (`{id, name, role}`, active memberships only). Plans may limit how many farms a user can hold (Free = 1) while paid users may belong to several. There is **no "switch farm" endpoint**: the existing header is authoritative. To change farm: send the chosen `farms[].id` as `X-Farm-Id` → `GET /farm` (membership + permissions of that farm) → `GET /subscription/entitlements` → clear/refetch farm-scoped data. Refetch `/auth/me` after accepting an invitation (`meta.accepted_farm_id`) or losing a membership.
 * **Membership removal**: the member loses access immediately (their next request is `403 no_active_farm` / `farm_access_denied`); records they created remain.
 * **Isolation**: every farm-owned resource is scoped server-side. An id that exists in another farm is `404 not_found` — never `403` — so existence is not disclosed.
 * Platform Admin routes have no farm context at all.
@@ -149,7 +153,7 @@ Saved responses for each state are in the collection folder **01 — Authenticat
 
 | Source | Gives |
 |---|---|
-| `GET /auth/me` → `farm.role` | the role **id** only |
+| `GET /auth/me` → `farm.role`, `farms[].role` | the role **id** only (of the default farm / of each listed farm). No permissions. |
 | `GET /farm` → `membership` | `id`, `role`, `role_label` and the **complete `permissions` list** (strings) of the caller on the current farm. **This is the source of truth for showing/hiding UI.** |
 | `GET /roles` (needs `team.view`) | the five role presets with their `permissions` and, per role, `assignable` (may the caller assign it?) — for the invite / change-role dialogs |
 | `GET /subscription/entitlements` (any role) | plan features/limits (a separate system, §5.4) |
@@ -635,7 +639,8 @@ Mutations that record a real-world event take a client-generated **`idempotency_
 | Planting material/unit codes | `GET /master/planting-reference` |
 | Measurement dimensions / units | `GET /master/measurement-dimensions`, `GET /master/units?dimension=` |
 | Place types | `GET /master/location-types` |
-| Record types and executable field schemas | `GET /master/record-types`, `GET /record-types/{type}/schema` |
+| Record types and executable field schemas (`permissions_required`, `inventory`, `area_fields`) | `GET /master/record-types`, `GET /record-types/{type}/schema` |
+| Record types a specific cycle accepts now | `GET /production-cycles/{id}` → `available_record_types[]` (detail only) |
 | Health record types | `GET /master/health-record-types` |
 | Inventory categories and reasons | `GET /master/inventory-options` |
 | Task categories | `GET /master/task-categories` |
@@ -714,6 +719,21 @@ Rules: branch on `code`, `category`, `tracking_model` and capability codes, neve
 | 401 | `unauthenticated`, `invalid_credentials`, `invalid_google_credential` |
 | 5xx | `server_error` (no internals are exposed) |
 
+
+### 13.1 Discoverability fields added for the frontend (additive; nothing was renamed or removed)
+
+| Field | Where | Meaning |
+|---|---|---|
+| `data.farms[]` = `{id, name, role}` | `GET /auth/me` and every auth-state response | farms the user actively belongs to; select with `X-Farm-Id` (§4) |
+| `available_record_types[]` = `{type, permissions_required}` | `GET /production-cycles/{id}`, `/summary` only | record types `POST /records` accepts for this cycle now (cycle kind + species capability + open cycle); `[]` when closed. Not filtered by the member's permissions. Absent from lists and write responses |
+| `permissions_required` = `{always[], when_inventory_linked[], when_correcting[]}` | each record schema | authoritative permission codes; the legacy `permission` stays |
+| `inventory` = `{mode, direction, output, item_category, dimensions[], optional, creates_item, object, fields{}}` or `null`; `area_fields[]` | each record schema | stock/output integration (`mode` `automatic_output` for eggs/milk, `optional_link` for feed_use/crop stock types; `fields` maps accepted `details.inventory` keys to `required`/`optional`) |
+| `kind` (`feed|eggs|milk|general`), `is_system_managed` | every inventory item | semantic kind for `reasons.by_item_kind[kind]`; true for the automatic Eggs/Milk items |
+| `manual_for_kinds[]`, `reasons.flat_lists.{deprecated, authoritative}` | `GET /master/inventory-options` | the flat reason lists are deprecated and not item-aware; `by_item_kind` is authoritative |
+| `url` (absolute `/api/v1/…`) beside `path` (relative) | every `route` / `also[]` in `inventory-options` | one spelling for every metadata route |
+| `url` and `path` beside `endpoint` (absolute) | `GET /tasks/{id}/record-prefill`, dashboard `quick_add[]` | same |
+| `items[].output: "eggs"|"milk"` | request: `POST /sales`, `POST /purchases` stock lines | alternative to `inventory_item_id` (exactly one) |
+
 ---
 
 ## 17. Domain concepts the API enforces
@@ -728,5 +748,6 @@ Verified against the implementation (and exercised by the workflows):
 * **Package conversions are contextual** (§12).
 * **Biological expected dates are references** (exact date or window, never a midpoint), not guarantees.
 * **Sale, invoice and payment are three separate concepts.** A sale records what left the farm (stock-out and/or livestock exit) and books no income; an invoice is the customer document snapshotted from the sale; a **payment is what books income** (one payment = one income ledger row). `sale.payment_status`: `uninvoiced` → `unpaid` → `partially_paid` → `paid`.
-* **Eggs, milk and feed: one event, one entry** ([FEED-EGGS-MILK-STOCK.md](FEED-EGGS-MILK-STOCK.md)). `egg_collection` / `milk` records write a stock-in (reason `production`) on the farm's automatic Eggs / Milk item in the same transaction; `feed_use` with `details.inventory` writes the stock-out (`production_use`); a breeding project with `consume_egg_stock` writes the `incubation` stock-out; sales write the `sale` stock-out. Donated/purchased/received stock is `POST /inventory/stock-in` and never a production record. **Available balance = SUM of movements; production totals are a separate figure.** Reasons that another workflow owns are `422` on the manual endpoints; `GET /master/inventory-options` returns labels and the authoritative route per action.\n* **A stocked purchase is the one path that writes stock and money together** (one `stock_in` per stock line + one expense), atomically. Finance transactions never touch stock.
+* **Eggs, milk and feed: one event, one entry** ([FEED-EGGS-MILK-STOCK.md](FEED-EGGS-MILK-STOCK.md)). `egg_collection` / `milk` records write a stock-in (reason `production`) on the farm's automatic Eggs / Milk item in the same transaction; `feed_use` with `details.inventory` writes the stock-out (`production_use`); a breeding project with `consume_egg_stock` writes the `incubation` stock-out; sales write the `sale` stock-out. Donated/purchased/received stock is `POST /inventory/stock-in` and never a production record. **Available balance = SUM of movements; production totals are a separate figure.** Reasons that another workflow owns are `422` on the manual endpoints; `GET /master/inventory-options` returns labels and the authoritative route per action.\n* **Stock lines can name the output instead of an item** (`items[].output: "eggs"|"milk"` on `POST /sales` and `POST /purchases`; exactly one of `output` / `inventory_item_id`). A purchase resolves or creates the farm's output item and receiving store like `stock-in {output}`; a sale takes the existing item only (never creates stock; `409 insufficient_stock` otherwise).
+* **A stocked purchase is the one path that writes stock and money together** (one `stock_in` per stock line + one expense), atomically. Finance transactions never touch stock.
 * **Platform Admin is not Farm Owner** (§14).

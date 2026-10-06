@@ -18,7 +18,9 @@ An inventory item has **no quantity field**. Current stock is always `SUM(invent
 
 | Method | Path | Permission | Success |
 |---|---|---|---|
-| GET | `/master/inventory-options` | `inventory.view` | 200 categories, sellable categories, movement types, reason codes and the labelled per-item-kind `reasons` catalogue |
+| GET | `/master/inventory-options` | `inventory.view` | 200 categories, sellable categories, movement types, reason codes and the labelled per-item-kind `reasons` catalogue (`by_item_kind` is authoritative; the flat `reasons.in/out` are deprecated and carry `manual_for_kinds`; every route has `path` + absolute `url`) |
+
+Every inventory item resource carries `kind` (`feed` \| `eggs` \| `milk` \| `general`) and `is_system_managed` (true for the farm's automatic Eggs / Milk items).
 | GET | `/inventory/output-balances` | `inventory.view` | 200 read-only available eggs / milk (never creates items) |
 | GET | `/inventory/items` | `inventory.view` | 200 paginated items with derived stock |
 | POST | `/inventory/items` | `inventory.manage` | 201 |

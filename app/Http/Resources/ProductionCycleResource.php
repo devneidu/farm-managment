@@ -3,11 +3,22 @@
 namespace App\Http\Resources;
 
 use App\Enums\CycleKind;
+use App\Services\Records\RecordTypeRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class ProductionCycleResource extends JsonResource
 {
+    private bool $withAvailableRecordTypes = false;
+
+    /** Detail reads only (GET /production-cycles/{id} and /summary): add the record types this cycle accepts. */
+    public function withAvailableRecordTypes(): static
+    {
+        $this->withAvailableRecordTypes = true;
+
+        return $this;
+    }
+
     /**
      * @return array{
      * id: string, kind: 'livestock'|'crop', name: string, reference: string, status: 'active'|'closed',
@@ -16,7 +27,8 @@ class ProductionCycleResource extends JsonResource
      * expected_end_date: string|null, end_date: string|null, notes: string|null, baseline_locked: bool,
      * livestock: array{species: array{id: string, code: string, name: string}, breed: array{id: string, name: string, is_active: bool}|null, initial_population: int, current_population: int, population_unit: string, population_basis: string}|null,
      * crop: array{crop_type: array{id: string, code: string, name: string}, variety: array{id: string, name: string, is_active: bool}|null, planting_material_type: string, planting_material_label: string, planting_unit_type: string, planting_unit_label: string, initial_planting_units: int, expected_germination_date: string|null, area: array{entered: list<array{quantity: string, unit: string}>, normalized: array{quantity: string, unit: string}}|null}|null,
-     * created_at: string, updated_at: string
+     * created_at: string, updated_at: string,
+     * available_record_types?: list<array{type: string, permissions_required: array{always: list<string>, when_inventory_linked: list<string>, when_correcting: list<string>}}>
      * }
      */
     public function toArray(Request $request): array
@@ -64,6 +76,13 @@ class ProductionCycleResource extends JsonResource
             ] : null,
             'created_at' => $this->created_at->toISOString(),
             'updated_at' => $this->updated_at->toISOString(),
+            /**
+             * Detail only. The record types POST /records accepts for this cycle right now: the same cycle-kind, species-capability and open-cycle rules the
+             * create endpoint applies (a closed cycle accepts none). Not filtered by the member's permissions - match `permissions_required` against GET /farm → membership.permissions.
+             *
+             * @var list<array{type: string, permissions_required: array{always: list<string>, when_inventory_linked: list<string>, when_correcting: list<string>}}>
+             */
+            'available_record_types' => $this->when($this->withAvailableRecordTypes, fn () => app(RecordTypeRegistry::class)->availableFor($this->resource)),
         ];
     }
 }

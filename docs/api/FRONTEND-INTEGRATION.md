@@ -31,9 +31,10 @@ export const api = axios.create({
 1. GET /auth/csrf-cookie            (once; again after any 419)
 2. GET /auth/me
      401  -> show the login screen
-     200  -> read data.next_action  (section 3)
+     200  -> read data.next_action  (section 3) and data.farms[] (the farms you belong to, section 5)
 3. if next_action == none:
-     GET /farm                      -> farm + membership.role + membership.permissions
+     choose the active farm from data.farms[] (default data.farm; remembered choice if still listed)
+     GET /farm                      -> farm + membership.role + membership.permissions   (send X-Farm-Id when not the default)
      GET /subscription/entitlements -> features and limits (what the plan allows)
      GET /locales + /translations/en (optional)  -> UI text
      then the screen's own data (GET /dashboard, ...)
@@ -78,9 +79,10 @@ Invited users: they register/log in with the **invited email**, verify it, then 
 
 * Do not send a farm id in URLs or bodies. By default the API uses the oldest active membership.
 * To act on another farm you belong to, add `X-Farm-Id: <farm uuid>` to **every** request for that farm (an Axios request interceptor reading the selected farm from your store). A farm you don't actively belong to is `403 farm_access_denied`.
-* V1 has **no endpoint that lists your farms and no switch endpoint**: remember the ids you learned (`data.farm.id`, `meta.accepted_farm_id`). Build single-farm UX first; a farm switcher needs a backend addition (see the gaps in `docs/postman/COVERAGE.md`).
-* If a request starts failing with `403 farm_access_denied` / `no_active_farm`, the membership was removed: refetch `/auth/me` and re-route.
-* When the selected farm changes, clear all cached farm data (query cache) — every resource is farm-scoped.
+* **Discovering your farms:** `GET /auth/me` → `data.farms` = `[{id, name, role}]`, every farm you ACTIVELY belong to (oldest membership first); `data.farm` is the default one. Plans may limit this (Free = 1 farm, paid plans can hold several), so a user may have one or many entries: render a switcher only when `farms.length > 1`. There is **no switch endpoint**: selecting a farm is purely client-side.
+* **Switching** (the order matters): set the selected farm id in your store → every request now carries `X-Farm-Id: <farms[].id>` → `GET /farm` (membership, role, **permissions** of that farm) → `GET /subscription/entitlements` (that farm's plan) → clear/refetch all farm-scoped data (query cache). Permissions are **never** listed in `/auth/me`; they are authoritative from `GET /farm → membership.permissions` of the selected farm.
+* A farm id that is not in `farms[]` (or whose membership was removed) is `403 farm_access_denied`. If a request starts failing with `403 farm_access_denied` / `no_active_farm`, the membership was removed: refetch `/auth/me`, drop the stale selection and re-route.
+* Refetch `/auth/me` after accepting an invitation (`meta.accepted_farm_id` is the new farm) so `farms[]` includes it.
 
 ## 6. Role- and permission-driven UI
 
@@ -267,7 +269,7 @@ Show the admin area only when `data.user.platform_role` is `admin` or `support`;
 
 ## 24. Building V1 Product Workflows
 
-Sections 1–23 explain *how to talk to the API*. This section explains *what to call next* for each product screen, so no one has to tell you verbally. Every statement was verified against the routes, FormRequests, services, resources and Postman collection (2026-10-06). Where the API cannot tell the UI something, it is marked **GAP-xx** (§24.7); nothing was changed to fix them.
+Sections 1–23 explain *how to talk to the API*. This section explains *what to call next* for each product screen, so no one has to tell you verbally. Every statement was verified against the routes, FormRequests, services, resources and Postman collection (2026-10-06). Where the API still cannot tell the UI something, it is marked **GAP-xx** (§24.7); the frontend-handoff pass resolved GAP-01 … GAP-08 and left GAP-09 and the documentation notes open.
 
 **The detailed, per-workflow orchestration (50 workflows, each with entry point, fetch, response properties, dependent dropdowns, conditional fields, final endpoint, side effects, "DO NOT also call…", refetch, permissions, error states and the Postman request) is in [`FRONTEND-WORKFLOWS.md`](FRONTEND-WORKFLOWS.md).** Read §24.1–§24.4 here first; they are the rules every workflow follows.
 
@@ -289,8 +291,9 @@ Sections 1–23 explain *how to talk to the API*. This section explains *what to
 | `GET /master/farm-operations` (+ `GET /farm/operations`) | production-type pickers, cycle creation | `category`, `tracking_model`, `selected`, `available` | ordering/de-emphasis only — **not enforced** by the backend |
 | `GET /master/species` | once per farm; cycle creation; every record-type decision | `capability_codes`, `operation` | which record types, breeding workflows and forms a livestock cycle gets |
 | `GET /master/species/{id}/capabilities` | breeding forms | `enabled`, `reference` (incubation/gestation days) | whether Incubation/Pregnancy is offered, expected dates |
-| `GET /master/record-types` | when "Record activity" opens (once, cached) | `type`, `cycle_kind`, `capability`, `permission`, `measurement`, `inventory_*` | which types exist for the selected cycle (intersect with species capabilities and permissions) |
-| `GET /record-types/{type}/schema` (**not** under `/master`) | when a type is chosen (or reuse the list row) | `fields`, `measurement` | the form inputs under `details.*`, the quantity control, whether a stock section appears |
+| `GET /production-cycles/{id}` | when "Record activity" opens for a cycle | `available_record_types[]` = `{type, permissions_required}` | exactly the types `POST /records` accepts for this cycle now (cycle kind + species capability + open cycle) — no client-side intersection |
+| `GET /master/record-types` | when "Record activity" opens (once, cached) | `type`, `permissions_required`, `inventory`, `measurement`, `area_fields`, `fields` | labels/forms for the types the cycle offered, and which permissions each needs |
+| `GET /record-types/{type}/schema` (**not** under `/master`) | when a type is chosen (or reuse the list row) | `fields`, `measurement`, `inventory` | the form inputs under `details.*`, the quantity control, whether and how a stock section appears |
 | `GET /master/units?dimension=` | every quantity field | units of one dimension | the unit dropdown; pre-select from `GET /settings/units` |
 | `GET /master/inventory-options` | opening any stock, feed, egg or milk screen (cached) | `reasons.by_item_kind.<feed|eggs|milk|general>.{in,out}`, `sellable_categories`, `categories` | the list of actions (labels), and for each: **which endpoint** to call (`route`) |
 | `GET /inventory/output-balances` | any egg/milk screen, before sale/incubation | `eggs|milk.{exists, inventory_item_id, available, by_storage_location}` | available stock, which store, the item id for sales and package conversions |
@@ -298,7 +301,7 @@ Sections 1–23 explain *how to talk to the API*. This section explains *what to
 | `GET /master/task-categories`, `GET /master/location-types`, `GET /finance/categories`, `GET /reports`, `GET /roles` | the respective form | codes / flags | dropdowns, report visibility (`relevant`, `available`, `exportable`), assignable roles |
 | `GET /dashboard` | landing | `sections`, `operations.relevant`, `quick_record`, `quick_add`, `empty_state` | which blocks exist |
 
-**Record-type ladder (what the schema alone does not say):** a type is offered for a cycle when `cycle_kind` matches the cycle kind **and** `capability` is null or in the cycle species' `capability_codes` **and** the user has `permission` plus the extra permissions in [`FRONTEND-WORKFLOWS.md` §0.3](FRONTEND-WORKFLOWS.md#03-permissions-the-schema-does-not-tell-you-gap-01). The backend answers `422` on `type` otherwise.
+**Record-type ladder:** open the cycle detail → `data.available_record_types[]` is the list to offer (the backend applies the same cycle-kind, species-capability and open-cycle rules as `POST /records`; a closed cycle returns `[]`). For each entry, enable the type when `membership.permissions` contains every code in `permissions_required.always` (and `when_inventory_linked` when the form links stock; `when_correcting` when replacing a reversed record). Labels, measurement and the stock section come from `GET /master/record-types` rows (match on `type`). A type the cycle did not list is `422` on `type`.
 
 **Stock ladder (Feed, Eggs, Milk, general):**
 
@@ -306,7 +309,7 @@ Sections 1–23 explain *how to talk to the API*. This section explains *what to
 GET /master/inventory-options
   → reasons.by_item_kind.<feed|eggs|milk|general>.in[] / out[]       (use this, not the flat reasons.in/out)
   → the user picks an entry (code, label)
-  → entry.route.kind / method / path           (path is relative to /api/v1)
+  → entry.route.kind / method / url            (url is absolute /api/v1/…; path = the same route relative to /api/v1)
        inventory        → POST /inventory/stock-in | /inventory/stock-out     (entry.manual === true)
        record           → POST /records, type = route.record_type              (egg_collection | milk | feed_use)
        breeding_project → POST /breeding-projects, consume_egg_stock          (incubation)
@@ -317,7 +320,7 @@ GET /master/inventory-options
 
 ### 24.3 How to know the item kind of what the user is acting on
 
-Inventory items carry no `kind` (**GAP-03**). `category: "feed"` → `feed`; the item whose id equals `output-balances.eggs.inventory_item_id` → `eggs`; `…milk.inventory_item_id` → `milk`; otherwise `general`. Egg and milk screens do not need an item picker at all: use `output: "eggs"|"milk"`. Details: [`FRONTEND-WORKFLOWS.md` §0.6](FRONTEND-WORKFLOWS.md#06-item-kind-of-a-stock-item-decides-which-inventory-options-list-to-render).
+Every inventory item (`GET /inventory/items`, `GET /inventory/items/{id}`) carries `kind` (`feed` | `eggs` | `milk` | `general`) and `is_system_managed` (`true` for the farm's automatic Eggs / Milk items). Use `kind` to index `reasons.by_item_kind`; never infer it from a name or category. Egg and milk screens do not need an item picker at all: use `output: "eggs"|"milk"` on stock-in/out, sales and purchases. Details: [`FRONTEND-WORKFLOWS.md` §0.6](FRONTEND-WORKFLOWS.md#06-item-kind-of-a-stock-item-decides-which-inventory-options-list-to-render).
 
 ### 24.4 Orientation map
 
@@ -333,9 +336,10 @@ Inventory items carry no `kind` (**GAP-03**). `category: "feed"` → `feed`; the
 | Feed OUT (not livestock) | `feed.out` | `route` | `POST /inventory/stock-out` | one stock-out |
 | Feed used for livestock | `feed.out → production_use`, feed items | `route.record_type: feed_use` | `POST /records` `feed_use` + `details.inventory` | record **and** stock-out `production_use` |
 | Eggs produced on farm | `eggs.in → production`, `/inventory/output-balances` | `route.kind: record`, `produces_eggs` | `POST /records` `egg_collection` | record **and** stock-in `production`; creates Eggs item / Main Store |
-| Eggs donation / purchase / received | `eggs.in` | `manual: true` | `POST /inventory/stock-in {output:"eggs"}` | stock-in only, never a record |
+| Eggs donation / received / other | `eggs.in` | `manual: true` | `POST /inventory/stock-in {output:"eggs"}` | stock-in only, never a record |
+| Eggs purchase (with cost) | `eggs.in → purchase` (`also[]`) | `output` | `POST /purchases` stock line `{output:"eggs"}` | stock-in + expense; item and Main Store resolved/created |
 | Eggs damaged / spoiled / internal / donated out | `eggs.out` | `manual: true` | `POST /inventory/stock-out {output:"eggs"}` | stock-out only |
-| Egg sale | `output-balances.eggs.inventory_item_id` | `sellable_categories` | `POST /sales` stock line | sale + stock-out `sale`; no income until paid |
+| Egg sale | `output-balances.eggs.available` | `exists`, `available` | `POST /sales` stock line `{output:"eggs"}` (or `inventory_item_id`) | sale + stock-out `sale`; no income until paid; never creates stock |
 | Egg incubation | `eggs.out → incubation`, `supports_incubation` | `route.kind: breeding_project` | `POST /breeding-projects` `consume_egg_stock` | project **and** stock-out `incubation` |
 | Milk produced / IN / OUT / sale | `by_item_kind.milk`, `produces_milk` | same as eggs | as eggs with `type: milk`, `output:"milk"` | as eggs |
 | Planting / fertilizer / harvest | schema `inventory_*` | `inventory_direction`, `inventory_dimensions` | `POST /records` (+ `details.inventory`) | record + stock out (planting, fertilizer, pesticide) or in (harvest) |
@@ -370,23 +374,22 @@ Inventory items carry no `kind` (**GAP-03**). `category: "feed"` → `feed`; the
 
 The table in §18 is authoritative. Additions for egg/milk screens: always refetch `GET /inventory/output-balances` and `GET /inventory/movements?inventory_item_id=`; the dashboard's `eggs_today` is production only.
 
-### 24.7 GAP index (documented, not fixed)
+### 24.7 GAP index
 
-| ID | Gap | Workaround used in the workflows |
+The frontend-handoff correction pass resolved GAP-01 … GAP-08 in the API (no workaround is needed any more). Only the items marked **open** remain.
+
+| ID | Was | Status / what the contract says now |
 |---|---|---|
-| GAP-01 | `record-type.permission` lists only `record.create`/`record.adjust`; egg/milk records and stock-linked records also need `inventory.use` | hard-wire the table in `FRONTEND-WORKFLOWS.md` §0.3 |
-| GAP-02 | no endpoint returns the record types valid for a cycle; the cycle resource has no `capability_codes` | intersect `/master/record-types` with `/master/species` `capability_codes` by `livestock.species.id` |
-| GAP-03 | inventory items expose no `kind` / `system_key` | match ids against `/inventory/output-balances`; `category === feed` |
-| GAP-04 | record schema does not describe `components` / `context` / `inventory` object shapes or area sub-fields; `inventory_required` is always `false` | shapes are documented in the workflows and Postman bodies |
-| GAP-05 | flat `reasons.in[production].manual = true`, but `by_item_kind.eggs|milk.in[production].manual = false` | use `by_item_kind` only |
-| GAP-06 | route paths: relative in `inventory-options` (`/records`), absolute in `record-prefill.endpoint` and dashboard `quick_add[].endpoint` (`/api/v1/…`) | normalise in one helper |
-| GAP-07 | `/auth/me` has no permissions; no "list my farms" endpoint | `GET /farm`; see `docs/postman/COVERAGE.md` §9 |
-| GAP-08 | sale and purchase lines have no `output: eggs|milk` shorthand and the item id is `null` until the farm has egg/milk stock | disable egg/milk sale until `exists: true`; use `stock-in {output}` for IN before then |
-| GAP-09 | the dashboard has an `eggs_today` production KPI but no milk-produced KPI and no available eggs/milk KPI | `GET /records?type=milk`, reports, `GET /inventory/output-balances` |
-| GAP-P1 | Postman: no request uses `output: "milk"` | copy the eggs examples, change `output` and unit |
-| GAP-P2 | Postman: feed/egg IN has examples only for `opening_balance` and egg `donation` | change `reason` per `inventory-options` |
-| GAP-P3 | Postman: no example for egg `damaged`/`spoiled`/`internal_use`/`lost` or any milk OUT | as above |
-| GAP-P4 | Postman: no example selling the *output* Eggs item or milk (Flow 10 sells the manual "Table Eggs" item) | use `output-balances` item id in the stock line |
-| GAP-P5 | Postman Flow 14 was prepared but not executed in the runner (`docs/postman/COVERAGE.md` addendum); scenario is covered by `OutputStockTest` | — |
+| GAP-01 | `record-type.permission` listed only `record.create`/`record.adjust`; `inventory.use` was hidden | **Resolved.** `permissions_required: {always, when_inventory_linked, when_correcting}` on every record schema; the legacy `permission` is unchanged |
+| GAP-02 | no endpoint returned the record types valid for a cycle | **Resolved.** `GET /production-cycles/{id}` (and `/summary`) → `available_record_types[]`, produced by the same rules as record creation; not on lists or write responses |
+| GAP-03 | inventory items exposed no `kind` / `system_key` | **Resolved.** `kind` (`feed|eggs|milk|general`) and `is_system_managed` on every item |
+| GAP-04 | record schema did not describe stock/output integration | **Resolved.** `inventory` block (`mode`, `direction`, `output`, `item_category`, `dimensions`, `fields`), `area_fields`; the compound `components`/`context` shapes stay documented in `FRONTEND-WORKFLOWS.md` §0.4 and Postman by design |
+| GAP-05 | flat `reasons.in/out` said `production.manual = true` for eggs/milk too | **Resolved additively.** `by_item_kind` stays authoritative; flat entries gain `manual_for_kinds`; `reasons.flat_lists.deprecated = true` |
+| GAP-06 | metadata routes were relative in some places and absolute in others | **Resolved additively.** `url` (absolute `/api/v1/…`) on every metadata route; `path` keeps its relative meaning; `endpoint` stays absolute and gains `url` + `path` on `record-prefill` and `quick_add[]` |
+| GAP-07 | no way to list the farms of a user | **Resolved.** `GET /auth/me → data.farms[] = {id, name, role}` (active memberships); select with `X-Farm-Id`; permissions stay on `GET /farm` |
+| GAP-08 | sale/purchase lines needed an item id that is `null` until stock exists | **Resolved.** `items[].output: eggs|milk` instead of `inventory_item_id` (exactly one); sale never creates stock, purchase resolves/creates it |
+| GAP-09 | the dashboard has `eggs_today` (production) but no milk-produced KPI and no available eggs/milk KPI | **Open (intentionally not implemented).** Use `GET /records?type=milk`, reports and `GET /inventory/output-balances` |
+| GAP-P1 … P4 | Postman had no milk, feed/egg IN-reason, egg/milk OUT-reason or output-sale examples | **Resolved.** New requests + saved examples (see `docs/postman/COVERAGE.md`) |
+| GAP-P5 | Flow 14 was not executed | **Resolved.** Flow 14 (22 requests) was executed with Newman against the final behaviour: 0 failures |
 
 Also noted: farm operation selection is advisory (a cycle can be created for an unselected operation); `dashboard.quick_record` is capped at 6 types; the `GET /settings/package-conversions` description lists only `crop_type|custom` for `context_type` although `inventory_item` is accepted; the member-role endpoint descriptions omit `vet`, which is accepted.

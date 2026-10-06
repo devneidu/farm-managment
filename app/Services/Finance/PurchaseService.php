@@ -183,12 +183,19 @@ class PurchaseService
         $lines = [];
         foreach (array_values($items) as $index => $line) {
             $prefix = 'items.'.$index;
-            $stockFields = ['inventory_item_id', 'storage_location_id', 'lot_id', 'lot', 'components'];
+            $stockFields = ['inventory_item_id', 'output', 'storage_location_id', 'lot_id', 'lot', 'components'];
             if ($line['kind'] === 'stock') {
-                foreach (['inventory_item_id', 'storage_location_id', 'components'] as $required) {
+                $hasOutput = ! empty($line['output']);
+                if ($hasOutput === ! empty($line['inventory_item_id'])) {
+                    $this->invalid($prefix.($hasOutput ? '.output' : '.inventory_item_id'), 'Name the stock with exactly one of inventory_item_id or output.');
+                }
+                foreach ($hasOutput ? ['components'] : ['inventory_item_id', 'storage_location_id', 'components'] as $required) {
                     if (empty($line[$required])) {
                         $this->invalid($prefix.'.'.$required, 'This is required for a stock line.');
                     }
+                }
+                if ($hasOutput) {
+                    $line = $this->inventory->resolveOutputLine($ctx, $line, $prefix, purchase: true);
                 }
                 if (! empty($line['description'])) {
                     $this->invalid($prefix.'.description', 'A stock line takes its name from the inventory item.');

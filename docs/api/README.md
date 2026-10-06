@@ -101,7 +101,8 @@ Every auth endpoint (register, login, google, email/verify, onboarding/farm, `GE
     "has_active_farm": false,
     "next_action": "verify_email",
     "user": { "id": "uuid", "email": "a@b.com", "name": null, "email_verified_at": null, "has_password": true, "providers": [] },
-    "farm": null },
+    "farm": null,
+    "farms": [] },
   "meta": {}, "message": null }
 ```
 
@@ -110,7 +111,7 @@ farm" screen (see below); `none` -> app.
 
 These are four distinct states, never derive one from another: email verified (`email_verified`), onboarding completed
 (`onboarded`, set once and never cleared), active farm membership (`has_active_farm`; `farm` is the default active farm
-or `null`). A user can be authenticated + verified + onboarded with `has_active_farm: false` (removed from their last
+or `null`); `farms[]` (`{id, name, role}`) lists every farm the user actively belongs to — send one `id` as `X-Farm-Id` to work in it (permissions come from `GET /farm`). A user can be authenticated + verified + onboarded with `has_active_farm: false` (removed from their last
 farm): `next_action = no_active_farm`, they are NOT sent back to farm setup (`POST /onboarding/farm` is `409
 already_onboarded`), and farm endpoints answer `403 no_active_farm`. Accepting a new invitation gets them back in.
 On app load call `GET /auth/me`: `401` = show login. Do not derive routing from anything else. The backend also enforces
@@ -610,7 +611,7 @@ Use **Livestock Batch** (including fish) and **Crop Project** in the UI. The can
 |---|---|---|---|
 | GET | `/production-cycles` | `production_cycle.view` | 200 paginated resources |
 | POST | `/production-cycles` | `production_cycle.create` | 201 full resource |
-| GET | `/production-cycles/{cycle}` | `production_cycle.view` | 200 full resource |
+| GET | `/production-cycles/{cycle}` | `production_cycle.view` | 200 full resource; detail (and `/summary`) also returns `available_record_types[]` = `{type, permissions_required}` — the record types `POST /records` accepts for this cycle now (empty when closed) |
 | PATCH | `/production-cycles/{cycle}` | `production_cycle.update` | 200 full resource |
 | POST | `/production-cycles/{cycle}/close` | `production_cycle.close` | 200 full resource |
 | POST | `/production-cycles/{cycle}/reopen` | `production_cycle.reopen` | 200 full resource |

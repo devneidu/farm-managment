@@ -24,7 +24,8 @@ class AuthStateResource extends JsonResource
      *     has_active_farm: bool,
      *     next_action: 'verify_email'|'complete_farm_setup'|'no_active_farm'|'none',
      *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, platform_role: 'admin'|'support'|null, providers: string[], locale: string|null},
-     *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null
+     *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null,
+     *     farms: list<array{id: string, name: string, role: string}>
      * }
      */
     public function toArray(Request $request): array
@@ -63,6 +64,15 @@ class AuthStateResource extends JsonResource
                 'locale' => $farm->locale,
                 'role' => $farm->pivot->role,
             ] : null,
+            /**
+             * Every farm the user ACTIVELY belongs to (oldest membership first, the same order the default farm is chosen by). Send a farm's `id` as the
+             * `X-Farm-Id` header to work in it; permissions are never listed here - they come from GET /farm → membership.permissions for the selected farm.
+             *
+             * @var list<array{id: string, name: string, role: string}>
+             */
+            'farms' => $user->memberships()->active()->with('farm')->orderBy('created_at')->orderBy('id')->get()
+                ->filter(fn ($m) => $m->farm !== null)
+                ->map(fn ($m) => ['id' => $m->farm->id, 'name' => $m->farm->name, 'role' => $m->role->value])->values()->all(),
         ];
     }
 }

@@ -9,7 +9,29 @@
 
 ---
 
-## Latest task — Feed, eggs and milk stock: one event, one entry, every effect (UNCOMMITTED)
+## Latest task — Frontend-handoff correction pass GAP-01 … GAP-08 (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-06. One additive backend pass so the frontend can fetch → discover → display → dependent fetch → submit once → understand side effects → refetch without product-owner knowledge. **GAP-09 deliberately not implemented** (dashboard milk/available KPIs). Contract: `docs/api/API-CONTRACT.md` §13.1.
+
+**Product decision (user):** V1 is multi-farm capable (plans limit it: Free = 1). No switch endpoint; `X-Farm-Id` stays authoritative; permissions stay on `GET /farm`.
+
+**Code:** `RecordTypeRegistry` (+`permissions_required`, `inventory` block, `area_fields`; `inapplicableReason()` / `capabilityCodes()` / `availableFor()` are now the single source of the cycle-kind + species-capability rules and `RecordService::create` calls them); `ProductionCycleResource::withAvailableRecordTypes()` (cycle detail + summary only); `InventoryItemResource` (+`kind`, `is_system_managed`); `StockReasonCatalogue` (+`manual_for_kinds` derived from `by_item_kind`, `reasons.flat_lists`, route `url`); new `App\Support\Api\ApiRoute` (`url`/`path`), used by the catalogue, `QuickActions` and `TaskService::recordPrefill`; `AuthStateResource` (+`farms[]` = active memberships, oldest first); `InventoryService::resolveOutputLine()` + `SaleService`/`PurchaseService` stock lines accept `output: eggs|milk` (exactly one of `output`/`inventory_item_id`; purchase resolves/creates via `OutputStockService`, sale uses the existing item only and answers `409 insufficient_stock` without creating anything; item lock order unchanged).
+
+**No migration, no new route** (233 routes; OpenAPI re-exported: 184 paths / 233 operations).
+
+**Tests:** new `tests/Feature/Api/FrontendHandoffGapsTest.php` (19 tests, 688 assertions: schema permissions vs real role behaviour, stock metadata, availability == what `POST /records` accepts for poultry/dairy/crop cycles, capability toggle, closed cycle, tenant scope, item kind not name-based, `manual_for_kinds` derived, route `url`, prefill/quick_add, `farms[]` active-only/other-user/removed/empty + `X-Farm-Id`, purchase/sale by output incl. idempotency, store rules, no fake stock, exactly-one target, back-compat, tenancy, permissions). Full Feature suite on MySQL 8: **872 tests, 11,983 assertions, 0 failures**. Pint clean.
+
+**Postman:** +10 reference requests, Flow 14 rebuilt (11 → 22 steps, self-contained: it used to depend on `context_id` from folder 06 and failed when first executed), P1-P4 examples filled, +3 env vars (111), descriptions/Tests extended, examples refreshed from real responses. Executed with Newman on a live local server: all 14 flows, 170 requests, 361 assertions, 0 failures. See `docs/postman/COVERAGE.md` addendum (also lists the 7 Auth-state examples whose `farms[]` was derived, not re-captured, and that the official Postman schema validation could not be re-run offline).
+
+**Docs:** API-CONTRACT (§3, §4, §5.1, §13, §13.1, §17), FRONTEND-INTEGRATION (§2, §5, §24.2-24.7; GAP index now shows 01-08 resolved, 09 open), FRONTEND-WORKFLOWS (§0.1-0.7, 1, 6, 7, 13, 19-21, 26, 27, 41, 42, 44, 49), FEED-EGGS-MILK-STOCK, PHASE-08/09/14/15, docs/api/README, postman WORKFLOWS + COVERAGE, openapi.json.
+
+**Environment note:** the sandbox had no MySQL/bcmath; verification used MySQL 8 + php8.3-bcmath installed locally (MariaDB cannot run the generated-column migrations). Nothing about that is committed.
+
+**Remaining intentional gaps:** GAP-09; flat `reasons.in/out` kept (deprecated, not removed); `available_record_types` is not permission-filtered (by design) and not on list/write responses; `components`/`context` shapes stay documented in the workflows + Postman, not in the schema; `/auth/me` still has no permissions.
+
+---
+
+## Previous task — Feed, eggs and milk stock: one event, one entry, every effect (UNCOMMITTED)
 
 **Agent:** Claude Code. **Date:** 2026-10-06. Closes the V1 gap where egg/milk production, incubation, donation/spoilage and feed OUT reasons did not move stock. Contract: `docs/api/FEED-EGGS-MILK-STOCK.md` (authoritative; includes the side-effect table, reason catalogue, units, compatibility notes).
 
@@ -683,4 +705,4 @@ Complete the production/staging gates in `docs/operations/LAUNCH.md`. Phase 20 r
 
 ## Recommended Next Commit
 
-`fix: harden V1 authentication, private jobs, reconciliation and launch operations`
+`feat: close frontend-handoff gaps GAP-01..08 (permissions_required, available_record_types, item kind, stock metadata, route urls, farms[], output-named sale/purchase lines)`

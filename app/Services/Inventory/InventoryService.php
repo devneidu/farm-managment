@@ -513,6 +513,36 @@ class InventoryService
 
     // ----------------------------------------------- Phase 14 integration (purchasing)
 
+    /**
+     * A sale/purchase stock line that names its item semantically (`output`: eggs|milk) instead of by id: returns the line with
+     * `inventory_item_id` and `storage_location_id` filled in, so the rest of the workflow is exactly the id-based one.
+     *
+     * Purchase: the farm's output item is resolved or created and the receiving store follows the stock-in rules (only active
+     * store, else "Main Store", several need a choice). Sale: the existing item only - nothing is created for a sale; a farm that
+     * never stocked the output gets the same 409 insufficient_stock as a stock-out. Must run inside the caller's transaction.
+     */
+    public function resolveOutputLine(FarmContext $ctx, array $line, string $prefix, bool $purchase): array
+    {
+        $kind = $line['output'];
+        unset($line['output']);
+        $field = $prefix.'.storage_location_id';
+        if ($purchase) {
+            $item = $this->outputs->resolve($ctx, $kind);
+            $line['storage_location_id'] = $this->outputs->receivingLocation($ctx, $line['storage_location_id'] ?? null, $field)->id;
+        } else {
+            // Unlocked here: the item row is locked later, in the caller's id order (lock order is farm, cycle, item).
+            $item = $this->outputs->find($ctx, $kind);
+            $location = $item ? $this->outputs->issuingLocation($ctx, $line['storage_location_id'] ?? null, $field) : null;
+            if ($item === null || $location === null) {
+                throw new ApiHttpException(409, 'insufficient_stock', 'There is no '.$kind.' in stock.', details: ['available' => ['quantity' => '0', 'unit' => $kind === 'eggs' ? 'piece' : 'l']]);
+            }
+            $line['storage_location_id'] = $location->id;
+        }
+        $line['inventory_item_id'] = $item->id;
+
+        return $line;
+    }
+
     /** Locks and returns the active item a stocked purchase line receives into. Called by PurchaseService inside its transaction. */
     public function itemForPurchase(FarmContext $ctx, string $itemId, string $field): InventoryItem
     {

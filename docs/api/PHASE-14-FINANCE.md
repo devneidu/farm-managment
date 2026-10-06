@@ -49,6 +49,7 @@ purchase ──► purchase_items
 }
 ```
 
+* **Output-named stock lines:** a stock line carries exactly one of `inventory_item_id` or `output` (`eggs` | `milk`). With `output` the farm's own Eggs / Milk item is resolved — or created — exactly as `POST /inventory/stock-in {output}` does (first use creates it; `storage_location_id` is optional: the only active store, "Main Store" when the farm has none, several stores = 422 `items.N.storage_location_id`). `inventory_item_id` keeps working unchanged. Both or neither is 422; `output` on a `non_stock` line is 422.
 * **Quantities** use the Phase 5 components format. Packages (`bag`) resolve **only** through the item's own package conversion (`POST /settings/package-conversions`); without it the request is 422. The stored quantity is the canonical normalised quantity plus the replayable conversion snapshot (`measurement`).
 * **Lots / expiry**: items that track lots require `lot_id` or `lot {code, expires_on}` on the line (expiry-tracked items require `expires_on`); a lot already expired on the purchase date is `409 lot_expired`; an existing lot code with a different expiry is 422. Items that do not track lots reject lots.
 * **Storage location** must be an active storage location of the farm (foreign/unknown = 404).

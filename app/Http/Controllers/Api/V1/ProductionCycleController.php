@@ -39,12 +39,14 @@ class ProductionCycleController extends Controller
      * Show livestock batch or crop project
      *
      * Requires production_cycle.view. Includes closed cycles and inactive historical catalogue/location selections.
+     * Detail only: `available_record_types` lists the record types POST /records accepts for this cycle now (same cycle-kind and species-capability
+     * rules as record creation; empty for a closed cycle), each with its `permissions_required`. List and write responses do not carry it.
      *
      * @response array{data: ProductionCycleResource, meta: object, message: null}
      */
     public function show(Request $request, FarmContext $ctx, CycleService $service, string $cycle): JsonResponse
     {
-        return ApiResponse::success((new ProductionCycleResource($service->find($ctx->farm, $cycle)))->resolve($request));
+        return ApiResponse::success((new ProductionCycleResource($service->find($ctx->farm, $cycle)))->withAvailableRecordTypes()->resolve($request));
     }
 
     /**

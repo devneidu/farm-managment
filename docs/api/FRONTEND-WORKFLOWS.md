@@ -2,7 +2,7 @@
 
 Detailed orchestration for each V1 workflow. **Entry point and rules:** [`FRONTEND-INTEGRATION.md` §24](FRONTEND-INTEGRATION.md#24-building-v1-product-workflows) (metadata ladder, orientation map, GAP index). Field-level payloads: the Postman collection (`docs/postman/Farm-Management-API.postman_collection.json`); contract: [`API-CONTRACT.md`](API-CONTRACT.md); Feed/Eggs/Milk detail: [`FEED-EGGS-MILK-STOCK.md`](FEED-EGGS-MILK-STOCK.md).
 
-Every statement here was checked against the code (routes, FormRequests, services, resources) on 2026-10-06. Where the API does not expose enough for the UI to decide something without product knowledge it is marked **GAP-xx** (index in §24.7 of the integration guide). Nothing here changes behaviour.
+Every statement here was checked against the code (routes, FormRequests, services, resources) on 2026-10-06. The frontend-handoff correction pass (GAP-01 … GAP-08) moved the former client-side workarounds into the API: record-type availability, permissions, item kind, stock metadata, route forms, farm discovery and output-named sale/purchase lines are now returned by the backend. The only open item is **GAP-09** (dashboard milk/available-stock KPIs); index in §24.7 of the integration guide.
 
 All paths are relative to `/api/v1`. Never send `farm_id`. Never send a permission string. `recorded_at` format, money strings, idempotency keys, error handling and optimistic-update rules are in the integration guide §9–§17 and are not repeated.
 
@@ -34,29 +34,27 @@ These recur in many workflows; each workflow names the ones it uses.
 
 1. `GET /production-cycles?status=active&kind=livestock|crop` (needs `production_cycle.view`). Read `data[].id`, `kind`, `name`, `reference`, `livestock.species.id`, `livestock.current_population`, `crop.*`.
 2. A cycle with `status: closed` accepts no new record, sale line, task or schedule (`409 cycle_closed`) — filter to `active` for pickers; reopen first (`POST /production-cycles/{id}/reopen`, `production_cycle.reopen`).
-3. Capability of the cycle's species: the cycle resource carries only `livestock.species.{id,code,name}` (**GAP-02**: no `capability_codes` on the cycle). Read `capability_codes` from `GET /master/species` (cache it per farm; rows are keyed by `id`) and match on `livestock.species.id`.
+3. Which record types the chosen cycle accepts: open its detail (`GET /production-cycles/{id}`) and read `data.available_record_types[]` (§0.2). The species capability is already applied by the backend; the cycle resource still carries only `livestock.species.{id,code,name}`, and `capability_codes` stay on `GET /master/species` for the breeding/health screens.
 
-### 0.2 Which record types a cycle accepts (the "record type ladder")
+### 0.2 Which record types a cycle accepts
 
-`GET /master/record-types` → each row has `type`, `cycle_kind` (`livestock` | `crop` | `null` = either), `capability` (code or `null`), `measurement`, `fields`, `permission`, `population_effect`, `inventory_*`. A type is offered for a cycle when **all** hold:
+`GET /production-cycles/{id}` (also `/summary`) → `data.available_record_types[]`, each `{type, permissions_required}`. The list is built by the same rules `POST /records` applies: the type's `cycle_kind` equals the cycle kind (or is `null` = either), the species has the type's `capability` enabled, and the cycle is `active` (a closed cycle returns `[]`). A type that is not listed is `422` on `type`. The list and the write responses of cycles do **not** carry the field — read it on the detail, and refetch the detail after close/reopen or a platform capability change.
 
-* `cycle_kind` is `null` or equals `cycle.kind`;
-* `capability` is `null` or is in the cycle species' `capability_codes` (otherwise `422` on `type`: "The species does not support this record capability");
-* `membership.permissions` contains `permission` (`record.create`; `record.adjust` for `population_adjustment`) **and** the extra permissions in §0.3.
+Then, per listed type, check permissions (§0.3) against `GET /farm → membership.permissions`, and take labels/fields/measurement from the `GET /master/record-types` row with the same `type`.
 
-The backend does not return this intersection (**GAP-02**); build it client-side from the three responses above.
+### 0.3 Permissions per record type (`permissions_required`)
 
-### 0.3 Permissions the schema does NOT tell you (**GAP-01**)
+Every record schema (`GET /master/record-types`, `GET /record-types/{type}/schema`, and each entry of `available_record_types`) carries the authoritative list; the legacy `permission` field (only `record.create` / `record.adjust`) is unchanged and is no longer enough on its own:
 
-`schema.permission` is only `record.create`/`record.adjust`. The service additionally requires:
+```json
+"permissions_required": {
+  "always": ["record.create", "inventory.use"],     // egg_collection, milk: they always write a stock-in
+  "when_inventory_linked": [],                      // feed_use, planting, fertilizer/pesticide_application, crop_harvest: ["inventory.use"] when details.inventory is sent
+  "when_correcting": ["record.reverse"]             // when corrects_record_id is sent
+}
+```
 
-| Record | Extra permission | Why |
-|---|---|---|
-| `egg_collection`, `milk` | `inventory.use` (always) | they write a stock-in |
-| `feed_use`, `fertilizer_application`, `pesticide_application`, `planting`, `crop_harvest` **when `details.inventory` is sent** | `inventory.use` | they write a stock movement |
-| a correction (`corrects_record_id`) | `record.reverse` | |
-
-Roles: `farm_worker` has `record.create` + `inventory.use`; `finance` and `vet` have neither. A role with `record.create` but not `inventory.use` gets `403 forbidden` on eggs/milk (hide those types).
+Offer a type when the member holds every code in `always`; additionally require `when_inventory_linked` when the form links stock, and `when_correcting` for a replacement. `population_adjustment` needs `record.adjust` instead of `record.create`. Roles: `farm_worker` has `record.create` + `inventory.use`; `finance` and `vet` have neither, so egg/milk types are hidden for them (the endpoint answers `403 forbidden`).
 
 ### 0.4 Unit dropdown for any quantity
 
@@ -77,16 +75,14 @@ Roles: `farm_worker` has `record.create` + `inventory.use`; `finance` and `vet` 
 
 ### 0.6 Item kind of a stock item (decides which `inventory-options` list to render)
 
-`GET /inventory/items` (and `GET /inventory/items/{id}`) return `category`, `stock_unit`, `dimension` but **no kind and no `system_key`** (**GAP-03**). Derive it:
+Every inventory item (`GET /inventory/items`, `GET /inventory/items/{id}`) carries two stable fields:
 
 ```text
-item.category === "feed"                                   → by_item_kind.feed
-item.id === output-balances.data.eggs.inventory_item_id    → by_item_kind.eggs
-item.id === output-balances.data.milk.inventory_item_id    → by_item_kind.milk
-otherwise                                                  → by_item_kind.general
+kind              "feed" | "eggs" | "milk" | "general"   → index into reasons.by_item_kind[kind]
+is_system_managed true for the farm's automatic Eggs / Milk output items (resolved by the system), false for every item the farmer created
 ```
 
-For Eggs/Milk screens skip the item picker entirely: the screen *is* the kind; call with `output: "eggs"|"milk"` (stock-in/out) or let the record/incubation resolve it. A manually created item called "Eggs" is adopted only if produce/piece/not lot-tracked/active; otherwise a separate "Eggs (farm output)" item is created — never match on `name`.
+Never derive the kind from the name or category. For Eggs/Milk screens skip the item picker entirely: the screen *is* the kind; call with `output: "eggs"|"milk"` (stock-in/out, sale and purchase lines) or let the record/incubation resolve it. A manually created item called "Eggs" is adopted only if produce/piece/not lot-tracked/active (then `kind: eggs`, `is_system_managed: true`); otherwise a separate "Eggs (farm output)" item is created and the manual one stays `kind: general` / `is_system_managed: false`.
 
 ### 0.7 The `inventory-options` ladder (Feed / Eggs / Milk / General)
 
@@ -101,14 +97,15 @@ GET /master/inventory-options                       (inventory.view; once per se
       "sale"             → POST /sales  (stock line)
       "transfer"         → POST /inventory/transfers
       "adjustment"       → POST /inventory/adjustments
+      (every route has `path` relative to /api/v1 and `url` = the absolute /api/v1/… form)
       entry.also[]       → alternative that books more (purchase → POST /purchases)
  → entry.creates_operational_record tells you whether a record row appears
 ```
 
 Rules verified in `StockReasonCatalogue`:
 
-* Use `by_item_kind`, **not** the flat `reasons.in/out`: the flat list says `production.manual = true` (true for home-made feed) but for eggs/milk `by_item_kind` correctly says `manual: false` (**GAP-05**).
-* `route.path` here is **relative to `/api/v1`** (`/records`). `GET /tasks/{id}/record-prefill → endpoint` and dashboard `quick_add[].endpoint` are **absolute** (`/api/v1/records`) (**GAP-06**) — strip or prefix consistently.
+* Use `by_item_kind` (authoritative, item-aware), **not** the flat `reasons.in/out` (`reasons.flat_lists.deprecated: true`): the flat list's `manual` only means "not system-only", so `production` is `manual: true` there although eggs/milk production is automatic. Each flat entry has `manual_for_kinds` (e.g. `production` → `["feed"]`) if you must read the flat list.
+* Route forms: `route.path` is relative to `/api/v1` (`/records`); `route.url` is the same route absolute (`/api/v1/records`). `GET /tasks/{id}/record-prefill` and dashboard `quick_add[]` keep their absolute `endpoint` and now also carry `url` (= `endpoint`) and `path` (relative). Pick `url` (or `path`) once and use it everywhere.
 * The route carries no payload hints beyond `record_type` / `field` / `workflow`; payload details are below and in Postman.
 * `manual: false` reasons are `422` on the manual endpoints. Never try them there.
 
@@ -122,9 +119,9 @@ Replace local state with the response resource and refetch per workflow ("Refetc
 
 1. **Intent:** open the app / sign in / sign up / create the first farm.
 2. **Fetch:** `GET /auth/csrf-cookie` (204) → `GET /auth/me`.
-3. **Read:** `data.next_action`, `data.user.platform_role`, `data.farm.id`.
+3. **Read:** `data.next_action`, `data.user.platform_role`, `data.farm.id` (default farm) and `data.farms[]` (`{id, name, role}` of every farm the user actively belongs to).
 4. **Effect:** `next_action` is the router: `verify_email` → OTP; `complete_farm_setup` → farm name; `no_active_farm` → "no farm" screen; `none` → app. `platform_role` ≠ null → show the Platform Admin area (separately, §53).
-5. **Dependent:** when `none`: `GET /farm` (farm + `membership.permissions`), `GET /subscription/entitlements`, optionally `GET /locales`, `GET /translations/{locale}`, `GET /me/preferences`, then `GET /dashboard`.
+5. **Dependent:** when `none`: choose the active farm from `farms[]` (remembered choice if still listed, else `data.farm`; send it as `X-Farm-Id` when it is not the default), then `GET /farm` (farm + `membership.permissions`), `GET /subscription/entitlements`, optionally `GET /locales`, `GET /translations/{locale}`, `GET /me/preferences`, then `GET /dashboard`.
 6. **Conditional:** invited users: register/login with the invited email → verify → `POST /invitations/accept {token}` (skips farm setup; `meta.accepted_farm_id`). Google: `POST /auth/google {credential}`.
 7. **Final mutations:** `POST /auth/register`, `POST /auth/login`, `POST /auth/email/verify {code}`, `POST /auth/email/resend`, `POST /onboarding/farm {name}`, `POST /auth/logout`; reset: `POST /auth/password/forgot` → `/verify-otp` (keep `reset_token` in memory) → `/reset`.
 8. **Payload:** Postman folders `01 — Authentication`, `02 — Onboarding & Account`; Flow 1, Flow 2.
@@ -134,7 +131,7 @@ Replace local state with the response resource and refetch per workflow ("Refetc
 12. **Needs:** none (verified user). Farm endpoints answer `403 email_verification_required` / `onboarding_required` / `no_active_farm` until the state is right.
 13. **States:** `429` + `Retry-After` on OTP resend (60 s); `401 invalid_credentials` is identical for wrong email/password; `403 account_suspended`; `419 session_expired` (refetch csrf, retry once).
 14. **Postman:** Flow 1, Flow 2, Flow 13 (invitation).
-* **GAP-07:** `/auth/me` has `farm.role` only; permissions need `GET /farm`. No endpoint lists your farms (`docs/postman/COVERAGE.md` §9, G1).
+* **Multi-farm (V1):** plans may limit farms (Free = 1) while paid users can belong to several. Show a switcher only when `farms.length > 1`. Switching is client-side: store the chosen `farms[].id` → send `X-Farm-Id` on every request → `GET /farm` → `GET /subscription/entitlements` → clear and refetch farm-scoped data. `/auth/me` never lists permissions (they come from `GET /farm → membership.permissions` of the selected farm). A removed membership disappears from `farms[]` and its id is `403 farm_access_denied`.
 
 ## 2. Farm setup and farm operations
 
@@ -209,11 +206,11 @@ Replace local state with the response resource and refetch per workflow ("Refetc
 The "Record activity" button is a three-step discovery, not a fixed menu.
 
 1. **Intent:** "Record something that happened".
-2. **Fetch (in order):** (a) cycle (§0.1) — or start from the dashboard's `quick_record[]`; (b) `GET /master/record-types`; (c) `GET /master/species` (capabilities) — all cached.
-3. **Read:** record types `type`, `cycle_kind`, `capability`, `permission`, `measurement`, `inventory_effect_enabled`, `inventory_automatic`, `inventory_output`; the cycle's `kind` and species.
-4. **Effect:** apply §0.2 + §0.3 to list the types the user may record for *this* cycle. Stock-moving types (`inventory_effect_enabled: true`) are the ones that also change an inventory balance.
+2. **Fetch (in order):** (a) cycle (§0.1) — or start from the dashboard's `quick_record[]`; (b) `GET /production-cycles/{id}` → `available_record_types[]`; (c) `GET /master/record-types` (labels, forms) — the record-type list is cached; the cycle detail is read per cycle.
+3. **Read:** `available_record_types[].{type, permissions_required}`; per type row `type`, `permissions_required`, `measurement`, `inventory` (`mode`, `direction`, `output`, …), `area_fields`, plus the legacy `permission`, `inventory_effect_enabled`, `inventory_automatic`, `inventory_output`.
+4. **Effect:** list the types in `available_record_types` whose `permissions_required` the member holds (§0.2 + §0.3). Stock-moving types (`inventory` ≠ `null`) are the ones that also change an inventory balance.
 5. **Dependent:** the chosen `type` → `GET /record-types/{type}/schema` (note: **not** under `/master`) for the form (§7).
-6. **Conditional:** hide stock-moving types for roles without `inventory.use`; hide `population_adjustment` without `record.adjust`.
+6. **Conditional:** hide types whose `permissions_required.always` the member lacks (egg/milk without `inventory.use`, `population_adjustment` without `record.adjust`); for optional stock links, hide the "Take from stock" section without `inventory.use`.
 7. **Final mutation:** `POST /records` (§7–§30).
 8. **Payload:** Postman `09 — Operational Records`, `14 — Crop Operations`.
 9. **Backend does:** see each type.
@@ -227,19 +224,19 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 
 1. **Intent:** render the form for one record type.
 2. **Fetch:** `GET /record-types/{type}/schema` (or reuse the row from `/master/record-types`).
-3. **Read:** `fields` (key → list of rules, e.g. `["required","string","max:500"]`), `measurement {dimension, display_unit, normalized_unit, required, components_max}` or `null`, `population_effect`, `inventory_*`.
+3. **Read:** `fields` (key → list of rules, e.g. `["required","string","max:500"]`), `measurement {dimension, display_unit, normalized_unit, required, components_max}` or `null`, `area_fields`, `population_effect`, `permissions_required`, `inventory` (or `null`), and the legacy `inventory_*` flags.
 4. **Effect:** each `fields` key is an input under `details.<key>`; `required` is in the rules (`required_without:details.inventory` means "required unless stock is linked"). `measurement` ≠ null → show a quantity control (`details.components`); `measurement.required: false` → optional, but required once a `context`/`inventory` is chosen. Units: §0.4. Unknown `details` keys are `422`, so render only what the schema lists plus `components`/`context`.
 5. **Dependent:** unit list per `measurement.dimension`; stock item picker for linkable types (§13–§15, §28–§30); storage picker (§0.5).
-6. **Conditional:** `inventory_effect_enabled` & not `inventory_automatic` → optional "Take from stock" section (item + store [+ lot]) → send `details.inventory {item_id, storage_location_id, lot_id?}`; `inventory_automatic: true` (eggs, milk) → no item section, only an optional store picker → `details.inventory {storage_location_id}`. `inventory_direction: in|out` says whether stock is added or taken. `inventory_dimensions` limits which items are eligible (filter `GET /inventory/items?category=<inventory_category>` by `dimension`).
+6. **Conditional:** read the `inventory` block. `mode: "optional_link"` → optional "Take from stock" / "Add to stock" section: `fields` says which `details.inventory` keys exist (`item_id`, `storage_location_id` are `required` once the object is sent; `lot_id` optional; `lot {code, expires_on}` optional on harvest) → send `details.inventory {item_id, storage_location_id, lot_id?}`. `mode: "automatic_output"` (eggs, milk) → no item section, only an optional store picker → `details.inventory {storage_location_id}` (`output` names which farm stock it feeds). `direction: in|out` says whether stock is added or taken; `item_category` + `dimensions` limit which items are eligible (filter `GET /inventory/items?category=<item_category>` by `dimension`). `area_fields` lists the sub-objects that are an AREA (`treated_area`, `affected_area`: `{quantity, unit}` with an area unit) and are never the stock or planting quantity. `inventory` is `null` for types without a stock effect.
 7. **Final mutation:** `POST /records {type, production_cycle_id, recorded_at, idempotency_key, details, notes?}`.
 8. **Payload:** Postman folders 09 and 14.
 9. **Backend does:** validates strictly against the registry, normalises quantities, writes the record, and (stock-moving types) the movement, in one transaction.
 10. **DO NOT:** send `farm_id`, `population_delta`, `measurement`, `created_by` (422); invent record types; patch/delete a record (use `POST /records/{id}/reverse`).
 11. **Refetch:** see the per-type sections; always `GET /records?production_cycle_id=`.
-12. **Needs:** §0.3.
+12. **Needs:** §0.3 (`permissions_required`).
 13. **States:** `409 cycle_closed`, `409 idempotency_conflict`, `422` measurement codes (`conversion_not_configured`, …).
-14. **Postman:** folder 09.
-* **GAP-04:** the schema does not describe the shape of `components`/`context`/`inventory` objects or area sub-fields (`treated_area`, `affected_area`); `inventory_required` is always `false`. The shapes are in §0.4 and the Postman bodies.
+14. **Postman:** folder 09 (`Get one record type schema`, `Get the egg collection record type schema`).
+* **Shapes the schema does not spell out (by design):** the compound `components` / `context` objects are documented once, in §0.4 and the Postman bodies; `inventory_required` is always `false` (stock is never mandatory) — use the `inventory` block.
 * **Reversal / correction:** `POST /records/{id}/reverse {reason, recorded_at, idempotency_key}` (`record.reverse`; cycle must be open; appends a compensating row, never edits). Correct = reverse, then `POST /records {…, corrects_record_id}`. `breeding_outcome` and `livestock_sale` records are reversed through their owners (`409 reverse_via_breeding_outcome` / `reverse_via_sale`).
 * **Attachments:** `POST /records/{id}/attachments` (multipart `file`), `GET …/attachments/{id}` as blob.
 
@@ -347,7 +344,7 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 11. **Refetch:** `GET /inventory/items/{id}`, `/inventory/items/{id}/movements`, items list (`stock`, `is_low_stock`), dashboard `low_stock`.
 12. **Needs:** `inventory.manage`. (Farm worker has `inventory.use` only → hide IN.)
 13. **States:** `409 item_inactive`, `422 conversion_not_configured`, `422 reason` (system-owned), `409 idempotency_conflict`.
-14. **Postman:** `Receive stock (stock-in)` (opening balance only — **GAP-P2**: no example with `donation`, `aid`, `received`, `production`, `other`; purchase is `Record a purchase (stock + expense)`).
+14. **Postman:** `Receive stock (stock-in)` (opening balance), `Receive feed from other sources (stock-in reasons)` (`aid`, `production`, `donation`, `received`); purchase is `Record a purchase (stock + expense)`; Flow 14 request 21.
 
 ## 14. Feed OUT
 
@@ -445,14 +442,14 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 4. **Effect:** one stock-in screen with a "source" dropdown made from those entries. `purchase` also offers `also[]` → **Record a purchase** to book the expense.
 5. **Dependent:** store (optional with `output`).
 6. **Conditional:** none; no cycle is involved.
-7. **Final mutation:** `POST /inventory/stock-in {output: "eggs", storage_location_id?, reason, components, recorded_at, idempotency_key}`. To book the cost as well: `POST /purchases` instead (§42) — it needs the eggs item id (`output-balances.eggs.inventory_item_id`), which is `null` until the farm has any egg stock (**GAP-08**: purchase lines have no `output` shorthand; use stock-in until the item exists).
+7. **Final mutation:** `POST /inventory/stock-in {output: "eggs", storage_location_id?, reason, components, recorded_at, idempotency_key}`. To book the cost as well: `POST /purchases` instead (§42) with a stock line `{kind: "stock", output: "eggs", storage_location_id?, components, amount}` — no item id is needed (the Eggs item is resolved or created exactly as stock-in does).
 8. **Payload:** Postman `Receive donated eggs (stock-in, no item setup)`.
 9. **Backend does:** one `stock_in` movement; creates the Eggs item/Main Store if missing. **No** `egg_collection` record, ever.
 10. **DO NOT:** call `POST /records`; do not combine stock-in and purchase for the same delivery.
 11. **Refetch:** output-balances, movements.
 12. **Needs:** `inventory.manage`.
 13. **States:** `422 reason` for `production`/`returned`.
-14. **Postman:** `Receive donated eggs…`; Flow 14 request 4. (**GAP-P2:** no example for `purchase`/`received`/`other`.)
+14. **Postman:** `Receive donated eggs…`, `Receive eggs from other sources (stock-in reasons)` (`received`, `purchase`, `other`, `production` → 422), `Record a purchase of eggs (by output)`; Flow 14 requests 7, 8 and 16.
 
 ## 20. Egg damage / spoilage / internal use
 
@@ -469,24 +466,24 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 11. **Refetch:** output-balances, movements.
 12. **Needs:** `inventory.use`.
 13. **States:** `409 insufficient_stock`.
-14. **Postman:** `Give away eggs…` (**GAP-P3:** no example for `damaged`, `spoiled`, `internal_use`, `lost`).
+14. **Postman:** `Give away eggs…` (`donation`), `Write off or use eggs (stock-out reasons)` (`damaged`, `spoiled`, `internal_use`, `lost`, `sale` → 422, too many → 409); Flow 14 requests 10 and 11.
 
 ## 21. Egg sale
 
 1. **Intent:** "Sold 2 crates of eggs".
-2. **Fetch:** `GET /inventory/output-balances` (`eggs.inventory_item_id`, `available`, `by_storage_location`); `GET /contacts?role=customer`; `GET /finance/categories` (optional).
-3. **Read:** `eggs.exists` and `inventory_item_id`.
-4. **Effect:** a sale screen with a stock line. If `eggs.exists === false` there is nothing to sell: disable.
-5. **Dependent:** store from `by_storage_location`; crate size from the **Eggs item's** conversion (`context_type: inventory_item`).
-6. **Conditional:** `sellable_categories` (from `inventory-options`) must include `produce` — the Eggs item is produce.
-7. **Final mutation:** `POST /sales {contact_id? | customer_name?, recorded_at, idempotency_key, items:[{kind:"stock", inventory_item_id, storage_location_id, components, amount}], invoice?}`.
-8. **Payload:** Postman `Record a sale of surplus feed` shows the stock-line shape; `Record a sale (stock + livestock lines)` sells the manual "Table Eggs" item (**GAP-P4:** no example selling the *output* Eggs item or milk).
-9. **Backend does:** the sale + lines + one `sale` stock-out per stock line, linked to the line. Books **no income** and **no invoice** (unless the optional `invoice` block is sent).
+2. **Fetch:** `GET /inventory/output-balances` (`eggs.exists`, `available`, `by_storage_location`); `GET /contacts?role=customer`; `GET /finance/categories` (optional).
+3. **Read:** `eggs.exists`, `eggs.available`; the store ids with stock.
+4. **Effect:** a sale screen with a stock line that names `output: "eggs"` — no item id is needed. If `eggs.exists === false` or `available` is 0 there is nothing to sell: disable (the backend would answer `409 insufficient_stock` and create nothing).
+5. **Dependent:** store from `by_storage_location` (optional when the farm has exactly one active store); crate size from the **Eggs item's** conversion (`context_type: inventory_item`).
+6. **Conditional:** `sellable_categories` (from `inventory-options`) includes `produce` — the Eggs item is produce.
+7. **Final mutation:** `POST /sales {contact_id? | customer_name?, recorded_at, idempotency_key, items:[{kind:"stock", output:"eggs", storage_location_id?, components, amount}], invoice?}`. Exactly one of `output` / `inventory_item_id` per stock line (`inventory_item_id` stays supported); both or neither is `422 items.N.output|inventory_item_id`.
+8. **Payload:** Postman `Record a sale of eggs (by output)` (+ examples: `409 insufficient_stock`, `422` several stores); Flow 14 request 15.
+9. **Backend does:** the sale + lines + one `sale` stock-out per stock line, linked to the line. A sale resolves the EXISTING Eggs item only: it never creates the item, a store or any stock. Books **no income** and **no invoice** (unless the optional `invoice` block is sent).
 10. **DO NOT:** also `stock-out` the eggs (reason `sale` is refused); do not book income manually; do not call `POST /invoices` after sending the `invoice` block.
 11. **Refetch:** sale, output-balances, movements, sales list, dashboard (`sales_month`).
 12. **Needs:** `sale.create` (+ `invoice.create` for the invoice block). `inventory.use` is **not** required.
-13. **States:** `409 insufficient_stock`, `409 item_inactive`, `422` amounts (≤ 2 decimals).
-14. **Postman:** folder 17.
+13. **States:** `409 insufficient_stock` (also when the farm never had eggs), `409 item_inactive`, `422 items.N.storage_location_id` (several active stores, none chosen), `422` amounts (≤ 2 decimals).
+14. **Postman:** `Record a sale of eggs (by output)` (folder 17), Flow 14 request 15.
 
 ## 22. Egg incubation
 
@@ -508,11 +505,11 @@ As §18 with `type: milk`, `capability: produces_milk`, `measurement.dimension: 
 
 ## 26. Milk purchase / donation
 
-As §19 with `output: "milk"` and `reason` ∈ `purchase`, `donation`, `received`, `other`, `opening_balance`. Postman: **GAP-P1** — no request uses `output: milk` on stock-in/out (the eggs examples are the template; change `output` and the unit to `l`).
+As §19 with `output: "milk"` and `reason` ∈ `purchase`, `donation`, `received`, `other`, `opening_balance`; a purchase with its cost is `POST /purchases` with a stock line `{output: "milk", …}` (unit `l`). Postman: `Receive milk (stock-in, no item setup)` (`opening_balance`, `donation`, `purchase`, `production` → 422); Flow 14 request 17.
 
 ## 27. Milk sale / spoilage / internal use
 
-Sale: as §21 with the milk item id (`output-balances.milk.inventory_item_id`) and a volume `components` (`l`). Spoilage/internal use/donation/lost: as §20 with `output: "milk"` and reasons `spoiled`, `internal_use`, `donation`, `lost`, `other`. **GAP-P4/P3:** no Postman example for a milk sale or any milk OUT.
+Sale: as §21 with `output: "milk"` and a volume `components` (`l`). Spoilage/internal use/donation/lost: as §20 with `output: "milk"` and reasons `spoiled`, `internal_use`, `donation`, `lost`, `other`. Postman: `Record a sale of milk (by output)`, `Write off or use milk (stock-out reasons)`; Flow 14 requests 18 and 19.
 
 ---
 
@@ -750,7 +747,7 @@ The only correct order is **record first, then complete**.
 1. **Intent:** "Mark done" a task that has a `linked_record_type`.
 2. **Fetch:** `GET /tasks/{id}/record-prefill`.
 3. **Read:** `endpoint`, `method`, `evidence_type`, `prefill {production_cycle_id, breeding_project_id?, type?, recorded_at, date}`. `409 task_has_no_linked_record` if none.
-4. **Effect:** open the *normal* record form for that type pre-filled with the context. `endpoint` is absolute (`/api/v1/records`, `/api/v1/health-records`, `/api/v1/breeding-projects/{id}/checks|outcomes`) — **GAP-06** (other APIs return relative paths); for a `breeding_*` link the URL needs `breeding_project_id` — verify it is present.
+4. **Effect:** open the *normal* record form for that type pre-filled with the context. `endpoint` is absolute (`/api/v1/records`, `/api/v1/health-records`, `/api/v1/breeding-projects/{id}/checks|outcomes`); `url` repeats it and `path` is the same route relative to `/api/v1` (use either consistently); for a `breeding_*` link the URL needs `breeding_project_id` — verify it is present.
 5. **Dependent:** the record form (§7, §34, §38).
 6. **Conditional:** `requires_evidence: true` → completion is `422` without evidence.
 7. **Final mutations (in order):** (1) the actual record endpoint → returns `id`; (2) `POST /tasks/{id}/complete {evidence: {type: evidence_type, id}, note?, completed_at?}`.
@@ -771,9 +768,9 @@ The only correct order is **record first, then complete**.
 3. **Read:** item `id`, `dimension`; category ids.
 4. **Effect:** lines: `kind: stock` (item, store, components, lot, `amount`) or `non_stock` (description, `amount`). `record_expense` (default books the expense).
 5. **Dependent:** units by item dimension; packages via the **item's** conversion.
-6. **Conditional:** `record_expense: false` → later `POST /expenses {source:{type:"purchase", id}}` for **exactly** the total.
+6. **Conditional:** `record_expense: false` → later `POST /expenses {source:{type:"purchase", id}}` for **exactly** the total. Eggs or milk bought: send the stock line as `{kind:"stock", output:"eggs"|"milk", storage_location_id?, components, amount}` instead of an item id (exactly one of the two; `inventory_item_id` stays supported). The output item is resolved or created and the store follows the stock-in rules (only active store; none → "Main Store"; several → `422 items.N.storage_location_id`).
 7. **Final mutation:** `POST /purchases`.
-8. **Payload:** `Record a purchase (stock + expense)`; Flow 9. Cancel: `POST /purchases/{id}/cancel`.
+8. **Payload:** `Record a purchase (stock + expense)`, `Record a purchase of eggs (by output)`; Flow 9, Flow 14 request 16. Cancel: `POST /purchases/{id}/cancel`.
 9. **Backend does:** one `stock_in` (reason `purchase`) per stock line + one expense of the total linked to the purchase, atomically.
 10. **DO NOT:** also `POST /inventory/stock-in` or `POST /expenses` for the same purchase (`409 finance_already_recorded`).
 11. **Refetch:** purchase, items/movements, finance summary/transactions, dashboard.
@@ -801,13 +798,13 @@ The only correct order is **record first, then complete**.
 ## 44. Sales
 
 1. **Intent:** sell stock, livestock or other lines.
-2. **Fetch:** `GET /contacts?role=customer`; stock: `GET /inventory/items` (categories in `inventory-options.sellable_categories`: `produce`, `feed`) and `GET /inventory/output-balances` for eggs/milk; livestock: active cycles with `current_population`.
+2. **Fetch:** `GET /contacts?role=customer`; stock: `GET /inventory/items` (categories in `inventory-options.sellable_categories`: `produce`, `feed`) and `GET /inventory/output-balances` for eggs/milk (sell them with `output`, no item id); livestock: active cycles with `current_population`.
 3. **Read:** `sellable_categories`; item ids/balances.
-4. **Effect:** line kinds `stock` (item, store, lot?, components, amount), `livestock` (cycle, `head_count`, amount), `other` (description, amount). Medicine, seed, agrochemicals and supplies are `422` on a stock line.
+4. **Effect:** line kinds `stock` (`inventory_item_id` **or** `output: eggs|milk`, store, lot?, components, amount — exactly one of item/output; an `output` line sells existing stock only and creates nothing), `livestock` (cycle, `head_count`, amount), `other` (description, amount). Medicine, seed, agrochemicals and supplies are `422` on a stock line.
 5. **Dependent:** store with stock, lot (lot-tracked), cycle.
 6. **Conditional:** optional `invoice {issue_date?, due_date?, notes?}` ("Save & create invoice", needs `invoice.create`); `corrects_sale_id` (needs `sale.cancel`).
 7. **Final mutation:** `POST /sales`.
-8. **Payload:** `Record a sale (stock + livestock lines)`, `Record a sale and issue its invoice in one step`; Flow 10.
+8. **Payload:** `Record a sale (stock + livestock lines)`, `Record a sale and issue its invoice in one step`, `Record a sale of eggs (by output)`, `Record a sale of milk (by output)`; Flow 10, Flow 14.
 9. **Backend does:** the sale + one `sale` stock-out per stock line + one `livestock_sale` population exit per livestock line, atomically. **No income, no invoice** (unless `invoice` block). The default income category is derived from the lines: livestock-only → `livestock_sales`, produce-only → `crop_sales`, anything else (including feed) → `other_income`.
 10. **DO NOT:** manually stock-out or adjust population for the sold items; do not add income.
 11. **Refetch:** sale, sales list, items/output-balances, cycle (`current_population`), dashboard.
@@ -876,14 +873,14 @@ The only correct order is **record first, then complete**.
 
 1. **Intent:** landing screen.
 2. **Fetch:** `GET /dashboard` (one request); `GET /dashboard/calendar`, `GET /insights?severity=`.
-3. **Read:** `sections` (booleans per area the viewer may see), `operations.relevant {livestock, crop}`, `kpis[]` (`code`, `value`, `unit`, `breakdown`), `quick_record[]`, `quick_add[]` (`code`, `permission`, `method`, absolute `endpoint`), `empty_state`, `work`, `production`, `insights`, `recent_activity`.
+3. **Read:** `sections` (booleans per area the viewer may see), `operations.relevant {livestock, crop}`, `kpis[]` (`code`, `value`, `unit`, `breakdown`), `quick_record[]`, `quick_add[]` (`code`, `permission`, `method`, absolute `endpoint`, plus `url` = `endpoint` and relative `path`), `empty_state`, `work`, `production`, `insights`, `recent_activity`.
 4. **Effect:** render a block only if present/`sections.<x>` is true; nothing 403s. `empty_state.suggested_actions` for new farms.
 5. **Dependent:** each card links to its own screen.
 6. **Conditional:** a crop-only farm gets no egg/mortality cards; workers get no money cards.
 7. **Final mutation:** none (read model; nothing stored).
 8. **Payload:** `Get the dashboard`.
 9. **Backend does:** computes on request.
-10. **DO NOT:** use `eggs_today` as stock (it is production); treat `quick_record` as complete (max 6) or `quick_add.endpoint` as relative. **GAP-09:** no milk-produced or available eggs/milk KPI.
+10. **DO NOT:** use `eggs_today` as stock (it is production); treat `quick_record` as complete (max 6). **GAP-09 (open):** no milk-produced or available eggs/milk KPI.
 11. **Refetch:** after any ledger action (integration guide §18).
 12. **Needs:** any active member.
 13. **States:** null blocks (`work`, `calendar`, `production`) when the permission is missing.

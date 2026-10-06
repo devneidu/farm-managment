@@ -3,6 +3,9 @@
 namespace App\Services\Records;
 
 use App\Enums\ConversionContextType;
+use App\Enums\CycleStatus;
+use App\Enums\Permission;
+use App\Models\ProductionCycle;
 use App\Rules\PositiveWholeCount;
 use Illuminate\Validation\Rule;
 
@@ -119,15 +122,113 @@ class RecordTypeRegistry
             'measurement' => isset($d['dimension']) ? ['dimension' => $d['dimension'], 'display_unit' => $d['unit'], 'normalized_unit' => match ($d['dimension']) {
                 'weight' => 'g', 'volume' => 'ml', default => $d['unit']
             }, 'required' => ! ($d['optional_measurement'] ?? false), 'components_max' => $d['dimension'] === 'temperature' ? 1 : 10] : null,
+            /** Top-level details keys that carry an AREA ({quantity, unit}), never the stock/planting-material quantity. */
+            'area_fields' => $d['area_fields'] ?? [],
             'population_effect' => match ($type) {
                 'mortality' => 'decrease', 'population_adjustment' => 'actual_minus_expected', default => 'none'
             },
-            'permission' => $type === 'population_adjustment' ? 'record.adjust' : 'record.create', 'inventory_effect_enabled' => $type === 'feed_use' || isset($d['stock']) || isset($d['output']),
+            /** The base permission only; kept for compatibility. `permissions_required` is the authoritative, complete list. */
+            'permission' => $this->basePermission($type),
+            'permissions_required' => $this->permissionsRequired($type),
+            'inventory_effect_enabled' => $type === 'feed_use' || isset($d['stock']) || isset($d['output']),
             'inventory_category' => $type === 'feed_use' ? 'feed' : (isset($d['output']) ? 'produce' : ($d['stock']['category'] ?? null)),
             'inventory_direction' => $type === 'feed_use' ? 'out' : (isset($d['output']) ? 'in' : ($d['stock']['direction'] ?? null)),
+            /** Always false: stock is never mandatory for a record. Whether a type has a stock effect at all, and how, is `inventory`. */
             'inventory_required' => ($d['stock']['required'] ?? false) === true,
             'inventory_dimensions' => $type === 'feed_use' ? ['weight'] : (isset($d['output']) ? [$d['dimension']] : ($d['stock']['dimensions'] ?? null)),
             /** Eggs and milk: the stock-in is automatic (the farm's own Eggs / Milk output item); details.inventory only picks the store. */
-            'inventory_automatic' => isset($d['output']), 'inventory_output' => $d['output'] ?? null];
+            'inventory_automatic' => isset($d['output']), 'inventory_output' => $d['output'] ?? null,
+            'inventory' => $this->inventoryMetadata($type, $d)];
+    }
+
+    /**
+     * Everything the backend checks before accepting this type, as permission codes. A caller holds what it needs when it has every code in
+     * `always`, plus `when_inventory_linked` if it sends details.inventory, plus `when_correcting` if it sets corrects_record_id.
+     *
+     * @return array{always: list<string>, when_inventory_linked: list<string>, when_correcting: list<string>}
+     */
+    public function permissionsRequired(string $type): array
+    {
+        $d = $this->definition($type);
+        $always = [$this->basePermission($type)];
+        $linked = [];
+        if (isset($d['output'])) {
+            $always[] = Permission::InventoryUse->value; // egg / milk records always write a stock-in
+        } elseif ($type === 'feed_use' || isset($d['stock'])) {
+            $linked[] = Permission::InventoryUse->value;
+        }
+
+        return ['always' => $always, 'when_inventory_linked' => $linked, 'when_correcting' => [Permission::RecordReverse->value]];
+    }
+
+    private function basePermission(string $type): string
+    {
+        return ($type === 'population_adjustment' ? Permission::RecordAdjust : Permission::RecordCreate)->value;
+    }
+
+    /**
+     * Structured stock/output integration (null = the type never touches inventory). `fields` lists the details.inventory keys the type accepts
+     * and whether each is `required` once details.inventory is sent. Measurement/context object shapes stay in the integration docs.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function inventoryMetadata(string $type, array $d): ?array
+    {
+        if (isset($d['output'])) {
+            return ['mode' => 'automatic_output', 'direction' => 'in', 'output' => $d['output'], 'item_category' => 'produce', 'dimensions' => [$d['dimension']],
+                'optional' => false, 'creates_item' => true, 'object' => 'details.inventory', 'fields' => ['storage_location_id' => 'optional']];
+        }
+        if ($type !== 'feed_use' && ! isset($d['stock'])) {
+            return null;
+        }
+        $in = ($d['stock']['direction'] ?? 'out') === 'in';
+
+        return ['mode' => 'optional_link', 'direction' => $in ? 'in' : 'out', 'output' => null, 'item_category' => $type === 'feed_use' ? 'feed' : $d['stock']['category'],
+            'dimensions' => $type === 'feed_use' ? ['weight'] : $d['stock']['dimensions'], 'optional' => true, 'creates_item' => false, 'object' => 'details.inventory',
+            'fields' => ['item_id' => 'required', 'storage_location_id' => 'required', 'lot_id' => 'optional'] + ($in ? ['lot' => 'optional'] : [])];
+    }
+
+    // ------------------------------------------------- applicability to a cycle
+
+    /** Why the type cannot be recorded against this cycle (the message record creation answers with, 422 on `type`), or null when it can. */
+    public function inapplicableReason(ProductionCycle $cycle, string $type, ?array $capabilityCodes = null): ?string
+    {
+        $definition = $this->definition($type);
+        if ($definition['kind'] !== null && $definition['kind'] !== $cycle->kind->value) {
+            return 'This record type is not applicable to this kind of cycle.';
+        }
+        if (isset($definition['capability']) && ! in_array($definition['capability'], $capabilityCodes ?? $this->capabilityCodes($cycle), true)) {
+            return 'The species does not support this record capability.';
+        }
+
+        return null;
+    }
+
+    /** Capability codes currently enabled for the cycle's species (none for a crop cycle). */
+    public function capabilityCodes(ProductionCycle $cycle): array
+    {
+        return $cycle->livestock?->species->speciesCapabilities()->where('enabled', true)->with('capability')->get()->pluck('capability.code')->filter()->values()->all() ?? [];
+    }
+
+    /**
+     * The record types that can be created for this cycle right now, by exactly the rules record creation applies (cycle kind, species capability,
+     * active cycle). Permissions are not filtered: intersect `permissions_required` with the member's permissions (GET /farm).
+     *
+     * @return list<array{type: string, permissions_required: array<string, list<string>>}>
+     */
+    public function availableFor(ProductionCycle $cycle): array
+    {
+        if ($cycle->status !== CycleStatus::Active) {
+            return [];
+        }
+        $codes = $this->capabilityCodes($cycle);
+        $out = [];
+        foreach (array_keys($this->definitions()) as $type) {
+            if ($this->inapplicableReason($cycle, $type, $codes) === null) {
+                $out[] = ['type' => $type, 'permissions_required' => $this->permissionsRequired($type)];
+            }
+        }
+
+        return $out;
     }
 }
