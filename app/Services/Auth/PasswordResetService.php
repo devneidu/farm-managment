@@ -22,6 +22,7 @@ class PasswordResetService
     public function sendOtp(string $email): void
     {
         $user = User::where('email', $email)->first();
+        logger($user);
 
         if (! $user || $user->isSuspended()) {
             return;

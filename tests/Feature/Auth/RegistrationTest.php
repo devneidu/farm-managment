@@ -69,11 +69,13 @@ class RegistrationTest extends AuthTestCase
         $this->postJson('/api/v1/auth/register', $this->registerPayload(['password_confirmation' => 'Different123']))
             ->assertJsonValidationErrors('password');
 
-        $this->postJson('/api/v1/auth/register', $this->registerPayload(['password' => 'short1', 'password_confirmation' => 'short1']))
+        $this->postJson('/api/v1/auth/register', $this->registerPayload(['password' => 'short', 'password_confirmation' => 'short']))
             ->assertJsonValidationErrors('password');
 
         $this->postJson('/api/v1/auth/register', $this->registerPayload(['password' => 'onlyletterspassword', 'password_confirmation' => 'onlyletterspassword']))
-            ->assertJsonValidationErrors('password');
+            ->assertCreated(); // no letter/number composition rules; minimum is 6 characters
+        $this->assertSame(1, User::count());
+        User::query()->delete();
 
         $this->postJson('/api/v1/auth/register', [])->assertJsonValidationErrors(['email', 'password']);
         $this->assertSame(0, User::count());

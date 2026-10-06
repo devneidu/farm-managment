@@ -23,9 +23,9 @@ class RegisterRequest extends FormRequest
         ];
     }
 
-    /** Shared new-password policy: 8-72 chars with at least one letter and one number. */
+    /** Shared new-password policy: 6-72 characters; no letter/number composition rules. */
     public static function passwordRule(): Password
     {
-        return Password::min(8)->max(72)->letters()->numbers();
+        return Password::min(6)->max(72);
     }
 }
