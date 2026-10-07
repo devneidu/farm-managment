@@ -102,11 +102,13 @@ Every auth endpoint (register, login, google, email/verify, onboarding/farm, `GE
     "next_action": "verify_email",
     "user": { "id": "uuid", "email": "a@b.com", "name": null, "email_verified_at": null, "has_password": true, "providers": [] },
     "farm": null,
-    "farms": [] },
+    "farms": [],
+    "marketplace": { "shop_count": 0 } },
   "meta": {}, "message": null }
 ```
 
-`next_action` -> screen: `verify_email` -> `/verify-email`; `complete_farm_setup` -> `/onboarding/farm`; `no_active_farm` -> a "you have no
+`next_action` -> screen: `verify_email` -> `/verify-email`; `marketplace` -> the seller dashboard (verified, no farm, member of a
+Marketplace shop; `marketplace.shop_count > 0`); `complete_farm_setup` -> `/onboarding/farm`; `no_active_farm` -> a "you have no
 farm" screen (see below); `none` -> app.
 
 These are four distinct states, never derive one from another: email verified (`email_verified`), onboarding completed
@@ -856,6 +858,10 @@ The complete contract is [Phase 18 platform administration](PHASE-18-PLATFORM-AD
 ## Phase 19 - Localization & accessibility
 
 The complete contract is [Phase 19 localization](PHASE-19-LOCALIZATION.md): public `GET /locales` and `GET /translations/{locale}` (UI text bundles with per-key English fallback and `fallback_keys`), and `GET|PATCH /me/preferences` (user-level `locale`). English is the only available language; Hausa/Yoruba/Igbo/Pidgin are registered but `pending_terminology_review`. `locale` is added to `GET /account` and `data.user.locale` of the auth-state payload. Locale never changes stored values, codes, exact decimal money, canonical quantities or UTC timestamps; user-entered farm records are not translated. Existing API messages remain English; machine `code`s are language-independent.
+
+## Phase 22 - Marketplace foundation & seller shops
+
+The complete contract is [Phase 22 marketplace](PHASE-22-MARKETPLACE.md): `GET /marketplace/my/shops`, `POST /marketplace/shops`, `GET|PATCH /marketplace/shops/{shop}`, `GET|PATCH …/contact` (PRIVATE), `POST …/submit|close|reopen|request-verification`, shop members under `…/members` (shop roles `owner|manager|staff`); anonymous discovery `GET /public/marketplace/shops` and `/{slug}` (active shops only, no private data); platform oversight `/platform-admin/marketplace/shops` (approve, reject, suspend, reinstate, verification). Sellers need only a verified email — no farm, no farm onboarding. New farm permission `marketplace.manage` (Owner, Manager) for linking a shop to a farm; new platform setting `marketplace_max_shops_per_user`.
 
 ## 32. Phase 21 launch hardening
 

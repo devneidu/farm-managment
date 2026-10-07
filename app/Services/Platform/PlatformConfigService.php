@@ -21,6 +21,7 @@ class PlatformConfigService
     public const SETTINGS = [
         'support_email' => [['nullable', 'email:rfc', 'max:150'], 'Address shown to farmers who need help.'],
         'support_whatsapp' => [['nullable', 'string', 'regex:/^\+?[0-9]{7,15}$/'], 'WhatsApp number (digits, optional leading +) for support.'],
+        'marketplace_max_shops_per_user' => [['nullable', 'integer', 'min:1', 'max:20'], 'How many seller shops one user may own (null = the built-in default of 3).'],
         'announcement' => [['nullable', 'string', 'max:500'], 'Short platform-wide notice for farmers; null clears it.'],
     ];
 

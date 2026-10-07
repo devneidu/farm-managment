@@ -60,7 +60,7 @@ Register -> user (unverified) + session + OTP email
 
 **Business rules to notice**
 
-- `next_action` goes `verify_email` -> `complete_farm_setup` -> `none`; farm endpoints answer 403 (`email_verification_required`, `onboarding_required`) until each step is done.
+- `next_action` goes `verify_email` -> `complete_farm_setup` -> `none` (a farm-less user who opens a Marketplace shop gets `marketplace` instead of `complete_farm_setup`; see folder 01 examples); farm endpoints answer 403 (`email_verification_required`, `onboarding_required`) until each step is done.
 - OTP: 6 digits, 10 minutes, single use, 5 wrong attempts invalidate it; resend has a 60 s cooldown (so the flow skips the resend request; it is documented in the reference folder).
 - Only the farm name is asked at onboarding; country, timezone, currency and language are defaults.
 

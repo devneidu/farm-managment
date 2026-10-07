@@ -157,7 +157,7 @@ The collection and contract document the **running code**; these differences exi
 
 * Sanctum first-party SPA cookie auth; **no bearer tokens** are issued by any endpoint. Required: CSRF cookie + `X-XSRF-TOKEN` on writes + a stateful `Origin` on **every** request (an existing session cookie without it gets `401`; register without it `400 stateful_request_required`; missing CSRF `419 session_expired`). Verified over real HTTP.
 * Session cookie `farm_management_api_session` (HttpOnly, SameSite=Lax, 120 min); `XSRF-TOKEN` readable.
-* `next_action` ∈ `verify_email`, `complete_farm_setup`, `no_active_farm`, `none` (computed in that order). `onboarded` is never cleared.
+* `next_action` ∈ `verify_email`, `marketplace`, `complete_farm_setup`, `no_active_farm`, `none` (computed in that order; `marketplace` only for a verified user with no active farm who belongs to a Marketplace shop — Phase 22 final review). `onboarded` is never cleared.
 * Farm context: oldest ACTIVE membership by default, optional `X-Farm-Id` header (`403 farm_access_denied` for a farm you do not actively belong to, `403 no_active_farm` when none). `GET /auth/me → data.farms[]` lists the farms you actively belong to (GAP-07, resolved); there is still no switch endpoint (the header is the switch).
 * OTP/invitation tokens exist only in email; locally they are in `storage/logs/laravel.log`.
 * A suspended account gets `403 account_suspended` on every request and its session is ended.
@@ -234,3 +234,13 @@ New reference requests (each also a Flow 14 step except the schema request): `Sh
 * **Execution (Flow 14 and all others):** Newman against `php artisan serve` on a fresh MySQL 8 database (migrate + seed, a platform admin granted by `platform:grant-admin`), flows in the order 1, 2, S, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 13: **170 requests, 361 assertions, 0 failures.** Flow 11 needs a running queue worker (the harness started `queue:work` and spaced the requests 1.5 s) and Flow 12 needs `notifications:generate`; without them Flow 11 `Download an export` answers `409` (not ready) and Flow 12 `Mark a notification read` `404` — both are the documented prerequisites, not regressions. The OTP and invitation token were read from `storage/logs/laravel.log` between requests.
 * **Not re-verified:** validation against the official Postman Collection v2.1 JSON Schema (the schema host is not reachable from the build sandbox). The collection loads and runs in Newman, and every new item is a structural clone of an existing valid item.
 * The tool used for the capture/verification run is a throwaway script and is **not** committed.
+
+## Addendum — Phase 22 (Marketplace foundation & seller shops)
+
+* 19 new `/api/v1` routes (OpenAPI 184 -> 203 paths; no existing path or schema changed): 14 seller routes, 2 public routes, 7 platform-admin routes (14+2+7 = 23 operations, 19 new path items).
+* Postman: new folder **23 — Marketplace (seller shops)** (17 requests incl. the two public ones) and **90 — Platform Admin → Marketplace Shops** (7 requests); +3 environment variables (`shop_id`, `shop_slug`, `shop_member_id`; 114 total). These requests carry descriptions and Tests scripts but **no saved example responses and were not executed with Newman** (the contract is verified by `tests/Feature/Marketplace/MarketplaceShopTest.php` and the OpenAPI test instead). Earlier counts in this report are not updated.
+* Contract: `docs/api/PHASE-22-MARKETPLACE.md`.
+
+## Addendum — Phase 22 final review: marketplace-only seller routing (2026-10-07)
+
+The auth state gained `marketplace.shop_count` and the `next_action` value `marketplace` (verified, no active farm, member of at least one shop). Affected Postman requests (descriptions extended; `Get current auth state (me)` asserts `marketplace.shop_count`): register, verify email, me, login, Google, onboarding (reference folders and flow copies). Saved Auth-state examples that were not re-captured received `marketplace: {shop_count: 0}` mechanically (they all belong to users without shops); three **real** examples captured from a live server were added to folder 01 (`me` before the first shop, `me` after creating a shop, login as a marketplace-only seller). Request count unchanged by this correction (collection total 477, of which 170 in the flows). The 14 flows were re-run with Newman after the change: see WORKLOG for the result.

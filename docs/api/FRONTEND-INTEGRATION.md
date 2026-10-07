@@ -49,12 +49,13 @@ Every auth endpoint returns the same state object. **Route on `data.next_action`
 | `next_action` | Screen |
 |---|---|
 | `verify_email` | OTP entry (`POST /auth/email/verify {code}`), "resend" (`POST /auth/email/resend`, 60 s cooldown → `429` + `Retry-After`: show a countdown) |
-| `complete_farm_setup` | Farm name → `POST /onboarding/farm {name}` |
+| `marketplace` | A verified user with **no farm** who already runs a Marketplace shop: show the seller dashboard (`GET /marketplace/my/shops`). Farm routes stay locked (`403 onboarding_required` / `no_active_farm`); offer an optional "Set up a farm" → `POST /onboarding/farm`. Never returned to a user with a farm (`data.marketplace.shop_count` is returned to everyone for showing both areas) |
+| `complete_farm_setup` | Farm name → `POST /onboarding/farm {name}`. A user who only wants to sell on the Marketplace can instead go straight to `POST /marketplace/shops` (no farm needed); once they have a shop the state becomes `marketplace` |
 | `no_active_farm` | "You have no farm" screen (the user was removed from their last farm). Not the setup screen: `POST /onboarding/farm` would be `409 already_onboarded`. Offer "accept an invitation". |
 | `none` | the app |
 
 ```ts
-const ROUTES = { verify_email: '/verify-email', complete_farm_setup: '/onboarding', no_active_farm: '/no-farm', none: '/' } as const;
+const ROUTES = { verify_email: '/verify-email', marketplace: '/marketplace/seller', complete_farm_setup: '/onboarding', no_active_farm: '/no-farm', none: '/' } as const;
 export const routeFor = (s: { next_action: keyof typeof ROUTES }) => ROUTES[s.next_action];
 ```
 

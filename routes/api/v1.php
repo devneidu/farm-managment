@@ -29,6 +29,9 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopMemberController;
 use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
 use App\Http\Controllers\Api\V1\MeasurementContextController;
@@ -41,6 +44,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAdminController;
 use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
@@ -79,6 +83,10 @@ Route::get('/health', HealthController::class)->name('api.v1.health');
 Route::get('/locales', [LocaleController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.locales.index');
 Route::get('/translations/{locale}', [LocaleController::class, 'bundle'])->middleware('throttle:60,1')->name('api.v1.translations.show');
 
+// Marketplace discovery (Phase 22): anonymous, ACTIVE shops only.
+Route::get('/public/marketplace/shops', [MarketplacePublicController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.marketplace.shops.index');
+Route::get('/public/marketplace/shops/{slug}', [MarketplacePublicController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('api.v1.public.marketplace.shops.show');
+
 Route::get('/public/plans', [PlanController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.plans');
 
 Route::prefix('auth')->group(function () {
@@ -112,6 +120,27 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
     // My UI preferences (user-level): language
     Route::get('/me/preferences', [UserPreferenceController::class, 'show'])->name('api.v1.me.preferences.show');
     Route::patch('/me/preferences', [UserPreferenceController::class, 'update'])->name('api.v1.me.preferences.update');
+
+    // Marketplace seller shops (Phase 22). User-level like /account: no farm, no onboarding, no farm context. A shop is reached only through the
+    // caller's shop membership; the shop role (not any farm role) authorises each action.
+    Route::prefix('marketplace')->group(function () {
+        Route::get('/my/shops', [MarketplaceShopController::class, 'mine'])->name('api.v1.marketplace.my-shops');
+        Route::post('/shops', [MarketplaceShopController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.store');
+        Route::prefix('/shops/{shop}')->whereUuid('shop')->group(function () {
+            Route::get('/', [MarketplaceShopController::class, 'show'])->name('api.v1.marketplace.shops.show');
+            Route::patch('/', [MarketplaceShopController::class, 'update'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.update');
+            Route::get('/contact', [MarketplaceShopController::class, 'contact'])->name('api.v1.marketplace.shops.contact');
+            Route::patch('/contact', [MarketplaceShopController::class, 'updateContact'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.contact.update');
+            Route::post('/submit', [MarketplaceShopController::class, 'submit'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.submit');
+            Route::post('/close', [MarketplaceShopController::class, 'close'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.close');
+            Route::post('/reopen', [MarketplaceShopController::class, 'reopen'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.reopen');
+            Route::post('/request-verification', [MarketplaceShopController::class, 'requestVerification'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.request-verification');
+            Route::get('/members', [MarketplaceShopMemberController::class, 'index'])->name('api.v1.marketplace.shops.members.index');
+            Route::post('/members', [MarketplaceShopMemberController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.store');
+            Route::patch('/members/{member}', [MarketplaceShopMemberController::class, 'update'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.update');
+            Route::delete('/members/{member}', [MarketplaceShopMemberController::class, 'destroy'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.destroy');
+        });
+    });
 
     // My Account (user-level, not farm-scoped)
     Route::prefix('account')->group(function () {
@@ -430,6 +459,17 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
     Route::post('/master/{kind}', [PlatformMasterDataController::class, 'store'])->where('kind', $kinds)->middleware($write)->name('api.v1.platform.master.store');
     Route::get('/master/{kind}/{id}', [PlatformMasterDataController::class, 'show'])->where('kind', $kinds)->whereUuid('id')->name('api.v1.platform.master.show');
     Route::patch('/master/{kind}/{id}', [PlatformMasterDataController::class, 'update'])->where('kind', $kinds)->whereUuid('id')->middleware($write)->name('api.v1.platform.master.update');
+
+    // Marketplace shop oversight (Phase 22)
+    Route::prefix('marketplace/shops')->group(function () use ($write) {
+        Route::get('/', [PlatformMarketplaceController::class, 'index'])->name('api.v1.platform.marketplace.shops.index');
+        Route::get('/{shop}', [PlatformMarketplaceController::class, 'show'])->whereUuid('shop')->name('api.v1.platform.marketplace.shops.show');
+        Route::post('/{shop}/approve', [PlatformMarketplaceController::class, 'approve'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.approve');
+        Route::post('/{shop}/reject', [PlatformMarketplaceController::class, 'reject'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.reject');
+        Route::post('/{shop}/suspend', [PlatformMarketplaceController::class, 'suspend'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.suspend');
+        Route::post('/{shop}/reinstate', [PlatformMarketplaceController::class, 'reinstate'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.reinstate');
+        Route::post('/{shop}/verification', [PlatformMarketplaceController::class, 'verification'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.verification');
+    });
 
     // Platform work templates
     Route::get('/work-templates', [PlatformTemplateController::class, 'index'])->name('api.v1.platform.templates.index');

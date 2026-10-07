@@ -67,6 +67,12 @@ class User extends Authenticatable
             ->wherePivot('status', 'active');
     }
 
+    /** Shops this user is a member of (Marketplace, any status). */
+    public function marketplaceShopCount(): int
+    {
+        return MarketplaceShopMember::where('user_id', $this->id)->count();
+    }
+
     public function platformAdmin(): HasOne
     {
         return $this->hasOne(PlatformAdmin::class);

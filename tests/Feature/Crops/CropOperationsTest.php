@@ -353,7 +353,7 @@ class CropOperationsTest extends TeamTestCase
         $this->harvest($crop, $item, $loc, '1', inventory: ['lot_id' => $lot, 'lot' => ['code' => 'X']])->assertStatus(422);
         $plain = $this->item();
         $this->harvest($crop, $plain, $loc, '1', inventory: ['lot' => ['code' => 'X']])->assertStatus(422);
-        $this->harvest($crop, $item, $loc, '1', inventory: ['lot' => ['code' => 'OLD', 'expires_on' => now('Africa/Lagos')->subDay()->toDateString()]])->assertStatus(409)->assertJsonPath('code', 'lot_expired');
+        $this->harvest($crop, $item, $loc, '1', inventory: ['lot' => ['code' => 'OLD', 'expires_on' => now('Africa/Lagos')->subHours(2)->subDay()->toDateString()]])->assertStatus(409)->assertJsonPath('code', 'lot_expired');
         // Receiving location must belong to the farm and be active.
         $this->harvest($crop, $plain, (string) Str::uuid(), '1')->assertNotFound();
         $this->assertSame('20', $this->stock($item));

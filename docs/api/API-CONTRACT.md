@@ -100,7 +100,8 @@ A platform admin can suspend a user (`POST /platform-admin/users/{user}/suspend`
       "locale": null
     },
     "farm": null,
-    "farms": []
+    "farms": [],
+    "marketplace": {"shop_count": 0}
   },
   "meta": {},
   "message": null
@@ -119,15 +120,17 @@ A user with a farm returns, for example, `"farm": {"id": "…", "name": "Okafor 
 | `user.platform_role` | `admin`, `support` or `null` — shows the Platform Admin area (a different system, §14) |
 | `user.providers` | linked social providers (`["google"]`) |
 | `farm.role` | the caller's role id on the default farm. **Permissions are not here** (see §5). |
+| `marketplace.shop_count` | Marketplace shops the user is a member of (any status; Phase 22). Independent of farms: a user can have farms, shops, both or neither |
 | `farms[]` | every farm the user ACTIVELY belongs to, `{id, name, role}`, oldest membership first (the first one is the default `farm`). Empty when there is no active membership. Removed memberships never appear. It is the discovery list for `X-Farm-Id` (§4); it carries no permissions and no farm settings. |
 
-`next_action` values (computed in this order):
+`next_action` values (computed in this order; `marketplace` sits between `verify_email` and `complete_farm_setup` and applies only to farm-less shop members):
 
 | `next_action` | Condition | Frontend should |
 |---|---|---|
 | `verify_email` | email not verified | show the OTP screen (`/auth/email/verify`, `/auth/email/resend`). The user is logged in but every farm endpoint answers `403 email_verification_required`. |
 | `complete_farm_setup` | verified, never onboarded | show the farm-name screen → `POST /onboarding/farm`. Farm endpoints answer `403 onboarding_required`. (An invited user skips this: accepting an invitation marks them onboarded.) |
 | `no_active_farm` | verified, onboarded, but no active membership (removed from their last farm) | show a "you have no farm" screen. They are **not** sent back to setup (`POST /onboarding/farm` is `409 already_onboarded`); farm endpoints answer `403 no_active_farm`. Accepting a new invitation brings them back. |
+| `marketplace` | verified, **no active farm**, but a member of at least one Marketplace shop (`marketplace.shop_count > 0`); returned instead of `complete_farm_setup` / `no_active_farm` for that user only | show the seller area (`GET /marketplace/my/shops`). Farm endpoints still answer `403 onboarding_required` / `no_active_farm`; offer "Set up a farm" (`POST /onboarding/farm`, still allowed) as an optional extra. Never returned to a user with an active farm |
 | `none` | normal access | load the app (`GET /farm`, `GET /dashboard`, …) |
 
 Saved responses for each state are in the collection folder **01 — Authentication** (after OTP: `complete_farm_setup`; after being removed from the only farm: `no_active_farm`).

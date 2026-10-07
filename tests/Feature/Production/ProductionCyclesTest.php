@@ -377,7 +377,7 @@ class ProductionCyclesTest extends TeamTestCase
         $this->patchJson($url, ['area' => ['quantity' => 0, 'unit' => 'hectare']])->assertUnprocessable();
         $this->patchJson($url, ['area' => ['quantity' => -2, 'unit' => 'hectare']])->assertUnprocessable();
         $this->patchJson($url, ['expected_germination_date' => '2026-01-15', 'expected_end_date' => '2026-08-10'])->assertOk();
-        $this->postJson($url.'/close', ['end_date' => now()->addDay()->toDateString(), 'reason' => 'Future'])->assertUnprocessable();
+        $this->postJson($url.'/close', ['end_date' => now('Africa/Lagos')->addDay()->toDateString(), 'reason' => 'Future'])->assertUnprocessable();
         $this->postJson($url.'/close', ['end_date' => '2026-08-10', 'reason' => 'Season ended'])->assertOk()->assertJsonPath('data.crop.initial_planting_units', 50);
         $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'closed');
         $this->postJson($url.'/reopen', ['reason' => 'Resume'])->assertOk();

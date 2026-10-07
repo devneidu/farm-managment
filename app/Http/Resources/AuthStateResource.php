@@ -22,10 +22,11 @@ class AuthStateResource extends JsonResource
      *     email_verified: bool,
      *     onboarded: bool,
      *     has_active_farm: bool,
-     *     next_action: 'verify_email'|'complete_farm_setup'|'no_active_farm'|'none',
+     *     next_action: 'verify_email'|'marketplace'|'complete_farm_setup'|'no_active_farm'|'none',
      *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, platform_role: 'admin'|'support'|null, providers: string[], locale: string|null},
      *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null,
-     *     farms: list<array{id: string, name: string, role: string}>
+     *     farms: list<array{id: string, name: string, role: string}>,
+     *     marketplace: array{shop_count: int}
      * }
      */
     public function toArray(Request $request): array
@@ -33,6 +34,7 @@ class AuthStateResource extends JsonResource
         $user = $this->resource;
         // Distinct states: email verification, onboarding completion, active membership, current farm.
         $farm = $user->currentFarm();
+        $shops = $user->marketplaceShopCount();
 
         return [
             'authenticated' => true,
@@ -41,6 +43,8 @@ class AuthStateResource extends JsonResource
             'has_active_farm' => $farm !== null,
             'next_action' => match (true) {
                 ! $user->hasVerifiedEmail() => 'verify_email',
+                // A seller who runs Marketplace shops but has no active farm: send them to the shop dashboard, not to farm setup.
+                $farm === null && $shops > 0 => 'marketplace',
                 ! $user->isOnboarded() => 'complete_farm_setup',
                 $farm === null => 'no_active_farm',
                 default => 'none',
@@ -73,6 +77,13 @@ class AuthStateResource extends JsonResource
             'farms' => $user->memberships()->active()->with('farm')->orderBy('created_at')->orderBy('id')->get()
                 ->filter(fn ($m) => $m->farm !== null)
                 ->map(fn ($m) => ['id' => $m->farm->id, 'name' => $m->farm->name, 'role' => $m->role->value])->values()->all(),
+            /**
+             * Marketplace participation, independent of farms. `shop_count` = shops the user is a member of (any status); drive the seller area from
+             * GET /marketplace/my/shops. A user can have farms, shops, both or neither.
+             *
+             * @var array{shop_count: int}
+             */
+            'marketplace' => ['shop_count' => $shops],
         ];
     }
 }
