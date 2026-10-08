@@ -55,6 +55,17 @@ class MarketplaceShopPolicy
         return $this->can($user, $shop, ShopPermission::ListingPublish);
     }
 
+    public function viewOffers(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::OfferView);
+    }
+
+    /** Accept or reject a buyer offer. */
+    public function respondToOffers(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::OfferRespond);
+    }
+
     private function can(User $user, MarketplaceShop $shop, ShopPermission $permission): bool
     {
         $member = $shop->relationLoaded('viewer') ? $shop->getRelation('viewer') : $shop->members()->where('user_id', $user->id)->first();

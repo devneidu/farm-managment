@@ -14,8 +14,8 @@ enum ShopRole: string
     {
         return match ($this) {
             self::Owner => ShopPermission::cases(),
-            self::Manager => [ShopPermission::View, ShopPermission::Update, ShopPermission::ManageContact, ShopPermission::ListingView, ShopPermission::ListingManage, ShopPermission::ListingPublish],
-            self::Staff => [ShopPermission::View, ShopPermission::ListingView, ShopPermission::ListingManage],
+            self::Manager => [ShopPermission::View, ShopPermission::Update, ShopPermission::ManageContact, ShopPermission::ListingView, ShopPermission::ListingManage, ShopPermission::ListingPublish, ShopPermission::OfferView, ShopPermission::OfferRespond],
+            self::Staff => [ShopPermission::View, ShopPermission::ListingView, ShopPermission::ListingManage, ShopPermission::OfferView],
         };
     }
 

@@ -42,6 +42,7 @@ class MarketplaceListingService
         private MarketplaceInventoryLink $inventory,
         private MarketplaceImageService $images,
         private MarketplaceListingHistory $history,
+        private MarketplaceOfferLifecycle $offers,
         private AuditLogger $audit,
     ) {}
 
@@ -139,6 +140,7 @@ class MarketplaceListingService
                 $listing->updated_by = $user->id;
                 $listing->version = $listing->version + 1;
                 $listing->save();
+                $this->offers->reconcile($listing, $user->id);   // pending offers the edit made untrue are voided (and refund the attempt)
                 $this->audit($user, $shop, $listing, 'marketplace.listing_updated', ['fields' => $dirty] + $this->priceChange($before, $listing));
             }
 
@@ -282,15 +284,8 @@ class MarketplaceListingService
     /** @return array<string, mixed> */
     public function preview(MarketplaceListing $listing, mixed $quantity): array
     {
-        $listing->loadMissing('unit');
-        $qty = $this->rules->quantityFor('quantity', $quantity, $listing->unit);
+        $qty = $this->rules->orderableQuantity($listing, $quantity);
         $price = Decimal::trim((string) $listing->unit_price);
-        if ($listing->min_order_quantity !== null && Decimal::cmp($qty, Decimal::trim((string) $listing->min_order_quantity)) < 0) {
-            throw ValidationException::withMessages(['quantity' => 'The quantity is below the minimum order of '.Decimal::trim((string) $listing->min_order_quantity).'.']);
-        }
-        if (Decimal::cmp($qty, Decimal::trim((string) $listing->available_quantity)) > 0) {
-            throw ValidationException::withMessages(['quantity' => 'The quantity exceeds the quantity the seller has declared as available.']);
-        }
 
         return [
             'quantity' => $qty, 'unit' => $listing->unit->code, 'unit_price' => $this->rules->money($price), 'currency' => MarketplaceListingRules::CURRENCY,

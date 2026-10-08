@@ -32,10 +32,12 @@ use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceCatalogueController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingImageController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceOfferController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopMemberController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopOfferController;
 use App\Http\Controllers\Api\V1\MasterDataController;
 use App\Http\Controllers\Api\V1\MeasurementCatalogueController;
 use App\Http\Controllers\Api\V1\MeasurementContextController;
@@ -138,6 +140,14 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
     Route::prefix('marketplace')->group(function () {
         Route::get('/my/shops', [MarketplaceShopController::class, 'mine'])->name('api.v1.marketplace.my-shops');
         Route::get('/product-options', [MarketplaceCatalogueController::class, 'productOptions'])->name('api.v1.marketplace.product-options');
+        // Buyer offers and purchase intents (Phase 24): any signed-in user; the listing must be public.
+        Route::prefix('/listings/{slug}')->where(['slug' => '[a-z0-9-]+'])->group(function () {
+            Route::post('/offers', [MarketplaceOfferController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.listings.offers.store');
+            Route::get('/offer-status', [MarketplaceOfferController::class, 'status'])->name('api.v1.marketplace.listings.offer-status');
+            Route::post('/purchase-intent', [MarketplaceOfferController::class, 'intent'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.listings.purchase-intent');
+        });
+        Route::get('/my/enquiries', [MarketplaceOfferController::class, 'index'])->name('api.v1.marketplace.my-enquiries');
+        Route::get('/my/offers/{offer}', [MarketplaceOfferController::class, 'show'])->whereUuid('offer')->name('api.v1.marketplace.my-offers.show');
         Route::get('/image-library', [MarketplaceCatalogueController::class, 'imageLibrary'])->name('api.v1.marketplace.image-library');
         Route::post('/shops', [MarketplaceShopController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.store');
         Route::prefix('/shops/{shop}')->whereUuid('shop')->group(function () {
@@ -168,6 +178,11 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
                     Route::get('/images/{image}/file', [MarketplaceListingImageController::class, 'file'])->whereUuid('image')->name('api.v1.marketplace.shops.listings.images.file');
                 });
             });
+            Route::get('/offers', [MarketplaceShopOfferController::class, 'index'])->name('api.v1.marketplace.shops.offers.index');
+            Route::get('/offers/{offer}', [MarketplaceShopOfferController::class, 'show'])->whereUuid('offer')->name('api.v1.marketplace.shops.offers.show');
+            Route::post('/offers/{offer}/accept', [MarketplaceShopOfferController::class, 'accept'])->whereUuid('offer')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.offers.accept');
+            Route::post('/offers/{offer}/reject', [MarketplaceShopOfferController::class, 'reject'])->whereUuid('offer')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.offers.reject');
+            Route::get('/purchase-intents', [MarketplaceShopOfferController::class, 'intents'])->name('api.v1.marketplace.shops.purchase-intents.index');
             Route::get('/members', [MarketplaceShopMemberController::class, 'index'])->name('api.v1.marketplace.shops.members.index');
             Route::post('/members', [MarketplaceShopMemberController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.store');
             Route::patch('/members/{member}', [MarketplaceShopMemberController::class, 'update'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.update');

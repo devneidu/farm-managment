@@ -3,6 +3,7 @@
 namespace App\Services\Marketplace;
 
 use App\Models\CropType;
+use App\Models\MarketplaceListing;
 use App\Models\Species;
 use App\Models\Unit;
 use App\Support\Measurement\Decimal;
@@ -75,6 +76,24 @@ class MarketplaceListingRules
     public function quantityFor(string $field, mixed $value, Unit $unit): string
     {
         return $this->quantity($field, $value, $unit);
+    }
+
+    /**
+     * A buyer's quantity for a listing: the unit's precision, the minimum order and the declared available quantity. Throws a 422 keyed `quantity`.
+     * Used by the price estimate, offers and purchase intents so all three agree.
+     */
+    public function orderableQuantity(MarketplaceListing $listing, mixed $value): string
+    {
+        $listing->loadMissing('unit');
+        $qty = $this->quantityFor('quantity', $value, $listing->unit);
+        if ($listing->min_order_quantity !== null && Decimal::cmp($qty, Decimal::trim((string) $listing->min_order_quantity)) < 0) {
+            throw ValidationException::withMessages(['quantity' => 'The quantity is below the minimum order of '.Decimal::trim((string) $listing->min_order_quantity).'.']);
+        }
+        if (Decimal::cmp($qty, Decimal::trim((string) $listing->available_quantity)) > 0) {
+            throw ValidationException::withMessages(['quantity' => 'The quantity exceeds the quantity the seller has declared as available.']);
+        }
+
+        return $qty;
     }
 
     // ------------------------------------------------------------------ parts

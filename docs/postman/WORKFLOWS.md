@@ -22,6 +22,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 13 | Team invitation | 13 | Flow 1 and the plan change from Flow S (Free allows only 3 team members). |
 | 14 | Feed, eggs and milk stock | 22 | Flows 1, S, 3 and 5 (`cycle_id`, `store_id`, `item_feed_id` with stock). Creates its own measurement context and crate conversion. |
 | 15 | Marketplace listings | 48 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own farm-less seller (`seller_email`). Manual input: `otp_code`. Run with Newman `--working-dir docs/postman` (photo upload). |
+| 16 | Marketplace negotiation | 79 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own staff, manager, buyer and seller (`staff_email`, `manager_email`, `buyer_email`, `neg_seller_email`). Manual input: `otp_code` before each of the four *Verify … email* requests. |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -855,3 +856,109 @@ milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                       
 | 48 | Delete the draft | `DELETE /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}` |
 
 **Business rules shown.** Publishing is immediate for an `active` shop and needs no image (the image-less eggs listing shows `image.source = placeholder`); the package of a crate is a seller statement (`is_conversion: false`); `version` protects field edits (a stale version → `409 stale_listing`) and photos do not move it; pausing, restricting or archiving makes the public address answer `404`; lifting a restriction leaves the listing `paused` and the seller publishes again; the public payload never contains `farm_id`, `version`, inventory or contact values.
+
+## Flow 16 — Marketplace negotiation (Phase 24)
+
+**Goal.** Prove the controlled-negotiation rules end to end with four real accounts: a buyer makes offers, the seller accepts one and rejects three, the offer limit and the fixed-price rule hold, staff and non-members cannot respond, and **no private contact detail ever appears in a negotiation response**.
+
+**Prerequisites.** A platform admin account (`admin_email`, `admin_password`; `php artisan platform:grant-admin`). No farm, no other flow. Manual input: the emailed OTP in `otp_code` before each *Verify … email* request (four of them: staff, manager, buyer, seller). The four emails are `staff_email`, `manager_email`, `buyer_email`, `neg_seller_email`: use a **fresh database** or change them before a second run. Registration is limited to 10 per hour per IP and login to 5 per minute per email, which is why the flow spreads the seller's responses over the owner and a manager.
+
+**Request sequence**
+
+| # | Request | Call | Status |
+|---|---|---|---|
+| 1 | Initialise CSRF cookie | `GET /auth/csrf-cookie` | 204 |
+| 2 | Register the staff member | `POST /auth/register` | 201 |
+| 3 | Verify the staff member's email with OTP | `POST /auth/email/verify` | 200 |
+| 4 | Log out the staff member | `POST /auth/logout` | 200 |
+| 5 | Register the manager | `POST /auth/register` | 201 |
+| 6 | Verify the manager's email with OTP | `POST /auth/email/verify` | 200 |
+| 7 | Log out the manager | `POST /auth/logout` | 200 |
+| 8 | Register the buyer | `POST /auth/register` | 201 |
+| 9 | Verify the buyer's email with OTP | `POST /auth/email/verify` | 200 |
+| 10 | Log out the buyer | `POST /auth/logout` | 200 |
+| 11 | Register the seller | `POST /auth/register` | 201 |
+| 12 | Verify the seller's email with OTP | `POST /auth/email/verify` | 200 |
+| 13 | Create the shop | `POST /marketplace/shops` | 201 |
+| 14 | Set private contact (must never appear in any negotiation response) | `PATCH /marketplace/shops/{{shop_id}}/contact` | 200 |
+| 15 | Submit the shop for review | `POST /marketplace/shops/{{shop_id}}/submit` | 200 |
+| 16 | Log out the seller | `POST /auth/logout` | 200 |
+| 17 | Log in as the platform admin | `POST /auth/login` | 200 |
+| 18 | Approve the shop | `POST /platform-admin/marketplace/shops/{{shop_id}}/approve` | 200 |
+| 19 | Log out the platform admin | `POST /auth/logout` | 200 |
+| 20 | Log in as the seller | `POST /auth/login` | 200 |
+| 21 | Product options | `GET /marketplace/product-options` | 200 |
+| 22 | Create listing A - negotiable, N8,000 per head | `POST /marketplace/shops/{{shop_id}}/listings` | 201 |
+| 23 | Create listing B - fixed price (not negotiable) | `POST /marketplace/shops/{{shop_id}}/listings` | 201 |
+| 24 | Create listing C - negotiable (used for the offer limit) | `POST /marketplace/shops/{{shop_id}}/listings` | 201 |
+| 25 | Publish listing A | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish` | 200 |
+| 26 | Publish listing B | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}/publish` | 200 |
+| 27 | Publish listing C | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_c_id}}/publish` | 200 |
+| 28 | Add the staff member (role staff: offer.view only) | `POST /marketplace/shops/{{shop_id}}/members` | 201 |
+| 29 | Add the manager (role manager: may respond to offers) | `POST /marketplace/shops/{{shop_id}}/members` | 201 |
+| 30 | Log out the seller | `POST /auth/logout` | 200 |
+| 31 | Log in as the buyer | `POST /auth/login` | 200 |
+| 32 | Fixed-price listing: my negotiation status | `GET /marketplace/listings/{{listing_b_slug}}/offer-status` | 200 |
+| 33 | Fixed-price listing rejects negotiation | `POST /marketplace/listings/{{listing_b_slug}}/offers` | 409 |
+| 34 | Offer below the 70% floor is refused (no attempt used) | `POST /marketplace/listings/{{listing_slug}}/offers` | 422 |
+| 35 | Listing A: make an offer, 10 head at N7,000 | `POST /marketplace/listings/{{listing_slug}}/offers` | 201 |
+| 36 | Listing A: a second offer while one is pending is refused | `POST /marketplace/listings/{{listing_slug}}/offers` | 409 |
+| 37 | Listing A: my negotiation status | `GET /marketplace/listings/{{listing_slug}}/offer-status` | 200 |
+| 38 | Listing C: offer 1 of 3 | `POST /marketplace/listings/{{listing_c_slug}}/offers` | 201 |
+| 39 | A buyer cannot respond to a shop's offers (not a member) | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_id}}/accept` | 404 |
+| 40 | A buyer cannot list a shop's offers | `GET /marketplace/shops/{{shop_id}}/offers` | 404 |
+| 41 | Log out the buyer | `POST /auth/logout` | 200 |
+| 42 | Log in as the staff member | `POST /auth/login` | 200 |
+| 43 | Staff: list pending offers (offer.view) | `GET /marketplace/shops/{{shop_id}}/offers?status=pending` | 200 |
+| 44 | Staff cannot accept (needs offer.respond) | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_id}}/accept` | 403 |
+| 45 | Staff cannot reject (needs offer.respond) | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_c_id}}/reject` | 403 |
+| 46 | Log out the staff member | `POST /auth/logout` | 200 |
+| 47 | Log in as the seller | `POST /auth/login` | 200 |
+| 48 | Shop: show offer A | `GET /marketplace/shops/{{shop_id}}/offers/{{offer_id}}` | 200 |
+| 49 | Shop: accept offer A | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_id}}/accept` | 200 |
+| 50 | Shop: accepting again is idempotent | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_id}}/accept` | 200 |
+| 51 | Shop: rejecting an accepted offer is refused | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_id}}/reject` | 409 |
+| 52 | Shop: reject offer 1 on listing C | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_c_id}}/reject` | 200 |
+| 53 | Log out the seller | `POST /auth/logout` | 200 |
+| 54 | Log in as the buyer | `POST /auth/login` | 200 |
+| 55 | Show my accepted offer | `GET /marketplace/my/offers/{{offer_id}}` | 200 |
+| 56 | Listing A: no further offer after acceptance | `POST /marketplace/listings/{{listing_slug}}/offers` | 409 |
+| 57 | Proceed at the listed price on the fixed-price listing B | `POST /marketplace/listings/{{listing_b_slug}}/purchase-intent` | 201 |
+| 58 | Repeating the purchase intent is idempotent | `POST /marketplace/listings/{{listing_b_slug}}/purchase-intent` | 200 |
+| 59 | Listing C: offer 2 of 3 | `POST /marketplace/listings/{{listing_c_slug}}/offers` | 201 |
+| 60 | Log out the buyer | `POST /auth/logout` | 200 |
+| 61 | Log in as the manager | `POST /auth/login` | 200 |
+| 62 | Manager: reject offer 2 on listing C (manager may respond) | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_c_id}}/reject` | 200 |
+| 63 | Log out the manager | `POST /auth/logout` | 200 |
+| 64 | Log in as the buyer | `POST /auth/login` | 200 |
+| 65 | Listing C: offer 3 of 3 | `POST /marketplace/listings/{{listing_c_slug}}/offers` | 201 |
+| 66 | Log out the buyer | `POST /auth/logout` | 200 |
+| 67 | Log in as the manager | `POST /auth/login` | 200 |
+| 68 | Manager: reject offer 3 on listing C | `POST /marketplace/shops/{{shop_id}}/offers/{{offer_c_id}}/reject` | 200 |
+| 69 | Log out the manager | `POST /auth/logout` | 200 |
+| 70 | Log in as the buyer | `POST /auth/login` | 200 |
+| 71 | Listing C: the fourth offer exceeds the limit | `POST /marketplace/listings/{{listing_c_slug}}/offers` | 409 |
+| 72 | Listing C: status shows no attempts left | `GET /marketplace/listings/{{listing_c_slug}}/offer-status` | 200 |
+| 73 | Listing C: proceed at the listed price still works | `POST /marketplace/listings/{{listing_c_slug}}/purchase-intent` | 201 |
+| 74 | My enquiries (offers + purchase intents) | `GET /marketplace/my/enquiries?per_page=50` | 200 |
+| 75 | Log out the buyer | `POST /auth/logout` | 200 |
+| 76 | Log in as the seller | `POST /auth/login` | 200 |
+| 77 | Shop: list purchase intents | `GET /marketplace/shops/{{shop_id}}/purchase-intents` | 200 |
+| 78 | Shop: list all offers | `GET /marketplace/shops/{{shop_id}}/offers` | 200 |
+| 79 | Log out the seller | `POST /auth/logout` | 200 |
+
+**Chain of effects**
+
+```
+4 accounts -> shop (private contact set) -> admin approves -> listings A (negotiable), B (fixed price), C (negotiable) published
+   -> buyer: B refuses negotiation | 5000 refused (floor 5600) | A offer 7000 pending | 2nd offer refused (offer_pending) | C offer 1
+   -> buyer / staff cannot respond (404 / 403) -> owner accepts A (accepted in principle) and rejects C offer 1
+   -> buyer: A closed (offer_already_accepted) | purchase intent on B (201, then 200) | C offer 2 -> manager rejects | C offer 3 -> manager rejects
+   -> 4th offer on C refused (offer_limit_reached) | purchase intent on C still works | seller lists 4 offers + 2 intents
+```
+
+**Assertions worth knowing.** Every buyer- and seller-facing response is checked to contain none of the shop's phone, e-mail or address (`+2348031234567`, `ada.private@example.com`, `12 Secret Street`); `contact` is `null` even on the accepted offer; sellers see the buyer's display name only; the 70% floor is computed on the unit price (`5000` refused, `7000` accepted against `8000`); the refused 4th offer reports `details.max_attempts = 3`. A non-member gets `404 not_found` (the shop's offers are not disclosed), shop staff get `403 forbidden` (they hold `offer.view` but not `offer.respond`), a manager may respond.
+
+**What it does NOT create.** No inventory movement, stock deduction or reservation, sale, invoice, payment or finance transaction: after the run only the marketplace tables, `audit_logs` and the identity/shop tables contain rows (checked on the database; enforced permanently by `MarketplaceOfferIsolationTest`).
+
+**Execution.** Executed with Newman against `php artisan serve` on the isolated test database (`farm_management_test`: fresh `migrate:fresh --seed`, platform admin granted): **79 requests, 197 assertions, 0 failures** (Newman counts 83 requests because the harness used four helper calls to read the emailed OTP from `storage/logs/laravel.log`). No saved response examples were captured for this flow; folder 25 holds the reference requests.

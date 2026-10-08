@@ -406,4 +406,17 @@ Contract: `PHASE-23-MARKETPLACE-LISTINGS.md`. Everything below needs sign-in + v
 5. **Visibility flags.** `is_public` / `hidden_because: "shop_not_active"` explain why a published listing is not on the feed (shop suspended or closed). A `restricted` listing shows `restriction.reason` and is read-only.
 6. **Public feed.** Anonymous `GET /public/marketplace/listings`: debounce `q`, send `min_price`/`max_price` only together with `unit`, treat `fulfilment=pickup|seller_delivery` as "offers it". Quantities are `seller_declared` — word them as "seller says N available", never as guaranteed stock. Use `price.amount_minor` for sorting/formatting in kobo.
 7. **Inventory link (farm-backed shops).** `GET …/listings/eligible-inventory?product_kind=` then send `inventory_item_id`. It is informational: show `inventory.changed_since_link` / `exceeds_stock` as a hint to update the declared quantity; publishing does not reserve or deduct stock.
-8. **Do not call** farm inventory/sales endpoints to "sync" a listing, and do not expect an offer/negotiation API yet (Phase 24).
+8. **Do not call** farm inventory/sales endpoints to "sync" a listing, and see §26 for offers and purchase intents (Phase 24).
+
+## 26. Marketplace offers & purchase intents (Phase 24)
+
+Contract: `PHASE-24-MARKETPLACE-OFFERS.md`. Sign-in + verified email only; **no `X-Farm-Id`**. This is controlled negotiation, not chat or checkout: nothing is reserved, paid or sold, and **seller contact is never returned** (not even after acceptance; that is Phase 25).
+
+1. **Before showing the offer form** call `GET /marketplace/listings/{slug}/offer-status`. Use `can_offer` / `blocked_reason` to decide what to render, `rules.minimum_unit_price` to hint the lowest price, `rules.attempts_remaining` to show "2 offers left", and `pending_offer.expires_at` for a countdown. Never hard-code 3 attempts, 48 hours or 70% - they are platform settings.
+2. **Offer = price per unit + quantity.** Send both as strings. The price must be below the listed price and not below the floor; show the `422` message on `unit_price` as-is (it names the lowest accepted price). Validation errors do not use an attempt.
+3. **Offer next to "Proceed at listed price".** The second button calls `POST …/purchase-intent`; it is idempotent and means "I am interested at the listed price", not "I bought it". Word it that way.
+4. **Statuses.** `pending`, `accepted`, `rejected`, `expired`, `voided`. `expired` is also what you get for a lapsed pending offer before the server has persisted it. `voided` means the seller changed the listing; the buyer's attempt is refunded - show "the listing changed, you can offer again".
+5. **Accepted is not a sale.** Show "The seller accepted your offer in principle" and nothing about contact details, payment or delivery: `contact` is `null`, availability is not reserved.
+6. **Seller screens.** Gate Accept/Reject on `offer.respond` (owner, manager) via `shop.viewer.permissions`; staff only read. Show the buyer by `buyer.name` only. Use `respondable` and handle `409 offer_expired | offer_voided | listing_unavailable | shop_not_active | offer_not_pending` by refetching the offer.
+7. **Refetch after writes:** offer-status, `GET /my/enquiries`, and for sellers `GET /shops/{shop}/offers`.
+8. **Do not** call farm sales/inventory endpoints from an offer, and do not poll faster than every 30 s (use the `expires_at` countdown).

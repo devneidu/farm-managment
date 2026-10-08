@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-/** Shop-scoped permissions. Checked by MarketplaceShopPolicy, never by role name. Listing permissions arrived in Phase 23; negotiation/deal permissions are added here later. */
+/** Shop-scoped permissions. Checked by MarketplaceShopPolicy, never by role name. Listing permissions arrived in Phase 23; offer permissions arrived in Phase 24; deal permissions are added later. */
 enum ShopPermission: string
 {
     case View = 'shop.view';
@@ -16,4 +16,8 @@ enum ShopPermission: string
     case ListingManage = 'listing.manage';
     /** Publish, pause, archive, restore and edit LIVE listings, and delete drafts' history-bearing state (owner, manager). */
     case ListingPublish = 'listing.publish';
+    /** Read buyer offers and purchase intents (all roles). */
+    case OfferView = 'offer.view';
+    /** Accept or reject a buyer offer (owner, manager). */
+    case OfferRespond = 'offer.respond';
 }

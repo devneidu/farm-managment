@@ -578,7 +578,7 @@ class PlatformAdminTest extends TeamTestCase
 
     public function test_settings_are_a_validated_closed_registry(): void
     {
-        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(4, 'data')->assertJsonPath('data.0.value', null);
+        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(7, 'data')->assertJsonPath('data.0.value', null);
         $this->putJson($this->url('/settings/support_email'), ['value' => 'help@farm.example'])->assertOk()->assertJsonPath('data.value', 'help@farm.example');
         $this->putJson($this->url('/settings/support_email'), ['value' => 'not-an-email'])->assertStatus(422);
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => '+2348012345678'])->assertOk();

@@ -9,7 +9,37 @@
 
 ---
 
-## Latest task — Phase 23: Marketplace product listings, pricing & images (UNCOMMITTED)
+## Latest task — Phase 24: Buyer enquiries & controlled negotiation
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 24 only; Phase 25 not started. Committed after the final API workflow verification below. Contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md` (authoritative); design record `docs/implementations/43-PHASE-24-MARKETPLACE-OFFERS.md`.
+
+**What it is:** a simple, controlled offer workflow on negotiable Marketplace listings. NOT chat, escrow, checkout, an order or a deal. Nothing is reserved, charged, deducted or sold; **seller contact is never returned, even after acceptance** (Phase 25).
+
+**Approved decisions applied:** voided offers (material listing edits) do not use an attempt; `offer.view` (all roles) / `offer.respond` (owner, manager); no buyer withdrawal; accepted = terminal immutable snapshot (no stock reservation); expiry default 48 h enforced on read AND write, expired offers use an attempt; price floor `marketplace_min_offer_percent` (default 70) on the UNIT price, strictly below the listed price, exact bcmath, validated before an attempt is used; "Proceed at listed price" = idempotent purchase intent (interest only); paused/restricted listings cannot have offers accepted (reject still allowed).
+
+**Settings (new, Platform Admin):** `marketplace_max_offers_per_buyer` (1-10, 3), `marketplace_offer_expiry_hours` (1-720, 48), `marketplace_min_offer_percent` (1-99, <=2 decimals, 70).
+
+**Endpoints (+10 operations; OpenAPI 226 -> 236 paths, 283 -> 293 ops, 0 warnings):** buyer `POST /marketplace/listings/{slug}/offers`, `GET …/offer-status`, `POST …/purchase-intent`, `GET /marketplace/my/enquiries`, `GET /marketplace/my/offers/{offer}`; shop `GET /marketplace/shops/{shop}/offers[/{offer}]`, `POST …/offers/{offer}/accept|reject`, `GET …/purchase-intents`. Command `marketplace:expire-offers` scheduled hourly.
+
+**Model:** migration `2026_10_21_100000_create_marketplace_offers` (`marketplace_offers`, `marketplace_offer_events` append-only, `marketplace_purchase_intents`). DB uniques: one pending offer per buyer+listing (`pending_slot`), one use of each `attempt_no`. Services: `MarketplaceOfferService`, `MarketplaceOfferLifecycle` (only place an offer leaves pending; `reconcile()` hook in `MarketplaceListingService::update`), `MarketplaceOfferDirectory`; `MarketplaceListingRules::orderableQuantity()` shared with the price estimate.
+
+**Locking:** buyer = listing row; seller = shop -> listing -> offer; edit = shop -> listing -> pending offers; sweep = one offer. Failures that must persist a change (lapse, void) are thrown after commit.
+
+**Final run: full Feature suite 1012 passed (15,171 assertions); Pint clean; `git diff --check` clean.**
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceOfferSubmissionTest` (11), `MarketplaceOfferResponseTest` (13), `MarketplacePurchaseIntentTest` (6), `MarketplaceOfferConcurrencyTest` (4, real `pcntl_fork` processes with own DB connections and a barrier; commits and cleans up its fixtures; skipped when pcntl is missing). Adapted: `PlatformAdminTest` settings count 4 -> 7; `MarketplaceShopTest` staff permissions (+`offer.view`).
+
+**Postman:** folder 25 (10 requests) + executable **Flow 16 — Marketplace negotiation** (79 requests) + 6 env vars (`offer_id`, `intent_id`, `neg_seller_email`, `buyer_email`, `staff_email`, `manager_email`). **Newman (isolated test DB, fresh): 79 requests, 197 assertions, 0 failures** (83 counted incl. 4 OTP helper calls). Docs: API-CONTRACT, FRONTEND-INTEGRATION §26, FRONTEND-WORKFLOWS §26, docs/api/README, postman COVERAGE/WORKFLOWS, master plan, OpenAPI.
+
+**Final verification round:** `MarketplaceOfferIsolationTest` (3 tests): the full lifecycle (accept, reject, void, expire, intent) changes only `marketplace_offers`, `marketplace_offer_events`, `marketplace_purchase_intents` and `audit_logs` (no inventory, sale, invoice, payment, finance row); `marketplace:expire-offers` is scheduled exactly once, hourly; four sweeps + a read + a write on a lapsed offer leave exactly one `expired` event and one audit row.
+
+**Environment note:** the container's MySQL data dir was MariaDB-format; tests ran on a fresh MySQL 8.0.46 datadir (`/tmp/mysqldata`, `mysqld --no-defaults`).
+
+**Known limits / open:** no buyer withdrawal; accepted offers have no validity period (Phase 25); no notifications to buyer/seller on offer events; OpenAPI regenerated with existing path order preserved (version string kept at 0.0.1).
+
+---
+
+## Previous task — Phase 23: Marketplace product listings, pricing & images (UNCOMMITTED)
 
 **Agent:** Claude Code. **Date:** 2026-10-08. Phase 23 only; Phase 24 not started; **not committed or pushed**. Contract: `docs/api/PHASE-23-MARKETPLACE-LISTINGS.md` (authoritative); image runbook `docs/api/PHASE-23-IMAGE-ASSET-RUNBOOK.md`; design record `docs/implementations/42-PHASE-23-MARKETPLACE-LISTINGS.md`.
 
