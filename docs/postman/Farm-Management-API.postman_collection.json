@@ -42356,6 +42356,1133 @@
       ]
     },
     {
+      "name": "27 — Marketplace monetisation (seller plans & promotions)",
+      "description": "**Phase 26.** Seller plans (per shop, prepaid 30/365 days, Free = 10 published listings) and fixed-price promoted listings, paid to Farmvest through Paystack. Activation only after server-side verification; redirects and webhook bodies are never trusted; settlement is idempotent. Both features are OFF by default (feature flags `marketplace_seller_plans`, `marketplace_promotions`). No commission, escrow, wallet, payout or buyer-seller payment. Saved example responses are not included: the payment steps need a real Paystack test-mode transaction (see docs/api/PHASE-26-MARKETPLACE-MONETISATION.md).",
+      "item": [
+        {
+          "name": "Seller: current plan and allowance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/plan",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "plan"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `listing.view` (every shop role). Plan now (`free` or a running paid period), `listing_limit`, `published_count`, `remaining`, `over_limit_by`, `can_publish`, `upcoming_periods`, `features` flags. A lapsed plan reads as Free at read time; listings are never deleted or paused by it.\n\n**ERRORS**\n`404` (not a member)\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: listing allowance",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/allowance",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "allowance"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `listing.view`. Only `published` listings count. Publishing at the limit answers `409 listing_limit_reached` with `details`.\n\n**ERRORS**\n`404`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: available plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = (json.data.find(p => !p.is_free) || {}).id; if (v !== undefined && v !== null) { pm.environment.set(\"seller_plan_id\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "plans"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `listing.view`. Active plans with 30/365-day prices (naira decimal strings). `meta.features.seller_plans` says whether buying is switched on. Sets `seller_plan_id` to the first paid plan.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: promotion packages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = (json.data[0] || {}).id; if (v !== undefined && v !== null) { pm.environment.set(\"promotion_package_id\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/promotion-packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "promotion-packages"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `listing.view`. Fixed-price packages. `meta.features.promotions` says whether buying is switched on.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: buy a seller plan (start checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 or 201\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = json.data.reference; if (v !== undefined && v !== null) { pm.environment.set(\"payment_reference\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/subscription/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "subscription",
+                "checkout"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `billing.manage` (owner, manager). Creates a PENDING payment at the current configured price (frozen) and returns `authorization_url` for Paystack. Nothing is activated. Prepaid; renewing the same plan extends the current period. A repeat within 30 minutes returns the same pending payment (200).\n\n**INPUTS**\n- `plan_id`, `interval_days` 30|365\n\n**ERRORS**\n`409` monetisation_disabled, plan_not_purchasable, subscription_active, shop_not_active; `403` staff; `422`; `502` gateway_unavailable; `503` payments_unavailable\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan_id\": \"{{seller_plan_id}}\",\n  \"interval_days\": 30\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: promote a listing (start checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 or 201\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = json.data.reference; if (v !== undefined && v !== null) { pm.environment.set(\"payment_reference\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/promotions/checkout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "listings",
+                "{{listing_id}}",
+                "promotions",
+                "checkout"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `billing.manage`. The listing must be published and not already promoted. Same payment flow; the promotion starts when payment is confirmed.\n\n**INPUTS**\n- `package_id`\n\n**ERRORS**\n`409` monetisation_disabled, package_not_available, listing_not_promotable, promotion_active, shop_not_active; `403`; `404`; `422`; `502`; `503`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"package_id\": \"{{promotion_package_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: verify a payment (return from checkout)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/payments/{{payment_reference}}/verify",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "payments",
+                "{{payment_reference}}",
+                "verify"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `billing.manage`. Asks Paystack server-side; activates the benefit only when reference, amount (kobo), currency and status all match. Safe to repeat: activates once. Call this when the buyer returns from Paystack; the redirect itself proves nothing.\n\n**ERRORS**\n`404` (not this shop's payment); `403`; `502` gateway_unavailable (nothing lost; retried automatically)\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: payment history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "payments"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `billing.view` (owner, manager). Filters `status`, `purpose`. `benefit_granted`, `needs_attention`; `authorization_url` only while pending.\n\n**ERRORS**\n`403` (staff)\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Seller: promotion history",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/promotions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "marketplace",
+                "shops",
+                "{{shop_id}}",
+                "promotions"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNeeds `billing.view`. Filter `state=running|ended`. `state` running|scheduled|expired|cancelled; `benefit_active` is false while the shop is suspended or the listing is not published/is restricted.\n\n**ERRORS**\n`403`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: list seller plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = (json.data.find(p => p.code === \"seller_plus\") || {}).id; if (v !== undefined && v !== null) { pm.environment.set(\"admin_plan_id\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/seller-plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "seller-plans"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nAny platform role. `free` (limit 10), `seller_plus`, `seller_pro` are seeded; the paid plans start inactive with no price and no limit.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: create a seller plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/seller-plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "seller-plans"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. Creates an INACTIVE paid plan; set prices, then switch it on. Audited.\n\n**INPUTS**\n- `code`, `name`, `listing_limit`, `description?`, `sort_order?`\n\n**ERRORS**\n`422`; `403`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"seller_max\",\n  \"name\": \"Seller Max\",\n  \"listing_limit\": 500\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: update a seller plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/seller-plans/{{admin_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "seller-plans",
+                "{{admin_plan_id}}"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. `name, description, listing_limit, is_active, sort_order`. On the Free plan `listing_limit` is the free allowance (works while flags are off). Switching a paid plan on needs a limit and an active price (422). Audited.\n\n**ERRORS**\n`409` free_plan_required; `422`; `404`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"listing_limit\": 25,\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: set plan prices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/seller-plans/{{admin_plan_id}}/prices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "seller-plans",
+                "{{admin_plan_id}}",
+                "prices"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. `null` amount removes a price. Future checkouts only; a pending payment keeps its frozen amount. Audited.\n\n**ERRORS**\n`409` free_plan_has_no_price; `422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prices\": [\n    {\n      \"interval_days\": 30,\n      \"amount\": \"5000.00\"\n    },\n    {\n      \"interval_days\": 365,\n      \"amount\": \"50000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: list promotion packages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = (json.data[0] || {}).id; if (v !== undefined && v !== null) { pm.environment.set(\"admin_package_id\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "promotion-packages"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nAny platform role.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: create a promotion package",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "promotion-packages"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. Fixed price for a fixed number of days. Audited.\n\n**INPUTS**\n- `code`, `name`, `duration_days` 1-365, `amount`, `description?`, `is_active?`, `sort_order?`\n\n**ERRORS**\n`422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"featured_week\",\n  \"name\": \"Featured for 7 days\",\n  \"duration_days\": 7,\n  \"amount\": \"3000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: update a promotion package",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages/{{admin_package_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "promotion-packages",
+                "{{admin_package_id}}"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. Future purchases only. Switch off with `is_active:false`; never deleted. Audited.\n\n**ERRORS**\n`404`; `422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"3500.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: list service payments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/service-payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "service-payments"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nAny platform role. Filters `status`, `purpose`, `shop_id`, `needs_attention`, `q`. Includes gateway status, failure reason and settlement issue (paid but not applied).\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: list promotions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  { const v = (json.data[0] || {}).id; if (v !== undefined && v !== null) { pm.environment.set(\"promotion_id\", v); } }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/promotions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "promotions"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nAny platform role. Filters `state`, `shop_id`.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+          },
+          "response": []
+        },
+        {
+          "name": "Platform admin: cancel a promotion",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/marketplace/promotions/{{promotion_id}}/cancel",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "marketplace",
+                "promotions",
+                "{{promotion_id}}",
+                "cancel"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nRole `admin`. Stops it now and frees the listing. No refund is made here. Repeating is a no-op. Audited.\n\n**ERRORS**\n`422` (reason); `404`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Misleading listing\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Webhook: Paystack charge.success (server-to-server)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200 or 401\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/public/marketplace/payments/paystack/webhook",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "public",
+                "marketplace",
+                "payments",
+                "paystack",
+                "webhook"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nNot for the frontend. Authenticated only by `x-paystack-signature` (HMAC-SHA512 of the raw body with the secret key); a bad signature is `401 invalid_signature`. The body is never believed: the payment is re-read from Paystack. Deliveries are stored and de-duplicated; a redelivery answers 200 `duplicate`; a temporary failure answers 500 so Paystack redelivers. Can only be exercised with a real or correctly signed payload, so this request is reference-only.\n\n**ERRORS**\n`401` invalid_signature\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {\n    \"reference\": \"{{payment_reference}}\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "90 — Platform Admin",
       "description": "**Platform administration is NOT farm administration.** Access comes only from a `platform_admins` grant created by an operator (`php artisan platform:grant-admin <email> --role=admin|support`); being a farm Owner confers nothing here and a platform admin has no farm powers unless they also hold a farm membership. Roles: `admin` (read + write) and `support` (read only).\n\nThese routes have no farm context, no `X-Farm-Id` and no farm permissions. Log in as the platform admin account first (**01 — Authentication → Log in as the platform admin**); your cookie jar then holds the admin session.\n\nTypical screens: the separate platform administration console (not part of the farm UI).",
       "item": [

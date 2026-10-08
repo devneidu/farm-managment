@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-/** Shop-scoped permissions. Checked by MarketplaceShopPolicy, never by role name. Listing permissions arrived in Phase 23; offer permissions arrived in Phase 24; deal permissions arrived in Phase 25. */
+/** Shop-scoped permissions. Checked by MarketplaceShopPolicy, never by role name. Listing permissions arrived in Phase 23; offer permissions arrived in Phase 24; deal permissions arrived in Phase 25; billing permissions arrived in Phase 26. */
 enum ShopPermission: string
 {
     case View = 'shop.view';
@@ -24,4 +24,8 @@ enum ShopPermission: string
     case DealView = 'deal.view';
     /** Confirm purchase intents, complete or cancel a deal, report, and read the buyer's contact for a deal (owner, manager). */
     case DealRespond = 'deal.respond';
+    /** Read the shop's Farmvest service payments and promotions (owner, manager). */
+    case BillingView = 'billing.view';
+    /** Buy a seller plan or a promotion for the shop and re-check a payment (owner, manager). */
+    case BillingManage = 'billing.manage';
 }

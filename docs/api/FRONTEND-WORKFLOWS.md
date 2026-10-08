@@ -961,3 +961,19 @@ Contract: `PHASE-25-MARKETPLACE-DEALS.md`. No farm context needed. Not an order,
 
 **D. Read the other party's contact**
 1. **Intent:** "Show contact details". 2. **Fetch:** `GET …/deals/{deal}/contact` on click only. 3. **Read:** `contact.channels`, `contact.preferred_contact_method`, `contact.pickup` (pickup deals only), `notice`. 4. **Effect:** none besides the audit record. 5. **Dependent:** deal not cancelled. 6. **Conditional:** hide when `contact_available=false`; staff cannot see it. 7. **Final mutation:** none (read). 8. **Payload:** none. 9. **Backend does:** records who read which field names, audits, rate-limits (30/min). 10. **DO NOT:** cache, log or prefetch contact; show the address for delivery deals. 11. **Refetch:** none. 12. **Needs:** buyer or `deal.respond`. 13. **States:** `409 deal_contact_unavailable`, `403`, `404`, `429`. 14. **Postman:** Flow 17, "Buyer reads the seller's contact" / "Seller reads the buyer's contact".
+
+## 28. Marketplace monetisation (Phase 26)
+
+Contract: `PHASE-26-MARKETPLACE-MONETISATION.md`. No farm context needed. Farmvest's own fees only; no buyer-seller payment.
+
+**A. Seller hits the listing limit**
+1. **Intent:** "Publish". 2. **Fetch:** `GET /marketplace/shops/{shop}/allowance`. 3. **Read:** `can_publish`, `remaining`, `over_limit_by`, `plan`. 4. **Effect:** `409 listing_limit_reached` when full; nothing else changes. 5. **Dependencies:** pause/archive a listing or buy a plan.
+
+**B. Buy a plan**
+1. **Intent:** "Upgrade". 2. **Fetch:** `GET .../plans` (check `meta.features.seller_plans`). 3. **Effect:** `POST .../subscription/checkout` creates a pending payment, nothing is active yet. 4. Redirect to `authorization_url`; on return `POST .../payments/{reference}/verify`. 5. **Read:** `status`, `benefit_granted`, then `GET .../allowance` (new limit). Renewal of the same plan extends the period.
+
+**C. Promote a listing**
+1. **Intent:** "Promote". 2. **Fetch:** `GET .../promotion-packages`. 3. **Effect:** `POST .../listings/{listing}/promotions/checkout` -> pay -> verify; the promotion starts when payment is confirmed. 4. **Read:** `GET .../promotions` (`state`, `expires_at`, `benefit_active`). 5. Errors: `promotion_active`, `listing_not_promotable`.
+
+**D. Admin configuration**
+1. **Intent:** "Set up pricing". 2. `PUT /platform-admin/marketplace/seller-plans/{plan}/prices`, `PATCH .../seller-plans/{plan}` (limit, `is_active`), `POST .../promotion-packages`, then `PATCH /platform-admin/feature-flags/marketplace_seller_plans|marketplace_promotions {enabled:true}`. 3. Monitor with `GET .../service-payments?needs_attention=1` and `GET .../promotions`.

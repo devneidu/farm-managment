@@ -9,7 +9,38 @@
 
 ---
 
-## Latest task — Phase 25: Marketplace deal summary & fulfilment (UNCOMMITTED)
+## Latest task — Phase 26: Marketplace monetisation (COMPLETED, committed)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 26 only, approved and committed on `claude/brave-einstein-3v42ep`; Phase 27 not started (Phase 25 is `f10c3b5`). Contract: `docs/api/PHASE-26-MARKETPLACE-MONETISATION.md` (authoritative); design record `docs/implementations/45-PHASE-26-MARKETPLACE-MONETISATION.md`.
+
+**What it is:** Farmvest's own revenue from sellers, paid through Paystack: shop-scoped prepaid seller plans (30/365 days; Free = 10 published listings) and fixed-price promoted listings ("Sponsored", priority on page 1). NOT commissions, escrow, wallets, payouts, buyer-seller payments or stock effects; no auto-renewal, saved cards, bidding, targeting or bundled credits. The existing farm-scoped Phase 3 subscriptions were NOT reused (a seller may have no farm). No gateway existed in the code, so a small `PaystackClient` was built (Paystack only).
+
+**Payment safeguards:** price frozen at checkout; activation ONLY by `ServicePaymentSettler` after a server-side Paystack verify of reference + exact kobo amount + currency + status=success (redirect, client and webhook body never trusted); settlement = one transaction locking payment -> shop (-> listing), writing `settled_at` once (+ unique `payment_id` on the benefit rows); webhook = HMAC-SHA512 over the raw body, stored first, unique `(provider, event:reference)`, 200 on duplicates, 500 + `failed` on transient errors; `marketplace:reconcile-payments` (every 10 min) retries events, re-verifies recent pending payments and abandons stale ones; a confirmed payment that cannot be applied keeps `settlement_issue` for admins and is never lost.
+
+**Behaviour:** over-limit shops keep every listing; only `publish` is blocked (`409 listing_limit_reached`, checked under the shop lock with a locking read). Plan and promotion expiry are read from dates (no job). Renewal of the same plan chains after the current period; a different paid plan waits (`409 subscription_active`). One live promotion per listing (`open_slot` unique key). Discovery: up to `marketplace_max_promoted_per_page` (3) promoted listings lead page 1 of `newest`/`relevance` (daily rotation), organic order/totals untouched, price sorts pure, `promotion.label="Sponsored"` on every running promotion. Suspended shop / restricted or paused listing: no benefit, window not extended or refunded.
+
+**Config:** feature flags `marketplace_seller_plans`, `marketplace_promotions` (created OFF by the migration; gate new checkouts only), setting `marketplace_max_promoted_per_page` (0-10), the Free plan's `listing_limit` (editable while flags are off), env `PAYSTACK_SECRET_KEY`, `MARKETPLACE_PAYMENT_CALLBACK_URL`. Seeded plans `free`, `seller_plus`, `seller_pro` (paid ones inactive, unpriced, limit unset - no price invented).
+
+**Permissions (new shop):** `billing.view`, `billing.manage` (owner, manager). Plan/allowance/catalogue need only `listing.view`.
+
+**Endpoints (+19 operations; OpenAPI 257 -> 275 paths, 314 -> 334 ops, 0 warnings):** seller `GET plan|allowance|plans|promotion-packages|payments|promotions`, `POST subscription/checkout`, `POST listings/{listing}/promotions/checkout`, `POST payments/{reference}/verify` (all under `/marketplace/shops/{shop}`); public `POST /public/marketplace/payments/paystack/webhook`; admin `GET|POST seller-plans`, `PATCH seller-plans/{plan}`, `PUT seller-plans/{plan}/prices`, `GET|POST promotion-packages`, `PATCH promotion-packages/{package}`, `GET service-payments`, `GET promotions`, `POST promotions/{id}/cancel`. `PublicListingResource` gains `promotion`.
+
+**Model:** migration `2026_10_23_100000_create_marketplace_monetisation` (`marketplace_seller_plans`, `_seller_plan_prices`, `_promotion_packages`, `_service_payments`, `_shop_subscriptions`, `_promotions`, `_payment_webhook_events`; seeds plans + flags). Services: `PaystackClient`, `MarketplaceServiceCheckout`, `ServicePaymentSettler`, `MarketplacePaymentWebhook`, `MarketplacePaymentReconciler`, `MarketplaceSellerAllowance`, `MarketplacePromotionRanking`, `MarketplaceSellerBilling`, `MarketplaceMonetisationAdmin`; command `marketplace:reconcile-payments`.
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceSellerPlanTest` (14), `MarketplacePaymentSettlementTest` (10), `MarketplacePromotionTest` (9), `MarketplaceMonetisationConcurrencyTest` (3, real forked processes - it caught a real snapshot bug in the limit count), plus `ApiDocumentationTest::test_phase_26…` (1). Three existing assertions updated for intended changes (public listing allow-list gains `promotion`; settings registry 8 -> 9; two seeded flags precede `new_dashboard`). Final run: `tests/Feature` **1130 tests, 18,003 assertions, all passing** (was 1093 + 37 new); Pint clean; `git diff --check` clean.
+
+**Docs:** OpenAPI regenerated (existing order preserved; pure additions), Postman folder 27 (19 requests, no saved responses/workflow - needs a live Paystack test transaction) + 6 env vars + COVERAGE/WORKFLOWS notes, API-CONTRACT, README, FRONTEND-INTEGRATION §28, FRONTEND-WORKFLOWS §28, master plan.
+
+**Known limits / open:** real Paystack HTTP is only exercised against `Http::fake` - run one live test-mode payment before launch and set the webhook URL in the Paystack dashboard; no refunds, proration, mid-period plan switch, auto-renewal, receipts or notifications; a `needs_attention` payment has no admin "apply/refund" action yet (admins can see it); paid-plan `listing_limit` has no "unlimited" option in V1; promotions use the `newest`/`relevance` first page only (later pages are organic).
+
+**Pre-launch follow-ups (recorded, not done):**
+- Real Paystack test-mode checkout and webhook verification (live HTTP never exercised; set the webhook URL in the Paystack dashboard).
+- Administrative resolution of paid-but-not-applied (`needs_attention`) payments: apply or refund action for admins.
+- Confirm the local test database held no important data that was overwritten (a fresh MySQL datadir and `farm_management`/`farm_management_test` databases were created in this environment).
+
+---
+
+## Previous task — Phase 25: Marketplace deal summary & fulfilment (committed `f10c3b5`)
 
 **Agent:** Claude Code. **Date:** 2026-10-08. Phase 25 only; Phase 26 not started; **not committed or pushed** (awaiting instruction). Contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md` (authoritative); design record `docs/implementations/44-PHASE-25-MARKETPLACE-DEALS.md`.
 
