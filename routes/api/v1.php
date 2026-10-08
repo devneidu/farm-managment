@@ -34,8 +34,10 @@ use App\Http\Controllers\Api\V1\Marketplace\MarketplaceDealController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingImageController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceOfferController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplacePaymentWebhookController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicListingController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopBillingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopDealController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopMemberController;
@@ -55,6 +57,7 @@ use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceDealController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceListingController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceMonetisationController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
@@ -103,6 +106,9 @@ Route::get('/public/marketplace/listings/{slug}', [MarketplacePublicListingContr
 Route::get('/public/marketplace/listings/{slug}/price-preview', [MarketplacePublicListingController::class, 'preview'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('api.v1.public.marketplace.listings.preview');
 Route::get('/public/marketplace/images/{image}', [MarketplacePublicListingController::class, 'image'])->whereUuid('image')->middleware('throttle:240,1')->name('api.v1.public.marketplace.images.show');
 Route::get('/public/marketplace/catalogue-images/{code}', [MarketplacePublicListingController::class, 'catalogueImage'])->where('code', '[a-z0-9-]+')->middleware('throttle:240,1')->name('api.v1.public.marketplace.catalogue-images.show');
+
+// Paystack webhook (Phase 26): no session, authenticated by the HMAC signature only; the body is never trusted (the payment is re-read from Paystack).
+Route::post('/public/marketplace/payments/paystack/webhook', MarketplacePaymentWebhookController::class)->middleware('throttle:marketplace-webhook')->name('api.v1.public.marketplace.payments.paystack-webhook');
 
 Route::get('/public/plans', [PlanController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.plans');
 
@@ -208,6 +214,16 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
                 Route::post('/report', [MarketplaceShopDealController::class, 'report'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.report');
                 Route::get('/contact', [MarketplaceShopDealController::class, 'contact'])->middleware('throttle:marketplace-contact')->name('api.v1.marketplace.shops.deals.contact');
             });
+            // Farmvest services for the shop (Phase 26): seller plan, listing allowance, promotions. Payments go to Farmvest only, via Paystack.
+            Route::get('/plan', [MarketplaceShopBillingController::class, 'plan'])->name('api.v1.marketplace.shops.plan');
+            Route::get('/allowance', [MarketplaceShopBillingController::class, 'allowance'])->name('api.v1.marketplace.shops.allowance');
+            Route::get('/plans', [MarketplaceShopBillingController::class, 'plans'])->name('api.v1.marketplace.shops.plans');
+            Route::get('/promotion-packages', [MarketplaceShopBillingController::class, 'packages'])->name('api.v1.marketplace.shops.promotion-packages');
+            Route::post('/subscription/checkout', [MarketplaceShopBillingController::class, 'checkoutSubscription'])->middleware('throttle:marketplace-checkout')->name('api.v1.marketplace.shops.subscription.checkout');
+            Route::post('/listings/{listing}/promotions/checkout', [MarketplaceShopBillingController::class, 'checkoutPromotion'])->whereUuid('listing')->middleware('throttle:marketplace-checkout')->name('api.v1.marketplace.shops.promotions.checkout');
+            Route::get('/payments', [MarketplaceShopBillingController::class, 'payments'])->name('api.v1.marketplace.shops.payments.index');
+            Route::post('/payments/{reference}/verify', [MarketplaceShopBillingController::class, 'verify'])->where('reference', '[A-Za-z0-9-]+')->middleware('throttle:marketplace-checkout')->name('api.v1.marketplace.shops.payments.verify');
+            Route::get('/promotions', [MarketplaceShopBillingController::class, 'promotions'])->name('api.v1.marketplace.shops.promotions.index');
             Route::get('/members', [MarketplaceShopMemberController::class, 'index'])->name('api.v1.marketplace.shops.members.index');
             Route::post('/members', [MarketplaceShopMemberController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.store');
             Route::patch('/members/{member}', [MarketplaceShopMemberController::class, 'update'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.update');
@@ -559,6 +575,20 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
         Route::get('/deals/{deal}', [PlatformMarketplaceDealController::class, 'show'])->whereUuid('deal')->name('api.v1.platform.marketplace.deals.show');
         Route::get('/deals/{deal}/contact', [PlatformMarketplaceDealController::class, 'contact'])->whereUuid('deal')->middleware('throttle:marketplace-contact')->name('api.v1.platform.marketplace.deals.contact');
         Route::get('/deal-reports', [PlatformMarketplaceDealController::class, 'reports'])->name('api.v1.platform.marketplace.deal-reports.index');
+    });
+
+    // Marketplace monetisation (Phase 26): seller plans, promotion packages, service payments, promotions
+    Route::prefix('marketplace')->group(function () use ($write) {
+        Route::get('/seller-plans', [PlatformMarketplaceMonetisationController::class, 'plans'])->name('api.v1.platform.marketplace.seller-plans.index');
+        Route::post('/seller-plans', [PlatformMarketplaceMonetisationController::class, 'storePlan'])->middleware($write)->name('api.v1.platform.marketplace.seller-plans.store');
+        Route::patch('/seller-plans/{plan}', [PlatformMarketplaceMonetisationController::class, 'updatePlan'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.marketplace.seller-plans.update');
+        Route::put('/seller-plans/{plan}/prices', [PlatformMarketplaceMonetisationController::class, 'setPrices'])->whereUuid('plan')->middleware($write)->name('api.v1.platform.marketplace.seller-plans.prices');
+        Route::get('/promotion-packages', [PlatformMarketplaceMonetisationController::class, 'packages'])->name('api.v1.platform.marketplace.promotion-packages.index');
+        Route::post('/promotion-packages', [PlatformMarketplaceMonetisationController::class, 'storePackage'])->middleware($write)->name('api.v1.platform.marketplace.promotion-packages.store');
+        Route::patch('/promotion-packages/{package}', [PlatformMarketplaceMonetisationController::class, 'updatePackage'])->whereUuid('package')->middleware($write)->name('api.v1.platform.marketplace.promotion-packages.update');
+        Route::get('/service-payments', [PlatformMarketplaceMonetisationController::class, 'payments'])->name('api.v1.platform.marketplace.service-payments.index');
+        Route::get('/promotions', [PlatformMarketplaceMonetisationController::class, 'promotions'])->name('api.v1.platform.marketplace.promotions.index');
+        Route::post('/promotions/{promotion}/cancel', [PlatformMarketplaceMonetisationController::class, 'cancelPromotion'])->whereUuid('promotion')->middleware($write)->name('api.v1.platform.marketplace.promotions.cancel');
     });
 
     // Platform work templates

@@ -500,4 +500,33 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('locale', $spec['components']['schemas']['UpdatePreferencesRequest']['properties']);
         $this->assertArrayHasKey('locale', $spec['components']['schemas']['AccountResource']['properties']);
     }
+
+    public function test_phase_26_monetisation_endpoints_are_documented_without_secrets(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /marketplace/shops/{shop}/plan', 'get /marketplace/shops/{shop}/allowance', 'get /marketplace/shops/{shop}/plans', 'get /marketplace/shops/{shop}/promotion-packages',
+            'post /marketplace/shops/{shop}/subscription/checkout', 'post /marketplace/shops/{shop}/listings/{listing}/promotions/checkout', 'get /marketplace/shops/{shop}/payments',
+            'post /marketplace/shops/{shop}/payments/{reference}/verify', 'get /marketplace/shops/{shop}/promotions', 'post /public/marketplace/payments/paystack/webhook',
+            'get /platform-admin/marketplace/seller-plans', 'post /platform-admin/marketplace/seller-plans', 'patch /platform-admin/marketplace/seller-plans/{plan}',
+            'put /platform-admin/marketplace/seller-plans/{plan}/prices', 'get /platform-admin/marketplace/promotion-packages', 'post /platform-admin/marketplace/promotion-packages',
+            'patch /platform-admin/marketplace/promotion-packages/{package}', 'get /platform-admin/marketplace/service-payments', 'get /platform-admin/marketplace/promotions',
+            'post /platform-admin/marketplace/promotions/{promotion}/cancel'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method] ?? $this->fail("Missing {$endpoint}");
+            $this->assertNotEmpty($operation['description'] ?? '', $endpoint);
+        }
+        $checkout = $spec['paths']['/marketplace/shops/{shop}/subscription/checkout']['post'];
+        foreach (['201', '409', '422'] as $status) {
+            $this->assertArrayHasKey($status, $checkout['responses'], "subscription checkout missing {$status}");
+        }
+        $this->assertStringContainsString('NOTHING is activated', $checkout['description']);
+        $this->assertStringContainsString('listing_limit_reached', json_encode($spec['paths']['/marketplace/shops/{shop}/allowance']['get']));
+        $this->assertArrayHasKey('promotion', $spec['components']['schemas']['PublicListingResource']['properties']);
+
+        $payment = $spec['components']['schemas']['ServicePaymentResource']['properties'];
+        foreach (['access_code', 'secret', 'secret_key', 'gateway_status', 'user_id'] as $private) {
+            $this->assertArrayNotHasKey($private, $payment, "ServicePaymentResource must not expose {$private} to sellers");
+        }
+        $this->assertArrayHasKey('benefit_granted', $payment);
+    }
 }

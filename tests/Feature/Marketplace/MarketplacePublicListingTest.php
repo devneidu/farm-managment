@@ -80,7 +80,7 @@ class MarketplacePublicListingTest extends ListingTestCase
         $body = $this->getJson(self::PUBLIC.'/'.$this->slug($m['catfish']))->assertOk();
         $data = $body->json('data');
 
-        $this->assertEqualsCanonicalizing(['id', 'reference', 'slug', 'title', 'description', 'product', 'price', 'quantity', 'negotiable', 'package', 'fulfilment', 'location', 'image', 'images', 'shop', 'published_at'], array_keys($data));
+        $this->assertEqualsCanonicalizing(['id', 'reference', 'slug', 'title', 'description', 'product', 'price', 'quantity', 'negotiable', 'package', 'fulfilment', 'location', 'image', 'images', 'shop', 'promotion', 'published_at'], array_keys($data));
         $this->assertEqualsCanonicalizing(['id', 'slug', 'name', 'tagline', 'description', 'seller_type', 'categories', 'location', 'verified', 'verified_at', 'farm_backed', 'contact_methods', 'member_since'], array_keys($data['shop']));
         $this->assertSame('seller_declared', $data['quantity']['basis']);
         $this->assertSame('Ring road', $data['fulfilment']['pickup_area']);

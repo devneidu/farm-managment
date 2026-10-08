@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  */
 class MarketplaceListingDirectory
 {
-    public function __construct(private MarketplaceImageService $images) {}
+    public function __construct(private MarketplaceImageService $images, private MarketplacePromotionRanking $promotions) {}
 
     private const WITH = ['unit', 'packageBasisUnit', 'species', 'cropType', 'catalogImage', 'images', 'shop'];
 
@@ -47,21 +47,31 @@ class MarketplaceListingDirectory
             ->when(isset($f['shop']), fn (Builder $q) => $q->whereHas('shop', fn ($s) => $s->where('slug', $f['shop'])))
             ->when(isset($f['verified']), fn (Builder $q) => $q->whereHas('shop', fn ($s) => $f['verified'] ? $s->where('verification_status', 'verified') : $s->where('verification_status', '!=', 'verified')));
 
-        match (true) {
-            $sort === 'price_asc' => $query->orderBy('unit_price')->orderByDesc('published_at'),
-            $sort === 'price_desc' => $query->orderByDesc('unit_price')->orderByDesc('published_at'),
-            // Without a search term relevance has nothing to rank, so it reads as newest.
-            $sort === 'relevance' && $like !== null => $query->orderByRaw('CASE WHEN title LIKE ? THEN 3 WHEN custom_product_name LIKE ? THEN 2 ELSE 1 END DESC', [$like, $like])->orderByDesc('published_at'),
-            default => $query->orderByDesc('published_at'),
+        $order = function (Builder $q) use ($sort, $like) {
+            match (true) {
+                $sort === 'price_asc' => $q->orderBy('unit_price')->orderByDesc('published_at'),
+                $sort === 'price_desc' => $q->orderByDesc('unit_price')->orderByDesc('published_at'),
+                // Without a search term relevance has nothing to rank, so it reads as newest.
+                $sort === 'relevance' && $like !== null => $q->orderByRaw('CASE WHEN title LIKE ? THEN 3 WHEN custom_product_name LIKE ? THEN 2 ELSE 1 END DESC', [$like, $like])->orderByDesc('published_at'),
+                default => $q->orderByDesc('published_at'),
+            };
+            // UUIDv7 ids are time-ordered, so the id breaks ties newest-first and keeps pages stable.
+            $q->orderByDesc('id');
         };
 
-        // UUIDv7 ids are time-ordered, so the id breaks ties newest-first and keeps pages stable.
-        return $query->orderByDesc('id')->paginate($f['per_page'] ?? 20);
+        // Promoted listings lead the default and relevance orders only (see MarketplacePromotionRanking); price sorts are never bent by payment.
+        $page = $this->promotions->page($query, $order, ! in_array($sort, ['price_asc', 'price_desc'], true), $f['per_page'] ?? 20);
+        $this->promotions->annotate($page->getCollection());
+
+        return $page;
     }
 
     public function find(string $slug): MarketplaceListing
     {
-        return MarketplaceListing::public()->with(self::WITH)->where('slug', $slug)->firstOrFail();
+        $listing = MarketplaceListing::public()->with(self::WITH)->where('slug', $slug)->firstOrFail();
+        $this->promotions->annotate([$listing]);
+
+        return $listing;
     }
 
     /** A stored seller photo, only while its listing is publicly visible. */

@@ -578,7 +578,7 @@ class PlatformAdminTest extends TeamTestCase
 
     public function test_settings_are_a_validated_closed_registry(): void
     {
-        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(8, 'data')->assertJsonPath('data.0.value', null);
+        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(9, 'data')->assertJsonPath('data.0.value', null);
         $this->putJson($this->url('/settings/support_email'), ['value' => 'help@farm.example'])->assertOk()->assertJsonPath('data.value', 'help@farm.example');
         $this->putJson($this->url('/settings/support_email'), ['value' => 'not-an-email'])->assertStatus(422);
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => '+2348012345678'])->assertOk();
@@ -610,7 +610,10 @@ class PlatformAdminTest extends TeamTestCase
         $this->assertTrue(app(PlatformConfigService::class)->flag('new_dashboard'));
         $this->patchJson($this->url('/feature-flags/missing'), ['enabled' => true])->assertNotFound();
         $this->patchJson($this->url('/feature-flags/new_dashboard'), ['enabled' => 'maybe'])->assertStatus(422);
-        $this->getJson($this->url('/feature-flags'))->assertJsonPath('data.0.key', 'new_dashboard');
+        // The two Phase 26 monetisation flags are seeded (off); keys sort alphabetically.
+        $flags = $this->getJson($this->url('/feature-flags'))->assertJsonPath('data.0.key', 'marketplace_promotions')->assertJsonPath('data.0.enabled', false)
+            ->assertJsonPath('data.1.key', 'marketplace_seller_plans')->assertJsonPath('data.1.enabled', false)->json('data');
+        $this->assertSame('new_dashboard', $flags[2]['key']);
 
         $this->expectException(\LogicException::class);
         FeatureFlag::firstOrFail()->delete();

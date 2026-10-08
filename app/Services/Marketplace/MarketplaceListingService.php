@@ -42,6 +42,7 @@ class MarketplaceListingService
         private MarketplaceInventoryLink $inventory,
         private MarketplaceImageService $images,
         private MarketplaceListingHistory $history,
+        private MarketplaceSellerAllowance $allowance,
         private MarketplaceOfferLifecycle $offers,
         private AuditLogger $audit,
     ) {}
@@ -183,6 +184,7 @@ class MarketplaceListingService
             if ($missing = $this->missingForPublish($l)) {
                 throw new ApiHttpException(422, 'listing_incomplete', 'Complete the listing before publishing it.', details: ['missing' => $missing]);
             }
+            $this->allowance->assertCanPublish($shop, $l->id);   // the shop row is locked here: the last place cannot be taken twice
             $l->published_at ??= now();
             $l->paused_at = null;
         });

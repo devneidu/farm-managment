@@ -39,6 +39,8 @@ class PublicListingResource extends JsonResource
             'fulfilment' => ListingPresenter::fulfilment($l), 'location' => ListingPresenter::location($l),
             'image' => ListingPresenter::image($l, 'public'),
             'shop' => (new PublicShopResource($l->shop))->toArray($request),
+            // Paid placement is always disclosed. `null` = an ordinary (organic) listing.
+            'promotion' => $l->getAttribute('sponsored') ? ['label' => 'Sponsored'] : null,
             'published_at' => $l->published_at?->toIso8601String(),
         ];
         if ($this->detailed) {

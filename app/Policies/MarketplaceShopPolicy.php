@@ -77,6 +77,17 @@ class MarketplaceShopPolicy
         return $this->can($user, $shop, ShopPermission::DealRespond);
     }
 
+    public function viewBilling(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::BillingView);
+    }
+
+    /** Buy a Farmvest service for the shop (seller plan, promotion) and re-check one of its payments. */
+    public function manageBilling(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::BillingManage);
+    }
+
     private function can(User $user, MarketplaceShop $shop, ShopPermission $permission): bool
     {
         $member = $shop->relationLoaded('viewer') ? $shop->getRelation('viewer') : $shop->members()->where('user_id', $user->id)->first();
