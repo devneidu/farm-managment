@@ -13,6 +13,21 @@ class MarketplaceDealReport extends Model
 
     protected $guarded = ['id'];
 
+    protected static function booted(): void
+    {
+        static::updating(function (self $report) {
+            if ($report->isDirty(['reference', 'deal_id', 'reporter_id', 'reporter_side', 'target', 'reason', 'description', 'deal_status_at_report', 'created_at'])) {
+                throw new \LogicException('Filed complaints are immutable.');
+            }
+        });
+        static::deleting(fn () => throw new \LogicException('Reports cannot be deleted.'));
+    }
+
+    protected function casts(): array
+    {
+        return ['closed_at' => 'datetime'];
+    }
+
     public function deal(): BelongsTo
     {
         return $this->belongsTo(MarketplaceDeal::class, 'deal_id');

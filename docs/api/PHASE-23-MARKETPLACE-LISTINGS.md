@@ -233,7 +233,7 @@ Reads: any platform role. Writes: role `admin` (`403` for `support`); `throttle:
 | `GET /` | query `q`, `status`, `shop_id`, `product_kind`, `page`, `per_page` ≤100 | all listings (not soft-deleted), newest first | — |
 | `GET /{listing}` | — | detail incl. photos and full `history` (deleted drafts too) | — |
 | `POST /{listing}/restrict` | `reason` (3-500, required) | `draft|published|paused → restricted`: removed from the feed at once and frozen against seller edits/publishing; the seller sees the reason. Repeating is a no-op. `409 invalid_listing_state` (archived) | `platform.marketplace_listing_restricted` |
-| `POST /{listing}/lift-restriction` | — | `restricted → paused`; **never republishes by itself** (the seller publishes). `409 invalid_listing_state` otherwise | `platform.marketplace_listing_restriction_lifted` |
+| `POST /{listing}/lift-restriction` | `reason` (required, 3-500; Phase 27) | `restricted → paused`; **never republishes by itself** (the seller publishes). `409 invalid_listing_state` otherwise | `platform.marketplace_listing_restriction_lifted` |
 | `GET /{listing}/images/{image}/file` | — | stream a photo for review | — |
 
 ## 9. Image catalogue and assets

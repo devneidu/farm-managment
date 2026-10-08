@@ -977,3 +977,9 @@ Contract: `PHASE-26-MARKETPLACE-MONETISATION.md`. No farm context needed. Farmve
 
 **D. Admin configuration**
 1. **Intent:** "Set up pricing". 2. `PUT /platform-admin/marketplace/seller-plans/{plan}/prices`, `PATCH .../seller-plans/{plan}` (limit, `is_active`), `POST .../promotion-packages`, then `PATCH /platform-admin/feature-flags/marketplace_seller_plans|marketplace_promotions {enabled:true}`. 3. Monitor with `GET .../service-payments?needs_attention=1` and `GET .../promotions`.
+
+## Phase 27 — Marketplace trust, safety and administration
+
+See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing shop approval, verification, suspension and listing restriction are reused. New participant APIs file shop/listing complaints and list/read owned content or deal reports. New platform APIs provide `/platform-admin/marketplace/summary`, read-only `/offers[/{offer}]`, and `/reports[/{type}/{report}[/transition]]`. Report states are `open -> in_review -> dismissed|resolved`; every handling action requires a reason. A report never enforces automatically. Only explicit `enforcement_action` plus the related target UUID can invoke existing suspension/restriction. All report counts are available by status, including zeros. Read permissions remain platform admin/support, writes admin only.
+
+**Frontend contract changes:** reinstatement and lifting listing restrictions now require `{reason}`. Active duplicate reports use reporter + target + issue; a closed case permits a new report. Intake throttling is shared across content/deal reports, 20/hour/user. Show own complaint/outcome privately; internal history and reporter identities belong only in the platform administration area. Existing deals, stock and financial records are preserved; paid periods are not extended or refunded by enforcement.

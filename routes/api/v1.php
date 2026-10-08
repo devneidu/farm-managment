@@ -37,6 +37,7 @@ use App\Http\Controllers\Api\V1\Marketplace\MarketplaceOfferController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePaymentWebhookController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicListingController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceReportController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopBillingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopDealController;
@@ -58,6 +59,7 @@ use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceDealController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceListingController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceMonetisationController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceSafetyController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
@@ -166,10 +168,13 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
             Route::get('/', [MarketplaceDealController::class, 'show'])->name('api.v1.marketplace.my-deals.show');
             Route::post('/complete', [MarketplaceDealController::class, 'complete'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.complete');
             Route::post('/cancel', [MarketplaceDealController::class, 'cancel'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.cancel');
-            Route::post('/report', [MarketplaceDealController::class, 'report'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.report');
+            Route::post('/report', [MarketplaceDealController::class, 'report'])->middleware('throttle:marketplace-report')->name('api.v1.marketplace.my-deals.report');
             Route::get('/contact', [MarketplaceDealController::class, 'contact'])->middleware('throttle:marketplace-contact')->name('api.v1.marketplace.my-deals.contact');
         });
         Route::get('/image-library', [MarketplaceCatalogueController::class, 'imageLibrary'])->name('api.v1.marketplace.image-library');
+        Route::post('/reports/{target}/{slug}', [MarketplaceReportController::class, 'store'])->where('target', 'shop|listing')->middleware('throttle:marketplace-report')->name('api.v1.marketplace.reports.store');
+        Route::get('/my/reports', [MarketplaceReportController::class, 'index'])->name('api.v1.marketplace.reports.index');
+        Route::get('/my/reports/{type}/{report}', [MarketplaceReportController::class, 'show'])->where('type', 'content|deal')->whereUuid('report')->name('api.v1.marketplace.reports.show');
         Route::post('/shops', [MarketplaceShopController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.store');
         Route::prefix('/shops/{shop}')->whereUuid('shop')->group(function () {
             Route::get('/', [MarketplaceShopController::class, 'show'])->name('api.v1.marketplace.shops.show');
@@ -211,7 +216,7 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
                 Route::get('/', [MarketplaceShopDealController::class, 'show'])->name('api.v1.marketplace.shops.deals.show');
                 Route::post('/complete', [MarketplaceShopDealController::class, 'complete'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.complete');
                 Route::post('/cancel', [MarketplaceShopDealController::class, 'cancel'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.cancel');
-                Route::post('/report', [MarketplaceShopDealController::class, 'report'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.report');
+                Route::post('/report', [MarketplaceShopDealController::class, 'report'])->middleware('throttle:marketplace-report')->name('api.v1.marketplace.shops.deals.report');
                 Route::get('/contact', [MarketplaceShopDealController::class, 'contact'])->middleware('throttle:marketplace-contact')->name('api.v1.marketplace.shops.deals.contact');
             });
             // Farmvest services for the shop (Phase 26): seller plan, listing allowance, promotions. Payments go to Farmvest only, via Paystack.
@@ -526,6 +531,12 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
 */
 Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', 'email.verified', 'platform.admin'])->group(function () {
     $write = ['platform.admin:write', 'throttle:platform-admin-write'];
+    Route::get('/marketplace/summary', [PlatformMarketplaceSafetyController::class, 'summary'])->name('api.v1.platform.marketplace.summary');
+    Route::get('/marketplace/offers', [PlatformMarketplaceSafetyController::class, 'offers'])->name('api.v1.platform.marketplace.offers.index');
+    Route::get('/marketplace/offers/{offer}', [PlatformMarketplaceSafetyController::class, 'offer'])->whereUuid('offer')->name('api.v1.platform.marketplace.offers.show');
+    Route::get('/marketplace/reports', [PlatformMarketplaceSafetyController::class, 'reports'])->name('api.v1.platform.marketplace.reports.index');
+    Route::get('/marketplace/reports/{type}/{report}', [PlatformMarketplaceSafetyController::class, 'report'])->where('type', 'content|deal')->whereUuid('report')->name('api.v1.platform.marketplace.reports.show');
+    Route::post('/marketplace/reports/{type}/{report}/transition', [PlatformMarketplaceSafetyController::class, 'transition'])->where('type', 'content|deal')->whereUuid('report')->middleware($write)->name('api.v1.platform.marketplace.reports.transition');
     $kinds = implode('|', array_keys(PlatformMasterDataService::KINDS));
 
     Route::get('/me', [PlatformAdminController::class, 'me'])->name('api.v1.platform.me');

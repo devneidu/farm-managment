@@ -57,7 +57,7 @@ class MarketplaceDealIsolationTest extends DealTestCase
         sort($changed);
         $this->assertSame([
             'audit_logs', 'marketplace_deal_confirmations', 'marketplace_deal_contact_views', 'marketplace_deal_events', 'marketplace_deal_reports', 'marketplace_deals',
-            'marketplace_offer_events', 'marketplace_offers', 'marketplace_purchase_intents',
+            'marketplace_offer_events', 'marketplace_offers', 'marketplace_purchase_intents', 'marketplace_report_events',
         ], $changed, 'deals must not touch inventory, sales, invoices, payments, finance, contacts or any other table');
 
         $this->assertSame(0, Sale::count());

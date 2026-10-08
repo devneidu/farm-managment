@@ -144,7 +144,7 @@ class MarketplaceDealFromOfferTest extends DealTestCase
         $this->signInAs($this->admin())->postJson(self::ADMIN."/shops/{$this->shopId}/suspend", ['reason' => 'Under review'])->assertOk();
         $this->confirmOffer($offer)->assertStatus(409)->assertJsonPath('code', 'shop_not_active');
 
-        $this->signInAs($this->admin())->postJson(self::ADMIN."/shops/{$this->shopId}/reinstate")->assertOk();
+        $this->signInAs($this->admin())->postJson(self::ADMIN."/shops/{$this->shopId}/reinstate", ['reason' => 'Compliance review completed'])->assertOk();
         $this->confirmOffer($offer)->assertCreated();   // nothing was spent by the refusals
         $this->assertSame(1, MarketplaceDeal::count());
     }

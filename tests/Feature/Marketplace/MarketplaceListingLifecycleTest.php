@@ -301,7 +301,7 @@ class MarketplaceListingLifecycleTest extends ListingTestCase
         $this->postJson(self::SELLER."/shops/$shop/listings", $this->yam())->assertStatus(409)->assertJsonPath('code', 'shop_suspended');
         $this->getJson(self::SELLER."/shops/$shop/listings")->assertOk()->assertJsonCount(1, 'data');   // the seller can still read
 
-        $this->signInAs($admin)->postJson(self::ADMIN."/shops/$shop/reinstate")->assertOk()->assertJsonPath('data.status', 'active');
+        $this->signInAs($admin)->postJson(self::ADMIN."/shops/$shop/reinstate", ['reason' => 'Compliance review completed'])->assertOk()->assertJsonPath('data.status', 'active');
         $this->assertContains($slug, $this->publicSlugs(), 'reinstated shop: listings are back with no per-listing write');
     }
 
@@ -335,7 +335,7 @@ class MarketplaceListingLifecycleTest extends ListingTestCase
         $this->postJson($this->path($shop, $id, '/images'), ['image' => UploadedFile::fake()->image('a.jpg', 50, 50)])->assertStatus(409)->assertJsonPath('code', 'listing_restricted');
 
         // lifting does NOT republish
-        $this->signInAs($admin)->postJson(self::ADMIN."/listings/$id/lift-restriction")->assertOk()->assertJsonPath('data.status', 'paused')->assertJsonPath('data.restriction.reason', null);
+        $this->signInAs($admin)->postJson(self::ADMIN."/listings/$id/lift-restriction", ['reason' => 'Compliance review completed'])->assertOk()->assertJsonPath('data.status', 'paused')->assertJsonPath('data.restriction.reason', null);
         $this->assertNotContains($slug, $this->publicSlugs());
         $this->assertDatabaseHas('audit_logs', ['action' => 'platform.marketplace_listing_restriction_lifted', 'resource_id' => $id]);
         $this->signInAs($user);
@@ -361,7 +361,7 @@ class MarketplaceListingLifecycleTest extends ListingTestCase
         $this->postJson(self::ADMIN."/listings/$archived/restrict", ['reason' => 'Blocked'])->assertStatus(409)->assertJsonPath('code', 'invalid_listing_state');
 
         $live = $this->signInAs(User::findOrFail(MarketplaceListing::find($draft)->created_by))->postJson($this->path($shop, $this->createId($shop, $this->tomatoes()), '/publish'))->assertOk()->json('data.id');
-        $this->signInAs($this->admin())->postJson(self::ADMIN."/listings/$live/lift-restriction")->assertStatus(409)->assertJsonPath('code', 'invalid_listing_state');
+        $this->signInAs($this->admin())->postJson(self::ADMIN."/listings/$live/lift-restriction", ['reason' => 'Compliance review completed'])->assertStatus(409)->assertJsonPath('code', 'invalid_listing_state');
     }
 
     public function test_platform_listing_oversight_lists_filters_and_enforces_roles(): void

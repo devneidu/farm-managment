@@ -85,7 +85,7 @@ class MarketplaceDealLifecycle
 
     /**
      * A party reports the deal or the other party. Allowed in ANY deal state (a buyer may report after a cancellation) and never changes the deal's status.
-     * One report per reporter and target; repeating it returns the existing one. `[$report, $created]`.
+     * One active report per reporter, target and issue; closing a case allows later reports. `[$report, $created]`.
      *
      * @return array{0: MarketplaceDealReport, 1: bool}
      */
@@ -95,16 +95,18 @@ class MarketplaceDealLifecycle
             $deal = $this->lockedFor($user, $side, $shopId, $dealId);
             $subject = $target === 'deal' ? 'deal' : ($side === 'buyer' ? 'seller' : 'buyer');
 
-            if ($existing = MarketplaceDealReport::where('deal_id', $deal->id)->where('reporter_id', $user->id)->where('target', $subject)->first()) {
+            if ($existing = MarketplaceDealReport::where('deal_id', $deal->id)->where('reporter_id', $user->id)->where('target', $subject)->where('reason', $reason)->where('open_slot', 'O')->lockForUpdate()->first()) {
                 return [$existing, false];
             }
             $report = new MarketplaceDealReport([
                 'deal_id' => $deal->id, 'reporter_id' => $user->id, 'reporter_side' => $side, 'target' => $subject, 'reason' => $reason,
                 'description' => $description, 'deal_status_at_report' => $deal->status->value,
             ]);
-            $report->forceFill(['reference' => MarketplaceReferences::next('DRP', MarketplaceDealReport::class), 'status' => 'open'])->save();
+            $report->forceFill(['reference' => MarketplaceReferences::next('DRP', MarketplaceDealReport::class), 'status' => 'open', 'open_slot' => 'O'])->save();
+            app(MarketplaceReportService::class)->event('deal', $report, $user, null, 'open', null);
             $this->event($deal, $side, $user->id, 'reported', $deal->status->value, $deal->status->value, $reason);
-            $this->auditDeal($deal, $user, 'marketplace.deal_reported', ['report_id' => $report->id, 'target' => $subject, 'reason' => $reason]);
+            // A farm's audit view must not disclose a confidential complaint or its reporter to the reported shop.
+            $this->audit->record(null, $user->id, 'marketplace.deal_reported', 'marketplace_deal', $deal->id, $deal->reference, ['report_id' => $report->id, 'target' => $subject, 'reason' => $reason]);
 
             return [$report, true];
         }));

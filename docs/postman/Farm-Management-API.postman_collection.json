@@ -7,6 +7,719 @@
   },
   "item": [
     {
+      "name": "28 — Marketplace trust, safety & administration",
+      "description": "Phase 27 reference requests, not one sequential workflow: resolve/dismiss/enforce are alternative outcomes. Intake never enforces. Select the proper participant/admin session and report variables. Original deal report endpoints remain authoritative. Existing reinstate/lift requests now require a reason.",
+      "item": [
+        {
+          "name": "Report a listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/marketplace/reports/listing/{{listing_slug}}",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"description\": \"Please investigate the advertised listing.\",\r\n  \"reason\": \"suspected_fraud\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }",
+                  "if (pm.response.code < 300) { pm.environment.set(\"report_id\", pm.response.json().data.id); pm.environment.set(\"report_type\", \"content\"); pm.test(\"Reporter confidentiality\", () => pm.expect(pm.response.json().data).not.to.have.property(\"history\")); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Report a shop",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/marketplace/reports/shop/{{shop_slug}}",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"description\": \"Please investigate repeated unsolicited messages.\",\r\n  \"reason\": \"spam\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }",
+                  "if (pm.response.code < 300) { pm.environment.set(\"report_id\", pm.response.json().data.id); pm.environment.set(\"report_type\", \"content\"); pm.test(\"Reporter confidentiality\", () => pm.expect(pm.response.json().data).not.to.have.property(\"history\")); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "My reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/marketplace/my/reports?type=content&status=open",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "My report detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/marketplace/my/reports/{{report_type}}/{{report_id}}",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Safety summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/summary",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Admin offers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/offers?offer_status=pending&per_page=20",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Admin offer detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/offers/{{offer_id}}",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Admin reports",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports?type={{report_type}}&status=open",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Admin report detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Review a report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"status\": \"in_review\",\r\n  \"reason\": \"Investigating the submitted complaint.\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Resolve without enforcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"status\": \"resolved\",\r\n  \"reason\": \"The parties clarified the issue.\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Dismiss a report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"status\": \"dismissed\",\r\n  \"reason\": \"No actionable violation was established.\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Explicitly restrict reported listing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"enforcement_id\": \"{{listing_id}}\",\r\n  \"reason\": \"Prohibited content was confirmed.\",\r\n  \"enforcement_action\": \"restrict_listing\",\r\n  \"status\": \"resolved\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Explicitly suspend related shop",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"enforcement_id\": \"{{shop_id}}\",\r\n  \"reason\": \"A serious safety violation was confirmed.\",\r\n  \"enforcement_action\": \"suspend_shop\",\r\n  \"status\": \"resolved\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Reinstate shop with reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/shops/{{shop_id}}/reinstate",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"reason\": \"Compliance review completed.\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        },
+        {
+          "name": "Lift restriction with reason",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "value": "application/json",
+                "key": "Accept"
+              },
+              {
+                "value": "{{frontend_origin}}",
+                "key": "Origin"
+              },
+              {
+                "value": "application/json",
+                "key": "Content-Type"
+              },
+              {
+                "value": "{{xsrf_token}}",
+                "key": "X-XSRF-TOKEN"
+              }
+            ],
+            "url": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
+            "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+            "body": {
+              "mode": "raw",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              },
+              "raw": "{\r\n  \"reason\": \"Corrective action was reviewed.\"\r\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Successful response\", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));",
+                  "if (pm.response.code < 300) { const j = pm.response.json(); pm.test(\"Envelope\", () => { pm.expect(j).to.have.property(\"data\"); pm.expect(j).to.have.property(\"meta\"); }); }"
+                ]
+              },
+              "listen": "test"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "00 — Setup & Health",
       "description": "Start here. `GET /health` proves the API is reachable. Then select the **Farm Management — Local** environment, make sure `base_url` and `frontend_origin` match your server, and run **01 — Authentication → Initialise CSRF cookie**.\n\nTypical screens: startup/connectivity check.",
       "item": [
@@ -48171,6 +48884,7 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
+                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/shops/{{shop_id}}/reinstate",
                   "host": [
@@ -48184,7 +48898,7 @@
                     "reinstate"
                   ]
                 },
-                "description": "Admin write. `suspended -> active` if it had been approved, otherwise `pending_review`."
+                "description": "Admin write. Required reason (3-500 chars). `suspended -> active` if it had been approved, otherwise `pending_review`."
               },
               "response": []
             },
@@ -48610,6 +49324,7 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
+                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                   "host": [
@@ -48623,7 +49338,7 @@
                     "lift-restriction"
                   ]
                 },
-                "description": "Admin write. `restricted -> paused`. The listing does NOT go live again by itself: the seller (owner/manager) publishes it. Audited `platform.marketplace_listing_restriction_lifted`."
+                "description": "Admin write. Reason required (3-500 chars); restricted to paused, seller must publish again."
               },
               "response": [
                 {
@@ -48646,6 +49361,7 @@
                         "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                       }
                     ],
+                    "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
                     "url": {
                       "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                       "host": [
@@ -48659,7 +49375,7 @@
                         "lift-restriction"
                       ]
                     },
-                    "description": "Admin write. `restricted -> paused`. The listing does NOT go live again by itself: the seller (owner/manager) publishes it. Audited `platform.marketplace_listing_restriction_lifted`."
+                    "description": "Admin write. Reason required (3-500 chars); restricted to paused, seller must publish again."
                   },
                   "status": "OK",
                   "code": 200,
@@ -74283,6 +74999,7 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
+                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                   "host": [
@@ -74296,7 +75013,7 @@
                     "lift-restriction"
                   ]
                 },
-                "description": "Admin write. `restricted -> paused`. The listing does NOT go live again by itself: the seller (owner/manager) publishes it. Audited `platform.marketplace_listing_restriction_lifted`."
+                "description": "Admin write. Reason required (3-500 chars); restricted to paused, seller must publish again."
               },
               "response": [
                 {
@@ -74319,6 +75036,7 @@
                         "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                       }
                     ],
+                    "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
                     "url": {
                       "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                       "host": [
@@ -74332,7 +75050,7 @@
                         "lift-restriction"
                       ]
                     },
-                    "description": "Admin write. `restricted -> paused`. The listing does NOT go live again by itself: the seller (owner/manager) publishes it. Audited `platform.marketplace_listing_restriction_lifted`."
+                    "description": "Admin write. Reason required (3-500 chars); restricted to paused, seller must publish again."
                   },
                   "status": "OK",
                   "code": 200,
@@ -83765,7 +84483,7 @@
               "response": []
             },
             {
-              "name": "78. Buyer 2: reporting again returns the existing report",
+              "name": "78. Buyer 2: reporting the same issue returns the existing report",
               "event": [
                 {
                   "listen": "test",
@@ -83818,7 +84536,7 @@
                 "description": "**IN THIS FLOW**",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"target\": \"other_party\",\n  \"reason\": \"no_show\"\n}",
+                  "raw": "{\n  \"target\": \"other_party\",\n  \"reason\": \"misrepresented_product\"\n}",
                   "options": {
                     "raw": {
                       "language": "json"

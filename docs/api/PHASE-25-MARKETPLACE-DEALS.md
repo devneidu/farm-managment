@@ -177,9 +177,9 @@ A buyer who changes their request (`POST …/purchase-intent` with a new quantit
 
 * Allowed in **any** deal state, including after cancellation or completion.
 * **Does not change the deal.** No status change, no freeze of completion or cancellation, no refund, penalty or settlement. The report preserves the deal and its history as they were and records `deal_status_at_report`.
-* One report per reporter and target; repeating returns the existing one (`200`; first `201`). The report reference is `DRP-…`.
+* Phase 27: one active report per reporter, target and issue (`reason`); repeating returns the active case (`200`; first `201`). Closing permits a later new case. The report reference is `DRP-…`.
 * **Confidential:** the other party never sees that they were reported — not in `my_reports`, not in `history`. The reporter sees their own. Platform admins see all.
-* Phase 27 owns moderation (triage, outcomes, sanctions). Phase 25 only preserves the complaint.
+* Phase 27 implements triage, outcomes and explicitly selected enforcement; see `PHASE-27-MARKETPLACE-SAFETY.md`. A complaint or outcome alone never changes the deal.
 
 ## 9. Contact exchange and privacy
 
@@ -243,6 +243,6 @@ Append-only deal history (`created`, `completion_confirmed`, `completed`, `cance
 
 ## 14. Concurrency guarantees
 
-* Database unique keys: one deal per offer (`offer_id`), one per confirmation (`confirmation_id`), a `CHECK` that a deal has exactly one source, one open confirmation per intent (`open_slot`), one report per reporter and target.
+* Database unique keys: one deal per offer (`offer_id`), one per confirmation (`confirmation_id`), a `CHECK` that a deal has exactly one source, one open confirmation per intent (`open_slot`), one active report per reporter, target and issue (Phase 27).
 * Lock order: buyer paths lock **listing → offer/intent → confirmation**; the seller path locks **shop → listing → intent → confirmation** (the order Phase 24 uses); deal actions lock **only the deal row**. No cycle is possible.
 * Verified with real multi-process tests: simultaneous confirmations of one offer or confirmation → one deal; simultaneous seller confirmations → one open confirmation; both sides completing together → completed exactly once; cancel racing complete → exactly one terminal outcome; a buyer changing their request racing the buyer's confirmation never leaves a mismatched confirmation.

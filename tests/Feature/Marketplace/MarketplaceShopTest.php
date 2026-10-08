@@ -408,8 +408,8 @@ class MarketplaceShopTest extends TeamTestCase
             $this->{$method.'Json'}(self::SELLER.$path, $body)->assertStatus(409)->assertJsonPath('code', 'shop_suspended');
         }
 
-        $this->signInAs($admin)->postJson(self::ADMIN."/$id/reinstate")->assertOk()->assertJsonPath('data.status', 'active');
-        $this->postJson(self::ADMIN."/$id/reinstate")->assertStatus(409);
+        $this->signInAs($admin)->postJson(self::ADMIN."/$id/reinstate", ['reason' => 'Compliance review completed'])->assertOk()->assertJsonPath('data.status', 'active');
+        $this->postJson(self::ADMIN."/$id/reinstate", ['reason' => 'Compliance review completed'])->assertStatus(409);
         $this->app['auth']->forgetGuards();
         $this->getJson(self::PUBLIC."/$slug")->assertOk();
     }
@@ -419,7 +419,7 @@ class MarketplaceShopTest extends TeamTestCase
         $id = $this->submitted($this->seller());
         $admin = $this->admin();
         $this->signInAs($admin)->postJson(self::ADMIN."/$id/suspend", ['reason' => 'Looks off'])->assertOk();
-        $this->postJson(self::ADMIN."/$id/reinstate")->assertOk()->assertJsonPath('data.status', 'pending_review');
+        $this->postJson(self::ADMIN."/$id/reinstate", ['reason' => 'Compliance review completed'])->assertOk()->assertJsonPath('data.status', 'pending_review');
         $this->app['auth']->forgetGuards();
         $this->getJson(self::PUBLIC.'/'.$this->slug($id))->assertNotFound();
 
@@ -671,7 +671,7 @@ class MarketplaceShopTest extends TeamTestCase
 
         $this->signInAs($admin)->postJson(self::ADMIN."/$id/approve")->assertOk();
         $this->postJson(self::ADMIN."/$id/suspend", ['reason' => 'Policy breach'])->assertOk();
-        $this->postJson(self::ADMIN."/$id/reinstate")->assertOk();
+        $this->postJson(self::ADMIN."/$id/reinstate", ['reason' => 'Compliance review completed'])->assertOk();
 
         $entries = $this->getJson('/api/v1/platform-admin/audit-logs?per_page=100')->assertOk()->json('data');
         $actions = array_column($entries, 'action');

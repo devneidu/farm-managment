@@ -185,7 +185,7 @@ class MarketplacePromotionTest extends MonetisationTestCase
         $this->assertSame([], $this->discovery(), 'a suspended shop has no listings, so no promotion');
         $this->signInAs($owner)->getJson(self::SELLER."/shops/$shop/promotions")->assertJsonPath('data.0.benefit_active', false);
 
-        $this->signInAs($admin)->postJson(self::ADMIN."/shops/$shop/reinstate")->assertOk();
+        $this->signInAs($admin)->postJson(self::ADMIN."/shops/$shop/reinstate", ['reason' => 'Compliance review completed'])->assertOk();
         $this->assertTrue(MarketplacePromotion::where('listing_id', $a)->value('expires_at')->equalTo($expires), 'the paid window is neither extended nor refunded');
         $this->assertSame(['Bravo'], array_column($this->discovery(), 'title'));
         $this->assertSame('Sponsored', $this->discovery()[0]['promotion']['label']);

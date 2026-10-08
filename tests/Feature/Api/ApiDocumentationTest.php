@@ -501,6 +501,21 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayHasKey('locale', $spec['components']['schemas']['AccountResource']['properties']);
     }
 
+    public function test_phase_27_safety_endpoints_and_workflow_are_documented(): void
+    {
+        $spec = $this->spec();
+        foreach (['post /marketplace/reports/{target}/{slug}', 'get /marketplace/my/reports', 'get /marketplace/my/reports/{type}/{report}', 'get /platform-admin/marketplace/summary', 'get /platform-admin/marketplace/offers', 'get /platform-admin/marketplace/offers/{offer}', 'get /platform-admin/marketplace/reports', 'get /platform-admin/marketplace/reports/{type}/{report}', 'post /platform-admin/marketplace/reports/{type}/{report}/transition'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey($method, $spec['paths'][$path] ?? [], $endpoint);
+        }
+        $schema = $spec['components']['schemas']['TransitionReportRequest'];
+        $this->assertContains('reason', $schema['required']);
+        $this->assertSame(['in_review', 'dismissed', 'resolved'], $schema['properties']['status']['enum']);
+        foreach (['shops/{shop}/reinstate', 'listings/{listing}/lift-restriction'] as $path) {
+            $this->assertArrayHasKey('requestBody', $spec['paths']['/platform-admin/marketplace/'.$path]['post']);
+        }
+    }
+
     public function test_phase_26_monetisation_endpoints_are_documented_without_secrets(): void
     {
         $spec = $this->spec();

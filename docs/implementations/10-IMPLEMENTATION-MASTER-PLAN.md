@@ -137,7 +137,7 @@ Offers on negotiable listings (price floor, attempt limit, expiry, accept/reject
 
 ## Post-V1 — Phase 25 (Marketplace deal summary & fulfilment)
 
-A lightweight deal summary: the buyer confirms an accepted offer (A), or the seller confirms a fixed-price purchase request and then the buyer confirms the exact terms (B). Frozen product/unit/quantity/price/total and fulfilment terms (pickup or seller delivery, delivery charge never added to the total), two-sided self-reported completion, cancellation, confidential reports (Phase 27 owns moderation), audited contact exchange (address only for pickup), shop permissions `deal.view|respond`, platform admin read-only. Farmvest is not an escrow, payment processor or logistics provider: no payment, stock reservation, sale, invoice or delivery. Design: `44-PHASE-25-MARKETPLACE-DEALS.md`; contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md`. Phase 26 (monetisation) is not started.
+A lightweight deal summary: the buyer confirms an accepted offer (A), or the seller confirms a fixed-price purchase request and then the buyer confirms the exact terms (B). Frozen product/unit/quantity/price/total and fulfilment terms (pickup or seller delivery, delivery charge never added to the total), two-sided self-reported completion, cancellation, confidential reports (Phase 27 owns moderation), audited contact exchange (address only for pickup), shop permissions `deal.view|respond`, platform admin read-only. Farmvest is not an escrow, payment processor or logistics provider: no payment, stock reservation, sale, invoice or delivery. Design: `44-PHASE-25-MARKETPLACE-DEALS.md`; contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md`. Phase 26 (monetisation) is implemented below.
 
 ## Post-V1 — Phase 26 (Marketplace monetisation)
 
@@ -146,3 +146,7 @@ Shop-scoped prepaid seller plans (Free = 10 published listings; Seller Plus / Pr
 ## V1 launch status (Phase 21)
 
 Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented and locally verified; see [audit and acceptance record](../operations/PHASE-21-VERIFICATION.md) and [deployment runbook](../operations/LAUNCH.md) for final test evidence and remaining infrastructure gates. No unconditional production-readiness claim until restore, reconciliation, staging smoke and representative concurrent load gates are signed off. Phase 20 — Deferred from V1 / post-launch enhancement (WhatsApp integration, AI-assisted parsing); it is not a V1 launch blocker.
+
+## Post-V1 — Phase 27 (Marketplace trust, safety and administration)
+
+Implemented: platform status summaries and offer oversight; confidential shop/listing reporting; existing deal-report triage (`open -> in_review -> dismissed|resolved`), active issue deduplication and later reporting after closure; append-only report history and required administrative reasons; explicit linked enforcement using existing shop/listing services, platform roles and audit. Reports never automatically enforce; existing deal lifecycle and paid periods remain intact. Design: `46-PHASE-27-MARKETPLACE-SAFETY.md`; contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. Phase 28 is not started.

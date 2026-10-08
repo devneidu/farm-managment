@@ -9,7 +9,33 @@
 
 ---
 
-## Latest task — Phase 26: Marketplace monetisation (COMPLETED, committed)
+## Latest task — Phase 27: Marketplace trust, safety & administration (COMPLETED)
+
+**Agent:** Codex. **Date:** 2026-10-08. Started from clean `master` at `0970912` (merge of Phase 26 `9f7da99`). Approved plan and product decisions implemented; user approved commit and push on the current branch. Phase 28 not started. Contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`; design record: `docs/implementations/46-PHASE-27-MARKETPLACE-SAFETY.md`.
+
+**Reuse / behavior:** Existing shop approval/verification/suspension and listing restrict/lift remain authoritative. Immediate listing publication retained. Existing deal reports are extended, not copied. Report workflow `open -> in_review -> dismissed|resolved`, required administrative reasons, immutable filed complaints and append-only history. Reports NEVER automatically enforce. An optional explicitly selected `suspend_shop|restrict_listing` plus related target UUID invokes existing moderation in the same transaction as resolution/history/audit. Outcomes alone never alter deals, financial records, paid subscriptions or promotion windows. Existing deal completion/cancellation/reporting permissions remain intact during shop suspension.
+
+**Duplicates / privacy:** Active slot uniqueness is reporter + target + issue (`reason`) + nullable `open_slot`; `open` and `in_review` occupy the slot, closure frees it, allowing legitimate later cases without rewriting earlier ones. Content/deal intake shares `marketplace-report` (20/hour/user). Reporter sees only owned complaints/outcomes; platform readers see reporter/handler/history; other participants get 404. Filing audit rows have `farm_id=null`; migration also removes farm visibility from historical deal-report audits, preserving their contents. Closure reasons are reporter-visible: no private investigative/contact details should be placed in them.
+
+**Schema:** `2026_10_24_100000_create_marketplace_report_workflows` adds `marketplace_content_reports` and `marketplace_report_events`, extends `marketplace_deal_reports` with workflow/outcome/handler/closure columns and active issue uniqueness, backfills original filing events. Rollback refuses repeat legacy-key cases, new content complaints or administrative history instead of discarding them. New models use UUIDv7; original complaint fields and event history have model-level mutation/deletion guards. Normal deployment migration is required; development/production schemas were not altered or reset. Test runs used guarded `farm_management_test`; migration preservation test uses isolated in-memory SQLite.
+
+**APIs (+9 operations):** participant `POST /marketplace/reports/{target}/{slug}`, `GET /marketplace/my/reports[/{type}/{report}]`; platform `GET /platform-admin/marketplace/summary`, `GET .../offers[/{offer}]`, `GET .../reports[/{type}/{report}]`, `POST .../reports/{type}/{report}/transition`. Platform roles unchanged: admin/support reads, admin writes. Summary includes all four report counts (zeros included), separately for content/deal and combined, shop/listing/deal status maps, effective offer statuses and distinct shop-owner count. Existing shop details provide seller oversight. Existing reinstate and lift-restriction now REQUIRE `reason` (3-500 chars); existing deal-report list accepts all workflow states.
+
+**Documentation:** OpenAPI 275 -> 284 paths, 334 -> 343 operations, final export 0 warnings; existing key order/server definition retained, no paths removed. Phase 27 contract/design, previous endpoint contracts, API-CONTRACT, FRONTEND-INTEGRATION, FRONTEND-WORKFLOWS, README, master plan updated. Postman folder 28 has 16 reference requests and report_id/report_type env keys; existing reinstate/lift requests include reasons; Flow 17 request 78 now repeats the same issue category. Collection/environment JSON validated. No saved HTTP responses or Newman run claimed for the new folder.
+
+**Verification:** Complete `tests/Feature/Marketplace`: **268 tests, 6,063 assertions, 19 skipped** (existing pcntl-based concurrency tests cannot run on Windows; remaining tests pass). Focused `MarketplaceReportMigrationTest|PlatformAdminTest|ApiDocumentationTest`: **55 tests, 1,383 assertions, all passing**. Final migration/shared content+deal throttle recheck: **2 tests, 54 assertions, all passing**. New tests: 13 safety behavior cases, 1 legacy migration preservation/rollback case and 1 OpenAPI contract case. Relevant existing tests adapted for required reasons, issue deduplication and new report-history side effects. Pint --test on all changed/new PHP: passed. git diff --check: passed. No whole Feature suite was run.
+
+**Limits:** No account-wide bans, private notes, evidence uploads, notifications, appeals/reopening, automated sanctions, payment adjudication/refunds or community features. Content reports require currently public targets; deal parties can still report suspended-shop deals. Real process-concurrency checks remain unverified on this Windows runtime; DB uniqueness and locked transitions are covered. Real Paystack validation remains the Phase 26 pre-launch follow-up.
+
+**Recommended commit:** `feat: add marketplace trust safety and report administration`
+
+**Outstanding release checks (not performed):**
+- Apply and verify the Phase 27 migration on the development database.
+- Run the new Postman requests through Newman.
+- Verify the skipped process-concurrency scenarios in a supported environment.
+
+---
+## Previous task — Phase 26: Marketplace monetisation (COMPLETED, committed)
 
 **Agent:** Claude Code. **Date:** 2026-10-08. Phase 26 only, approved and committed on `claude/brave-einstein-3v42ep`; Phase 27 not started (Phase 25 is `f10c3b5`). Contract: `docs/api/PHASE-26-MARKETPLACE-MONETISATION.md` (authoritative); design record `docs/implementations/45-PHASE-26-MARKETPLACE-MONETISATION.md`.
 

@@ -73,9 +73,9 @@ class PlatformMarketplaceListingController extends Controller
      * @response array{data: PlatformListingResource, meta: object, message: string|null}
      */
     #[Response(status: 409, description: 'Conflict (see the endpoint description for the `code`)', type: 'array{message: string, code: string, request_id: string, details?: object}')]
-    public function lift(Request $request, string $listing, MarketplaceListingModerationService $moderation): JsonResponse
+    public function lift(ListingRestrictionRequest $request, string $listing, MarketplaceListingModerationService $moderation): JsonResponse
     {
-        return ApiResponse::success((new PlatformListingResource($moderation->lift($request->user(), $listing)))->detailed()->resolve($request));
+        return ApiResponse::success((new PlatformListingResource($moderation->lift($request->user(), $listing, $request->validated('reason'))))->detailed()->resolve($request));
     }
 
     /**

@@ -64,11 +64,11 @@ class MarketplaceModerationService
     }
 
     /** suspended -> active when the shop had been approved, otherwise back to pending_review (suspension never grants an approval). */
-    public function reinstate(User $actor, string $id): MarketplaceShop
+    public function reinstate(User $actor, string $id, string $reason): MarketplaceShop
     {
         return $this->decide($actor, $id, 'reinstated', [ShopStatus::Suspended], fn (MarketplaceShop $shop) => $shop->forceFill([
             'status' => $shop->approved_at !== null ? ShopStatus::Active : ShopStatus::PendingReview, 'status_reason' => null, 'suspended_at' => null,
-        ]));
+        ]), $reason);
     }
 
     /**

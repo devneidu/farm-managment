@@ -219,7 +219,7 @@ class MarketplaceDealLifecycleTest extends DealTestCase
         $this->assertSame(0, MarketplaceDealReport::count());
 
         $first = $this->dealAction('report', $id, ['target' => 'deal', 'reason' => 'other'])->assertCreated()->json('data.id');
-        $this->dealAction('report', $id, ['target' => 'deal', 'reason' => 'no_show'])->assertOk()->assertJsonPath('data.id', $first);   // same target: the first stands
+        $this->dealAction('report', $id, ['target' => 'deal', 'reason' => 'other'])->assertOk()->assertJsonPath('data.id', $first);   // same active issue: the first stands
         $this->dealAction('report', $id, ['target' => 'other_party', 'reason' => 'no_show'])->assertCreated();                           // a different target is a separate report
         $this->assertSame(2, MarketplaceDealReport::count());
         $this->assertSame(2, MarketplaceDealEvent::where('deal_id', $id)->where('action', 'reported')->count());

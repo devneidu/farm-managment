@@ -32,6 +32,7 @@ class DealReportResource extends JsonResource
         $out = [
             'id' => $r->id, 'reference' => $r->reference, 'deal_id' => $r->deal_id, 'target' => $r->target, 'reason' => $r->reason, 'description' => $r->description,
             'status' => $r->status, 'deal_status_at_report' => $r->deal_status_at_report, 'created_at' => $r->created_at->toIso8601String(),
+            'outcome_reason' => $r->outcome_reason, 'closed_at' => $r->closed_at,
         ];
         if ($this->audience === 'admin') {
             $out['reporter'] = ['id' => $r->reporter_id, 'side' => $r->reporter_side, 'name' => $r->relationLoaded('reporter') ? $r->reporter?->name : null];

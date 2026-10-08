@@ -95,9 +95,9 @@ class PlatformMarketplaceController extends Controller
      *
      * @response array{data: PlatformShopResource, meta: object, message: string|null}
      */
-    public function reinstate(Request $request, string $shop, MarketplaceModerationService $moderation): JsonResponse
+    public function reinstate(ShopReasonRequest $request, string $shop, MarketplaceModerationService $moderation): JsonResponse
     {
-        return ApiResponse::success((new PlatformShopResource($moderation->reinstate($request->user(), $shop)))->resolve($request));
+        return ApiResponse::success((new PlatformShopResource($moderation->reinstate($request->user(), $shop, $request->validated('reason'))))->resolve($request));
     }
 
     /**

@@ -173,7 +173,7 @@ Reads: any platform role. Writes: role `admin` (`403 platform_write_forbidden` f
 | `POST /{shop}/approve` | — | `pending_review → active`, sets `approved_at`; `409 invalid_shop_state` | `platform.marketplace_shop_approved` |
 | `POST /{shop}/reject` | `reason` (3-500) | `pending_review → rejected` | `platform.marketplace_shop_rejected` |
 | `POST /{shop}/suspend` | `reason` (3-500) | see §1.2; `409 invalid_shop_state` | `platform.marketplace_shop_suspended` |
-| `POST /{shop}/reinstate` | — | `suspended → active|pending_review` | `platform.marketplace_shop_reinstated` |
+| `POST /{shop}/reinstate` | `reason` (required, 3-500; Phase 27) | `suspended → active|pending_review` | `platform.marketplace_shop_reinstated` |
 | `POST /{shop}/verification` | `decision` (`verified|rejected|unverified`), `reason` (required for the last two) | `409 invalid_verification_state`, `409 shop_not_approved` | `platform.marketplace_verification_{decision}` |
 
 Audit entries carry `changes.before/after` (`status` or `verification_status`) and `changes.reason`, with `farm_id = null`.

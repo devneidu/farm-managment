@@ -58,9 +58,9 @@ class MarketplaceListingModerationService
     }
 
     /** restricted -> paused. The seller then decides whether to publish again; lifting never republishes by itself. */
-    public function lift(User $actor, string $id): MarketplaceListing
+    public function lift(User $actor, string $id, string $reason): MarketplaceListing
     {
-        return $this->decide($actor, $id, 'restriction_lifted', [ListingStatus::Restricted], ListingStatus::Paused, null, function (MarketplaceListing $l) {
+        return $this->decide($actor, $id, 'restriction_lifted', [ListingStatus::Restricted], ListingStatus::Paused, $reason, function (MarketplaceListing $l) {
             $l->forceFill(['restricted_at' => null, 'restricted_reason' => null, 'restricted_by' => null, 'paused_at' => now()]);
         });
     }
