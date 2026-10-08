@@ -24,6 +24,8 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 15 | Marketplace listings | 48 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own farm-less seller (`seller_email`). Manual input: `otp_code`. Run with Newman `--working-dir docs/postman` (photo upload). |
 | 16 | Marketplace negotiation | 79 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own staff, manager, buyer and seller (`staff_email`, `manager_email`, `buyer_email`, `neg_seller_email`). Manual input: `otp_code` before each of the four *Verify … email* requests. |
 | 17 | Marketplace deals | 92 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own staff, manager, two buyers and a seller (`deal_staff_email`, `deal_manager_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_seller_email`). Manual input: `otp_code` before each of the five *Verify … email* requests. |
+| 18 | Marketplace reports & moderation | 38 | Flow 17 (a published listing, an active shop, an accepted offer) and the platform admin account. Uses the Flow 17 buyer; no new registrations. |
+| 19 | Marketplace seller plans & promotions (Paystack not exercised) | 30 | Flows 17 and 18 (the seller shop and its listing) and the platform admin account. Switches both monetisation flags on, then off again. |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -1088,11 +1090,49 @@ milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                       
 
 **Execution.** Executed with Newman against `php artisan serve` on the isolated test database (`farm_management_test`: fresh `migrate:fresh --seed`, platform admin granted): **92 requests, 226 assertions, 0 failures** (Newman counts 97 requests because the harness used five helper calls to read the emailed OTP from `storage/logs/laravel.log`). Database after the run: `marketplace_deals` 2 (1 completed, 1 cancelled), `marketplace_deal_confirmations` 1, `marketplace_deal_events` 7, `marketplace_deal_reports` 1, `marketplace_deal_contact_views` 4. No saved response examples were captured for this flow; folder 26 holds the reference requests.
 
-## Phase 26 — monetisation (documented, not executed)
+## Flow 18 — Marketplace reports & moderation (Phase 27)
 
-Suggested order for a Paystack **test-mode** run, after Flow 15 has produced `shop_id` and a published `listing_id` and a platform admin is signed in: `PUT …/seller-plans/{id}/prices` -> `PATCH …/seller-plans/{id}` (limit, `is_active`) -> `POST …/promotion-packages` -> `PATCH /platform-admin/feature-flags/marketplace_seller_plans` and `…/marketplace_promotions` (`enabled:true`) -> sign in as the seller -> `GET …/plans` -> `POST …/subscription/checkout` -> open `authorization_url`, pay with a Paystack test card -> `POST …/payments/{{payment_reference}}/verify` (expect `status=paid`, `benefit_granted=true`) -> `GET …/allowance` (new limit) -> `POST …/listings/{{listing_id}}/promotions/checkout` -> pay -> verify -> `GET /public/marketplace/listings` (the listing leads with `promotion.label = "Sponsored"`). Nothing is activated by the redirect; verify (or the webhook) is the only activation path.
+**Goal.** A buyer files complaints about a listing and a shop; the platform admin triages them (review, resolve, dismiss) and, only when explicitly chosen, enforces (restrict a listing, suspend a shop) and later reverses the enforcement with a reason.
 
-## Phase 27 — Safety administration
+**Prerequisites.** Flow 17 run on the same database in the same Newman process (it leaves an active shop, one published listing, an accepted offer `deal_offer_id`, `shop_id`, `listing_id`, `listing_slug`). The platform admin account (`admin_email` / `admin_password`). Run Flow 19 after it, not before: Flow 18 leaves the listing `paused` and Flow 19 publishes it again.
 
-Folder 28 adds 16 reference requests for shop/listing intake, owned reports, admin summary/offers/reports, triage outcomes, explicit linked enforcement, and reason-required reinstatement/lifting. `report_id` and `report_type` are environment variables; intake saves them. Use a verified participant for intake/my reports, support/admin for platform reads and admin for handling. Review before resolving/dismissing. Resolution, dismissal and enforcement examples are alternatives, not a sequential runner. Deal reports keep existing participant endpoints; select `report_type=deal` for their admin workflow. All statuses/counts and errors: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. No saved HTTP responses or Newman execution are claimed for this folder; feature tests validate the workflows. Prior reinstate/lift reference requests were updated to supply the newly required reason.
+| # | Step | Result |
+|---|---|---|
+| 1-3 | CSRF, log in as the buyer, find `shop_slug` from the public directory | 200 |
+| 4-8 | Report the listing (suspected fraud), repeat it, report the shop (spam), report the listing (prohibited content), report the shop (abusive behaviour) | 201, duplicate 200 (same case), 201, 201, 201 |
+| 9-10 | List my reports; show one | 4 open; no `reporter_id`, no `history` |
+| 11-12 | Log out; log in as the platform admin | 200 |
+| 13-17 | Safety summary, offers (read-only), one offer, open reports, one report | admin sees `reporter_id` and `history`; no contact data in offers |
+| 18-21 | Report A: `in_review` -> `resolved` (no enforcement); listing stays public; reopening a terminal report | 200, 200, 200, `409 invalid_report_state` |
+| 22-23 | Report B: `in_review` -> `dismissed` | 200 |
+| 24-28 | Report C: enforcement without an id is refused (422); `in_review`; resolve with `restrict_listing`; the listing is no longer public (404); lift the restriction with a reason (listing -> `paused`) | 422, 200, 200, 404, 200 |
+| 29-33 | Report D: `in_review`; resolve with `suspend_shop`; the shop is hidden (404); reinstate with a reason (shop -> `active`); shop public again | 200, 200, 404, 200, 200 |
+| 34 | Summary: no open content reports left | 200 |
+| 35-38 | Log out; log in as the buyer; the buyer sees the outcome reason of report C; log out | 200 |
+
+**Rules shown.** Reports follow `open -> in_review -> dismissed|resolved` (a report cannot jump straight from `open` to a terminal state: `409 invalid_report_state`); enforcement is never implied by a status, only by the explicit `enforcement_action` + `enforcement_id`; reinstating and lifting need a reason; reporters never see handling detail.
+
+**Execution.** Newman against `php artisan serve` on a disposable MySQL database after Flow 17: **38 requests, 101 assertions, 0 failures**.
+
+## Flow 19 — Marketplace seller plans & promotions (Phase 26, Paystack not exercised)
+
+**Goal.** Configure the monetisation catalogue as a platform admin, switch the two features on, browse them as the seller, attempt both checkouts, prove the webhook rejects an unsigned delivery, inspect the admin lists, switch the features off again.
+
+**Prerequisites.** Flows 17 and 18 (seller shop `shop_id`, `listing_id`, seller login). Platform admin account. **No Paystack key is configured**, so the payment steps stop at the checkout: a checkout answers `503 payments_unavailable` and records nothing (the test also accepts `200/201` with a real test key and `502 gateway_unavailable` when Paystack is unreachable).
+
+| # | Step | Result |
+|---|---|---|
+| 1-9 | Admin: list seeded plans (Free = 10), create a plan, set 30/365-day prices, activate it with a limit, create and update a promotion package, list packages | 200/201 |
+| 10-11 | Admin: enable `marketplace_seller_plans` and `marketplace_promotions` | 200 |
+| 12-14 | Log out; log in as the seller; publish the listing again (Flow 18 left it paused) | 200 |
+| 15-18 | Seller: plan and allowance, allowance, available plans, promotion packages | 200 |
+| 19-20 | Seller: start plan checkout and promotion checkout | 503 `payments_unavailable` (no Paystack key) |
+| 21-22 | Seller: payment and promotion history | 200 (empty) |
+| 23-24 | Log out; webhook without a valid `x-paystack-signature` | `401 invalid_signature` |
+| 25-30 | Admin: log in, service payments, promotions, disable both flags, log out | 200 |
+
+**Not executable without Paystack test-mode credentials** (documented in the reference folder 27, not run): `POST .../payments/{reference}/verify`, a signed `charge.success` webhook, settlement (`benefit_granted=true`), allowance after upgrade, a promoted listing leading discovery with `promotion.label="Sponsored"`, and `POST /platform-admin/marketplace/promotions/{id}/cancel`. Run them once with a test key before launch: set `PAYSTACK_SECRET_KEY`, open the returned `authorization_url`, pay with a Paystack test card, then call verify.
+
+**Execution.** Newman, same database and process as Flows 17-18: **30 requests, 64 assertions, 0 failures**.
+
 Flow 17 request 78 now repeats the same issue category as request 77, matching Phase 27 active-issue deduplication.
