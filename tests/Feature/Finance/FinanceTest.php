@@ -247,7 +247,7 @@ class FinanceTest extends TeamTestCase
         $ok = $this->purchase([$this->stockLine($vac, $loc, '100', 'ml', '3000', ['lot' => ['code' => 'L-1', 'expires_on' => $future]])])->assertCreated()->json('data');
         $this->assertSame('L-1', $ok['items'][0]['lot']['code']);
         $this->assertSame($future, $ok['items'][0]['lot']['expires_on']);
-        $this->purchase([$this->stockLine($vac, $loc, '100', 'ml', '3000', ['lot' => ['code' => 'L-OLD', 'expires_on' => now()->subDay()->toDateString()]])])->assertStatus(409)->assertJsonPath('code', 'lot_expired');
+        $this->purchase([$this->stockLine($vac, $loc, '100', 'ml', '3000', ['lot' => ['code' => 'L-OLD', 'expires_on' => now('Africa/Lagos')->subHours(2)->subDay()->toDateString()]])])->assertStatus(409)->assertJsonPath('code', 'lot_expired');
         // Reusing the lot code adds to the same lot; a different expiry for it is refused.
         $this->purchase([$this->stockLine($vac, $loc, '50', 'ml', '1500', ['lot' => ['code' => 'L-1', 'expires_on' => $future]])])->assertCreated();
         $this->assertSame('150', $this->stock($vac));

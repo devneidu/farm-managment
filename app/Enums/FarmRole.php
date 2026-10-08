@@ -42,7 +42,7 @@ enum FarmRole: string
                 Permission::TaskView, Permission::TaskComplete, Permission::TaskManage,
                 Permission::ContactView, Permission::ContactManage, Permission::PurchaseView, Permission::PurchaseCreate, Permission::PurchaseCancel, Permission::FinanceView, Permission::FinanceCreate, Permission::FinanceReverse,
                 Permission::SaleView, Permission::SaleCreate, Permission::SaleCancel, Permission::InvoiceView, Permission::InvoiceCreate, Permission::InvoiceVoid, Permission::PaymentView, Permission::PaymentCreate, Permission::PaymentReverse,
-                Permission::ReportView, Permission::ReportExport, Permission::AuditView,
+                Permission::ReportView, Permission::ReportExport, Permission::AuditView, Permission::MarketplaceManage,
                 Permission::MasterDataView, Permission::MasterDataManage,
                 Permission::MeasurementView, Permission::MeasurementManage,
                 Permission::LocationView, Permission::LocationManage, Permission::ProductionCycleView, Permission::ProductionCycleCreate, Permission::ProductionCycleUpdate, Permission::ProductionCycleClose, Permission::ProductionCycleReopen,

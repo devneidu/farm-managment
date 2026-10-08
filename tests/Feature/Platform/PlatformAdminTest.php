@@ -578,11 +578,15 @@ class PlatformAdminTest extends TeamTestCase
 
     public function test_settings_are_a_validated_closed_registry(): void
     {
-        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('data.0.value', null);
+        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(8, 'data')->assertJsonPath('data.0.value', null);
         $this->putJson($this->url('/settings/support_email'), ['value' => 'help@farm.example'])->assertOk()->assertJsonPath('data.value', 'help@farm.example');
         $this->putJson($this->url('/settings/support_email'), ['value' => 'not-an-email'])->assertStatus(422);
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => '+2348012345678'])->assertOk();
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => 'call me'])->assertStatus(422);
+        foreach ([0, 21, 'many'] as $bad) {
+            $this->putJson($this->url('/settings/marketplace_max_shops_per_user'), ['value' => $bad])->assertStatus(422);
+        }
+        $this->putJson($this->url('/settings/marketplace_max_shops_per_user'), ['value' => 5])->assertOk()->assertJsonPath('data.value', 5);
         $this->putJson($this->url('/settings/announcement'), ['value' => str_repeat('a', 501)])->assertStatus(422);
         $this->putJson($this->url('/settings/announcement'), [])->assertStatus(422);
         $this->putJson($this->url('/settings/default_currency'), ['value' => 'USD'])->assertNotFound()->assertJsonPath('code', 'unknown_setting');

@@ -9,7 +9,128 @@
 
 ---
 
-## Latest task — Frontend-handoff correction pass GAP-01 … GAP-08 (UNCOMMITTED)
+## Latest task — Phase 25: Marketplace deal summary & fulfilment (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 25 only; Phase 26 not started; **not committed or pushed** (awaiting instruction). Contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md` (authoritative); design record `docs/implementations/44-PHASE-25-MARKETPLACE-DEALS.md`.
+
+**What it is:** a lightweight deal summary. Farmvest is NOT an escrow, payment processor or logistics provider: no payment, wallet, payout, refund, stock reservation/deduction, Sale, invoice, finance row or delivery. Contact is released only after a deal exists.
+
+**Approved decisions applied:** (1) only the BUYER confirms an accepted offer, within `marketplace_deal_confirmation_hours` (72) of acceptance, no seller-triggered creation; (2) fixed-price intent: seller confirms first (a `marketplace_deal_confirmations` row: no agreement, no contact), the BUYER then confirms the exact terms and only then is there a deal; (3) completion needs BOTH sides, self-reported, never automatic, `completion.state` exposes the pending side; (4) optional per-deal buyer `contact_phone` (validated), email fallback, no profile phone; (5) `address_line` disclosed only for pickup deals; (6) delivery charge/fulfilment terms immutable after confirmation, unknown = `null` shown "To be agreed directly", never in `product_total`; (7) reports never change the deal (separate table + history), hidden from the reported party, Phase 27 owns moderation; (8) either party cancels an active deal with a reason, contact access ends, nothing refunded/restored; (9) product/unit/quantity/price/total frozen, listing + declared availability validated before activation; (10)-(12) boundaries, locking/uniqueness/audit, docs.
+
+**Setting (new, Platform Admin):** `marketplace_deal_confirmation_hours` (1-720, default 72).
+
+**Permissions (new shop):** `deal.view` (owner, manager, staff), `deal.respond` (owner, manager). Staff can list/open deals but not act or read contact.
+
+**Endpoints (+21 operations; OpenAPI 236 -> 257 paths, 293 -> 314 ops, 0 warnings):** buyer `POST /marketplace/my/offers/{offer}/deal`, `GET|POST /marketplace/my/deal-confirmations/{id}[/confirm]`, `GET /marketplace/my/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; shop `POST /marketplace/shops/{shop}/purchase-intents/{intent}/confirm`, `POST …/deal-confirmations/{id}/withdraw`, `GET …/shops/{shop}/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; platform admin read-only `GET /platform-admin/marketplace/deals[/{deal}]`, `…/deals/{deal}/contact`, `…/deal-reports`. New throttle `marketplace-contact` (30/min). Command `marketplace:expire-confirmations` scheduled hourly (lapses unanswered seller confirmations only; never touches a deal).
+
+**Model:** migration `2026_10_22_100000_create_marketplace_deals` (`marketplace_deal_confirmations`, `marketplace_deals` with a `CHECK` of exactly one source and unique `offer_id` / `confirmation_id`, `marketplace_deal_events` append-only, `marketplace_deal_reports`, `marketplace_deal_contact_views` append-only, + `marketplace_purchase_intents.converted_at`). Services: `MarketplaceDealService`, `MarketplaceConfirmationLifecycle`, `MarketplaceDealLifecycle`, `MarketplaceDealContact`, `MarketplaceDealDirectory`, `MarketplaceReferences`. Phase 24 touch-points: `MarketplaceOfferService::recordIntent` (voids open confirmations when the request changes, re-arms a finished intent), `OfferResource`/`PurchaseIntentResource` (`deal`, `deal_confirmation`, `deal_flow`, `confirmation`), offer `next_step`.
+
+**Locking:** buyer = listing -> offer/intent -> confirmation; seller confirm = shop -> listing -> intent -> confirmation (Phase 24 order); deal actions = the deal row only. Failures that must persist (lapse, void) are thrown after commit.
+
+**Sales boundary (documented, not built):** a later explicit `POST /sales` with `idempotency_key = "deal:{deal_id}"` is replay-safe (`sales` unique on `(farm_id, idempotency_key)`); nothing posts automatically.
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceDealFromOfferTest` (14), `MarketplaceDealFromIntentTest` (18), `MarketplaceDealLifecycleTest` (16), `MarketplaceDealContactTest` (12), `MarketplaceDealIsolationTest` (6), `MarketplaceDealConcurrencyTest` (12, real `pcntl_fork` processes). Adapted: `PlatformAdminTest` settings count 7 -> 8; `MarketplaceShopTest` staff permissions (+`deal.view`).
+
+**Postman:** folder 26 (21 reference requests) + executable **Flow 17 — Marketplace deals** (92 requests) + env vars (`deal_seller_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_staff_email`, `deal_manager_email`, `deal_id`, `deal_b_id`, `confirmation_id`, `deal_offer_id`, `deal_intent_id`). **Newman (isolated test DB, fresh): 92 requests (97 counted incl. 5 OTP helper calls), 226 assertions, 0 failures.** DB after the run: 2 deals, 1 confirmation, 1 report, 4 contact views, 0 rows in inventory/sales/invoices/payments/finance. Docs: PHASE-25 contract, API-CONTRACT, FRONTEND-INTEGRATION §27, FRONTEND-WORKFLOWS §27, docs/api/README, Phase 24 doc cross-references, postman COVERAGE/WORKFLOWS, master plan, design record 44, OpenAPI.
+
+**Final run:** full Feature suite **1093 tests, 16,999 assertions, all passing**; after two last display-only cleanups the whole Marketplace directory was re-run: 219 tests, 4,921 assertions, passing (twice; one earlier run showed a single intermittent error in the Phase 24 `MarketplaceOfferConcurrencyTest` that passed alone and on both reruns, not reproduced). Pint clean; `git diff --check` clean.
+
+**Known limits / open:** no buyer decline of a seller confirmation (it lapses after the window or the seller withdraws); no notifications on deal events; a seller-proposed delivery charge exists only on the purchase-request door; no bulk/auto-close of stuck one-sided completions (explicitly out of scope); reports have no resolution workflow (Phase 27); Sale integration is a documented boundary only.
+
+---
+
+## Previous task — Phase 24: Buyer enquiries & controlled negotiation
+
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 24 only; Phase 25 not started. Committed after the final API workflow verification below. Contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md` (authoritative); design record `docs/implementations/43-PHASE-24-MARKETPLACE-OFFERS.md`.
+
+**What it is:** a simple, controlled offer workflow on negotiable Marketplace listings. NOT chat, escrow, checkout, an order or a deal. Nothing is reserved, charged, deducted or sold; **seller contact is never returned, even after acceptance** (Phase 25).
+
+**Approved decisions applied:** voided offers (material listing edits) do not use an attempt; `offer.view` (all roles) / `offer.respond` (owner, manager); no buyer withdrawal; accepted = terminal immutable snapshot (no stock reservation); expiry default 48 h enforced on read AND write, expired offers use an attempt; price floor `marketplace_min_offer_percent` (default 70) on the UNIT price, strictly below the listed price, exact bcmath, validated before an attempt is used; "Proceed at listed price" = idempotent purchase intent (interest only); paused/restricted listings cannot have offers accepted (reject still allowed).
+
+**Settings (new, Platform Admin):** `marketplace_max_offers_per_buyer` (1-10, 3), `marketplace_offer_expiry_hours` (1-720, 48), `marketplace_min_offer_percent` (1-99, <=2 decimals, 70).
+
+**Endpoints (+10 operations; OpenAPI 226 -> 236 paths, 283 -> 293 ops, 0 warnings):** buyer `POST /marketplace/listings/{slug}/offers`, `GET …/offer-status`, `POST …/purchase-intent`, `GET /marketplace/my/enquiries`, `GET /marketplace/my/offers/{offer}`; shop `GET /marketplace/shops/{shop}/offers[/{offer}]`, `POST …/offers/{offer}/accept|reject`, `GET …/purchase-intents`. Command `marketplace:expire-offers` scheduled hourly.
+
+**Model:** migration `2026_10_21_100000_create_marketplace_offers` (`marketplace_offers`, `marketplace_offer_events` append-only, `marketplace_purchase_intents`). DB uniques: one pending offer per buyer+listing (`pending_slot`), one use of each `attempt_no`. Services: `MarketplaceOfferService`, `MarketplaceOfferLifecycle` (only place an offer leaves pending; `reconcile()` hook in `MarketplaceListingService::update`), `MarketplaceOfferDirectory`; `MarketplaceListingRules::orderableQuantity()` shared with the price estimate.
+
+**Locking:** buyer = listing row; seller = shop -> listing -> offer; edit = shop -> listing -> pending offers; sweep = one offer. Failures that must persist a change (lapse, void) are thrown after commit.
+
+**Final run: full Feature suite 1012 passed (15,171 assertions); Pint clean; `git diff --check` clean.**
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceOfferSubmissionTest` (11), `MarketplaceOfferResponseTest` (13), `MarketplacePurchaseIntentTest` (6), `MarketplaceOfferConcurrencyTest` (4, real `pcntl_fork` processes with own DB connections and a barrier; commits and cleans up its fixtures; skipped when pcntl is missing). Adapted: `PlatformAdminTest` settings count 4 -> 7; `MarketplaceShopTest` staff permissions (+`offer.view`).
+
+**Postman:** folder 25 (10 requests) + executable **Flow 16 — Marketplace negotiation** (79 requests) + 6 env vars (`offer_id`, `intent_id`, `neg_seller_email`, `buyer_email`, `staff_email`, `manager_email`). **Newman (isolated test DB, fresh): 79 requests, 197 assertions, 0 failures** (83 counted incl. 4 OTP helper calls). Docs: API-CONTRACT, FRONTEND-INTEGRATION §26, FRONTEND-WORKFLOWS §26, docs/api/README, postman COVERAGE/WORKFLOWS, master plan, OpenAPI.
+
+**Final verification round:** `MarketplaceOfferIsolationTest` (3 tests): the full lifecycle (accept, reject, void, expire, intent) changes only `marketplace_offers`, `marketplace_offer_events`, `marketplace_purchase_intents` and `audit_logs` (no inventory, sale, invoice, payment, finance row); `marketplace:expire-offers` is scheduled exactly once, hourly; four sweeps + a read + a write on a lapsed offer leave exactly one `expired` event and one audit row.
+
+**Environment note:** the container's MySQL data dir was MariaDB-format; tests ran on a fresh MySQL 8.0.46 datadir (`/tmp/mysqldata`, `mysqld --no-defaults`).
+
+**Known limits / open:** no buyer withdrawal; accepted offers have no validity period (Phase 25); no notifications to buyer/seller on offer events; OpenAPI regenerated with existing path order preserved (version string kept at 0.0.1).
+
+---
+
+## Previous task — Phase 23: Marketplace product listings, pricing & images (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 23 only; Phase 24 not started; **not committed or pushed**. Contract: `docs/api/PHASE-23-MARKETPLACE-LISTINGS.md` (authoritative); image runbook `docs/api/PHASE-23-IMAGE-ASSET-RUNBOOK.md`; design record `docs/implementations/42-PHASE-23-MARKETPLACE-LISTINGS.md`.
+
+**Product decisions applied:** staff create/edit DRAFTS only (`listing.manage`); publish/pause/archive/restore/live edits need `listing.publish` (owner, manager); private local `marketplace` disk served by the API (S3-ready via `MARKETPLACE_DISK`); `basket`, `tuber`, `bunch` added as package units by insert-only data migration (no conversions); immediate publish for an active shop, admins restrict afterwards; **image never required** (placeholder indicator); **no Sale/stock movement from listings or (future) acceptance** - inventory link is a reference + snapshot only, future deals must use the confirmed Sales workflow with a deal-derived idempotency key; package contents seller-declared, never converted; admin = `restrict` / `lift-restriction` only (no hide); append-only history + audit.
+
+**Model:** `marketplace_listings` (decimal strings; `version` token; soft delete), `marketplace_listing_images`, `marketplace_catalog_images` (reusable, illustrative, seeded WITHOUT assets), `marketplace_listing_events` (append-only). Visibility = `status=published` AND shop `active`, evaluated on read (suspending/closing a shop hides listings at once; no per-listing write). Writes lock shop then listing row (asserted by a test); optional `version` -> `409 stale_listing`; repeat transitions are no-ops. Photos do NOT bump `version`. Search is escaped `LIKE` (InnoDB full-text is invisible inside open transactions).
+
+**Endpoints (+27 operations, 23 paths; OpenAPI 203->226 paths, 256->283 ops):** seller `product-options`, `image-library`, `shops/{shop}/listings[/{listing}]` (+ `publish|pause|archive|restore|price-preview`, `eligible-inventory`, `images[/{image}[/file]]`); public `/public/marketplace/listings[/{slug}[/price-preview]]`, `images/{image}`, `catalogue-images/{code}`; admin `/platform-admin/marketplace/listings[/{listing}]`, `restrict`, `lift-restriction`, `images/{image}/file`.
+
+**Draft-delete cleanup:** deleting a draft now removes its photo rows in the same transaction and, after commit, its uploaded files (only paths inside `listings/{shop}/{listing}/`; catalogue assets and other listings' files are never touched; a storage failure is reported and leaves an orphan file, never a failed delete). 4 regression tests added.
+
+**Final run: full Feature suite 978 passed (14,638 assertions); Pint clean; `git diff --check` clean.**
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceListingPricingTest` (14), `MarketplaceListingLifecycleTest` (20), `MarketplacePublicListingTest` (11), `MarketplaceListingImageTest` (16), `MarketplaceListingInventoryTest` (8) + `ApiDocumentationTest` phase-23 test. Adapted: `MarketplaceShopTest` (staff permissions), `StandardConversionTest`/`MeasurementApiTest` (package unit list). Fixtures use `Storage::fake('marketplace')` (a leak of test files into the real disk was found and fixed).
+
+**OpenAPI warning:** the persisting Phase 22 warning was `PD001 Redundant @var` on `AuthStateResource.marketplace`; the `@var` was removed (the inferred type is identical, now with `minimum: 0`); export has 0 warnings. Only existing-schema change: `AuthStateResource`.
+
+**Pre-existing failure found and fixed (test-only):** `FinanceTest::test_package_conversion_lots_and_expiry_flow_through_the_purchase` has the same UTC/Lagos date-boundary fragility as the four Phase 22 tests (fails 23:00-01:00 UTC; reproduced identically on a clean HEAD worktree); the expired-lot date now uses `now('Africa/Lagos')->subHours(2)->subDay()`.
+
+**Postman:** folder 24 (26 requests), 90 -> Marketplace Listings (5), Flow 15 (48 requests) executed with Newman on a fresh MySQL 8 DB: 48 requests, 88 assertions, 0 failures; +8 env vars; sample picture `docs/postman/samples/listing-photo.png` (generated). Docs: API-CONTRACT, FRONTEND-INTEGRATION §25, FRONTEND-WORKFLOWS §54, docs/api/README, PHASE-22 cross-refs, master plan, postman COVERAGE/WORKFLOWS.
+
+**Known limits / open:** no real catalogue assets (runbook); drafts deleted softly keep their photo files; real parallel-request concurrency is covered by lock-order and stale-version tests, not by multi-process tests; Flows 1-14 not re-run.
+
+---
+
+## Previous task — Phase 22 final review & corrections (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-07. Two review items, nothing else; Phase 23 not started; not committed or pushed.
+
+**1. Marketplace-only seller routing (auth contract, additive).** Problem: a verified farm-less user got `next_action = complete_farm_setup` even when they only run a shop. Fix (smallest backward-compatible): `AuthStateResource` adds `marketplace: {shop_count}` and one new `next_action` value `marketplace`, returned only when the user is verified, has **no active farm** and belongs to >=1 shop (`User::marketplaceShopCount()`, one indexed COUNT on `marketplace_shop_members`). Priority: `verify_email` > `marketplace` > `complete_farm_setup` > `no_active_farm` > `none`. Unchanged: farm users (`none`), brand-new users with no shop (`complete_farm_setup`; frontend offers "open a shop instead" -> existing `POST /marketplace/shops`), `onboarded_at` (never touched by shops), farm routes (`403 onboarding_required` / `no_active_farm`), `POST /onboarding/farm` (still works for a marketplace-only user, then `none` and both areas). No route, permission, migration, second account or skip flag. Affected responses: register, login, google, email/verify, onboarding/farm, invitations/accept, `GET /auth/me`. Tests: +4 in `MarketplaceShopTest` (31 tests, 573 assertions in the file). Docs: PHASE-22-MARKETPLACE (§1, new §1.3), implementations/41 (decision 5), API-CONTRACT §3, FRONTEND-INTEGRATION §3, FRONTEND-WORKFLOWS §1, docs/api/README, OpenAPI (203 paths / 256 operations; only delta = the `marketplace` field), Postman (auth requests described + `marketplace.shop_count` assertion, `marketplace: {shop_count: 0}` added to Auth-state examples not re-captured, 3 real examples captured live for a farm-less seller, folder 23 text), COVERAGE addendum, postman WORKFLOWS.
+
+**2. Four regression failures = pre-existing UTC/Lagos date-boundary test fragility, not Phase 22.** Reproduced at 23:21 UTC (00:21 Lagos) on BOTH the working tree and a clean `git worktree` of HEAD `6aefcdb`: the same 4 failures (4 failed / 130 passed, 1966 assertions each). They passed earlier in the session at 12:xx UTC (872/872). Cause: the application correctly uses the farm timezone (`Africa/Lagos`); each test builds a date from UTC `now()` (or Lagos "now") but compares it with an event recorded 1-2 h earlier, which lands on the previous Lagos date only in the 23:00-24:00 UTC window. Failing assertions: `BreedingTest.php:249` outcome_date expected `now(Lagos)` ('2026-10-08') got '2026-10-07' (recorded_at = 2 h ago); `CropOperationsTest.php:356` expired-lot intake expected 409 got 201 (expiry `now(Lagos)->subDay()` is not before the harvest's local date); `InventoryTest.php:717` `recorded_from=now(Lagos)` date returned 0 of 2 movements recorded 1-2 h ago; `ProductionCyclesTest.php:380` close with `now()->addDay()` (UTC date) expected 422 got 200 because it equals the Lagos "today". Fix = test-only, assertions kept: BreedingTest uses `now(Lagos)->subHours(2)`; CropOperationsTest `now(Lagos)->subHours(2)->subDay()`; InventoryTest `recorded_from = now(Lagos)->subHours(2)`; ProductionCyclesTest `now('Africa/Lagos')->addDay()`. After the fix all four classes pass inside the window (134 passed, 1986 assertions). No application code changed for this item.
+
+**Verification:** Marketplace 31 tests; onboarding/auth suites; the four regression classes; full Feature suite (see final report numbers in the chat); Newman: 14 flows, 170 requests, 366 assertions, 0 failures; Pint clean on app/tests/database/routes; `git diff --check` clean.
+
+**Environment note:** sandbox MySQL 8 was restarted from `/var/lib/mysql8`; local-only. Not committed: `.env`.
+
+---
+
+## Previous task — Phase 22: Marketplace foundation & seller shops (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-07. Seller-shop foundation only; **no listings, negotiation, deals, buyer payments/wallets/escrow/payouts, delivery, marketplace subscriptions, community; Phase 20 untouched; Phase 23 not started.** Contract: `docs/api/PHASE-22-MARKETPLACE.md` (authoritative); design record: `docs/implementations/41-PHASE-22-MARKETPLACE.md`.
+
+**Model:** a shop belongs to USERS via `marketplace_shop_members` (shop roles `owner|manager|staff` -> `ShopPermission`, `MarketplaceShopPolicy`); optional immutable `farm_id` link (unique per farm) accepted only for an active farm membership holding the new farm permission `marketplace.manage` (Owner, Manager); never exposed to sellers/public. `status` (draft, pending_review, rejected, active, suspended, closed) = publishing; `verification_status` (unverified, pending, verified, rejected) = badge. Only platform approval makes a shop public; suspension hides it at once, freezes seller writes (`409 shop_suspended`) and never grants an approval. Private contact (phone/whatsapp/email/address/preferred) is in separate columns + `ShopContactResource`; public resource is an explicit allow-list (`contact_methods` = channel names only).
+
+**Migration (additive):** `2026_10_19_100000_create_marketplace_shops` (`marketplace_shops`, `marketplace_shop_members`). **Endpoints (+23 operations / 19 paths; 233 -> 256 operations):** seller `/marketplace/my/shops`, `/marketplace/shops[/{shop}]`, `…/contact`, `…/submit|close|reopen|request-verification`, `…/members[/{member}]`; public `/public/marketplace/shops[/{slug}]`; platform `/platform-admin/marketplace/shops[/{shop}]` + `approve|reject|suspend|reinstate|verification`. Marketplace routes need only sign-in + verified email (no `app.access`/`farm.context`): **farm onboarding is unchanged**; (superseded by the final review above) a farm-less shop member now gets `next_action = marketplace` from `/auth/me`.
+
+**Reused:** platform settings registry (new key `marketplace_max_shops_per_user`, default 3), `AuditLogger`/`PlatformAudit` (seller actions `marketplace.*` carry the shop's `farm_id` or none; admin decisions `platform.marketplace_*` with before/after + reason), `Paginates`, platform-admin middleware, new limiter `marketplace-write`. Concurrency: shop row `lockForUpdate`; creation serialised with MySQL `GET_LOCK` (reference/slug/limit); unique indexes as final guard.
+
+**Tests:** `tests/Feature/Marketplace/MarketplaceShopTest.php` (27 tests, 531 assertions: farm-less seller, auth gates, validation, client cannot set lifecycle/ownership fields, slug/reference/name uniqueness, per-user limit setting, farm link permission + untrusted `farm_id`, onboarding/farm workflows unchanged, profile + contact privacy across every seller/public body, lifecycle + visibility (draft/pending/rejected/suspended/closed never public), suspension freeze, verification workflow, shop roles/non-member 404, member rules/enumeration safety, public filters/sorting/pagination/LIKE escaping, no leakage for farm-backed shops, platform role gates, queue/detail shape, audit trail, tenant isolation) + `ApiDocumentationTest::test_phase_22…`. Existing tests adapted: `RolePermissionTest` (manager list +`marketplace.manage`), `PlatformAdminTest` settings registry (4 keys). Migration down()/up() exercised on `farm_management_test` only (fixture user+shop+member: rollback dropped both tables, user kept; re-apply -> empty tables).
+
+**Docs/API tooling:** `docs/api/openapi.json` re-exported (184 -> 203 paths, no existing path/schema changed, version kept 0.0.1; export needs a migrated DB, e.g. `DB_DATABASE=farm_management_test`); Postman folder 23 + 90 sub-folder + 3 env vars (no saved examples, not Newman-executed — see COVERAGE addendum); `docs/api/README.md` pointer; master-plan note.
+
+**Environment note:** `/var/lib/mysql` here is a MariaDB-10.11 datadir that the installed MySQL 8 cannot open; it was left untouched. A scratch MySQL 8 instance (scratchpad datadir, port 3307) was used with `DB_HOST/DB_PORT` env overrides; `farm_management` (dev) was not touched.
+
+**Not built (deliberate):** ownership transfer, member self-leave, invitations to non-users, seller notifications on decisions, shop images/logo/coordinates, shop deletion, plan-based shop limits, a feature flag to disable the marketplace.
+
+---
+
+## Previous task — Frontend-handoff correction pass GAP-01 … GAP-08 (UNCOMMITTED)
 
 **Agent:** Claude Code. **Date:** 2026-10-06. One additive backend pass so the frontend can fetch → discover → display → dependent fetch → submit once → understand side effects → refetch without product-owner knowledge. **GAP-09 deliberately not implemented** (dashboard milk/available KPIs). Contract: `docs/api/API-CONTRACT.md` §13.1.
 

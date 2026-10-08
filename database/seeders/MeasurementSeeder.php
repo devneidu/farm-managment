@@ -61,6 +61,8 @@ class MeasurementSeeder extends Seeder
 
     private const PACKAGES = [
         ['bag', 'Bag'], ['sack', 'Sack'], ['crate', 'Crate'], ['tray', 'Tray'], ['carton', 'Carton'], ['bottle', 'Bottle'],
+        // Marketplace selling units (Phase 23). Still package units: no family, no conversion. A tuber is counted whole.
+        ['basket', 'Basket'], ['tuber', 'Tuber', true], ['bunch', 'Bunch'],
     ];
 
     public function run(): void
@@ -102,11 +104,13 @@ class MeasurementSeeder extends Seeder
             ]);
         }
 
-        foreach (self::PACKAGES as $n => [$code, $name]) {
+        foreach (self::PACKAGES as $n => $package) {
+            [$code, $name] = $package;
+            $whole = $package[2] ?? false;
             $this->unit($dimensions['package'], $code, [
                 'name' => $name, 'symbol' => $code, 'family' => null, 'is_canonical' => false,
                 'conversion_strategy' => ConversionStrategy::None, 'to_canonical_factor' => null,
-                'decimal_places' => 2, 'integer_only' => false, 'sort_order' => $n + 1,
+                'decimal_places' => $whole ? 0 : 2, 'integer_only' => $whole, 'sort_order' => $n + 1,
             ]);
         }
     }

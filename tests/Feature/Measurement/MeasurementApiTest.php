@@ -48,7 +48,7 @@ class MeasurementApiTest extends MeasurementTestCase
         // Land area -> area
         $this->assertSame(['sq_m', 'hectare', 'acre'], $this->unitCodes('area'));
         $this->assertSame(['celsius', 'fahrenheit'], $this->unitCodes('temperature'));
-        $this->assertEqualsCanonicalizing(['bag', 'sack', 'crate', 'tray', 'carton', 'bottle'], $this->unitCodes('package'));
+        $this->assertEqualsCanonicalizing(['bag', 'sack', 'crate', 'tray', 'carton', 'bottle', 'basket', 'tuber', 'bunch'], $this->unitCodes('package'));
 
         foreach ($this->getJson('/api/v1/master/units?dimension=volume')->json('data') as $unit) {
             $this->assertSame('volume', $unit['dimension']);

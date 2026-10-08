@@ -75,6 +75,9 @@ class AuthRateLimiters
         RateLimiter::for('report-run', fn (Request $r) => [Limit::perMinute(60)->by('report-run:'.self::actor($r))]);
         RateLimiter::for('report-export', fn (Request $r) => [Limit::perHour((int) config('reports.exports_per_hour', 20))->by('report-export:'.self::actor($r))]);
         RateLimiter::for('report-download', fn (Request $r) => [Limit::perMinute(30)->by('report-download:'.self::actor($r))]);
+        RateLimiter::for('marketplace-write', fn (Request $r) => [Limit::perMinute(60)->by('marketplace-write:'.self::actor($r))]);
+        RateLimiter::for('marketplace-contact', fn (Request $r) => [Limit::perMinute(30)->by('marketplace-contact:'.self::actor($r))]);   // contact reads are audited; the cap also limits scraping
+        RateLimiter::for('marketplace-upload', fn (Request $r) => [Limit::perMinute(20)->by('marketplace-upload:'.self::actor($r))]);
         RateLimiter::for('platform-admin-write', fn (Request $r) => [Limit::perMinute(60)->by('platform-admin-write:'.self::actor($r))]);
         RateLimiter::for('inventory-write', fn (Request $r) => [Limit::perHour(240)->by('inventory-write:'.self::actor($r))]);
 

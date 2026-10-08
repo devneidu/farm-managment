@@ -123,6 +123,22 @@ reconciliation, deployment runbook.
 Do not combine phases merely to reduce file count. Each phase must
 finish migrations/models/services/API/policies/tests before moving on.
 
+## Post-V1 — Phase 22 (Marketplace foundation & seller shops)
+
+Implemented as a post-launch addition: seller-shop onboarding, private contact configuration, publishing lifecycle, verification, shop members, public discovery and platform oversight. Listings, negotiation, deals, payments and delivery are later phases. See [41-PHASE-22-MARKETPLACE.md](41-PHASE-22-MARKETPLACE.md) and [`docs/api/PHASE-22-MARKETPLACE.md`](../api/PHASE-22-MARKETPLACE.md).
+
+## Post-V1 — Phase 23 (Marketplace product listings, pricing & images)
+
+Implemented as a post-launch addition: seller product listings (master-data products, flexible NGN-priced selling units, seller-declared packages, negotiable flag as data only, seller-arranged fulfilment), an illustrative image catalogue plus seller photos, an optional informational inventory link, a listing lifecycle with immediate publishing for active shops, the anonymous feed and platform-admin restrict/lift. Offers/negotiation (Phase 24), deals (25), monetisation (26), community (28), payments, logistics and stock reservation are later phases. See [42-PHASE-23-MARKETPLACE-LISTINGS.md](42-PHASE-23-MARKETPLACE-LISTINGS.md) and [`docs/api/PHASE-23-MARKETPLACE-LISTINGS.md`](../api/PHASE-23-MARKETPLACE-LISTINGS.md).
+
+## Post-V1 — Phase 24 (Buyer enquiries & controlled negotiation)
+
+Offers on negotiable listings (price floor, attempt limit, expiry, accept/reject), "proceed at listed price" purchase intents, shop permissions `offer.view|respond`. No chat, escrow, checkout, stock reservation or seller contact exchange. Design: `43-PHASE-24-MARKETPLACE-OFFERS.md`; contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`. Phase 25 (deals, contact exchange) is implemented below.
+
+## Post-V1 — Phase 25 (Marketplace deal summary & fulfilment)
+
+A lightweight deal summary: the buyer confirms an accepted offer (A), or the seller confirms a fixed-price purchase request and then the buyer confirms the exact terms (B). Frozen product/unit/quantity/price/total and fulfilment terms (pickup or seller delivery, delivery charge never added to the total), two-sided self-reported completion, cancellation, confidential reports (Phase 27 owns moderation), audited contact exchange (address only for pickup), shop permissions `deal.view|respond`, platform admin read-only. Farmvest is not an escrow, payment processor or logistics provider: no payment, stock reservation, sale, invoice or delivery. Design: `44-PHASE-25-MARKETPLACE-DEALS.md`; contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md`. Phase 26 (monetisation) is not started.
+
 ## V1 launch status (Phase 21)
 
 Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented and locally verified; see [audit and acceptance record](../operations/PHASE-21-VERIFICATION.md) and [deployment runbook](../operations/LAUNCH.md) for final test evidence and remaining infrastructure gates. No unconditional production-readiness claim until restore, reconciliation, staging smoke and representative concurrent load gates are signed off. Phase 20 — Deferred from V1 / post-launch enhancement (WhatsApp integration, AI-assisted parsing); it is not a V1 launch blocker.

@@ -400,6 +400,93 @@ class ApiDocumentationTest extends TestCase
         $this->assertArrayNotHasKey('farm_id', $spec['components']['schemas']['StorePlanRequest']['properties'] ?? []);
     }
 
+    public function test_phase_22_marketplace_endpoints_are_documented_without_private_fields(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /marketplace/my/shops', 'post /marketplace/shops', 'get /marketplace/shops/{shop}', 'patch /marketplace/shops/{shop}', 'get /marketplace/shops/{shop}/contact', 'patch /marketplace/shops/{shop}/contact',
+            'post /marketplace/shops/{shop}/submit', 'post /marketplace/shops/{shop}/close', 'post /marketplace/shops/{shop}/reopen', 'post /marketplace/shops/{shop}/request-verification',
+            'get /marketplace/shops/{shop}/members', 'post /marketplace/shops/{shop}/members', 'patch /marketplace/shops/{shop}/members/{member}', 'delete /marketplace/shops/{shop}/members/{member}',
+            'get /public/marketplace/shops', 'get /public/marketplace/shops/{slug}', 'get /platform-admin/marketplace/shops', 'get /platform-admin/marketplace/shops/{shop}',
+            'post /platform-admin/marketplace/shops/{shop}/approve', 'post /platform-admin/marketplace/shops/{shop}/reject', 'post /platform-admin/marketplace/shops/{shop}/suspend',
+            'post /platform-admin/marketplace/shops/{shop}/reinstate', 'post /platform-admin/marketplace/shops/{shop}/verification'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method] ?? $this->fail("Missing {$endpoint}");
+            $this->assertNotEmpty($operation['description'] ?? '', $endpoint);
+        }
+        foreach (['201', '409', '422'] as $status) {
+            $this->assertArrayHasKey($status, $spec['paths']['/marketplace/shops']['post']['responses'], "POST /marketplace/shops missing {$status}");
+        }
+        $this->assertArrayHasKey('201', $spec['paths']['/marketplace/shops/{shop}/members']['post']['responses']);
+        $this->assertArrayHasKey('404', $spec['paths']['/public/marketplace/shops/{slug}']['get']['responses']);
+        $this->assertArrayHasKey('401', $spec['paths']['/marketplace/shops/{shop}']['get']['responses']);
+        $this->assertStringContainsString('shop_incomplete', $spec['paths']['/marketplace/shops/{shop}/submit']['post']['description']);
+        $this->assertStringContainsString('platform.marketplace_shop_approved', $spec['paths']['/platform-admin/marketplace/shops/{shop}/approve']['post']['description']);
+        $this->assertStringContainsString('marketplace.manage', $spec['paths']['/marketplace/shops']['post']['description']);
+
+        // The seller profile and public schemas never carry the private contact configuration, the farm id or owner identity.
+        $schemas = $spec['components']['schemas'];
+        foreach (['ShopResource', 'PublicShopResource'] as $schema) {
+            foreach (['contact_phone', 'contact_whatsapp', 'contact_email', 'address_line', 'farm_id', 'owner', 'created_by'] as $private) {
+                $this->assertArrayNotHasKey($private, $schemas[$schema]['properties'] ?? [], "{$schema} must not expose {$private}");
+            }
+        }
+        $this->assertArrayHasKey('contact_phone', $schemas['ShopContactResource']['properties']);
+        $this->assertArrayNotHasKey('status', $schemas['StoreShopRequest']['properties'] ?? []);
+    }
+
+    public function test_phase_23_listing_endpoints_are_documented_without_private_fields(): void
+    {
+        $spec = $this->spec();
+        foreach (['get /marketplace/product-options', 'get /marketplace/image-library', 'get /marketplace/shops/{shop}/listings', 'post /marketplace/shops/{shop}/listings',
+            'get /marketplace/shops/{shop}/listings/eligible-inventory', 'get /marketplace/shops/{shop}/listings/{listing}', 'patch /marketplace/shops/{shop}/listings/{listing}',
+            'delete /marketplace/shops/{shop}/listings/{listing}', 'post /marketplace/shops/{shop}/listings/{listing}/publish', 'post /marketplace/shops/{shop}/listings/{listing}/pause',
+            'post /marketplace/shops/{shop}/listings/{listing}/archive', 'post /marketplace/shops/{shop}/listings/{listing}/restore', 'post /marketplace/shops/{shop}/listings/{listing}/price-preview',
+            'post /marketplace/shops/{shop}/listings/{listing}/images', 'patch /marketplace/shops/{shop}/listings/{listing}/images/{image}', 'delete /marketplace/shops/{shop}/listings/{listing}/images/{image}',
+            'get /marketplace/shops/{shop}/listings/{listing}/images/{image}/file', 'get /public/marketplace/listings', 'get /public/marketplace/listings/{slug}',
+            'get /public/marketplace/listings/{slug}/price-preview', 'get /public/marketplace/images/{image}', 'get /public/marketplace/catalogue-images/{code}',
+            'get /platform-admin/marketplace/listings', 'get /platform-admin/marketplace/listings/{listing}', 'post /platform-admin/marketplace/listings/{listing}/restrict',
+            'post /platform-admin/marketplace/listings/{listing}/lift-restriction', 'get /platform-admin/marketplace/listings/{listing}/images/{image}/file'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $operation = $spec['paths'][$path][$method] ?? $this->fail("Missing {$endpoint}");
+            $this->assertNotEmpty($operation['description'] ?? '', $endpoint);
+        }
+        // there is deliberately no separate "hide" action
+        $this->assertArrayNotHasKey('/platform-admin/marketplace/listings/{listing}/hide', $spec['paths']);
+
+        foreach (['post /marketplace/shops/{shop}/listings', 'patch /marketplace/shops/{shop}/listings/{listing}', 'post /marketplace/shops/{shop}/listings/{listing}/publish',
+            'post /platform-admin/marketplace/listings/{listing}/restrict'] as $endpoint) {
+            [$method, $path] = explode(' ', $endpoint);
+            $this->assertArrayHasKey('409', $spec['paths'][$path][$method]['responses'], "{$endpoint} missing 409");
+        }
+        $this->assertArrayHasKey('201', $spec['paths']['/marketplace/shops/{shop}/listings']['post']['responses']);
+        $this->assertArrayHasKey('404', $spec['paths']['/public/marketplace/listings/{slug}']['get']['responses']);
+        $this->assertArrayHasKey('multipart/form-data', $spec['paths']['/marketplace/shops/{shop}/listings/{listing}/images']['post']['requestBody']['content']);
+        $this->assertStringContainsString('listing_incomplete', $spec['paths']['/marketplace/shops/{shop}/listings/{listing}/publish']['post']['description']);
+        $this->assertStringContainsString('stale_listing', $spec['paths']['/marketplace/shops/{shop}/listings/{listing}']['patch']['description']);
+        $this->assertStringContainsString('platform.marketplace_listing_restricted', $spec['paths']['/platform-admin/marketplace/listings/{listing}/restrict']['post']['description']);
+        $this->assertStringContainsString('Remote URLs are never accepted', $spec['paths']['/marketplace/shops/{shop}/listings/{listing}/images']['post']['description']);
+
+        // public filters are documented query parameters
+        $params = array_column($spec['paths']['/public/marketplace/listings']['get']['parameters'], 'name');
+        foreach (['q', 'product_kind', 'species', 'crop_type', 'state', 'city', 'min_price', 'max_price', 'unit', 'negotiable', 'fulfilment', 'delivers_to', 'shop', 'verified', 'sort', 'per_page'] as $param) {
+            $this->assertContains($param, $params);
+        }
+
+        // The public listing schema is an allow-list: no farm, inventory, creator, version, status or moderation data.
+        $schemas = $spec['components']['schemas'];
+        foreach (['farm_id', 'inventory', 'inventory_item_id', 'inventory_linked', 'created_by', 'updated_by', 'version', 'status', 'restriction', 'abilities', 'history', 'catalog_image_id', 'deleted_at'] as $private) {
+            $this->assertArrayNotHasKey($private, $schemas['PublicListingResource']['properties'] ?? [], "PublicListingResource must not expose {$private}");
+        }
+        // clients can never set lifecycle, ownership or farm fields
+        foreach (['StoreListingRequest', 'UpdateListingRequest'] as $schema) {
+            foreach (['status', 'shop_id', 'created_by', 'farm_id', 'slug', 'reference', 'currency', 'published_at'] as $forbidden) {
+                $this->assertArrayNotHasKey($forbidden, $schemas[$schema]['properties'] ?? [], "{$schema} must not accept {$forbidden}");
+            }
+        }
+        $this->assertArrayHasKey('version', $schemas['UpdateListingRequest']['properties']);
+        $this->assertArrayNotHasKey('image_url', $schemas['UploadListingImageRequest']['properties'] ?? []);
+    }
+
     public function test_phase_19_localization_endpoints_are_documented(): void
     {
         $spec = $this->spec();

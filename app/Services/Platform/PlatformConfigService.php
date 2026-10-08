@@ -21,6 +21,11 @@ class PlatformConfigService
     public const SETTINGS = [
         'support_email' => [['nullable', 'email:rfc', 'max:150'], 'Address shown to farmers who need help.'],
         'support_whatsapp' => [['nullable', 'string', 'regex:/^\+?[0-9]{7,15}$/'], 'WhatsApp number (digits, optional leading +) for support.'],
+        'marketplace_max_shops_per_user' => [['nullable', 'integer', 'min:1', 'max:20'], 'How many seller shops one user may own (null = the built-in default of 3).'],
+        'marketplace_max_offers_per_buyer' => [['nullable', 'integer', 'min:1', 'max:10'], 'How many offers one buyer may make on one negotiable listing, voided offers excluded (null = the built-in default of 3).'],
+        'marketplace_offer_expiry_hours' => [['nullable', 'integer', 'min:1', 'max:720'], 'How long a pending offer stays open before it expires (null = the built-in default of 48 hours).'],
+        'marketplace_min_offer_percent' => [['nullable', 'numeric', 'min:1', 'max:99', 'regex:/^\d{1,2}(\.\d{1,2})?$/'], 'Lowest offer allowed, as a percentage of the listed UNIT price (1-99, up to 2 decimals; null = the built-in default of 70).'],
+        'marketplace_deal_confirmation_hours' => [['nullable', 'integer', 'min:1', 'max:720'], 'How long the buyer has to confirm a deal after the seller accepts an offer or confirms a purchase request (null = the built-in default of 72 hours).'],
         'announcement' => [['nullable', 'string', 'max:500'], 'Short platform-wide notice for farmers; null clears it.'],
     ];
 
