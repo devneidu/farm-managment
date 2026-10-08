@@ -149,4 +149,14 @@ Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented
 
 ## Post-V1 — Phase 27 (Marketplace trust, safety and administration)
 
-Implemented: platform status summaries and offer oversight; confidential shop/listing reporting; existing deal-report triage (`open -> in_review -> dismissed|resolved`), active issue deduplication and later reporting after closure; append-only report history and required administrative reasons; explicit linked enforcement using existing shop/listing services, platform roles and audit. Reports never automatically enforce; existing deal lifecycle and paid periods remain intact. Design: `46-PHASE-27-MARKETPLACE-SAFETY.md`; contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. Phase 28 is not started.
+Implemented: platform status summaries and offer oversight; confidential shop/listing reporting; existing deal-report triage (`open -> in_review -> dismissed|resolved`), active issue deduplication and later reporting after closure; append-only report history and required administrative reasons; explicit linked enforcement using existing shop/listing services, platform roles and audit. Reports never automatically enforce; existing deal lifecycle and paid periods remain intact. Design: `46-PHASE-27-MARKETPLACE-SAFETY.md`; contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. Phase 28 is deferred from V1; Phase 29 is the next active phase, not started.
+
+## Phase 28 — Community Features (Deferred from V1 / post-launch enhancement)
+
+**Product decision — 2026-10-08:** Defer Phase 28 entirely to post-launch, as with Phase 20 (WhatsApp and AI Parsing). Community posts, comments, likes, discussions and all related functionality are excluded from Farmvest V1 and are not V1 launch blockers. Do not implement Phase 28 as part of the current release.
+
+Preserve the original Phase 28 requirements for future implementation; this decision changes scheduling and V1 scope, not the retained requirements. Existing community specifications and the [community feedback backlog](38-COMMUNITY-FEEDBACK-BACKLOG.md) remain available for future planning.
+
+## Phase 29 — Integration Testing and Release Hardening (Next active phase; not started)
+
+Phase 29 is the next active phase after completed Phase 27, bypassing deferred Phase 28. Await an explicit implementation instruction before starting Phase 29. The outstanding Phase 27 release checks remain: apply and verify the development database migration, run the new Postman requests through Newman, and verify skipped process-concurrency scenarios in a supported environment.

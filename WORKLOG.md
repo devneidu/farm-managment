@@ -9,7 +9,19 @@
 
 ---
 
-## Latest task — Phase 27: Marketplace trust, safety & administration (COMPLETED)
+## Latest task — V1 roadmap decision: defer Phase 28 (COMPLETED)
+
+**Agent:** Codex. **Date:** 2026-10-08. User-directed documentation-only update on `master` after Phase 27 commit `f022c9c`. Phase 28 (Community Features) is entirely deferred from Farmvest V1 to post-launch, matching Phase 20 (WhatsApp and AI Parsing). Community posts, comments, likes, discussions and related functionality are excluded from V1 and are not launch blockers. Original requirements and existing community specifications/backlog are preserved for future implementation. Do not implement Phase 28.
+
+**Next active phase:** Phase 29 — Integration Testing and Release Hardening. Not started; await explicit authorization to begin. Only the master plan and this WORKLOG changed; no feature development or test-suite rerun. User authorized committing and pushing this roadmap update to `master`.
+
+**Outstanding release checks:** Apply and verify the Phase 27 migration on the development database; run the new Postman requests through Newman; verify skipped process-concurrency scenarios in a supported environment. These remain pending.
+
+**Recommended commit:** `docs: defer community features and set phase 29 as next`
+
+---
+
+## Previous task — Phase 27: Marketplace trust, safety & administration (COMPLETED)
 
 **Agent:** Codex. **Date:** 2026-10-08. Started from clean `master` at `0970912` (merge of Phase 26 `9f7da99`). Approved plan and product decisions implemented; user approved commit and push on the current branch. Phase 28 not started. Contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`; design record: `docs/implementations/46-PHASE-27-MARKETPLACE-SAFETY.md`.
 
