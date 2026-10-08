@@ -913,3 +913,21 @@ Preferences change pre-selected units/language only, never stored data. Details/
 ## 53. Platform Admin separation
 
 Show only when `user.platform_role` is `admin` or `support`. Separate route tree and client: `/platform-admin/*`, no `X-Farm-Id`, different login (a farm Owner is not an admin). `support` is read-only (`403 platform_write_forbidden`). Admin granted only by `php artisan platform:grant-admin`. Surfaces: plans/prices/entitlements, reference data and species capabilities, work templates (draft/publish/archive), settings, feature flags, users (suspend/restore), farms (support overview, change plan), audit logs. Never expose in the farm UI. Postman folder 90; [`PHASE-18-PLATFORM-ADMIN.md`](PHASE-18-PLATFORM-ADMIN.md).
+
+## 54. Marketplace listings (Phase 23)
+
+Full rules: `PHASE-23-MARKETPLACE-LISTINGS.md`. No farm context; sign-in + verified email.
+
+**Create & publish:** `GET /marketplace/product-options` → choose kind, product, unit (+ `package` for containers) → `POST /marketplace/shops/{shop}/listings` (draft, `201`) → optional `POST …/images` (multipart) or `catalog_image_id` → `POST …/publish` (owner/manager; `409 shop_not_active` if the shop is not approved, `422 listing_incomplete` with `details.missing`). Effect: the listing is on `GET /public/marketplace/listings` immediately; **no stock moves**, no admin approval needed.
+
+**Edit/stay live:** `PATCH …/listings/{listing}` with `version`. Changing `unit` requires restating `package`. `409 stale_listing` → reload.
+
+**Pause / archive / restore:** `POST …/pause|archive|restore`; idempotent. Archived → `restore` → draft → `publish`. Draft-only `DELETE`.
+
+**Staff:** can create/edit drafts and photos; Publish/Pause/Archive/Restore and edits to live listings answer `403` (hide them using `abilities`).
+
+**Moderation (platform admin):** `POST /platform-admin/marketplace/listings/{listing}/restrict {reason}` hides it at once; `…/lift-restriction` → `paused` (the seller must publish again). There is no "hide" endpoint.
+
+**Shop suspended/closed:** every published listing of the shop disappears from the public feed immediately and returns when the shop is reinstated/reopened — no listing changes.
+
+**Inventory-linked listing:** the seller may link an eggs/milk/feed/produce item of the shop's farm; the console shows live `on_hand` vs the declared quantity. Selling still goes through the normal farm Sales workflow; an accepted deal (later phase) will never create a Sale or deduct stock by itself.

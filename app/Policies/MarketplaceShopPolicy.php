@@ -38,6 +38,23 @@ class MarketplaceShopPolicy
         return $this->can($user, $shop, ShopPermission::ManageMembers);
     }
 
+    public function viewListings(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::ListingView);
+    }
+
+    /** Create / edit DRAFT listings and their images. */
+    public function manageListings(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::ListingManage);
+    }
+
+    /** Publication authority: publish, pause, archive, restore, edit live listings. */
+    public function publishListings(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::ListingPublish);
+    }
+
     private function can(User $user, MarketplaceShop $shop, ShopPermission $permission): bool
     {
         $member = $shop->relationLoaded('viewer') ? $shop->getRelation('viewer') : $shop->members()->where('user_id', $user->id)->first();

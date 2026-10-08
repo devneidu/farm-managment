@@ -127,6 +127,10 @@ finish migrations/models/services/API/policies/tests before moving on.
 
 Implemented as a post-launch addition: seller-shop onboarding, private contact configuration, publishing lifecycle, verification, shop members, public discovery and platform oversight. Listings, negotiation, deals, payments and delivery are later phases. See [41-PHASE-22-MARKETPLACE.md](41-PHASE-22-MARKETPLACE.md) and [`docs/api/PHASE-22-MARKETPLACE.md`](../api/PHASE-22-MARKETPLACE.md).
 
+## Post-V1 — Phase 23 (Marketplace product listings, pricing & images)
+
+Implemented as a post-launch addition: seller product listings (master-data products, flexible NGN-priced selling units, seller-declared packages, negotiable flag as data only, seller-arranged fulfilment), an illustrative image catalogue plus seller photos, an optional informational inventory link, a listing lifecycle with immediate publishing for active shops, the anonymous feed and platform-admin restrict/lift. Offers/negotiation (Phase 24), deals (25), monetisation (26), community (28), payments, logistics and stock reservation are later phases. See [42-PHASE-23-MARKETPLACE-LISTINGS.md](42-PHASE-23-MARKETPLACE-LISTINGS.md) and [`docs/api/PHASE-23-MARKETPLACE-LISTINGS.md`](../api/PHASE-23-MARKETPLACE-LISTINGS.md).
+
 ## V1 launch status (Phase 21)
 
 Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented and locally verified; see [audit and acceptance record](../operations/PHASE-21-VERIFICATION.md) and [deployment runbook](../operations/LAUNCH.md) for final test evidence and remaining infrastructure gates. No unconditional production-readiness claim until restore, reconciliation, staging smoke and representative concurrent load gates are signed off. Phase 20 — Deferred from V1 / post-launch enhancement (WhatsApp integration, AI-assisted parsing); it is not a V1 launch blocker.

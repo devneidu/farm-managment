@@ -21,6 +21,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 12 | Notifications | 4 | Flow 11, plus `php artisan notifications:generate` (and a queue worker) run on the server. |
 | 13 | Team invitation | 13 | Flow 1 and the plan change from Flow S (Free allows only 3 team members). |
 | 14 | Feed, eggs and milk stock | 22 | Flows 1, S, 3 and 5 (`cycle_id`, `store_id`, `item_feed_id` with stock). Creates its own measurement context and crate conversion. |
+| 15 | Marketplace listings | 48 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own farm-less seller (`seller_email`). Manual input: `otp_code`. Run with Newman `--working-dir docs/postman` (photo upload). |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -793,3 +794,64 @@ milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                       
 - Refetch the balance, movements and the breeding project after each step.
 
 **Execution.** Executed with Newman against a live local server on a fresh MySQL database, together with every other flow, in the order 1, 2, S, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 13: 170 requests, 361 assertions, 0 failures (Flow 11 needs a queue worker and Flow 12 needs `notifications:generate`, both run by the harness).
+
+## Flow 15 — Marketplace listings (Phase 23)
+
+**Goal.** A marketplace-only seller (no farm) opens a shop, gets it approved, creates listings with decimal-safe prices and a seller-declared package, uploads a photo, publishes (immediately, no per-listing approval), is found by anonymous buyers, pauses, is restricted and un-restricted by a platform admin and publishes again.
+
+**Prerequisites.** A platform admin account (`admin_email`, `admin_password`; `php artisan platform:grant-admin`). No farm, no other flow. Manual input: the emailed OTP in `otp_code` before request 3. Request 16 uploads `docs/postman/samples/listing-photo.png` (a generated picture), so run with `newman --working-dir docs/postman` or pick the file in Postman. The session switches between the seller and the admin with log-out / log-in requests.
+
+**Request sequence**
+
+| # | Request | Call |
+|---|---|---|
+| 1 | Initialise CSRF cookie | `GET /auth/csrf-cookie` |
+| 2 | Register a marketplace seller (no farm) | `POST /auth/register` |
+| 3 | Verify email with OTP | `POST /auth/email/verify` |
+| 4 | Create a shop | `POST /marketplace/shops` |
+| 5 | Set private contact | `PATCH /marketplace/shops/{{shop_id}}/contact` |
+| 6 | Submit the shop for review | `POST /marketplace/shops/{{shop_id}}/submit` |
+| 7 | Log out the seller | `POST /auth/logout` |
+| 8 | Log in as the platform admin | `POST /auth/login` |
+| 9 | Approve the shop | `POST /platform-admin/marketplace/shops/{{shop_id}}/approve` |
+| 10 | Log out the admin | `POST /auth/logout` |
+| 11 | Log in as the seller | `POST /auth/login` |
+| 12 | Product options | `GET /marketplace/product-options` |
+| 13 | Image library (empty until assets are seeded) | `GET /marketplace/image-library` |
+| 14 | Create a listing - chicken, N8,000 per head | `POST /marketplace/shops/{{shop_id}}/listings` |
+| 15 | Create a listing - eggs per crate (seller-declared package) | `POST /marketplace/shops/{{shop_id}}/listings` |
+| 16 | Price preview | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/price-preview` |
+| 17 | Eligible inventory (a marketplace-only shop has none) | `GET /marketplace/shops/{{shop_id}}/listings/eligible-inventory` |
+| 18 | Upload a photo | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images` |
+| 19 | Move / describe the photo | `PATCH /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images/{{listing_image_id}}` |
+| 20 | Fetch the photo as a member | `GET /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images/{{listing_image_id}}/file` |
+| 21 | Update the price (with version) | `PATCH /marketplace/shops/{{shop_id}}/listings/{{listing_id}}` |
+| 22 | Update with a stale version (409) | `PATCH /marketplace/shops/{{shop_id}}/listings/{{listing_id}}` |
+| 23 | Publish the chicken listing | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish` |
+| 24 | Publish the image-less eggs listing | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}/publish` |
+| 25 | Public feed | `GET /public/marketplace/listings` |
+| 26 | Public listing detail | `GET /public/marketplace/listings/{{listing_slug}}` |
+| 27 | Public price estimate | `GET /public/marketplace/listings/{{listing_slug}}/price-preview` |
+| 28 | Public catalogue image (404 until assets are seeded) | `GET /public/marketplace/catalogue-images/chicken` |
+| 29 | Public photo file | `GET /public/marketplace/images/{{listing_image_id}}` |
+| 30 | Pause the chicken listing | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/pause` |
+| 31 | Public detail after pause (404) | `GET /public/marketplace/listings/{{listing_slug}}` |
+| 32 | Publish again | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish` |
+| 33 | Log out the seller | `POST /auth/logout` |
+| 34 | Log in as the platform admin | `POST /auth/login` |
+| 35 | Admin: list listings | `GET /platform-admin/marketplace/listings` |
+| 36 | Admin: restrict the listing | `POST /platform-admin/marketplace/listings/{{listing_id}}/restrict` |
+| 37 | Public detail after restriction (404) | `GET /public/marketplace/listings/{{listing_slug}}` |
+| 38 | Admin: show the listing and its history | `GET /platform-admin/marketplace/listings/{{listing_id}}` |
+| 39 | Admin: lift the restriction | `POST /platform-admin/marketplace/listings/{{listing_id}}/lift-restriction` |
+| 40 | Log out the admin | `POST /auth/logout` |
+| 41 | Log in as the seller | `POST /auth/login` |
+| 42 | Reload the listing (the platform moved its version) | `GET /marketplace/shops/{{shop_id}}/listings/{{listing_id}}` |
+| 43 | Publish after the restriction is lifted | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish` |
+| 44 | List my shop's listings | `GET /marketplace/shops/{{shop_id}}/listings` |
+| 45 | Delete the photo | `DELETE /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images/{{listing_image_id}}` |
+| 46 | Archive the eggs listing | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}/archive` |
+| 47 | Restore it to a draft | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}/restore` |
+| 48 | Delete the draft | `DELETE /marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}` |
+
+**Business rules shown.** Publishing is immediate for an `active` shop and needs no image (the image-less eggs listing shows `image.source = placeholder`); the package of a crate is a seller statement (`is_conversion: false`); `version` protects field edits (a stale version → `409 stale_listing`) and photos do not move it; pausing, restricting or archiving makes the public address answer `404`; lifting a restriction leaves the listing `paused` and the seller publishes again; the public payload never contains `farm_id`, `version`, inventory or contact values.

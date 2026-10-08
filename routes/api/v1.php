@@ -29,7 +29,11 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceCatalogueController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingImageController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopMemberController;
 use App\Http\Controllers\Api\V1\MasterDataController;
@@ -45,6 +49,7 @@ use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAdminController;
 use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceListingController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformSupportController;
@@ -87,6 +92,13 @@ Route::get('/translations/{locale}', [LocaleController::class, 'bundle'])->middl
 Route::get('/public/marketplace/shops', [MarketplacePublicController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.marketplace.shops.index');
 Route::get('/public/marketplace/shops/{slug}', [MarketplacePublicController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('api.v1.public.marketplace.shops.show');
 
+// Marketplace listings (Phase 23): anonymous, PUBLISHED listings of ACTIVE shops only. Files are streamed by the application from a private disk.
+Route::get('/public/marketplace/listings', [MarketplacePublicListingController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.marketplace.listings.index');
+Route::get('/public/marketplace/listings/{slug}', [MarketplacePublicListingController::class, 'show'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('api.v1.public.marketplace.listings.show');
+Route::get('/public/marketplace/listings/{slug}/price-preview', [MarketplacePublicListingController::class, 'preview'])->where('slug', '[a-z0-9-]+')->middleware('throttle:60,1')->name('api.v1.public.marketplace.listings.preview');
+Route::get('/public/marketplace/images/{image}', [MarketplacePublicListingController::class, 'image'])->whereUuid('image')->middleware('throttle:240,1')->name('api.v1.public.marketplace.images.show');
+Route::get('/public/marketplace/catalogue-images/{code}', [MarketplacePublicListingController::class, 'catalogueImage'])->where('code', '[a-z0-9-]+')->middleware('throttle:240,1')->name('api.v1.public.marketplace.catalogue-images.show');
+
 Route::get('/public/plans', [PlanController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.public.plans');
 
 Route::prefix('auth')->group(function () {
@@ -125,6 +137,8 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
     // caller's shop membership; the shop role (not any farm role) authorises each action.
     Route::prefix('marketplace')->group(function () {
         Route::get('/my/shops', [MarketplaceShopController::class, 'mine'])->name('api.v1.marketplace.my-shops');
+        Route::get('/product-options', [MarketplaceCatalogueController::class, 'productOptions'])->name('api.v1.marketplace.product-options');
+        Route::get('/image-library', [MarketplaceCatalogueController::class, 'imageLibrary'])->name('api.v1.marketplace.image-library');
         Route::post('/shops', [MarketplaceShopController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.store');
         Route::prefix('/shops/{shop}')->whereUuid('shop')->group(function () {
             Route::get('/', [MarketplaceShopController::class, 'show'])->name('api.v1.marketplace.shops.show');
@@ -135,6 +149,25 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
             Route::post('/close', [MarketplaceShopController::class, 'close'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.close');
             Route::post('/reopen', [MarketplaceShopController::class, 'reopen'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.reopen');
             Route::post('/request-verification', [MarketplaceShopController::class, 'requestVerification'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.request-verification');
+            Route::prefix('listings')->group(function () {
+                Route::get('/', [MarketplaceListingController::class, 'index'])->name('api.v1.marketplace.shops.listings.index');
+                Route::post('/', [MarketplaceListingController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.store');
+                Route::get('/eligible-inventory', [MarketplaceListingController::class, 'eligibleInventory'])->name('api.v1.marketplace.shops.listings.eligible-inventory');
+                Route::prefix('{listing}')->whereUuid('listing')->group(function () {
+                    Route::get('/', [MarketplaceListingController::class, 'show'])->name('api.v1.marketplace.shops.listings.show');
+                    Route::patch('/', [MarketplaceListingController::class, 'update'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.update');
+                    Route::delete('/', [MarketplaceListingController::class, 'destroy'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.destroy');
+                    Route::post('/publish', [MarketplaceListingController::class, 'publish'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.publish');
+                    Route::post('/pause', [MarketplaceListingController::class, 'pause'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.pause');
+                    Route::post('/archive', [MarketplaceListingController::class, 'archive'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.archive');
+                    Route::post('/restore', [MarketplaceListingController::class, 'restore'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.restore');
+                    Route::post('/price-preview', [MarketplaceListingController::class, 'preview'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.price-preview');
+                    Route::post('/images', [MarketplaceListingImageController::class, 'store'])->middleware(['throttle:marketplace-write', 'throttle:marketplace-upload'])->name('api.v1.marketplace.shops.listings.images.store');
+                    Route::patch('/images/{image}', [MarketplaceListingImageController::class, 'update'])->whereUuid('image')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.images.update');
+                    Route::delete('/images/{image}', [MarketplaceListingImageController::class, 'destroy'])->whereUuid('image')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.listings.images.destroy');
+                    Route::get('/images/{image}/file', [MarketplaceListingImageController::class, 'file'])->whereUuid('image')->name('api.v1.marketplace.shops.listings.images.file');
+                });
+            });
             Route::get('/members', [MarketplaceShopMemberController::class, 'index'])->name('api.v1.marketplace.shops.members.index');
             Route::post('/members', [MarketplaceShopMemberController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.store');
             Route::patch('/members/{member}', [MarketplaceShopMemberController::class, 'update'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.update');
@@ -469,6 +502,15 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
         Route::post('/{shop}/suspend', [PlatformMarketplaceController::class, 'suspend'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.suspend');
         Route::post('/{shop}/reinstate', [PlatformMarketplaceController::class, 'reinstate'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.reinstate');
         Route::post('/{shop}/verification', [PlatformMarketplaceController::class, 'verification'])->whereUuid('shop')->middleware($write)->name('api.v1.platform.marketplace.shops.verification');
+    });
+
+    // Marketplace listing oversight (Phase 23): restrict / lift only - restricting is hiding; nothing is deleted
+    Route::prefix('marketplace/listings')->group(function () use ($write) {
+        Route::get('/', [PlatformMarketplaceListingController::class, 'index'])->name('api.v1.platform.marketplace.listings.index');
+        Route::get('/{listing}', [PlatformMarketplaceListingController::class, 'show'])->whereUuid('listing')->name('api.v1.platform.marketplace.listings.show');
+        Route::post('/{listing}/restrict', [PlatformMarketplaceListingController::class, 'restrict'])->whereUuid('listing')->middleware($write)->name('api.v1.platform.marketplace.listings.restrict');
+        Route::post('/{listing}/lift-restriction', [PlatformMarketplaceListingController::class, 'lift'])->whereUuid('listing')->middleware($write)->name('api.v1.platform.marketplace.listings.lift');
+        Route::get('/{listing}/images/{image}/file', [PlatformMarketplaceListingController::class, 'image'])->whereUuid(['listing', 'image'])->name('api.v1.platform.marketplace.listings.images.file');
     });
 
     // Platform work templates

@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        // Marketplace images (Phase 23): private, served only by the application. Point MARKETPLACE_DISK at an S3 disk to migrate; nothing else changes.
+        'marketplace' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/marketplace'),
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

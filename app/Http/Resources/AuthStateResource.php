@@ -80,8 +80,6 @@ class AuthStateResource extends JsonResource
             /**
              * Marketplace participation, independent of farms. `shop_count` = shops the user is a member of (any status); drive the seller area from
              * GET /marketplace/my/shops. A user can have farms, shops, both or neither.
-             *
-             * @var array{shop_count: int}
              */
             'marketplace' => ['shop_count' => $shops],
         ];

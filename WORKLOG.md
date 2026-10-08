@@ -9,7 +9,33 @@
 
 ---
 
-## Latest task — Phase 22 final review & corrections (UNCOMMITTED)
+## Latest task — Phase 23: Marketplace product listings, pricing & images (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 23 only; Phase 24 not started; **not committed or pushed**. Contract: `docs/api/PHASE-23-MARKETPLACE-LISTINGS.md` (authoritative); image runbook `docs/api/PHASE-23-IMAGE-ASSET-RUNBOOK.md`; design record `docs/implementations/42-PHASE-23-MARKETPLACE-LISTINGS.md`.
+
+**Product decisions applied:** staff create/edit DRAFTS only (`listing.manage`); publish/pause/archive/restore/live edits need `listing.publish` (owner, manager); private local `marketplace` disk served by the API (S3-ready via `MARKETPLACE_DISK`); `basket`, `tuber`, `bunch` added as package units by insert-only data migration (no conversions); immediate publish for an active shop, admins restrict afterwards; **image never required** (placeholder indicator); **no Sale/stock movement from listings or (future) acceptance** - inventory link is a reference + snapshot only, future deals must use the confirmed Sales workflow with a deal-derived idempotency key; package contents seller-declared, never converted; admin = `restrict` / `lift-restriction` only (no hide); append-only history + audit.
+
+**Model:** `marketplace_listings` (decimal strings; `version` token; soft delete), `marketplace_listing_images`, `marketplace_catalog_images` (reusable, illustrative, seeded WITHOUT assets), `marketplace_listing_events` (append-only). Visibility = `status=published` AND shop `active`, evaluated on read (suspending/closing a shop hides listings at once; no per-listing write). Writes lock shop then listing row (asserted by a test); optional `version` -> `409 stale_listing`; repeat transitions are no-ops. Photos do NOT bump `version`. Search is escaped `LIKE` (InnoDB full-text is invisible inside open transactions).
+
+**Endpoints (+27 operations, 23 paths; OpenAPI 203->226 paths, 256->283 ops):** seller `product-options`, `image-library`, `shops/{shop}/listings[/{listing}]` (+ `publish|pause|archive|restore|price-preview`, `eligible-inventory`, `images[/{image}[/file]]`); public `/public/marketplace/listings[/{slug}[/price-preview]]`, `images/{image}`, `catalogue-images/{code}`; admin `/platform-admin/marketplace/listings[/{listing}]`, `restrict`, `lift-restriction`, `images/{image}/file`.
+
+**Draft-delete cleanup:** deleting a draft now removes its photo rows in the same transaction and, after commit, its uploaded files (only paths inside `listings/{shop}/{listing}/`; catalogue assets and other listings' files are never touched; a storage failure is reported and leaves an orphan file, never a failed delete). 4 regression tests added.
+
+**Final run: full Feature suite 978 passed (14,638 assertions); Pint clean; `git diff --check` clean.**
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceListingPricingTest` (14), `MarketplaceListingLifecycleTest` (20), `MarketplacePublicListingTest` (11), `MarketplaceListingImageTest` (16), `MarketplaceListingInventoryTest` (8) + `ApiDocumentationTest` phase-23 test. Adapted: `MarketplaceShopTest` (staff permissions), `StandardConversionTest`/`MeasurementApiTest` (package unit list). Fixtures use `Storage::fake('marketplace')` (a leak of test files into the real disk was found and fixed).
+
+**OpenAPI warning:** the persisting Phase 22 warning was `PD001 Redundant @var` on `AuthStateResource.marketplace`; the `@var` was removed (the inferred type is identical, now with `minimum: 0`); export has 0 warnings. Only existing-schema change: `AuthStateResource`.
+
+**Pre-existing failure found and fixed (test-only):** `FinanceTest::test_package_conversion_lots_and_expiry_flow_through_the_purchase` has the same UTC/Lagos date-boundary fragility as the four Phase 22 tests (fails 23:00-01:00 UTC; reproduced identically on a clean HEAD worktree); the expired-lot date now uses `now('Africa/Lagos')->subHours(2)->subDay()`.
+
+**Postman:** folder 24 (26 requests), 90 -> Marketplace Listings (5), Flow 15 (48 requests) executed with Newman on a fresh MySQL 8 DB: 48 requests, 88 assertions, 0 failures; +8 env vars; sample picture `docs/postman/samples/listing-photo.png` (generated). Docs: API-CONTRACT, FRONTEND-INTEGRATION §25, FRONTEND-WORKFLOWS §54, docs/api/README, PHASE-22 cross-refs, master plan, postman COVERAGE/WORKFLOWS.
+
+**Known limits / open:** no real catalogue assets (runbook); drafts deleted softly keep their photo files; real parallel-request concurrency is covered by lock-order and stale-version tests, not by multi-process tests; Flows 1-14 not re-run.
+
+---
+
+## Previous task — Phase 22 final review & corrections (UNCOMMITTED)
 
 **Agent:** Claude Code. **Date:** 2026-10-07. Two review items, nothing else; Phase 23 not started; not committed or pushed.
 

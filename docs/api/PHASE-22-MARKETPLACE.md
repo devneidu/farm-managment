@@ -1,6 +1,6 @@
 # Phase 22 — Marketplace foundation & seller shops
 
-Contract for the seller-shop foundation of the Marketplace. **Implemented:** shop onboarding, profile, private contact configuration, publishing lifecycle, verification badge, shop members/roles, anonymous discovery, platform-admin oversight. **Not implemented (later phases):** product listings, buyer negotiation, deals/orders, buyer payments/wallets/escrow/payouts, delivery, marketplace subscriptions, community. Nothing here touches Phase 20.
+Contract for the seller-shop foundation of the Marketplace. **Implemented:** shop onboarding, profile, private contact configuration, publishing lifecycle, verification badge, shop members/roles, anonymous discovery, platform-admin oversight. **Not implemented in Phase 22 (listings arrived in [Phase 23](PHASE-23-MARKETPLACE-LISTINGS.md)):** product listings, buyer negotiation, deals/orders, buyer payments/wallets/escrow/payouts, delivery, marketplace subscriptions, community. Nothing here touches Phase 20.
 
 All paths are under `/api/v1`. Success envelope `{data, meta, message}`; errors `{message, code, request_id, errors?, details?}` (see `API-CONTRACT.md` §4). The generated spec is `docs/api/openapi.json` (203 paths); Postman: folder **23 — Marketplace** and **90 → Marketplace Shops**.
 
@@ -21,7 +21,7 @@ All paths are under `/api/v1`. Success envelope `{data, meta, message}`; errors 
 |---|---|
 | `owner` | `shop.view`, `shop.update`, `shop.manage_contact`, `shop.manage_lifecycle`, `shop.manage_members` |
 | `manager` | `shop.view`, `shop.update`, `shop.manage_contact` |
-| `staff` | `shop.view` |
+| `staff` | `shop.view` (Phase 23 adds `listing.view`, `listing.manage`; managers/owners also get `listing.publish` - see PHASE-23-MARKETPLACE-LISTINGS.md §2) |
 
 A non-member always gets `404` for a shop (existence is not revealed); a member lacking the permission gets `403`. Farm roles confer nothing on a shop. The platform setting `marketplace_max_shops_per_user` (integer 1-20, default **3**, set through `PUT /platform-admin/settings/marketplace_max_shops_per_user`) limits how many shops one user may own.
 
