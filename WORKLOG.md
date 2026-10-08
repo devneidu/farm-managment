@@ -9,7 +9,38 @@
 
 ---
 
-## Latest task — Phase 24: Buyer enquiries & controlled negotiation
+## Latest task — Phase 25: Marketplace deal summary & fulfilment (UNCOMMITTED)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Phase 25 only; Phase 26 not started; **not committed or pushed** (awaiting instruction). Contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md` (authoritative); design record `docs/implementations/44-PHASE-25-MARKETPLACE-DEALS.md`.
+
+**What it is:** a lightweight deal summary. Farmvest is NOT an escrow, payment processor or logistics provider: no payment, wallet, payout, refund, stock reservation/deduction, Sale, invoice, finance row or delivery. Contact is released only after a deal exists.
+
+**Approved decisions applied:** (1) only the BUYER confirms an accepted offer, within `marketplace_deal_confirmation_hours` (72) of acceptance, no seller-triggered creation; (2) fixed-price intent: seller confirms first (a `marketplace_deal_confirmations` row: no agreement, no contact), the BUYER then confirms the exact terms and only then is there a deal; (3) completion needs BOTH sides, self-reported, never automatic, `completion.state` exposes the pending side; (4) optional per-deal buyer `contact_phone` (validated), email fallback, no profile phone; (5) `address_line` disclosed only for pickup deals; (6) delivery charge/fulfilment terms immutable after confirmation, unknown = `null` shown "To be agreed directly", never in `product_total`; (7) reports never change the deal (separate table + history), hidden from the reported party, Phase 27 owns moderation; (8) either party cancels an active deal with a reason, contact access ends, nothing refunded/restored; (9) product/unit/quantity/price/total frozen, listing + declared availability validated before activation; (10)-(12) boundaries, locking/uniqueness/audit, docs.
+
+**Setting (new, Platform Admin):** `marketplace_deal_confirmation_hours` (1-720, default 72).
+
+**Permissions (new shop):** `deal.view` (owner, manager, staff), `deal.respond` (owner, manager). Staff can list/open deals but not act or read contact.
+
+**Endpoints (+21 operations; OpenAPI 236 -> 257 paths, 293 -> 314 ops, 0 warnings):** buyer `POST /marketplace/my/offers/{offer}/deal`, `GET|POST /marketplace/my/deal-confirmations/{id}[/confirm]`, `GET /marketplace/my/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; shop `POST /marketplace/shops/{shop}/purchase-intents/{intent}/confirm`, `POST …/deal-confirmations/{id}/withdraw`, `GET …/shops/{shop}/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; platform admin read-only `GET /platform-admin/marketplace/deals[/{deal}]`, `…/deals/{deal}/contact`, `…/deal-reports`. New throttle `marketplace-contact` (30/min). Command `marketplace:expire-confirmations` scheduled hourly (lapses unanswered seller confirmations only; never touches a deal).
+
+**Model:** migration `2026_10_22_100000_create_marketplace_deals` (`marketplace_deal_confirmations`, `marketplace_deals` with a `CHECK` of exactly one source and unique `offer_id` / `confirmation_id`, `marketplace_deal_events` append-only, `marketplace_deal_reports`, `marketplace_deal_contact_views` append-only, + `marketplace_purchase_intents.converted_at`). Services: `MarketplaceDealService`, `MarketplaceConfirmationLifecycle`, `MarketplaceDealLifecycle`, `MarketplaceDealContact`, `MarketplaceDealDirectory`, `MarketplaceReferences`. Phase 24 touch-points: `MarketplaceOfferService::recordIntent` (voids open confirmations when the request changes, re-arms a finished intent), `OfferResource`/`PurchaseIntentResource` (`deal`, `deal_confirmation`, `deal_flow`, `confirmation`), offer `next_step`.
+
+**Locking:** buyer = listing -> offer/intent -> confirmation; seller confirm = shop -> listing -> intent -> confirmation (Phase 24 order); deal actions = the deal row only. Failures that must persist (lapse, void) are thrown after commit.
+
+**Sales boundary (documented, not built):** a later explicit `POST /sales` with `idempotency_key = "deal:{deal_id}"` is replay-safe (`sales` unique on `(farm_id, idempotency_key)`); nothing posts automatically.
+
+**Tests (new, `tests/Feature/Marketplace/`):** `MarketplaceDealFromOfferTest` (14), `MarketplaceDealFromIntentTest` (18), `MarketplaceDealLifecycleTest` (16), `MarketplaceDealContactTest` (12), `MarketplaceDealIsolationTest` (6), `MarketplaceDealConcurrencyTest` (12, real `pcntl_fork` processes). Adapted: `PlatformAdminTest` settings count 7 -> 8; `MarketplaceShopTest` staff permissions (+`deal.view`).
+
+**Postman:** folder 26 (21 reference requests) + executable **Flow 17 — Marketplace deals** (92 requests) + env vars (`deal_seller_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_staff_email`, `deal_manager_email`, `deal_id`, `deal_b_id`, `confirmation_id`, `deal_offer_id`, `deal_intent_id`). **Newman (isolated test DB, fresh): 92 requests (97 counted incl. 5 OTP helper calls), 226 assertions, 0 failures.** DB after the run: 2 deals, 1 confirmation, 1 report, 4 contact views, 0 rows in inventory/sales/invoices/payments/finance. Docs: PHASE-25 contract, API-CONTRACT, FRONTEND-INTEGRATION §27, FRONTEND-WORKFLOWS §27, docs/api/README, Phase 24 doc cross-references, postman COVERAGE/WORKFLOWS, master plan, design record 44, OpenAPI.
+
+**Final run:** full Feature suite **1093 tests, 16,999 assertions, all passing**; after two last display-only cleanups the whole Marketplace directory was re-run: 219 tests, 4,921 assertions, passing (twice; one earlier run showed a single intermittent error in the Phase 24 `MarketplaceOfferConcurrencyTest` that passed alone and on both reruns, not reproduced). Pint clean; `git diff --check` clean.
+
+**Known limits / open:** no buyer decline of a seller confirmation (it lapses after the window or the seller withdraws); no notifications on deal events; a seller-proposed delivery charge exists only on the purchase-request door; no bulk/auto-close of stuck one-sided completions (explicitly out of scope); reports have no resolution workflow (Phase 27); Sale integration is a documented boundary only.
+
+---
+
+## Previous task — Phase 24: Buyer enquiries & controlled negotiation
+
 
 **Agent:** Claude Code. **Date:** 2026-10-08. Phase 24 only; Phase 25 not started. Committed after the final API workflow verification below. Contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md` (authoritative); design record `docs/implementations/43-PHASE-24-MARKETPLACE-OFFERS.md`.
 

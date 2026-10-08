@@ -515,7 +515,7 @@ class MarketplaceShopTest extends TeamTestCase
 
         // Staff: read-only on the shop itself (Phase 23 adds draft-listing rights), and cannot read private contact.
         $this->signInAs($staff);
-        $this->getJson(self::SELLER."/shops/$id")->assertOk()->assertJsonPath('data.viewer.permissions', ['shop.view', 'listing.view', 'listing.manage', 'offer.view']);
+        $this->getJson(self::SELLER."/shops/$id")->assertOk()->assertJsonPath('data.viewer.permissions', ['shop.view', 'listing.view', 'listing.manage', 'offer.view', 'deal.view']);
         $this->getJson(self::SELLER."/shops/$id/contact")->assertForbidden();
         $this->patchJson(self::SELLER."/shops/$id", ['tagline' => 'x'])->assertForbidden();
         $this->patchJson(self::SELLER."/shops/$id/contact", ['contact_phone' => '+2348000000000'])->assertForbidden();

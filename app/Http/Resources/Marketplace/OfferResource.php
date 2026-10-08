@@ -6,6 +6,7 @@ use App\Enums\ListingStatus;
 use App\Enums\OfferStatus;
 use App\Enums\ShopStatus;
 use App\Models\MarketplaceOffer;
+use App\Services\Marketplace\MarketplaceDealService;
 use App\Services\Marketplace\MarketplaceListingRules;
 use App\Support\Measurement\Decimal;
 use Illuminate\Http\Request;
@@ -13,8 +14,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
  * A buyer offer, for the buyer (`audience: buyer`) or for the shop's members (`audience: seller`). The status is the EFFECTIVE one (a lapsed pending offer
- * reads as `expired`). The seller sees the buyer's display name only - never an email, phone or id - and the buyer never sees seller contact: an accepted
- * offer is an agreement in principle, `contact` stays null until contact exchange exists (Phase 25).
+ * reads as `expired`). The seller sees the buyer's display name only - never an email, phone or id - and the buyer never sees seller contact here: an
+ * accepted offer is an agreement in principle, `contact` stays null. Contact is shared only after the BUYER confirms a deal (Phase 25), through the audited
+ * deal-contact endpoint.
  *
  * @property MarketplaceOffer $resource
  */
@@ -66,11 +68,22 @@ class OfferResource extends JsonResource
             'expires_at' => $o->expires_at->toIso8601String(), 'responded_at' => $o->responded_at?->toIso8601String(),
             'void_reason' => $o->void_reason, 'created_at' => $o->created_at->toIso8601String(),
             'agreement' => $status === OfferStatus::Accepted ? 'seller_accepted' : 'none',
-            // Seller contact stays private until Phase 25 (deal confirmation + contact exchange).
+            // Contact is never part of an offer; it is released only through a confirmed deal.
             'contact' => null,
         ];
         if ($status === OfferStatus::Accepted) {
-            $out['next_step'] = 'Accepted in principle. Availability is not reserved and the sale is not complete; contact exchange and deal confirmation come in a later step.';
+            $deals = app(MarketplaceDealService::class);
+            $deadline = $deals->offerDeadline($o);
+            $deal = $o->relationLoaded('deal') ? $o->deal : null;
+            $windowOpen = $deal === null && $deadline !== null && $deadline->gt(now());
+            $out['deal'] = $deal ? ['id' => $deal->id, 'reference' => $deal->reference, 'status' => $deal->status->value] : null;
+            $out['deal_confirmation'] = ['required_from' => 'buyer', 'open' => $windowOpen, 'deadline' => $deadline?->toIso8601String(), 'window_hours' => $deals->confirmationHours()];
+            $out['next_step'] = match (true) {
+                $deal !== null => 'A deal summary exists for this offer.',
+                $windowOpen && $this->audience === 'buyer' => 'The seller accepted. Confirm the deal before the deadline to share contact details. Availability is not reserved and no payment is taken.',
+                $windowOpen => 'Accepted. Waiting for the buyer to confirm the deal; no contact is shared until they do.',
+                default => 'The time to confirm this accepted offer has passed. No deal was formed and nothing was reserved.',
+            };
         }
         if ($this->audience === 'seller') {
             $out['buyer'] = ['name' => $o->buyer->name];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Marketplace;
 
+use App\Enums\ConfirmationStatus;
 use App\Enums\ListingStatus;
 use App\Enums\ShopStatus;
 use App\Models\MarketplacePurchaseIntent;
@@ -47,9 +48,23 @@ class PurchaseIntentResource extends JsonResource
                 'total' => $rules->money((string) $i->total_amount), 'currency' => $i->currency,
             ],
             'is_current' => $current, 'listing_version' => $i->listing_version,
-            'note' => 'Interest recorded at the listed price. Nothing is reserved, paid or agreed; the seller must confirm before any deal.',
+            'note' => 'Interest recorded at the listed price. Nothing is reserved, paid or agreed; the seller must confirm and then the buyer must confirm before any deal.',
             'created_at' => $i->created_at->toIso8601String(), 'updated_at' => $i->updated_at->toIso8601String(), 'contact' => null,
         ];
+        if ($i->relationLoaded('confirmations')) {
+            $open = $i->confirmations->first(fn ($c) => $c->effectiveStatus() === ConfirmationStatus::AwaitingBuyer);
+            $converted = $i->confirmations->first(fn ($c) => $c->status === ConfirmationStatus::Converted);
+            $out['confirmation'] = $open ? (new DealConfirmationResource($open))->audience($this->audience)->resolve($request) : null;
+            $out['deal'] = $converted?->deal && $i->converted_at !== null ? ['id' => $converted->deal->id, 'reference' => $converted->deal->reference, 'status' => $converted->deal->status->value] : null;
+            $out['deal_flow'] = match (true) {
+                $open !== null => 'awaiting_buyer',
+                $converted !== null && $i->converted_at !== null => 'deal',
+                default => 'awaiting_seller',
+            };
+            if ($this->audience === 'seller') {
+                $out['can_confirm'] = $current && $open === null && $i->converted_at === null;
+            }
+        }
         if ($this->audience === 'seller') {
             $out['buyer'] = ['name' => $i->buyer->name];
         }

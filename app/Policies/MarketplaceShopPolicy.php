@@ -66,6 +66,17 @@ class MarketplaceShopPolicy
         return $this->can($user, $shop, ShopPermission::OfferRespond);
     }
 
+    public function viewDeals(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::DealView);
+    }
+
+    /** Confirm purchase intents, complete, cancel, report, and read the buyer's contact. */
+    public function respondToDeals(User $user, MarketplaceShop $shop): bool
+    {
+        return $this->can($user, $shop, ShopPermission::DealRespond);
+    }
+
     private function can(User $user, MarketplaceShop $shop, ShopPermission $permission): bool
     {
         $member = $shop->relationLoaded('viewer') ? $shop->getRelation('viewer') : $shop->members()->where('user_id', $user->id)->first();

@@ -7,6 +7,7 @@ use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * A buyer's priced proposal on a negotiable listing, with a snapshot of the listing as it stood. Terms and snapshot are written once; only the
@@ -55,5 +56,11 @@ class MarketplaceOffer extends Model
     public function events(): HasMany
     {
         return $this->hasMany(MarketplaceOfferEvent::class, 'offer_id')->orderBy('created_at')->orderBy('id');
+    }
+
+    /** The deal this accepted offer became (at most one). */
+    public function deal(): HasOne
+    {
+        return $this->hasOne(MarketplaceDeal::class, 'offer_id');
     }
 }

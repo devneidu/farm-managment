@@ -2,10 +2,12 @@
 
 namespace App\Services\Marketplace;
 
+use App\Enums\DealStatus;
 use App\Enums\ListingStatus;
 use App\Enums\OfferStatus;
 use App\Enums\ShopStatus;
 use App\Models\FarmMembership;
+use App\Models\MarketplaceDeal;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOffer;
 use App\Models\MarketplaceOfferEvent;
@@ -43,6 +45,7 @@ class MarketplaceOfferService
         private MarketplaceShopService $shops,
         private MarketplaceListingRules $rules,
         private MarketplaceOfferLifecycle $lifecycle,
+        private MarketplaceConfirmationLifecycle $confirmations,
         private PlatformConfigService $config,
         private AuditLogger $audit,
     ) {}
@@ -166,9 +169,15 @@ class MarketplaceOfferService
                 } else {
                     $intent->fill($facts);
                     $created = false;
+                    // A used-up intent (its deal is over, cancelled or completed) is re-armed by the buyer proceeding again; one whose deal is still ACTIVE is not,
+                    // so the same request can never become a second deal.
+                    if ($intent->converted_at !== null && ! MarketplaceDeal::where('intent_id', $intent->id)->where('status', DealStatus::Accepted->value)->exists()) {
+                        $intent->converted_at = null;
+                    }
                     if (! $intent->isDirty()) {
                         return [$intent->load($this->intentRelations()), false];   // same interest at the same terms: nothing to record
                     }
+                    $this->confirmations->voidOpenFor($intent);   // whatever the seller confirmed no longer matches the buyer's request
                     $intent->save();
                 }
                 $this->audit->record(null, $buyer->id, 'marketplace.purchase_intent_recorded', 'marketplace_purchase_intent', $intent->id, $intent->reference,
@@ -272,13 +281,13 @@ class MarketplaceOfferService
     /** @return list<string> */
     public function relations(): array
     {
-        return ['listing.shop', 'shop', 'buyer', 'events'];
+        return ['listing.shop', 'shop', 'buyer', 'events', 'deal'];
     }
 
     /** @return list<string> */
     public function intentRelations(): array
     {
-        return ['listing.shop', 'shop', 'buyer'];
+        return ['listing.shop', 'shop', 'buyer', 'confirmations.deal'];
     }
 
     /** Locks the listing row by public slug. A listing that is not public right now is indistinguishable from one that does not exist. */

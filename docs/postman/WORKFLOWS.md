@@ -23,6 +23,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 14 | Feed, eggs and milk stock | 22 | Flows 1, S, 3 and 5 (`cycle_id`, `store_id`, `item_feed_id` with stock). Creates its own measurement context and crate conversion. |
 | 15 | Marketplace listings | 48 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own farm-less seller (`seller_email`). Manual input: `otp_code`. Run with Newman `--working-dir docs/postman` (photo upload). |
 | 16 | Marketplace negotiation | 79 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own staff, manager, buyer and seller (`staff_email`, `manager_email`, `buyer_email`, `neg_seller_email`). Manual input: `otp_code` before each of the four *Verify … email* requests. |
+| 17 | Marketplace deals | 92 | None besides a platform admin account (`admin_email` / `admin_password`). Registers its own staff, manager, two buyers and a seller (`deal_staff_email`, `deal_manager_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_seller_email`). Manual input: `otp_code` before each of the five *Verify … email* requests. |
 
 ## Flow 1 — Email registration & onboarding
 
@@ -962,3 +963,127 @@ milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                       
 **What it does NOT create.** No inventory movement, stock deduction or reservation, sale, invoice, payment or finance transaction: after the run only the marketplace tables, `audit_logs` and the identity/shop tables contain rows (checked on the database; enforced permanently by `MarketplaceOfferIsolationTest`).
 
 **Execution.** Executed with Newman against `php artisan serve` on the isolated test database (`farm_management_test`: fresh `migrate:fresh --seed`, platform admin granted): **79 requests, 197 assertions, 0 failures** (Newman counts 83 requests because the harness used four helper calls to read the emailed OTP from `storage/logs/laravel.log`). No saved response examples were captured for this flow; folder 25 holds the reference requests.
+
+## Flow 17 — Marketplace deals (Phase 25)
+
+**Goal.** Prove the deal rules end to end with five real accounts: the buyer confirms an accepted offer (door A) or the seller confirms a purchase request and then the buyer confirms the exact terms (door B); terms are frozen and the unknown delivery charge is never invented; contact is released only through the audited contact endpoints (the private address only for a pickup deal); completion is two-sided and self-reported; cancellation ends contact; a report is accepted in any state, never changes the deal and is invisible to the reported party; the platform admin reviews read-only.
+
+**Prerequisites.** A platform admin account (`admin_email`, `admin_password`; `php artisan platform:grant-admin`). No farm, no other flow. Manual input: the emailed OTP in `otp_code` before each *Verify … email* request (five of them). The five emails are `deal_staff_email`, `deal_manager_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_seller_email`: use a **fresh database** or change them before a second run. Registration is limited to 10 per hour per IP and login to 5 per minute per email, which is why the flow spreads the seller's responses over the owner and a manager.
+
+**Request sequence**
+
+| # | Request | Call | Status |
+|---|---|---|---|
+| 1 | Initialise CSRF cookie | `GET /auth/csrf-cookie` | 204 |
+| 2 | Register the staff member | `POST /auth/register` | 201 |
+| 3 | Verify the staff member's email with OTP | `POST /auth/email/verify` | 200 |
+| 4 | Log out the staff member | `POST /auth/logout` | 200 |
+| 5 | Register the manager | `POST /auth/register` | 201 |
+| 6 | Verify the manager's email with OTP | `POST /auth/email/verify` | 200 |
+| 7 | Log out the manager | `POST /auth/logout` | 200 |
+| 8 | Register the buyer (negotiated offer) | `POST /auth/register` | 201 |
+| 9 | Verify the buyer (negotiated offer)'s email with OTP | `POST /auth/email/verify` | 200 |
+| 10 | Log out the buyer (negotiated offer) | `POST /auth/logout` | 200 |
+| 11 | Register the buyer (fixed price) | `POST /auth/register` | 201 |
+| 12 | Verify the buyer (fixed price)'s email with OTP | `POST /auth/email/verify` | 200 |
+| 13 | Log out the buyer (fixed price) | `POST /auth/logout` | 200 |
+| 14 | Register the seller | `POST /auth/register` | 201 |
+| 15 | Verify the seller's email with OTP | `POST /auth/email/verify` | 200 |
+| 16 | Create the shop | `POST /marketplace/shops` | 201 |
+| 17 | Set private contact (must only ever appear on the contact endpoints) | `PATCH /marketplace/shops/{{shop_id}}/contact` | 200 |
+| 18 | Submit the shop for review | `POST /marketplace/shops/{{shop_id}}/submit` | 200 |
+| 19 | Log out the seller | `POST /auth/logout` | 200 |
+| 20 | Log in as the platform admin | `POST /auth/login` | 200 |
+| 21 | Approve the shop | `POST /platform-admin/marketplace/shops/{{shop_id}}/approve` | 200 |
+| 22 | Log out the platform admin | `POST /auth/logout` | 200 |
+| 23 | Log in as the seller | `POST /auth/login` | 200 |
+| 24 | Product options | `GET /marketplace/product-options` | 200 |
+| 25 | Create the listing: negotiable, pickup OR seller delivery, delivery charge agreed separately | `POST /marketplace/shops/{{shop_id}}/listings` | 201 |
+| 26 | Publish the listing | `POST /marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish` | 200 |
+| 27 | Add the staff member (deal.view only) | `POST /marketplace/shops/{{shop_id}}/members` | 201 |
+| 28 | Add the manager (deal.respond) | `POST /marketplace/shops/{{shop_id}}/members` | 201 |
+| 29 | Log out the seller | `POST /auth/logout` | 200 |
+| 30 | Log in as the buyer (negotiated offer) | `POST /auth/login` | 200 |
+| 31 | Buyer: make an offer, 10 head at N7,000 | `POST /marketplace/listings/{{listing_slug}}/offers` | 201 |
+| 32 | Buyer: a pending offer cannot become a deal | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 409 |
+| 33 | Buyer: no deal exists yet | `GET /marketplace/my/deals` | 200 |
+| 34 | Log out the buyer (negotiated offer) | `POST /auth/logout` | 200 |
+| 35 | Log in as the manager | `POST /auth/login` | 200 |
+| 36 | Manager: accept the offer (agreement in principle only) | `POST /marketplace/shops/{{shop_id}}/offers/{{deal_offer_id}}/accept` | 200 |
+| 37 | Manager: a seller cannot create the deal for the buyer | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 404 |
+| 38 | Log out the manager | `POST /auth/logout` | 200 |
+| 39 | Log in as the buyer (negotiated offer) | `POST /auth/login` | 200 |
+| 40 | Buyer: the accepted offer shows the confirmation window | `GET /marketplace/my/offers/{{deal_offer_id}}` | 200 |
+| 41 | Buyer: the listing offers both methods, so one must be chosen | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 422 |
+| 42 | Buyer: an invalid phone is refused | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 422 |
+| 43 | Buyer: confirm the deal (seller delivery, optional phone) | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 201 |
+| 44 | Buyer: confirming again returns the same deal (idempotent) | `POST /marketplace/my/offers/{{deal_offer_id}}/deal` | 200 |
+| 45 | Buyer: the seller's contact (delivery deal: channels and coverage, never the private address) | `GET /marketplace/my/deals/{{deal_id}}/contact` | 200 |
+| 46 | Buyer: report completion (self-reported; the deal stays open) | `POST /marketplace/my/deals/{{deal_id}}/complete` | 200 |
+| 47 | Log out the buyer (negotiated offer) | `POST /auth/logout` | 200 |
+| 48 | Log in as the buyer (fixed price) | `POST /auth/login` | 200 |
+| 49 | Buyer 2: proceed at the listed price | `POST /marketplace/listings/{{listing_slug}}/purchase-intent` | 201 |
+| 50 | Buyer 2: a stranger cannot read another buyer's deal | `GET /marketplace/my/deals/{{deal_id}}` | 404 |
+| 51 | Buyer 2: nor its contact | `GET /marketplace/my/deals/{{deal_id}}/contact` | 404 |
+| 52 | Log out the buyer (fixed price) | `POST /auth/logout` | 200 |
+| 53 | Log in as the staff member | `POST /auth/login` | 200 |
+| 54 | Staff: list deals (deal.view) - no action flags | `GET /marketplace/shops/{{shop_id}}/deals` | 200 |
+| 55 | Staff cannot confirm a purchase request (needs deal.respond) | `POST /marketplace/shops/{{shop_id}}/purchase-intents/{{intent_id}}/confirm` | 403 |
+| 56 | Staff cannot complete a deal | `POST /marketplace/shops/{{shop_id}}/deals/{{deal_id}}/complete` | 403 |
+| 57 | Staff cannot read the buyer's contact | `GET /marketplace/shops/{{shop_id}}/deals/{{deal_id}}/contact` | 403 |
+| 58 | Log out the staff member | `POST /auth/logout` | 200 |
+| 59 | Log in as the manager | `POST /auth/login` | 200 |
+| 60 | Manager: confirm the purchase request (pickup) - NOT an agreement, no contact | `POST /marketplace/shops/{{shop_id}}/purchase-intents/{{intent_id}}/confirm` | 201 |
+| 61 | Manager: the same confirmation again returns the open one | `POST /marketplace/shops/{{shop_id}}/purchase-intents/{{intent_id}}/confirm` | 200 |
+| 62 | Manager: different terms need a withdrawal first | `POST /marketplace/shops/{{shop_id}}/purchase-intents/{{intent_id}}/confirm` | 409 |
+| 63 | Manager: still only one deal exists (the confirmation is not a deal) | `GET /marketplace/shops/{{shop_id}}/deals` | 200 |
+| 64 | Manager: the buyer's contact (deal A: name, email, per-deal phone) | `GET /marketplace/shops/{{shop_id}}/deals/{{deal_id}}/contact` | 200 |
+| 65 | Manager: complete the deal (second self-report) | `POST /marketplace/shops/{{shop_id}}/deals/{{deal_id}}/complete` | 200 |
+| 66 | Manager: a completed deal cannot be cancelled | `POST /marketplace/shops/{{shop_id}}/deals/{{deal_id}}/cancel` | 409 |
+| 67 | Log out the manager | `POST /auth/logout` | 200 |
+| 68 | Log in as the buyer (fixed price) | `POST /auth/login` | 200 |
+| 69 | Buyer 2: no deal and no contact before confirming | `GET /marketplace/my/deals` | 200 |
+| 70 | Buyer 2: the seller's confirmation shows the exact terms | `GET /marketplace/my/deal-confirmations/{{confirmation_id}}` | 200 |
+| 71 | Buyer 2: the terms must be accepted explicitly | `POST /marketplace/my/deal-confirmations/{{confirmation_id}}/confirm` | 422 |
+| 72 | Buyer 2: confirm the seller's terms - the deal exists now | `POST /marketplace/my/deal-confirmations/{{confirmation_id}}/confirm` | 201 |
+| 73 | Buyer 2: confirming again returns the same deal (idempotent) | `POST /marketplace/my/deal-confirmations/{{confirmation_id}}/confirm` | 200 |
+| 74 | Buyer 2: the seller's contact (pickup deal: the address is disclosed) | `GET /marketplace/my/deals/{{deal_b_id}}/contact` | 200 |
+| 75 | Buyer 2: cancel the deal with a reason | `POST /marketplace/my/deals/{{deal_b_id}}/cancel` | 200 |
+| 76 | Buyer 2: contact access ended with the cancellation | `GET /marketplace/my/deals/{{deal_b_id}}/contact` | 409 |
+| 77 | Buyer 2: report the seller after cancelling (any state) | `POST /marketplace/my/deals/{{deal_b_id}}/report` | 201 |
+| 78 | Buyer 2: reporting again returns the existing report | `POST /marketplace/my/deals/{{deal_b_id}}/report` | 200 |
+| 79 | Buyer 2: the deal keeps its history and own report | `GET /marketplace/my/deals/{{deal_b_id}}` | 200 |
+| 80 | Log out the buyer (fixed price) | `POST /auth/logout` | 200 |
+| 81 | Log in as the seller | `POST /auth/login` | 200 |
+| 82 | Seller: list the shop's deals | `GET /marketplace/shops/{{shop_id}}/deals` | 200 |
+| 83 | Seller: the report is invisible to the reported party | `GET /marketplace/shops/{{shop_id}}/deals/{{deal_b_id}}` | 200 |
+| 84 | Seller: a cancelled deal's contact is unavailable | `GET /marketplace/shops/{{shop_id}}/deals/{{deal_b_id}}/contact` | 409 |
+| 85 | Log out the seller | `POST /auth/logout` | 200 |
+| 86 | Log in as the platform admin | `POST /auth/login` | 200 |
+| 87 | Platform admin: deals with reports | `GET /platform-admin/marketplace/deals?reported=true` | 200 |
+| 88 | Platform admin: the deal with its report and full history | `GET /platform-admin/marketplace/deals/{{deal_b_id}}` | 200 |
+| 89 | Platform admin: the deal is read-only | `POST /platform-admin/marketplace/deals/{{deal_b_id}}` | 405 |
+| 90 | Platform admin: both parties' contact (separately audited) | `GET /platform-admin/marketplace/deals/{{deal_b_id}}/contact` | 200 |
+| 91 | Platform admin: list deal reports | `GET /platform-admin/marketplace/deal-reports` | 200 |
+| 92 | Log out the platform admin | `POST /auth/logout` | 200 |
+
+**Chain of effects**
+
+```
+5 accounts -> shop (private contact set) -> admin approves -> negotiable listing (pickup OR delivery, charge agreed separately) published
+   DOOR A: buyer offers 10 @ 7000 -> confirming a pending offer refused (offer_not_accepted) -> manager accepts (agreement in principle, no deal, no contact)
+           -> buyer confirms: method required (422) | bad phone (422) | seller_delivery + phone -> DEAL 1 (70000.00, charge "To be agreed directly") -> repeat = same deal
+           -> buyer reads the seller's contact (no private address for delivery) -> buyer self-reports completion (deal stays open)
+   DOOR B: buyer 2 proceeds at the listed price (12 @ 8000) -> stranger refused (404) -> staff refused (403) ->
+           manager confirms (awaiting_buyer, NO deal, NO contact; repeat = same; different terms = confirmation_pending)
+           -> manager reads the buyer's contact on deal 1, completes it (both sides -> completed) and cannot cancel it afterwards
+           -> buyer 2: accept_terms required -> confirms -> DEAL 2 (96000.00, pickup) -> contact incl. pickup address -> cancels -> contact ends (409)
+           -> reports the seller after cancelling (deal stays cancelled) -> seller sees no trace of the report
+   ADMIN:  reported deals (1) -> deal with its report and history -> POST refused (405) -> both parties' contact (audited) -> deal reports (1)
+```
+
+**Assertions worth knowing.** Every non-contact response is checked to contain none of the shop's phone, e-mail or address (`+2348031234567`, `ada.private@example.com`, `12 Secret Street`) nor the buyers' phone or e-mails; `contact` is `null` on every deal and confirmation; `terms.product_total` is `70000.00` / `96000.00` and `delivery_charge.amount` is `null` with `display: "To be agreed directly"`; `completion.verification` is always `self_reported`; a stranger gets `404`, staff `403`; the delivery deal's contact has no address and the pickup deal's has `12 Secret Street, Bodija`; the reported party's view has no `reported` event and no `misrepresented_product`.
+
+**What it does NOT create.** No inventory movement, stock deduction or reservation, sale, invoice, payment or finance transaction (database checked after the run: 0 rows in inventory items/movements, sales, invoices, payments and finance transactions; enforced permanently by `MarketplaceDealIsolationTest`). The 72-hour confirmation window and lapse behaviour need clock changes and are covered by the PHPUnit suites.
+
+**Execution.** Executed with Newman against `php artisan serve` on the isolated test database (`farm_management_test`: fresh `migrate:fresh --seed`, platform admin granted): **92 requests, 226 assertions, 0 failures** (Newman counts 97 requests because the harness used five helper calls to read the emailed OTP from `storage/logs/laravel.log`). Database after the run: `marketplace_deals` 2 (1 completed, 1 cancelled), `marketplace_deal_confirmations` 1, `marketplace_deal_events` 7, `marketplace_deal_reports` 1, `marketplace_deal_contact_views` 4. No saved response examples were captured for this flow; folder 26 holds the reference requests.

@@ -10,6 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('subscriptions:close-lapsed')->hourly()->withoutOverlapping();
 Schedule::command('marketplace:expire-offers')->hourly()->withoutOverlapping();
+Schedule::command('marketplace:expire-confirmations')->hourly()->withoutOverlapping();
 Schedule::command('work:generate-tasks')->dailyAt('00:30')->withoutOverlapping();
 Schedule::command('notifications:generate')->hourly()->withoutOverlapping();
 Schedule::command('reports:prune-exports')->dailyAt('02:00')->withoutOverlapping();

@@ -1,6 +1,6 @@
 # Phase 24 — Buyer enquiries & controlled negotiation (design record)
 
-Contract: [`../api/PHASE-24-MARKETPLACE-OFFERS.md`](../api/PHASE-24-MARKETPLACE-OFFERS.md). Continues Phase 23 (listings). Phase 25 (deal summary, contact exchange) is **not started**.
+Contract: [`../api/PHASE-24-MARKETPLACE-OFFERS.md`](../api/PHASE-24-MARKETPLACE-OFFERS.md). Continues Phase 23 (listings). Phase 25 (deal summary, contact exchange) is implemented: see [44-PHASE-25-MARKETPLACE-DEALS.md](44-PHASE-25-MARKETPLACE-DEALS.md).
 
 ## Decisions (approved)
 
@@ -37,4 +37,4 @@ Buyer: global `GET_LOCK` for reference allocation → transaction → lock listi
 
 ## Phase 25 boundary
 
-`marketplace_deals` will reference `offer_id` or `intent_id`. Phase 25 owns Deal Summary, contact exchange, agreement validity, availability confirmation and any Sale (explicit `POST /sales` with a deal-derived idempotency key, per Phase 23 §6.1).
+(As built in Phase 25: `marketplace_deals` references `offer_id` or a seller `confirmation_id`; a purchase intent only becomes a deal through a seller confirmation and the buyer's confirmation.) Phase 25 owns Deal Summary, contact exchange, agreement validity, availability confirmation and any Sale (explicit `POST /sales` with a deal-derived idempotency key, per Phase 23 §6.1).

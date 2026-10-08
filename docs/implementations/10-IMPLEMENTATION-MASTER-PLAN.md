@@ -133,7 +133,11 @@ Implemented as a post-launch addition: seller product listings (master-data prod
 
 ## Post-V1 — Phase 24 (Buyer enquiries & controlled negotiation)
 
-Offers on negotiable listings (price floor, attempt limit, expiry, accept/reject), "proceed at listed price" purchase intents, shop permissions `offer.view|respond`. No chat, escrow, checkout, stock reservation or seller contact exchange. Design: `43-PHASE-24-MARKETPLACE-OFFERS.md`; contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`. Phase 25 (deals, contact exchange) is not started.
+Offers on negotiable listings (price floor, attempt limit, expiry, accept/reject), "proceed at listed price" purchase intents, shop permissions `offer.view|respond`. No chat, escrow, checkout, stock reservation or seller contact exchange. Design: `43-PHASE-24-MARKETPLACE-OFFERS.md`; contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`. Phase 25 (deals, contact exchange) is implemented below.
+
+## Post-V1 — Phase 25 (Marketplace deal summary & fulfilment)
+
+A lightweight deal summary: the buyer confirms an accepted offer (A), or the seller confirms a fixed-price purchase request and then the buyer confirms the exact terms (B). Frozen product/unit/quantity/price/total and fulfilment terms (pickup or seller delivery, delivery charge never added to the total), two-sided self-reported completion, cancellation, confidential reports (Phase 27 owns moderation), audited contact exchange (address only for pickup), shop permissions `deal.view|respond`, platform admin read-only. Farmvest is not an escrow, payment processor or logistics provider: no payment, stock reservation, sale, invoice or delivery. Design: `44-PHASE-25-MARKETPLACE-DEALS.md`; contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md`. Phase 26 (monetisation) is not started.
 
 ## V1 launch status (Phase 21)
 

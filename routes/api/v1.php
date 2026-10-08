@@ -30,12 +30,14 @@ use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceCatalogueController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceDealController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceListingImageController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceOfferController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplacePublicListingController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopController;
+use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopDealController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopMemberController;
 use App\Http\Controllers\Api\V1\Marketplace\MarketplaceShopOfferController;
 use App\Http\Controllers\Api\V1\MasterDataController;
@@ -51,6 +53,7 @@ use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAdminController;
 use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
+use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceDealController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceListingController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMasterDataController;
 use App\Http\Controllers\Api\V1\Platform\PlatformPlanController;
@@ -148,6 +151,18 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
         });
         Route::get('/my/enquiries', [MarketplaceOfferController::class, 'index'])->name('api.v1.marketplace.my-enquiries');
         Route::get('/my/offers/{offer}', [MarketplaceOfferController::class, 'show'])->whereUuid('offer')->name('api.v1.marketplace.my-offers.show');
+        // Deals (Phase 25): the buyer confirms; a deal is a summary of agreed terms, not an order or payment.
+        Route::post('/my/offers/{offer}/deal', [MarketplaceDealController::class, 'confirmOffer'])->whereUuid('offer')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-offers.deal');
+        Route::get('/my/deal-confirmations/{confirmation}', [MarketplaceDealController::class, 'showConfirmation'])->whereUuid('confirmation')->name('api.v1.marketplace.my-deal-confirmations.show');
+        Route::post('/my/deal-confirmations/{confirmation}/confirm', [MarketplaceDealController::class, 'acceptConfirmation'])->whereUuid('confirmation')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deal-confirmations.confirm');
+        Route::get('/my/deals', [MarketplaceDealController::class, 'index'])->name('api.v1.marketplace.my-deals.index');
+        Route::prefix('/my/deals/{deal}')->whereUuid('deal')->group(function () {
+            Route::get('/', [MarketplaceDealController::class, 'show'])->name('api.v1.marketplace.my-deals.show');
+            Route::post('/complete', [MarketplaceDealController::class, 'complete'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.complete');
+            Route::post('/cancel', [MarketplaceDealController::class, 'cancel'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.cancel');
+            Route::post('/report', [MarketplaceDealController::class, 'report'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.my-deals.report');
+            Route::get('/contact', [MarketplaceDealController::class, 'contact'])->middleware('throttle:marketplace-contact')->name('api.v1.marketplace.my-deals.contact');
+        });
         Route::get('/image-library', [MarketplaceCatalogueController::class, 'imageLibrary'])->name('api.v1.marketplace.image-library');
         Route::post('/shops', [MarketplaceShopController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.store');
         Route::prefix('/shops/{shop}')->whereUuid('shop')->group(function () {
@@ -183,6 +198,16 @@ Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(f
             Route::post('/offers/{offer}/accept', [MarketplaceShopOfferController::class, 'accept'])->whereUuid('offer')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.offers.accept');
             Route::post('/offers/{offer}/reject', [MarketplaceShopOfferController::class, 'reject'])->whereUuid('offer')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.offers.reject');
             Route::get('/purchase-intents', [MarketplaceShopOfferController::class, 'intents'])->name('api.v1.marketplace.shops.purchase-intents.index');
+            Route::post('/purchase-intents/{intent}/confirm', [MarketplaceShopDealController::class, 'confirmIntent'])->whereUuid('intent')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.purchase-intents.confirm');
+            Route::post('/deal-confirmations/{confirmation}/withdraw', [MarketplaceShopDealController::class, 'withdraw'])->whereUuid('confirmation')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deal-confirmations.withdraw');
+            Route::get('/deals', [MarketplaceShopDealController::class, 'index'])->name('api.v1.marketplace.shops.deals.index');
+            Route::prefix('/deals/{deal}')->whereUuid('deal')->group(function () {
+                Route::get('/', [MarketplaceShopDealController::class, 'show'])->name('api.v1.marketplace.shops.deals.show');
+                Route::post('/complete', [MarketplaceShopDealController::class, 'complete'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.complete');
+                Route::post('/cancel', [MarketplaceShopDealController::class, 'cancel'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.cancel');
+                Route::post('/report', [MarketplaceShopDealController::class, 'report'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.deals.report');
+                Route::get('/contact', [MarketplaceShopDealController::class, 'contact'])->middleware('throttle:marketplace-contact')->name('api.v1.marketplace.shops.deals.contact');
+            });
             Route::get('/members', [MarketplaceShopMemberController::class, 'index'])->name('api.v1.marketplace.shops.members.index');
             Route::post('/members', [MarketplaceShopMemberController::class, 'store'])->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.store');
             Route::patch('/members/{member}', [MarketplaceShopMemberController::class, 'update'])->whereUuid('member')->middleware('throttle:marketplace-write')->name('api.v1.marketplace.shops.members.update');
@@ -526,6 +551,14 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
         Route::post('/{listing}/restrict', [PlatformMarketplaceListingController::class, 'restrict'])->whereUuid('listing')->middleware($write)->name('api.v1.platform.marketplace.listings.restrict');
         Route::post('/{listing}/lift-restriction', [PlatformMarketplaceListingController::class, 'lift'])->whereUuid('listing')->middleware($write)->name('api.v1.platform.marketplace.listings.lift');
         Route::get('/{listing}/images/{image}/file', [PlatformMarketplaceListingController::class, 'image'])->whereUuid(['listing', 'image'])->name('api.v1.platform.marketplace.listings.images.file');
+    });
+
+    // Marketplace deal oversight (Phase 25): READ ONLY. Reports are preserved as filed; moderation arrives in a later phase.
+    Route::prefix('marketplace')->group(function () {
+        Route::get('/deals', [PlatformMarketplaceDealController::class, 'index'])->name('api.v1.platform.marketplace.deals.index');
+        Route::get('/deals/{deal}', [PlatformMarketplaceDealController::class, 'show'])->whereUuid('deal')->name('api.v1.platform.marketplace.deals.show');
+        Route::get('/deals/{deal}/contact', [PlatformMarketplaceDealController::class, 'contact'])->whereUuid('deal')->middleware('throttle:marketplace-contact')->name('api.v1.platform.marketplace.deals.contact');
+        Route::get('/deal-reports', [PlatformMarketplaceDealController::class, 'reports'])->name('api.v1.platform.marketplace.deal-reports.index');
     });
 
     // Platform work templates

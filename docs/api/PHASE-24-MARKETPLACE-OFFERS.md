@@ -4,7 +4,7 @@ Authoritative contract for the frontend. Design record: [`../implementations/43-
 
 **What this is:** a small, controlled offer workflow on Marketplace listings. A buyer either **proposes a lower unit price** (an *offer*) or **records interest at the listed price** (a *purchase intent*). The shop's owner or manager accepts or rejects offers.
 
-**What this is not:** chat, escrow, checkout, an order, a deal or a sale. Nothing is reserved, charged, deducted or posted. **Seller contact details are never returned in this phase** — not even after acceptance. Contact exchange, deal confirmation and availability confirmation are Phase 25.
+**What this is not:** chat, escrow, checkout, an order, a deal or a sale. Nothing is reserved, charged, deducted or posted. **Seller contact details are never returned in this phase** — not even after acceptance. Contact exchange, deal confirmation and availability confirmation arrived in Phase 25 ([PHASE-25-MARKETPLACE-DEALS.md](PHASE-25-MARKETPLACE-DEALS.md)); **no Phase 24 payload ever carries contact** - it is released only through a confirmed deal. Phase 25 added `deal` / `deal_confirmation` / `next_step` to accepted offers and `deal_flow` / `confirmation` / `deal` to purchase intents.
 
 All routes are under `/api/v1/marketplace`, need sign-in + a verified email, **no farm**, and the write routes use the `marketplace-write` throttle (60/min). Money and quantities are decimal strings (NGN).
 
@@ -64,12 +64,12 @@ pending ──seller──▶ accepted   (terminal)
 * **Seller decisions** are idempotent: repeating the decision that already won returns `200` unchanged. The opposite decision is `409 offer_not_pending`. A lapsed offer is `409 offer_expired` (the lapse is recorded). An invalidated offer is `409 offer_voided`.
 * **Accept** additionally needs the listing to be `published` (`409 listing_unavailable` while paused / archived / restricted — retry once live), the shop `active` (`409 shop_not_active`) and the offer's snapshot to still match the listing (otherwise the offer is voided and `409 offer_voided` returned). **Reject** is allowed whenever the offer is pending, even while the listing is paused.
 * **Voiding.** When a seller edits a listing, its pending offers are voided (`void_reason: "listing_changed"`) if the edit changed the **unit price, unit, product identity, negotiability**, lowered the **available quantity below the offer quantity**, or raised the **minimum order above the offer quantity**. Other edits (title, description, fulfilment, a larger availability…) leave offers alone. Pausing, archiving, restricting or suspending the shop never mutates offers: accept is simply blocked until the listing is live again, and expiry keeps running.
-* **Accepted offers are immutable snapshots.** Later listing changes never alter them. Accepting reserves **no** stock and guarantees **no** availability; Phase 25 must confirm availability before any deal.
+* **Accepted offers are immutable snapshots.** Later listing changes never alter them. Accepting reserves **no** stock and guarantees **no** availability; Phase 25 re-checks the seller-declared availability when the buyer confirms the deal, and the buyer must do so within `marketplace_deal_confirmation_hours` (72h) of acceptance.
 * No buyer withdrawal in this phase: a pending offer ends by seller decision or expiry.
 
 ## 5. Purchase intent — `POST /listings/{slug}/purchase-intent`
 
-Body `{quantity}`. Records interest at the listed unit price. Works on negotiable and fixed-price listings, also after the buyer used all offers. Same `404` / `403` / `422 quantity` rules. **Idempotent** per buyer and listing: same quantity → `200` same record; different quantity → `200` refreshed record; first call → `201`. `is_current` is computed on read (false if the price or unit changed or the listing is not live). It is *not* an acceptance, payment, order or deal; the seller must still confirm in Phase 25.
+Body `{quantity}`. Records interest at the listed unit price. Works on negotiable and fixed-price listings, also after the buyer used all offers. Same `404` / `403` / `422 quantity` rules. **Idempotent** per buyer and listing: same quantity → `200` same record; different quantity → `200` refreshed record; first call → `201`. `is_current` is computed on read (false if the price or unit changed or the listing is not live). It is *not* an acceptance, payment, order or deal; the seller must still confirm and then the buyer must confirm (Phase 25 §4) before any deal exists.
 
 ## 6. Response shapes
 
