@@ -9,13 +9,25 @@
 
 ---
 
+## Latest task — Phase 29: Postman finalization and backend handover (COMPLETED)
+
+**Agent:** Claude Code. **Date:** 2026-10-08. Scope revised by the user: Postman + docs only; Phase 28 (Community) stays deferred; no backend code changed; the Laravel suite was NOT re-run. Branch `claude/brave-einstein-3v42ep` was fast-forwarded to `origin/master` (`eee3ce0`, includes Phase 27) before starting. Approved by the user and committed as `docs: finalize Farmvest V1 Postman collection and backend handover`, then merged to master. Phases 20 (WhatsApp/AI) and 28 (Community) remain deferred to post-launch. Documented pre-launch checks remain open (below).
+
+**Route audit:** 343 `/api/v1` routes vs the collection: 343/343 covered in the reference folders, 0 unknown URLs; 187 routes also run by flows. **Added:** Flow 18 (reports & moderation, 38 requests) and Flow 19 (seller plans & promotions without Paystack, 30 requests); folder 27 fixes (`is_active:true` package sample, 502/503 accepted on checkout without a key, `x-paystack-signature` header on the webhook); +5 env vars (151). **Newman** (disposable MySQL, fresh DB, all 20 flows in one process): **457 requests, 1042 assertions, 0 failures** (Flows 17/18/19: 226/101/64 assertions). Reference folders run once in order: 171 state-dependent assertion failures, not triaged, not claimed (they are not a sequential runner). **Not executable:** Paystack verify/signed webhook/promotion cancel/happy-path checkouts, Google sign-in; 156 routes have no executable flow (see COVERAGE addendum).
+
+**Docs:** `docs/operations/BACKEND-HANDOVER.md` (new), COVERAGE (summary re-measured + Phase 29 addendum), WORKFLOWS (Flows 18-19), API-CONTRACT (Phases 20 and 28 deferred), FRONTEND-INTEGRATION §29, api README, LAUNCH.md (Paystack note), master plan (Phase 29 scope).
+
+**Pre-launch follow-ups (recorded):** real Paystack test-mode checkout + webhook verification; admin resolution of paid-but-not-applied (`needs_attention`) payments; confirm no important data was overwritten in the local test database; the LAUNCH.md infrastructure gates; process-concurrency scenarios skipped in some environments.
+
+---
+
 ## Latest task — V1 roadmap decision: defer Phase 28 (COMPLETED)
 
 **Agent:** Codex. **Date:** 2026-10-08. User-directed documentation-only update on `master` after Phase 27 commit `f022c9c`. Phase 28 (Community Features) is entirely deferred from Farmvest V1 to post-launch, matching Phase 20 (WhatsApp and AI Parsing). Community posts, comments, likes, discussions and related functionality are excluded from V1 and are not launch blockers. Original requirements and existing community specifications/backlog are preserved for future implementation. Do not implement Phase 28.
 
 **Next active phase:** Phase 29 — Integration Testing and Release Hardening. Not started; await explicit authorization to begin. Only the master plan and this WORKLOG changed; no feature development or test-suite rerun. User authorized committing and pushing this roadmap update to `master`.
 
-**Outstanding release checks:** Apply and verify the Phase 27 migration on the development database; run the new Postman requests through Newman; verify skipped process-concurrency scenarios in a supported environment. These remain pending.
+**Outstanding release checks:** Verify the Phase 27 migration on the real development/staging database (applied and exercised on a disposable database in Phase 29); verify skipped process-concurrency scenarios in a supported environment. The Postman/Newman check is done (Phase 29).
 
 **Recommended commit:** `docs: defer community features and set phase 29 as next`
 

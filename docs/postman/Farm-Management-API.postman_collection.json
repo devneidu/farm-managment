@@ -43270,7 +43270,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status is 200 or 201\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "pm.test(\"Status is 200, 201 (502/503 when Paystack is not configured or reachable)\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 502, 503]); });",
                   "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
                   "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
                   "  const json = pm.response.json();",
@@ -43337,7 +43337,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status is 200 or 201\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });",
+                  "pm.test(\"Status is 200, 201 (502/503 when Paystack is not configured or reachable)\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 502, 503]); });",
                   "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
                   "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
                   "  const json = pm.response.json();",
@@ -43893,7 +43893,7 @@
             "description": "**WHAT IT DOES**\nRole `admin`. Fixed price for a fixed number of days. Audited.\n\n**INPUTS**\n- `code`, `name`, `duration_days` 1-365, `amount`, `description?`, `is_active?`, `sort_order?`\n\n**ERRORS**\n`422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"featured_week\",\n  \"name\": \"Featured for 7 days\",\n  \"duration_days\": 7,\n  \"amount\": \"3000.00\"\n}",
+              "raw": "{\n  \"code\": \"featured_week\",\n  \"name\": \"Featured for 7 days\",\n  \"duration_days\": 7,\n  \"amount\": \"3000.00\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -44153,18 +44153,13 @@
                 "value": "application/json"
               },
               {
-                "key": "Origin",
-                "value": "{{frontend_origin}}",
-                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
-              },
-              {
-                "key": "X-XSRF-TOKEN",
-                "value": "{{xsrf_token}}",
-                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
-              },
-              {
                 "key": "Content-Type",
                 "value": "application/json"
+              },
+              {
+                "key": "x-paystack-signature",
+                "value": "{{paystack_signature}}",
+                "description": "HMAC-SHA512 of the raw body keyed with the Paystack secret. Only Paystack can send a valid one; without it the answer is 401."
               }
             ],
             "url": {
@@ -48884,7 +48879,15 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
-                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"reason\":\"Compliance review completed.\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/shops/{{shop_id}}/reinstate",
                   "host": [
@@ -49324,7 +49327,15 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
-                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"reason\":\"Compliance review completed.\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                   "host": [
@@ -49361,7 +49372,15 @@
                         "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                       }
                     ],
-                    "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\"reason\":\"Compliance review completed.\"}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
                     "url": {
                       "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                       "host": [
@@ -74999,7 +75018,15 @@
                     "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                   }
                 ],
-                "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\"reason\":\"Compliance review completed.\"}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
                 "url": {
                   "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                   "host": [
@@ -75036,7 +75063,15 @@
                         "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
                       }
                     ],
-                    "body": {"mode":"raw","raw":"{\"reason\":\"Compliance review completed.\"}","options":{"raw":{"language":"json"}}},
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\"reason\":\"Compliance review completed.\"}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
                     "url": {
                       "raw": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
                       "host": [
@@ -85178,6 +85213,3691 @@
             },
             {
               "name": "92. Log out the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the platform admin session."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 18 — Marketplace reports & moderation",
+          "item": [
+            {
+              "name": "1. Initialise CSRF cookie",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 204\", function () { pm.expect(pm.response.code).to.eql(204); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/csrf-cookie",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "csrf-cookie"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSets the XSRF-TOKEN cookie."
+              },
+              "response": []
+            },
+            {
+              "name": "2. Log in as the buyer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the buyer (negotiated offer).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deal_buyer_email}}\",\n  \"password\": \"{{password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Find the public shop slug",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/shops",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "shops"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nCaptures `shop_slug` of the first public shop (the Flow 17 seller shop) for the shop report."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"At least one public shop\", () => pm.expect(json.data).to.be.an(\"array\").that.is.not.empty);",
+                      "pm.environment.set(\"shop_slug\", json.data[0].slug);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Report the listing (suspected fraud)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/reports/listing/{{listing_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "reports",
+                    "listing",
+                    "{{listing_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nA complaint is not a finding: filing it changes nothing about the listing.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"suspected_fraud\",\n  \"description\": \"The advertised stock does not exist.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"report_a_id\", json.data.id);",
+                      "pm.test(\"Reporter view hides handling detail\", () => { pm.expect(json.data).not.to.have.property(\"history\"); pm.expect(json.data).not.to.have.property(\"reporter_id\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "5. Repeat the same report (duplicate returns the original, 200)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/reports/listing/{{listing_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "reports",
+                    "listing",
+                    "{{listing_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSame reporter + target + issue while open/in_review returns the existing case with 200.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"suspected_fraud\",\n  \"description\": \"The advertised stock does not exist.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Reporter view hides handling detail\", () => { pm.expect(json.data).not.to.have.property(\"history\"); pm.expect(json.data).not.to.have.property(\"reporter_id\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "6. Report the shop (spam)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/reports/shop/{{shop_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "reports",
+                    "shop",
+                    "{{shop_slug}}"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"spam\",\n  \"description\": \"Repeated unsolicited messages.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"report_b_id\", json.data.id);",
+                      "pm.test(\"Reporter view hides handling detail\", () => { pm.expect(json.data).not.to.have.property(\"history\"); pm.expect(json.data).not.to.have.property(\"reporter_id\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "7. Report the listing (prohibited content)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/reports/listing/{{listing_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "reports",
+                    "listing",
+                    "{{listing_slug}}"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"prohibited_content\",\n  \"description\": \"The listing contains prohibited content.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"report_c_id\", json.data.id);",
+                      "pm.test(\"Reporter view hides handling detail\", () => { pm.expect(json.data).not.to.have.property(\"history\"); pm.expect(json.data).not.to.have.property(\"reporter_id\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "8. Report the shop (abusive behaviour)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/reports/shop/{{shop_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "reports",
+                    "shop",
+                    "{{shop_slug}}"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"abusive_behaviour\",\n  \"description\": \"The seller was abusive in messages.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"report_d_id\", json.data.id);",
+                      "pm.test(\"Reporter view hides handling detail\", () => { pm.expect(json.data).not.to.have.property(\"history\"); pm.expect(json.data).not.to.have.property(\"reporter_id\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "9. List my reports",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/my/reports?type=content&status=open",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "my",
+                    "reports"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "content"
+                    },
+                    {
+                      "key": "status",
+                      "value": "open"
+                    }
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nOnly the caller's own complaints."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Four open reports of mine\", () => pm.expect(json.data.length).to.eql(4));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Show one of my reports",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/my/reports/content/{{report_a_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "my",
+                    "reports",
+                    "content",
+                    "{{report_a_id}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"No reporter_id or history for the reporter\", () => { pm.expect(json.data).not.to.have.property(\"reporter_id\"); pm.expect(json.data).not.to.have.property(\"history\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. Log out the buyer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the buyer (negotiated offer) session."
+              },
+              "response": []
+            },
+            {
+              "name": "12. Log in as the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the platform admin.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "13. Safety summary",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/summary",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "summary"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Content reports counted\", () => pm.expect(json.data.reports.content.open).to.be.at.least(4));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "14. List offers (read-only oversight)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/offers?per_page=20",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "offers"
+                  ],
+                  "query": [
+                    {
+                      "key": "per_page",
+                      "value": "20"
+                    }
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nOffers are read-only for admins; no contact details."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. Show an offer",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/offers/{{deal_offer_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "offers",
+                    "{{deal_offer_id}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"No contact details on the offer\", () => pm.expect(JSON.stringify(json.data)).not.to.include(\"ada.private@example.com\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "16. List open reports",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports?type=content&status=open",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports"
+                  ],
+                  "query": [
+                    {
+                      "key": "type",
+                      "value": "content"
+                    },
+                    {
+                      "key": "status",
+                      "value": "open"
+                    }
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"At least four open\", () => pm.expect(json.data.length).to.be.at.least(4));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "17. Show a report (admin view with history)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_a_id}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Admin sees reporter and history\", () => { pm.expect(json.data).to.have.property(\"reporter_id\"); pm.expect(json.data.history).to.be.an(\"array\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "18. Move report A to in_review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_a_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"in_review\",\n  \"reason\": \"Investigating the submitted complaint.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now in_review\", () => pm.expect(json.data.status).to.eql(\"in_review\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "19. Resolve report A without enforcement",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_a_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nNo enforcement_action: nothing is suspended or restricted.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"resolved\",\n  \"reason\": \"The parties clarified the issue.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now resolved\", () => pm.expect(json.data.status).to.eql(\"resolved\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "20. Listing is still public after an un-enforced resolution",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/listings/{{listing_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "listings",
+                    "{{listing_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "21. Resolve report A again (terminal)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_a_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nTerminal reports cannot change.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"in_review\",\n  \"reason\": \"Trying to reopen.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 409\", function () { pm.expect(pm.response.code).to.be.oneOf([409]); });",
+                      "pm.test(\"invalid_report_state\", () => pm.expect(pm.response.json().code).to.eql(\"invalid_report_state\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "22. Move report B to in_review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_b_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_b_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"in_review\",\n  \"reason\": \"Reviewing the complaint.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now in_review\", () => pm.expect(json.data.status).to.eql(\"in_review\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "23. Dismiss report B",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_b_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_b_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"dismissed\",\n  \"reason\": \"No actionable violation was established.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now dismissed\", () => pm.expect(json.data.status).to.eql(\"dismissed\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "24. Enforcement action without an id is rejected",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_c_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_c_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"resolved\",\n  \"reason\": \"Prohibited content was confirmed.\",\n  \"enforcement_action\": \"restrict_listing\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 422\", function () { pm.expect(pm.response.code).to.be.oneOf([422]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "25. Move report C to in_review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_c_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_c_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"in_review\",\n  \"reason\": \"Reviewing the complaint.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now in_review\", () => pm.expect(json.data.status).to.eql(\"in_review\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "26. Resolve report C and restrict the listing",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_c_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_c_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnforcement is explicit: the admin names the action and the listing id.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"resolved\",\n  \"reason\": \"Prohibited content was confirmed.\",\n  \"enforcement_action\": \"restrict_listing\",\n  \"enforcement_id\": \"{{listing_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now resolved\", () => pm.expect(json.data.status).to.eql(\"resolved\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "27. Restricted listing is no longer public",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/listings/{{listing_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "listings",
+                    "{{listing_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 404\", function () { pm.expect(pm.response.code).to.be.oneOf([404]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "28. Lift the restriction (reason required)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "value": "application/json",
+                    "key": "Accept"
+                  },
+                  {
+                    "value": "{{frontend_origin}}",
+                    "key": "Origin"
+                  },
+                  {
+                    "value": "application/json",
+                    "key": "Content-Type"
+                  },
+                  {
+                    "value": "{{xsrf_token}}",
+                    "key": "X-XSRF-TOKEN"
+                  }
+                ],
+                "url": "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction",
+                "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\r\n  \"reason\": \"Corrective action was reviewed.\"\r\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Listing is paused, seller must publish again\", () => pm.expect(json.data.status).to.eql(\"paused\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "29. Move report D to in_review",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_d_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_d_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"in_review\",\n  \"reason\": \"Reviewing the complaint.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now in_review\", () => pm.expect(json.data.status).to.eql(\"in_review\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "30. Resolve report D and suspend the shop",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/reports/content/{{report_d_id}}/transition",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "reports",
+                    "content",
+                    "{{report_d_id}}",
+                    "transition"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"resolved\",\n  \"reason\": \"A serious safety violation was confirmed.\",\n  \"enforcement_action\": \"suspend_shop\",\n  \"enforcement_id\": \"{{shop_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Report is now resolved\", () => pm.expect(json.data.status).to.eql(\"resolved\"));",
+                      "pm.test(\"Admin view carries history\", () => pm.expect(json.data.history).to.be.an(\"array\").that.is.not.empty);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "31. Suspended shop is hidden from the public directory",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/shops/{{shop_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "shops",
+                    "{{shop_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 404\", function () { pm.expect(pm.response.code).to.be.oneOf([404]); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "32. Reinstate the shop (reason required)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "value": "application/json",
+                    "key": "Accept"
+                  },
+                  {
+                    "value": "{{frontend_origin}}",
+                    "key": "Origin"
+                  },
+                  {
+                    "value": "application/json",
+                    "key": "Content-Type"
+                  },
+                  {
+                    "value": "{{xsrf_token}}",
+                    "key": "X-XSRF-TOKEN"
+                  }
+                ],
+                "url": "{{base_url}}/platform-admin/marketplace/shops/{{shop_id}}/reinstate",
+                "description": "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final.",
+                "body": {
+                  "mode": "raw",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  },
+                  "raw": "{\r\n  \"reason\": \"Compliance review completed.\"\r\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Shop is active again\", () => pm.expect(json.data.status).to.eql(\"active\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "33. Shop is public again",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/shops/{{shop_slug}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "shops",
+                    "{{shop_slug}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "34. Summary after moderation",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/summary",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "summary"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"No open content reports left\", () => pm.expect(json.data.reports.content.open).to.eql(0));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "35. Log out the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the platform admin session."
+              },
+              "response": []
+            },
+            {
+              "name": "36. Log in as the buyer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the buyer (negotiated offer).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deal_buyer_email}}\",\n  \"password\": \"{{password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "37. Reporter sees the outcome",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/my/reports/content/{{report_c_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "my",
+                    "reports",
+                    "content",
+                    "{{report_c_id}}"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nThe reason given when closing is reporter-visible."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Closed with outcome\", () => { pm.expect(json.data.status).to.eql(\"resolved\"); pm.expect(json.data.outcome_reason).to.be.a(\"string\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "38. Log out the buyer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the buyer (negotiated offer) session."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Flow 19 — Marketplace seller plans & promotions (Paystack not exercised)",
+          "item": [
+            {
+              "name": "1. Initialise CSRF cookie",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 204\", function () { pm.expect(pm.response.code).to.eql(204); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/csrf-cookie",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "csrf-cookie"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSets the XSRF-TOKEN cookie."
+              },
+              "response": []
+            },
+            {
+              "name": "2. Log in as the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the platform admin.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. List seller plans (seeded: free, seller_plus, seller_pro)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/seller-plans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "seller-plans"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n`free` is active with a 10-listing limit; the paid plans are seeded inactive and unpriced."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Free plan is seeded with limit 10\", () => { const f = json.data.find(p => p.code === \"free\"); pm.expect(f.listing_limit).to.eql(10); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "4. Create a seller plan",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"admin_plan_id\", json.data.id);",
+                      "pm.environment.set(\"seller_plan_id\", json.data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/seller-plans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "seller-plans"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nRole `admin`. Creates an INACTIVE paid plan; set prices, then switch it on. Audited.\n\n**INPUTS**\n- `code`, `name`, `listing_limit`, `description?`, `sort_order?`\n\n**ERRORS**\n`422`; `403`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"seller_max\",\n  \"name\": \"Seller Max\",\n  \"listing_limit\": 500\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5. Set the plan prices (30 and 365 days)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/seller-plans/{{admin_plan_id}}/prices",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "seller-plans",
+                    "{{admin_plan_id}}",
+                    "prices"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nRole `admin`. `null` amount removes a price. Future checkouts only; a pending payment keeps its frozen amount. Audited.\n\n**ERRORS**\n`409` free_plan_has_no_price; `422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"prices\": [\n    {\n      \"interval_days\": 30,\n      \"amount\": \"5000.00\"\n    },\n    {\n      \"interval_days\": 365,\n      \"amount\": \"50000.00\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6. Activate the plan and set its listing limit",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Plan active with limit 25\", () => { pm.expect(json.data.is_active).to.eql(true); pm.expect(json.data.listing_limit).to.eql(25); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/seller-plans/{{admin_plan_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "seller-plans",
+                    "{{admin_plan_id}}"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nRole `admin`. `name, description, listing_limit, is_active, sort_order`. On the Free plan `listing_limit` is the free allowance (works while flags are off). Switching a paid plan on needs a limit and an active price (422). Audited.\n\n**ERRORS**\n`409` free_plan_required; `422`; `404`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"listing_limit\": 25,\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7. Create a promotion package",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.environment.set(\"admin_package_id\", json.data.id);",
+                      "pm.environment.set(\"promotion_package_id\", json.data.id);"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "promotion-packages"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nRole `admin`. Fixed price for a fixed number of days. Audited.\n\n**INPUTS**\n- `code`, `name`, `duration_days` 1-365, `amount`, `description?`, `is_active?`, `sort_order?`\n\n**ERRORS**\n`422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"code\": \"featured_week\",\n  \"name\": \"Featured for 7 days\",\n  \"duration_days\": 7,\n  \"amount\": \"3000.00\",\n  \"is_active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "8. Update the package price",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages/{{admin_package_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "promotion-packages",
+                    "{{admin_package_id}}"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nRole `admin`. Future purchases only. Switch off with `is_active:false`; never deleted. Audited.\n\n**ERRORS**\n`404`; `422`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"amount\": \"3500.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "9. List promotion packages",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/promotion-packages",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "promotion-packages"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\n"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "10. Enable the marketplace_seller_plans feature flag",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/feature-flags/marketplace_seller_plans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "feature-flags",
+                    "marketplace_seller_plans"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nBoth marketplace monetisation flags are created OFF by the migration.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Flag is on\", () => pm.expect(json.data.enabled).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "11. Enable the marketplace_promotions feature flag",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/feature-flags/marketplace_promotions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "feature-flags",
+                    "marketplace_promotions"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nBoth marketplace monetisation flags are created OFF by the migration.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Flag is on\", () => pm.expect(json.data.enabled).to.eql(true));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "12. Log out the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the platform admin session."
+              },
+              "response": []
+            },
+            {
+              "name": "13. Log in as the seller",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the seller.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{deal_seller_email}}\",\n  \"password\": \"{{password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "14. Publish the listing again (Flow 18 left it paused after the restriction was lifted)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "listings",
+                    "{{listing_id}}",
+                    "publish"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nA promotion needs a published listing.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Published\", () => pm.expect(json.data.status).to.eql(\"published\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "15. Current plan and allowance",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Free plan applies\", () => pm.expect(JSON.stringify(json.data)).to.include(\"free\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/plan",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "plan"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `listing.view` (every shop role). Plan now (`free` or a running paid period), `listing_limit`, `published_count`, `remaining`, `over_limit_by`, `can_publish`, `upcoming_periods`, `features` flags. A lapsed plan reads as Free at read time; listings are never deleted or paused by it.\n\n**ERRORS**\n`404` (not a member)\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "16. Listing allowance",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/allowance",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "allowance"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `listing.view`. Only `published` listings count. Publishing at the limit answers `409 listing_limit_reached` with `details`.\n\n**ERRORS**\n`404`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "17. Available plans",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/plans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "plans"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `listing.view`. Active plans with 30/365-day prices (naira decimal strings). `meta.features.seller_plans` says whether buying is switched on. Sets `seller_plan_id` to the first paid plan.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "18. Available promotion packages",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/promotion-packages",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "promotion-packages"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `listing.view`. Fixed-price packages. `meta.features.promotions` says whether buying is switched on.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "19. Start a plan checkout (needs Paystack to go further)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"No Paystack key here: 503 payments_unavailable (502 if unreachable; 200/201 with a real test key)\", () => pm.expect(pm.response.code).to.be.oneOf([200,201,502,503]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/subscription/checkout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "subscription",
+                    "checkout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nWithout `PAYSTACK_SECRET_KEY` this answers `503 payments_unavailable` and records nothing (`502 gateway_unavailable` if Paystack cannot be reached; the payment is then stored as `failed`); with a Paystack test key it returns `authorization_url`. The paid path is NOT executable here.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"plan_id\": \"{{seller_plan_id}}\",\n  \"interval_days\": 30\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "20. Start a promotion checkout (needs Paystack to go further)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"No Paystack key here: 503 payments_unavailable (502 if unreachable; 200/201 with a real test key)\", () => pm.expect(pm.response.code).to.be.oneOf([200,201,502,503]));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/promotions/checkout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "listings",
+                    "{{listing_id}}",
+                    "promotions",
+                    "checkout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSame as above for a listing promotion.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"package_id\": \"{{promotion_package_id}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "21. Payment history (empty: nothing was charged or recorded)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"A list\", () => pm.expect(json.data).to.be.an(\"array\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/payments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "payments"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `billing.view` (owner, manager). Filters `status`, `purpose`. `benefit_granted`, `needs_attention`; `authorization_url` only while pending.\n\n**ERRORS**\n`403` (staff)\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "22. Promotion history (empty until a payment settles)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/marketplace/shops/{{shop_id}}/promotions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "marketplace",
+                    "shops",
+                    "{{shop_id}}",
+                    "promotions"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nNeeds `billing.view`. Filter `state=running|ended`. `state` running|scheduled|expired|cancelled; `benefit_active` is false while the shop is suspended or the listing is not published/is restricted.\n\n**ERRORS**\n`403`\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "23. Log out the seller",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/logout",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nEnds the seller session."
+              },
+              "response": []
+            },
+            {
+              "name": "24. Webhook without a valid signature is rejected",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "x-paystack-signature",
+                    "value": "{{paystack_signature}}",
+                    "description": "HMAC-SHA512 of the raw body keyed with the Paystack secret. Only Paystack can send a valid one."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/public/marketplace/payments/paystack/webhook",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "public",
+                    "marketplace",
+                    "payments",
+                    "paystack",
+                    "webhook"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nServer-to-server. Without a valid `x-paystack-signature` (HMAC-SHA512 of the raw body) it is 401 and nothing is touched. A signed delivery cannot be produced without the Paystack secret.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event\": \"charge.success\",\n  \"data\": {\n    \"reference\": \"MSP-2026-00000\"\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 401\", function () { pm.expect(pm.response.code).to.be.oneOf([401]); });",
+                      "pm.test(\"invalid_signature\", () => pm.expect(pm.response.json().code).to.eql(\"invalid_signature\"));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "25. Log in as the platform admin",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.eql(200); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/auth/login",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nSwitches the cookie session to the platform admin.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "26. List service payments",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"A list\", () => pm.expect(json.data).to.be.an(\"array\"));"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/service-payments",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "service-payments"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nAny platform role. Filters `status`, `purpose`, `shop_id`, `needs_attention`, `q`. Includes gateway status, failure reason and settlement issue (paid but not applied).\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "27. List promotions",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/marketplace/promotions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "marketplace",
+                    "promotions"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nAny platform role. Filters `state`, `shop_id`.\n\n**BOUNDARY**\nFarmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit."
+              },
+              "response": []
+            },
+            {
+              "name": "28. Disable the marketplace_seller_plans feature flag",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/feature-flags/marketplace_seller_plans",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "feature-flags",
+                    "marketplace_seller_plans"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nBoth marketplace monetisation flags are created OFF by the migration.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Flag is off\", () => pm.expect(json.data.enabled).to.eql(false));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "29. Disable the marketplace_promotions feature flag",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/feature-flags/marketplace_promotions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "feature-flags",
+                    "marketplace_promotions"
+                  ]
+                },
+                "description": "**IN THIS FLOW**\nBoth marketplace monetisation flags are created OFF by the migration.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"enabled\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                      "const json = pm.response.json();",
+                      "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                      "pm.test(\"Flag is off\", () => pm.expect(json.data.enabled).to.eql(false));"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "30. Log out the platform admin",
               "event": [
                 {
                   "listen": "test",

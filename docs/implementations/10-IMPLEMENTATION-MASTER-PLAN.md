@@ -157,6 +157,10 @@ Implemented: platform status summaries and offer oversight; confidential shop/li
 
 Preserve the original Phase 28 requirements for future implementation; this decision changes scheduling and V1 scope, not the retained requirements. Existing community specifications and the [community feedback backlog](38-COMMUNITY-FEEDBACK-BACKLOG.md) remain available for future planning.
 
-## Phase 29 — Integration Testing and Release Hardening (Next active phase; not started)
+## Phase 29 — Postman Finalization and Backend Handover (Completed 2026-10-08; scope revised)
 
-Phase 29 is the next active phase after completed Phase 27, bypassing deferred Phase 28. Await an explicit implementation instruction before starting Phase 29. The outstanding Phase 27 release checks remain: apply and verify the development database migration, run the new Postman requests through Newman, and verify skipped process-concurrency scenarios in a supported environment.
+**Revised scope:** finalize the Postman collection against all 343 implemented routes (marketplace Phases 22–27 included, deferred Phases 20 and 28 excluded), run it with Newman on a disposable database, record what cannot be executed (Paystack test-mode flows), and publish the frontend reference and the backend handover (`docs/operations/BACKEND-HANDOVER.md`). No new backend features and no repeat of the full Laravel suite. Results: `docs/postman/COVERAGE.md`, Phase 29 addendum. **Status: complete.** Phases 20 and 28 stay deferred to post-launch. Open pre-launch checks (documented, not blockers of this phase): real Paystack test-mode checkout and signed-webhook verification; administrative handling of paid-but-not-applied payments; infrastructure and deployment checks (`docs/operations/LAUNCH.md`); outstanding concurrency validation.
+
+Original heading and notes follow:
+
+Phase 29 followed completed Phase 27 and bypassed deferred Phase 28; it is complete. The Phase 27 migration was applied on a disposable database and its Postman requests run through Newman (Flows 18–19). Still open as pre-launch checks: verify the migration on the real development/staging database and the process-concurrency scenarios skipped in some environments.

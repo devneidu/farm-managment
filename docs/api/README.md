@@ -28,7 +28,8 @@ Re-run and commit `docs/api/openapi.json` whenever an endpoint changes.
 | [`FRONTEND-INTEGRATION.md`](FRONTEND-INTEGRATION.md) | How to use the API from the React app (client setup, startup, routing, permissions, errors, idempotency, refresh-after-write, downloads, exports, notifications). |
 | [`../postman/Farm-Management-API.postman_collection.json`](../postman/Farm-Management-API.postman_collection.json) | Postman collection (v2.1): every route documented with bodies, rules, side effects and real saved responses, plus executable workflows. |
 | [`../postman/Farm-Management-Local.postman_environment.json`](../postman/Farm-Management-Local.postman_environment.json) | Local environment (placeholders only, no credentials). |
-| [`../postman/WORKFLOWS.md`](../postman/WORKFLOWS.md) | The 14 Postman flows: sequence, produced variables, state changes, business rules. |
+| [`../postman/WORKFLOWS.md`](../postman/WORKFLOWS.md) | The 20 Postman flows (Flows 1-19 and S): sequence, produced variables, state changes, business rules. |
+| [`../operations/BACKEND-HANDOVER.md`](../operations/BACKEND-HANDOVER.md) | Backend handover: scope, configuration, Postman use, pre-launch follow-ups, known limits. |
 | [`../postman/COVERAGE.md`](../postman/COVERAGE.md) | Route coverage, verification results, docs/code discrepancies and frontend integration gaps. |
 
 ## Postman

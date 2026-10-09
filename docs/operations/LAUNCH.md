@@ -1,6 +1,6 @@
 # V1 deployment and recovery runbook
 
-Phase 21 hardens Phases 0–19. Phase 20 — **Deferred from V1 / post-launch enhancement** (WhatsApp and AI-assisted parsing). No payment-provider integration, impersonation or frontend is included.
+Phase 21 hardens Phases 0–19. Phase 20 — **Deferred from V1 / post-launch enhancement** (WhatsApp and AI-assisted parsing); Phase 28 (Community) is deferred the same way. The only payment-provider integration is Paystack for Farmvest's own marketplace seller plans and promotions (Phase 26; see `docs/api/PHASE-26-MARKETPLACE-MONETISATION.md`). Impersonation and a frontend are not included.
 
 ## Release gates
 
