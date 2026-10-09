@@ -138,7 +138,7 @@ Logout -> session ended
 | 7 | List crops | `GET /master/crops` (200) | `crop_yam_id` |
 | 8 | Create a custom breed | `POST /custom-breeds` (201) | `breed_id` |
 | 9 | Create a location | `POST /locations` (201) | `location_id` |
-| 10 | Create a production area | `POST /production-areas` (201) | `area_id` |
+| 10 | Create a batch location (pen, house, pond or plot) | `POST /production-areas` (201) | `area_id` |
 | 11 | Create a storage location | `POST /storage-locations` (201) | `store_id` |
 | 12 | Create a second storage location | `POST /storage-locations` (201) | `store2_id` |
 | 13 | Create an inventory item (lot-tracked medicine) | `POST /inventory/items` (201) | `item_med_id` |
@@ -158,7 +158,7 @@ Logout -> session ended
 
 ```
 Platform admin -> change the farm plan (Farm Business)
-   -> places: location, production area, storage locations
+   -> places: location, batch location (production area), storage locations
    -> inventory items + opening stock (each a stock_in movement)
    -> produce / planting-material / fertilizer / medicine items ready for later flows
 ```
@@ -166,7 +166,7 @@ Platform admin -> change the farm plan (Farm Business)
 **Expected state changes**
 
 - The demo farm moves to the `farm-business` plan (data export + unlimited cycles/members).
-- A breed, a location, a production area and two storage locations exist.
+- A breed, a location, a batch location (production area) and two storage locations exist.
 - Items exist with opening stock: vaccine lot NCD-2026-01 (500 ml, expires in 90 days), 600 eggs, 100 kg fertilizer, 200 kg seed tubers; a produce item for yam harvests has zero stock.
 
 **Business rules to notice**
@@ -193,7 +193,7 @@ Platform admin -> change the farm plan (Farm Business)
 | 1 | List farm operations (production types) | `GET /master/farm-operations` (200) | `op_poultry_id`, `op_crops_id` |
 | 2 | List species | `GET /master/species` (200) | `species_chicken_id` |
 | 3 | Get species capabilities | `GET /master/species/{species_chicken_id}/capabilities` (200) |  |
-| 4 | List production areas (the "Default Location" picker) | `GET /production-areas?is_active=true` (200) | `area_id` (only if empty) |
+| 4 | List batch locations (the "Default Location" picker) | `GET /production-areas?is_active=true` (200) | `area_id` (only if empty) |
 | 5 | Batch-creation options: purpose, growth stage and breed | `GET /master/species/{species_chicken_id}/batch-reference` (200) | `batch_purpose_code`, `batch_growth_stage_code` |
 | 6 | Start a livestock batch | `POST /production-cycles` (201) | `cycle_id`, `cycle_reference` |
 | 7 | Show a production cycle | `GET /production-cycles/{cycle_id}` (200) |  |
@@ -203,6 +203,8 @@ Platform admin -> change the farm plan (Farm Business)
 | 11 | Re-read the cycle after records | `GET /production-cycles/{cycle_id}` (200) |  |
 | 12 | List operational records | `GET /records` (200) |  |
 | 13 | Production summary | `GET /production-cycles/{cycle_id}/summary` (200) |  |
+
+**Naming: "location" for farmers, `production area` in the API.** Farmers think in terms of "where are my birds kept". The batch form's **Default Location** is therefore a *batch location*: a pen, house, pond, field or plot (`type_label`), shown with its full `path_label` such as "Main Site / Broiler House 1 / Pen 3". The API calls this resource `production-areas` and the batch field `production_area_id`; those names are unchanged, so frontend labels should say "Location", not "Production area". A top-level `location` (site, building) is the parent a batch location can sit under; it is created with `POST /locations` and is not what a batch points to.
 
 **What the "Start livestock batch" form needs and where each value comes from**
 
@@ -1177,4 +1179,6 @@ Newman (live local server, throwaway MySQL 8, queue worker running, Flow 1 + pla
 
 Test-data notes: Flow S step 8 reuses the existing breed (`409 duplicate_name` -> `details.existing_id`) when rerun; `Close a production cycle` (folder 08) starts its own disposable batch and captures `cycle_pilot_id` for `Reopen`, so run Close before Reopen and `cycle_id` is never closed; folder 05 names its custom breed with `{{custom_breed_name}}` (timestamp) so it never collides with Flow S.
 
-Flow 3 follow-up (2026-10-09): two lookup steps were added before the batch is started - step 4 lists production areas (Default Location) and step 5 reads the species batch-reference (purpose, growth stage, breed). Step 6 sends the captured `batch_purpose_code` and `batch_growth_stage_code`. Flow 3 now has 13 steps; Newman on a fresh database: 13 requests, 31 assertions, 0 failures.
+Flow 3 follow-up (2026-10-09): two lookup steps were added before the batch is started - step 4 lists batch locations (Default Location) and step 5 reads the species batch-reference (purpose, growth stage, breed). Step 6 sends the captured `batch_purpose_code` and `batch_growth_stage_code`. Flow 3 now has 13 steps; Newman on a fresh database: 13 requests, 31 assertions, 0 failures.
+
+Location wording (2026-10-09): requests and descriptions now say "batch location" (pen, house, pond or plot) and note that the API calls it a production area; no URL, field or variable changed.
