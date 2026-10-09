@@ -25,18 +25,30 @@ class OtpNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $app = config('app.name');
+        $brand = config('identity.brand_name');
 
-        [$subject, $intro] = match ($this->purpose) {
-            OtpPurpose::PasswordReset => ["Your {$app} password reset code", 'Use this code to reset your password.'],
-            default => ["Verify your {$app} email", 'Use this code to verify your email address.'],
+        [$subject, $lines, $ignore] = match ($this->purpose) {
+            OtpPurpose::PasswordReset => [
+                "Reset your {$brand} password",
+                ["We received a request to reset the password for your {$brand} account.", 'Use the code below to continue.'],
+                "If you didn't request a password reset, you can safely ignore this email. Your password will not change.",
+            ],
+            default => [
+                "Verify your {$brand} account",
+                ["Welcome to {$brand}.", 'Use the verification code below to confirm your email address and continue setting up your farm.'],
+                "If you didn't create a {$brand} account, you can safely ignore this email.",
+            ],
         };
 
         return (new MailMessage)
             ->subject($subject)
-            ->greeting('Hello,')
-            ->line($intro)
-            ->line("**{$this->code}**")
-            ->line("This code expires in {$this->ttlMinutes} minutes. If you did not request it, you can ignore this email.");
+            ->view(['html' => 'mail.otp', 'text' => 'mail.otp-text'], [
+                'brand' => $brand,
+                'subject' => $subject,
+                'lines' => $lines,
+                'code' => $this->code,
+                'ttlMinutes' => $this->ttlMinutes,
+                'ignore' => $ignore,
+            ]);
     }
 }

@@ -5,6 +5,9 @@
 | Rate limits are [maxAttempts, decayMinutes].
 */
 return [
+    // User-facing product name shown in auth emails (APP_NAME stays the internal service name).
+    'brand_name' => env('BRAND_NAME', 'Faramaka'),
+
     'otp' => [
         'length' => 6,
         'ttl_minutes' => (int) env('OTP_TTL_MINUTES', 10),
