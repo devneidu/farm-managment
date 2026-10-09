@@ -249,7 +249,7 @@ class PlatformMasterDataService
     /** @return array<string, mixed> */
     private function facts(Model $record): array
     {
-        return array_intersect_key($record->getAttributes(), array_flip(['code', 'name', 'category', 'tracking_model', 'livestock_group', 'list', 'sort_order', 'is_active', 'operation_type_id', 'species_id', 'crop_type_id']));
+        return array_intersect_key($record->getAttributes(), array_flip(['code', 'name', 'category', 'tracking_model', 'livestock_group', 'breed_field_label', 'list', 'sort_order', 'is_active', 'operation_type_id', 'species_id', 'crop_type_id']));
     }
 
     private function guardUnique(callable $work): mixed

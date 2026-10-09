@@ -1136,3 +1136,8 @@ milk: opening 40 l, spoiled 2 l, sale 5 l (all by output)                       
 **Execution.** Newman, same database and process as Flows 17-18: **30 requests, 64 assertions, 0 failures**.
 
 Flow 17 request 78 now repeats the same issue category as request 77, matching Phase 27 active-issue deduplication.
+
+
+## Livestock creation update — 2026-10-09
+
+Existing livestock create requests now send `production_purpose=meat`, `growth_stage=chick` for Chicken, with optional price and supplier null. Use folder 05 → Selected animal batch reference to obtain codes when choosing a different animal. For Fish use `table_fish` and an appropriate stage; Honeybee uses e.g. `honey` and `new_colony`. Never reuse Chicken codes for other animals. The existing flows are otherwise unchanged; no acquisition finance entry is inferred. Newman was not re-run for this task.

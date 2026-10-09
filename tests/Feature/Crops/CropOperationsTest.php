@@ -132,7 +132,7 @@ class CropOperationsTest extends TeamTestCase
         $this->assertSame(0, PopulationMovement::where('production_cycle_id', $crop)->count());
         // Crop-only.
         $flock = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Layers', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
         foreach ([['land_preparation', ['method' => 'x']], ['growth_stage', ['stage' => 'vegetative']], ['establishment_check', ['established_units' => 1]], ['crop_loss', ['units_lost' => 1, 'cause' => 'x']], ['planting', ['units_planted' => 1]]] as [$type, $details]) {
             $this->record($flock, $type, $details)->assertStatus(422)->assertJsonValidationErrors('type');
         }
@@ -280,7 +280,7 @@ class CropOperationsTest extends TeamTestCase
         $this->harvest($crop, $produce, $loc, '1', extra: ['details' => ['context' => ['type' => 'crop_type', 'id' => (string) Str::uuid()]]])->assertStatus(422);
         // Harvest belongs to crops; livestock exits are never "harvest".
         $flock = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Layers', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
         $this->harvest($flock, $produce, $loc, '1')->assertStatus(422)->assertJsonValidationErrors('type');
         $this->assertSame('618', $this->stock($produce));
     }

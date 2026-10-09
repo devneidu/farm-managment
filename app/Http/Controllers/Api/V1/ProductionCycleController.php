@@ -53,7 +53,10 @@ class ProductionCycleController extends Controller
      * Start livestock batch or crop project
      *
      * Requires production_cycle.create. The active_cycles entitlement applies transactionally (409 plan_limit_reached).
-     * kind=livestock requires species_id, initial_population and start_date. kind=crop requires crop_type_id,
+     * kind=livestock requires species_id, production_purpose (an active species-specific code), initial_population and start_date.
+     * Optional growth_stage is a species-specific starting stage, acquisition_price_per_animal is non-negative NGN (max two decimals),
+     * supplier_contact_id must be an active supplier on the current farm. These starting metadata fields are immutable; historical nulls are preserved.
+     * No expenses, purchases, payments or inventory movements are created. kind=crop requires crop_type_id,
      * planting_material_type, planting_unit_type, initial_planting_units and planting_date. Optional production_area_id.
      * Counts are positive whole numbers, maximum 999999999999. Crop area is a separate positive AREA measurement.
      * All starting identity/baseline fields are immutable after creation. No material consumption is inferred.

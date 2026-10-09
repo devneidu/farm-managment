@@ -25,7 +25,7 @@ class ProductionCycleResource extends JsonResource
      * operation: array{id: string, code: string, name: string, tracking_model: string},
      * production_area: PlaceResource|null, start_date: string|null, planting_date: string|null,
      * expected_end_date: string|null, end_date: string|null, notes: string|null, baseline_locked: bool,
-     * livestock: array{species: array{id: string, code: string, name: string}, breed: array{id: string, name: string, is_active: bool}|null, initial_population: int, current_population: int, population_unit: string, population_basis: string}|null,
+     * livestock: array{species: array{id: string, code: string, name: string}, breed: array{id: string, name: string, is_active: bool}|null, production_purpose: array{code: string, name: string, is_active: bool}|null, growth_stage: array{code: string, name: string, is_active: bool}|null, acquisition_price_per_animal: string|null, acquisition_currency: string|null, supplier_contact: array{id: string, name: string, is_active: bool}|null, initial_population: int, current_population: int, population_unit: string, population_basis: string}|null,
      * crop: array{crop_type: array{id: string, code: string, name: string}, variety: array{id: string, name: string, is_active: bool}|null, planting_material_type: string, planting_material_label: string, planting_unit_type: string, planting_unit_label: string, initial_planting_units: int, expected_germination_date: string|null, area: array{entered: list<array{quantity: string, unit: string}>, normalized: array{quantity: string, unit: string}}|null}|null,
      * created_at: string, updated_at: string,
      * available_record_types?: list<array{type: string, permissions_required: array{always: list<string>, when_inventory_linked: list<string>, when_correcting: list<string>}}>
@@ -53,6 +53,11 @@ class ProductionCycleResource extends JsonResource
             'livestock' => $this->livestock ? [
                 'species' => ['id' => $this->livestock->species->id, 'code' => $this->livestock->species->code, 'name' => $this->livestock->species->name],
                 'breed' => $this->livestock->breed ? ['id' => $this->livestock->breed->id, 'name' => $this->livestock->breed->name, 'is_active' => $this->livestock->breed->is_active] : null,
+                'production_purpose' => $this->livestock->productionPurpose ? ['code' => $this->livestock->productionPurpose->code, 'name' => $this->livestock->productionPurpose->name, 'is_active' => $this->livestock->productionPurpose->is_active] : null,
+                'growth_stage' => $this->livestock->growthStage ? ['code' => $this->livestock->growthStage->code, 'name' => $this->livestock->growthStage->name, 'is_active' => $this->livestock->growthStage->is_active] : null,
+                'acquisition_price_per_animal' => $this->livestock->acquisition_price_per_animal,
+                'acquisition_currency' => $this->livestock->acquisition_price_per_animal !== null ? 'NGN' : null,
+                'supplier_contact' => $this->livestock->supplierContact ? ['id' => $this->livestock->supplierContact->id, 'name' => $this->livestock->supplierContact->name, 'is_active' => $this->livestock->supplierContact->is_active] : null,
                 'initial_population' => $this->livestock->initial_population,
                 'current_population' => (int) $this->current_population,
                 'population_unit' => 'head',

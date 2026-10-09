@@ -14,6 +14,7 @@ use App\Models\FeatureFlag;
 use App\Models\OperationType;
 use App\Models\Plan;
 use App\Models\PlatformAdmin;
+use App\Models\ReferenceValue;
 use App\Models\Species;
 use App\Models\User;
 use App\Models\WorkTemplate;
@@ -69,6 +70,25 @@ class PlatformAdminTest extends TeamTestCase
             'code' => 'test_broiler_plan', 'name' => 'Test broiler plan', 'applies_to' => 'production_cycle', 'cycle_kind' => 'livestock',
             'items' => [['title' => 'Weigh a sample', 'category' => 'growth_monitoring', 'anchor' => 'cycle_start', 'offset_days' => 7]],
         ], $extra);
+    }
+
+    public function test_livestock_reference_lists_reuse_platform_administration_and_audit(): void
+    {
+        $list = 'livestock_purpose_chicken';
+        $this->getJson($this->url('/master/reference-values?list='.$list))->assertOk()->assertJsonCount(5, 'data');
+        $row = ReferenceValue::where('list', $list)->where('code', 'eggs')->firstOrFail();
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['name' => 'Egg production', 'is_active' => false])->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'platform.master_updated', 'resource_id' => $row->id]);
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['list' => 'livestock_purpose_cattle'])->assertUnprocessable();
+        $this->postJson($this->url('/master/reference-values'), ['list' => 'livestock_purpose_nonexistent', 'code' => 'meat', 'name' => 'Meat'])->assertUnprocessable();
+        $species = Species::where('code', 'fish')->firstOrFail();
+        $this->patchJson($this->url('/master/species/'.$species->id), ['breed_field_label' => 'Species / Type'])->assertOk()->assertJsonPath('data.breed_field_label', 'Species / Type');
+        $this->signInAs($this->platformUser(PlatformRole::Support, 'Reference support'));
+        $this->getJson($this->url('/master/reference-values?list='.$list))->assertOk();
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['is_active' => true])->assertForbidden();
+        $this->signInAs($this->owner);
+        $data = $this->getJson('/api/v1/master/species/'.Species::where('code', 'chicken')->value('id').'/batch-reference')->assertOk()->json('data');
+        $this->assertNotContains('eggs', array_column($data['purposes'], 'code'));
     }
 
     // ------------------------------------------------------------------ authorization

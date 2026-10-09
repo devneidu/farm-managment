@@ -298,7 +298,7 @@ class ApiDocumentationTest extends TestCase
         $this->assertStringContainsString('kind=crop requires', $post['description']);
         $this->assertStringContainsString('plan_limit_reached', $post['description']);
         $body = $spec['components']['schemas']['StoreCycleRequest'];
-        foreach (['kind', 'name', 'operation_type_id', 'species_id', 'initial_population', 'crop_type_id', 'planting_material_type', 'planting_unit_type', 'initial_planting_units', 'planting_date', 'area'] as $field) {
+        foreach (['kind', 'name', 'operation_type_id', 'species_id', 'production_purpose', 'growth_stage', 'acquisition_price_per_animal', 'supplier_contact_id', 'initial_population', 'crop_type_id', 'planting_material_type', 'planting_unit_type', 'initial_planting_units', 'planting_date', 'area'] as $field) {
             $this->assertArrayHasKey($field, $body['properties']);
         }
         foreach (['farm_id', 'current_population', 'material_quantity', 'status'] as $field) {
@@ -310,6 +310,11 @@ class ApiDocumentationTest extends TestCase
         $this->assertSame('array', $resource['crop']['properties']['area']['properties']['entered']['type']);
         $this->assertArrayHasKey('production_area', $resource);
         $this->assertArrayNotHasKey('delete', $spec['paths']['/production-cycles/{cycle}']);
+        $this->assertArrayHasKey('get', $spec['paths']['/master/species/{species}/batch-reference']);
+        $this->assertStringContainsString('master_data.view', $spec['paths']['/master/species/{species}/batch-reference']['get']['description']);
+        foreach (['production_purpose', 'growth_stage', 'acquisition_price_per_animal', 'acquisition_currency', 'supplier_contact'] as $field) {
+            $this->assertArrayHasKey($field, $resource['livestock']['properties']);
+        }
     }
 
     public function test_phase_6_place_endpoints_document_contracts_and_errors(): void

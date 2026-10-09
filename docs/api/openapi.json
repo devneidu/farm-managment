@@ -41579,7 +41579,51 @@
                             "type": "string",
                             "enum": [
                                 "planting_material_type",
-                                "planting_unit_type"
+                                "planting_unit_type",
+                                "livestock_purpose_camel",
+                                "livestock_stage_camel",
+                                "livestock_purpose_cattle",
+                                "livestock_stage_cattle",
+                                "livestock_purpose_chicken",
+                                "livestock_stage_chicken",
+                                "livestock_purpose_donkey",
+                                "livestock_stage_donkey",
+                                "livestock_purpose_duck",
+                                "livestock_stage_duck",
+                                "livestock_purpose_fish",
+                                "livestock_stage_fish",
+                                "livestock_purpose_goat",
+                                "livestock_stage_goat",
+                                "livestock_purpose_goose",
+                                "livestock_stage_goose",
+                                "livestock_purpose_grasscutter",
+                                "livestock_stage_grasscutter",
+                                "livestock_purpose_guinea_fowl",
+                                "livestock_stage_guinea_fowl",
+                                "livestock_purpose_guinea_pig",
+                                "livestock_stage_guinea_pig",
+                                "livestock_purpose_honeybee",
+                                "livestock_stage_honeybee",
+                                "livestock_purpose_horse",
+                                "livestock_stage_horse",
+                                "livestock_purpose_ostrich",
+                                "livestock_stage_ostrich",
+                                "livestock_purpose_pig",
+                                "livestock_stage_pig",
+                                "livestock_purpose_pigeon",
+                                "livestock_stage_pigeon",
+                                "livestock_purpose_quail",
+                                "livestock_stage_quail",
+                                "livestock_purpose_rabbit",
+                                "livestock_stage_rabbit",
+                                "livestock_purpose_sheep",
+                                "livestock_stage_sheep",
+                                "livestock_purpose_snail",
+                                "livestock_stage_snail",
+                                "livestock_purpose_turkey",
+                                "livestock_stage_turkey",
+                                "livestock_purpose_water_buffalo",
+                                "livestock_stage_water_buffalo"
                             ]
                         }
                     },
@@ -47377,7 +47421,7 @@
             },
             "post": {
                 "operationId": "v1.production-cycles.store",
-                "description": "Requires production_cycle.create. The active_cycles entitlement applies transactionally (409 plan_limit_reached).\nkind=livestock requires species_id, initial_population and start_date. kind=crop requires crop_type_id,\nplanting_material_type, planting_unit_type, initial_planting_units and planting_date. Optional production_area_id.\nCounts are positive whole numbers, maximum 999999999999. Crop area is a separate positive AREA measurement.\nAll starting identity/baseline fields are immutable after creation. No material consumption is inferred.\nCatalogue mismatches/inactive selection return 422; unknown or foreign UUIDs return 404.\n\n**Requires farm permission:** `production_cycle.create`.",
+                "description": "Requires production_cycle.create. The active_cycles entitlement applies transactionally (409 plan_limit_reached).\nkind=livestock requires species_id, production_purpose (an active species-specific code), initial_population and start_date.\nOptional growth_stage is a species-specific starting stage, acquisition_price_per_animal is non-negative NGN (max two decimals),\nsupplier_contact_id must be an active supplier on the current farm. These starting metadata fields are immutable; historical nulls are preserved.\nNo expenses, purchases, payments or inventory movements are created. kind=crop requires crop_type_id,\nplanting_material_type, planting_unit_type, initial_planting_units and planting_date. Optional production_area_id.\nCounts are positive whole numbers, maximum 999999999999. Crop area is a separate positive AREA measurement.\nAll starting identity/baseline fields are immutable after creation. No material consumption is inferred.\nCatalogue mismatches/inactive selection return 422; unknown or foreign UUIDs return 404.\n\n**Requires farm permission:** `production_cycle.create`.",
                 "summary": "Start livestock batch or crop project",
                 "tags": [
                     "ProductionCycle"
@@ -68006,6 +68050,271 @@
                     }
                 }
             }
+        },
+        "/master/species/{species}/batch-reference": {
+            "get": {
+                "operationId": "v1.master.species.batch-reference",
+                "description": "Requires master_data.view. System and own-farm breeds, species-specific purposes and biological starting stages.\ninclude_inactive=true includes inactive historical options; these cannot be used for a new batch.\nbreed_field_label is backend-managed. No individual tracking or population-unit changes.\n\n**Requires farm permission:** `master_data.view`.",
+                "summary": "Livestock batch reference for one selected animal",
+                "tags": [
+                    "MasterData"
+                ],
+                "parameters": [
+                    {
+                        "name": "species",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "operation",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 64
+                        }
+                    },
+                    {
+                        "name": "category",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/OperationCategory"
+                        }
+                    },
+                    {
+                        "name": "group",
+                        "in": "query",
+                        "schema": {
+                            "$ref": "#/components/schemas/LivestockGroup"
+                        }
+                    },
+                    {
+                        "name": "available",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "species": {
+                                                    "$ref": "#/components/schemas/SpeciesResource"
+                                                },
+                                                "breed_field_label": {
+                                                    "type": "string"
+                                                },
+                                                "breeds": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/BreedResource"
+                                                    }
+                                                },
+                                                "purposes": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "is_active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "name",
+                                                            "is_active"
+                                                        ]
+                                                    }
+                                                },
+                                                "growth_stages": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "code": {
+                                                                "type": "string"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "is_active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "code",
+                                                            "name",
+                                                            "is_active"
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "species",
+                                                "breed_field_label",
+                                                "breeds",
+                                                "purposes",
+                                                "growth_stages"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -73371,11 +73680,98 @@
                             "population_basis": {
                                 "type": "string",
                                 "const": "population_movements"
+                            },
+                            "production_purpose": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "is_active"
+                                ]
+                            },
+                            "growth_stage": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "name",
+                                    "is_active"
+                                ]
+                            },
+                            "acquisition_price_per_animal": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "acquisition_currency": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "enum": [
+                                    "NGN",
+                                    null
+                                ]
+                            },
+                            "supplier_contact": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "is_active": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "name",
+                                    "is_active"
+                                ]
                             }
                         },
                         "required": [
                             "species",
                             "breed",
+                            "production_purpose",
+                            "growth_stage",
+                            "acquisition_price_per_animal",
+                            "acquisition_currency",
+                            "supplier_contact",
                             "initial_population",
                             "current_population",
                             "population_unit",
@@ -76643,6 +77039,34 @@
                             "quantity",
                             "unit"
                         ]
+                    },
+                    "production_purpose": {
+                        "type": "string",
+                        "description": "Active purpose code from the selected species' batch-reference response.",
+                        "maxLength": 64
+                    },
+                    "growth_stage": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Optional biological growth-stage code; a starting snapshot, not a live stage tracker.",
+                        "maxLength": 64
+                    },
+                    "acquisition_price_per_animal": {
+                        "description": "Informational NGN unit price, non-negative with at most two decimals; no financial booking.",
+                        "type": [
+                            "string",
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "supplier_contact_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
                     }
                 },
                 "required": [

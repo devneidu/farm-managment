@@ -102,6 +102,30 @@ class MasterDataController extends Controller
     }
 
     /**
+     * Livestock batch reference for one selected animal
+     *
+     * Requires master_data.view. System and own-farm breeds, species-specific purposes and biological starting stages.
+     * include_inactive=true includes inactive historical options; these cannot be used for a new batch.
+     * breed_field_label is backend-managed. No individual tracking or population-unit changes.
+     *
+     * @response array{data: array{species: SpeciesResource, breed_field_label: string, breeds: BreedResource[], purposes: list<array{code: string, name: string, is_active: bool}>, growth_stages: list<array{code: string, name: string, is_active: bool}>}, meta: object, message: null}
+     */
+    public function batchReference(MasterDataListRequest $request, FarmContext $ctx, MasterDataCatalogue $catalogue, string $species): JsonResponse
+    {
+        $model = Species::with(['operationType', 'speciesCapabilities.capability'])->findOrFail($species);
+        $includeInactive = $request->filters()['include_inactive'];
+        $options = fn ($kind) => $catalogue->batchOptions($model, $kind, $includeInactive)
+            ->map(fn ($row) => $row->only(['code', 'name', 'is_active']))->all();
+
+        return ApiResponse::success([
+            'species' => (new SpeciesResource($model))->resolve($request),
+            'breed_field_label' => $model->breed_field_label ?? 'Breed / Strain',
+            'breeds' => BreedResource::collection($catalogue->breeds($ctx->farm, $model, $includeInactive))->resolve($request),
+            'purposes' => $options('purpose'), 'growth_stages' => $options('stage'),
+        ]);
+    }
+
+    /**
      * List crops
      *
      * Crop types. Filters: `available=true` (only crops of operations the farm may use), `include_inactive=true`.

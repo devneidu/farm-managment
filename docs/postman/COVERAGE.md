@@ -303,3 +303,7 @@ The reference folders are one request per route, not a sequential runner: they d
 - Google sign-in needs a real Google ID token.
 
 **Deferred features.** The collection and environment contain no Phase 20 (WhatsApp/AI) or Phase 28 (Community) request. The only "WhatsApp" strings are the `support_whatsapp` platform setting, a marketplace contact channel preference, and statements that WhatsApp is not in V1.
+
+## Livestock batch creation addendum — 2026-10-09
+
+One GET route added: `/master/species/{species}/batch-reference` (344 total application operations). Folder 05 includes its reference request. Both livestock creation request bodies (reference folder 08 and Flow 3) now include the required species-specific purpose and optional metadata examples. Historical captured examples are marked as predating this update. New request/examples have not been run through Newman; earlier Phase 29 results remain historical evidence, not validation of this addition.

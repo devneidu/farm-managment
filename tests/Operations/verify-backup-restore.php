@@ -39,7 +39,7 @@ try {
     $user = User::factory()->onboarded('Restore rehearsal')->create();
     $farm = $user->currentFarm();
     $ctx = new FarmContext($farm, FarmMembership::where('farm_id', $farm->id)->firstOrFail());
-    $cycle = app(CycleService::class)->create($ctx, $user, ['kind' => 'livestock', 'name' => 'Restore flock', 'operation_type_id' => OperationType::where('code', 'poultry')->value('id'), 'species_id' => Species::where('code', 'chicken')->value('id'), 'initial_population' => 100, 'start_date' => now()->subDays(5)->toDateString()]);
+    $cycle = app(CycleService::class)->create($ctx, $user, ['kind' => 'livestock', 'name' => 'Restore flock', 'operation_type_id' => OperationType::where('code', 'poultry')->value('id'), 'species_id' => Species::where('code', 'chicken')->value('id'), 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => now()->subDays(5)->toDateString()]);
     app(RecordService::class)->create($ctx, ['production_cycle_id' => $cycle->id, 'type' => 'mortality', 'recorded_at' => now()->utc()->subDay()->format('Y-m-d\TH:i:s\Z'), 'details' => ['quantity' => 2, 'cause' => 'Rehearsal'], 'idempotency_key' => (string) Str::uuid()]);
     app(FinanceService::class)->record($ctx, ['direction' => 'expense', 'finance_category_id' => FinanceCategory::where('code', 'transport')->value('id'), 'amount' => '1250.25', 'occurred_on' => now()->toDateString(), 'idempotency_key' => (string) Str::uuid()]);
     $location = app(PlaceService::class)->save($ctx, $user, PlaceKind::StorageLocation, ['name' => 'Restore store', 'type' => 'store']);

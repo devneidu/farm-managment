@@ -4,6 +4,7 @@ namespace App\Http\Requests\Production;
 
 use App\Enums\CycleKind;
 use App\Models\Place;
+use App\Rules\MoneyAmount;
 use App\Rules\PositiveWholeCount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,6 +35,17 @@ class StoreCycleRequest extends FormRequest
             'start_date' => ['required_if:kind,livestock', 'prohibited_unless:kind,livestock', 'date_format:Y-m-d'],
             'species_id' => ['required_if:kind,livestock', 'prohibited_unless:kind,livestock', 'uuid'],
             'breed_id' => ['sometimes', 'nullable', 'prohibited_unless:kind,livestock', 'uuid'],
+            /** Active purpose code from the selected species' batch-reference response. */
+            'production_purpose' => ['required_if:kind,livestock', 'prohibited_unless:kind,livestock', 'string', 'max:64'],
+            /** Optional biological growth-stage code; a starting snapshot, not a live stage tracker. */
+            'growth_stage' => ['sometimes', 'nullable', 'prohibited_unless:kind,livestock', 'string', 'max:64'],
+            /**
+             * Informational NGN unit price, non-negative with at most two decimals; no financial booking.
+             *
+             * @var string|int|float|null
+             */
+            'acquisition_price_per_animal' => ['sometimes', 'nullable', 'prohibited_unless:kind,livestock', new MoneyAmount(allowZero: true)],
+            'supplier_contact_id' => ['sometimes', 'nullable', 'prohibited_unless:kind,livestock', 'uuid'],
             'initial_population' => ['required_if:kind,livestock', 'prohibited_unless:kind,livestock', 'integer', 'min:1', 'max:999999999999', new PositiveWholeCount],
             'planting_date' => ['required_if:kind,crop', 'prohibited_unless:kind,crop', 'date_format:Y-m-d'],
             'crop_type_id' => ['required_if:kind,crop', 'prohibited_unless:kind,crop', 'uuid'],

@@ -81,3 +81,8 @@ They are biological **reference defaults**, never guarantees. Phase 11 must keep
 ## Existing databases
 
 The migration is additive and idempotent: existing rows are never deleted or recreated; a missing group is filled; an existing reference config only gains keys it lacks (a platform edit is kept, and a conflicting edit makes that species keep its value); a disabled capability is not re-enabled. Re-running changes nothing. `down()` removes only the `livestock_group` column and keeps the added master data, which cycles may already reference.
+
+
+## Approved breed/type and batch options (2026-10-09)
+
+All 21 livestock animals plus Fish now have the exact product-owner breed/type options and species-specific production purposes/growth stages. These use existing system breeds and reference_values, not reproduction capability configuration. See [batch reference catalogue and API contract](LIVESTOCK-BATCH-CREATION.md). Capabilities and biological period defaults above remain unchanged.

@@ -42,7 +42,7 @@ class FinanceTest extends TeamTestCase
     private function cycle(): string
     {
         return $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Layer flock '.Str::random(4), 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
     }
 
     private function store(): string

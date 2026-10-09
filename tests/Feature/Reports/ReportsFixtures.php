@@ -42,7 +42,7 @@ trait ReportsFixtures
     protected function layers(int $population = 100, array $extra = []): string
     {
         return $this->postJson('/api/v1/production-cycles', array_replace(['kind' => 'livestock', 'name' => 'Layers '.Str::random(4), 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => $population, 'start_date' => '2026-01-01'], $extra))->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => $population, 'start_date' => '2026-01-01'], $extra))->assertCreated()->json('data.id');
     }
 
     protected function yam(array $extra = []): string

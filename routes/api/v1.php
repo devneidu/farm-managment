@@ -286,6 +286,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/species', [MasterDataController::class, 'species'])->name('api.v1.master.species');
         Route::get('/species/{species}/capabilities', [MasterDataController::class, 'capabilities'])->name('api.v1.master.species.capabilities');
         Route::get('/species/{species}/breeds', [MasterDataController::class, 'breeds'])->name('api.v1.master.species.breeds');
+        Route::get('/species/{species}/batch-reference', [MasterDataController::class, 'batchReference'])->whereUuid('species')->name('api.v1.master.species.batch-reference');
         Route::get('/crops', [MasterDataController::class, 'crops'])->name('api.v1.master.crops');
         Route::get('/crops/{crop}/varieties', [MasterDataController::class, 'varieties'])->name('api.v1.master.crops.varieties');
         Route::get('/planting-reference', [MasterDataController::class, 'plantingReference'])->name('api.v1.master.planting-reference');

@@ -103,12 +103,12 @@ class MasterDataApiTest extends MasterDataTestCase
         $chicken = $this->species('chicken');
         $response = $this->signInAs($this->owner)->getJson("/api/v1/master/species/{$chicken->id}/breeds")->assertOk();
 
-        $this->assertSame(['Broiler', 'Our Hybrid'], collect($response->json('data'))->pluck('name')->all());
-        $this->assertSame(['system', 'farm'], collect($response->json('data'))->pluck('source')->all());
+        $this->assertSame(['Broiler', 'Our Hybrid'], collect($response->json('data'))->whereIn('name', ['Broiler', 'Our Hybrid'])->pluck('name')->all());
+        $this->assertSame(['system', 'farm'], collect($response->json('data'))->whereIn('name', ['Broiler', 'Our Hybrid'])->pluck('source')->all());
 
         // Inactive ones only on request (history display); still never the other farm's
         $all = $this->getJson("/api/v1/master/species/{$chicken->id}/breeds?include_inactive=true")->json('data');
-        $this->assertEqualsCanonicalizing(['Broiler', 'Retired Line', 'Our Hybrid', 'Old Hybrid'], collect($all)->pluck('name')->all());
+        $this->assertEqualsCanonicalizing(['Broiler', 'Retired Line', 'Our Hybrid', 'Old Hybrid'], collect($all)->whereIn('name', ['Broiler', 'Retired Line', 'Our Hybrid', 'Old Hybrid'])->pluck('name')->all());
     }
 
     public function test_farm_b_sees_only_its_own_custom_breeds(): void
@@ -120,7 +120,8 @@ class MasterDataApiTest extends MasterDataTestCase
         $goat = $this->species('goat');
         $names = collect($this->signInAs($ownerB)->getJson("/api/v1/master/species/{$goat->id}/breeds")->json('data'))->pluck('name')->all();
 
-        $this->assertSame(['Farm B Goat'], $names);
+        $this->assertContains('Farm B Goat', $names);
+        $this->assertNotContains('Farm A Goat', $names);
     }
 
     public function test_crops_and_varieties(): void

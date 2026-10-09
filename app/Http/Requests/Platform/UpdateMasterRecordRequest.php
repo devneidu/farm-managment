@@ -26,6 +26,7 @@ class UpdateMasterRecordRequest extends FormRequest
         }
         if ($this->route('kind') === 'species') {
             $rules['livestock_group'] = ['sometimes', 'nullable', Rule::enum(LivestockGroup::class)];
+            $rules['breed_field_label'] = ['sometimes', 'nullable', 'string', 'max:64'];
         }
 
         return $rules + ['code' => ['missing'], 'category' => ['missing'], 'tracking_model' => ['missing'], 'operation_type_id' => ['missing'], 'species_id' => ['missing'], 'crop_type_id' => ['missing'], 'list' => ['missing'], 'farm_id' => ['missing']];

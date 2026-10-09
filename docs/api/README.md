@@ -629,7 +629,7 @@ Common required fields: `kind` (`livestock` or `crop`), `name` (1–100 characte
 
 | Domain | Required fields | Optional fields |
 |---|---|---|
-| livestock | `species_id`, `initial_population`, `start_date` | `breed_id` |
+| livestock | `species_id`, `production_purpose`, `initial_population`, `start_date` | `breed_id`, `growth_stage`, `acquisition_price_per_animal` (NGN), `supplier_contact_id` |
 | crop | `crop_type_id`, `planting_material_type`, `planting_unit_type`, `initial_planting_units`, `planting_date` | `crop_variety_id`, `area`, `expected_germination_date` |
 
 Counts must be positive whole numbers, 1–999999999999. Booleans, fractional counts, unit strings, zero and negatives are rejected. Counts may be JSON integers or canonical digit strings without leading zeroes. Livestock counts always mean heads, including fish; no kg/litre/package population. Optional master UUIDs accept null. Dates must be actual `YYYY-MM-DD` calendar dates; historical dates are valid and independent of entry time. Future start/planting dates are accepted without inventing a draft status. Expected dates are nullable, user-entered estimates; they cannot precede start/planting. No biological duration is assumed. `expected_germination_date` is crop-only.
@@ -656,6 +656,7 @@ Poultry → Chicken → optional breed → 500 heads → optional Broiler Pen:
   "name": "October Broilers",
   "operation_type_id": "<poultry-uuid>",
   "species_id": "<chicken-uuid>",
+  "production_purpose": "meat",
   "breed_id": null,
   "initial_population": 500,
   "start_date": "2026-10-01",
@@ -673,6 +674,7 @@ Fishery → Fish → 2,000 heads → optional Pond A (same livestock model):
   "name": "Catfish Batch A",
   "operation_type_id": "<fishery-uuid>",
   "species_id": "<fish-uuid>",
+  "production_purpose": "table_fish",
   "initial_population": 2000,
   "start_date": "2026-09-01",
   "production_area_id": "<pond-a-production-area-uuid>"
@@ -901,3 +903,7 @@ The complete contract is [Phase 26 marketplace monetisation](PHASE-26-MARKETPLAC
 See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing shop approval, verification, suspension and listing restriction are reused. New participant APIs file shop/listing complaints and list/read owned content or deal reports. New platform APIs provide `/platform-admin/marketplace/summary`, read-only `/offers[/{offer}]`, and `/reports[/{type}/{report}[/transition]]`. Report states are `open -> in_review -> dismissed|resolved`; every handling action requires a reason. A report never enforces automatically. Only explicit `enforcement_action` plus the related target UUID can invoke existing suspension/restriction. All report counts are available by status, including zeros. Read permissions remain platform admin/support, writes admin only.
 
 **Frontend contract changes:** reinstatement and lifting listing restrictions now require `{reason}`. Active duplicate reports use reporter + target + issue; a closed case permits a new report. Intake throttling is shared across content/deal reports, 20/hour/user. Show own complaint/outcome privately; internal history and reporter identities belong only in the platform administration area. Existing deals, stock and financial records are preserved; paid periods are not extended or refunded by enforcement.
+
+## Livestock batch creation update (2026-10-09)
+
+New livestock/fish creation requires `production_purpose`; optional growth stage, NGN acquisition unit price and supplier contact are supported. Use `GET /master/species/{species}/batch-reference` for all dependent selectors and the backend breed/type label. Existing null metadata stays readable. See [full contract and approved catalogue](LIVESTOCK-BATCH-CREATION.md) for validation, responses, immutable metadata, no automatic financial effects and deployment.

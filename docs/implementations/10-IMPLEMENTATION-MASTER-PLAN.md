@@ -163,4 +163,6 @@ Preserve the original Phase 28 requirements for future implementation; this deci
 
 Original heading and notes follow:
 
+**User-directed livestock batch improvement — 2026-10-09:** Extends completed Phases 4/7 with the exact approved 22-animal system breed/type catalogue, species-specific purposes and biological starting stages in existing reference_values, a combined selected-animal selector response, and required purpose/optional stage/NGN acquisition unit price/supplier on new batches. Historical nulls and ledgers remain intact; no automatic financial booking or individual tracking. Contract: `docs/api/LIVESTOCK-BATCH-CREATION.md`. This scoped task does not start a new phase or change the Phase 20/28 deferrals.
+
 Phase 29 followed completed Phase 27 and bypassed deferred Phase 28; it is complete. The Phase 27 migration was applied on a disposable database and its Postman requests run through Newman (Flows 18–19). Still open as pre-launch checks: verify the migration on the real development/staging database and the process-concurrency scenarios skipped in some environments.

@@ -50,7 +50,7 @@ class WorkTest extends TeamTestCase
         $operation = Species::where('code', $species)->firstOrFail()->operationType->code;
 
         return $this->postJson('/api/v1/production-cycles', array_replace(['kind' => 'livestock', 'name' => ucfirst($species).' '.Str::random(4), 'operation_type_id' => OperationType::where('code', $operation)->firstOrFail()->id,
-            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'], $extra))->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'production_purpose' => ($species === 'honeybee' ? 'colony_breeding' : 'breeding'), 'initial_population' => 100, 'start_date' => '2026-01-01'], $extra))->assertCreated()->json('data.id');
     }
 
     private function payload(array $extra = []): array

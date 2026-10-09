@@ -41,7 +41,7 @@ class CustomMasterDataTest extends MasterDataTestCase
             'species_id' => $this->species('chicken')->id, 'name' => 'Sneaky', 'code' => 'sneaky',
         ])->assertStatus(422)->assertJsonValidationErrors('code');
 
-        $this->assertSame(0, Breed::count());
+        $this->assertSame(0, Breed::whereNotNull('farm_id')->count());
     }
 
     public function test_species_must_exist_be_active_and_name_valid(): void
@@ -113,7 +113,7 @@ class CustomMasterDataTest extends MasterDataTestCase
     {
         Event::fake([CustomMasterDataChanged::class]);
 
-        $this->signInAs($this->owner)->postJson('/api/v1/custom-breeds', ['species_id' => $this->species('sheep')->id, 'name' => 'West African Dwarf'])->assertCreated();
+        $this->signInAs($this->owner)->postJson('/api/v1/custom-breeds', ['species_id' => $this->species('sheep')->id, 'name' => 'Our Sheep Cross'])->assertCreated();
 
         Event::assertDispatched(CustomMasterDataChanged::class, fn ($e) => $e->action === 'created');
     }
@@ -125,7 +125,7 @@ class CustomMasterDataTest extends MasterDataTestCase
 
         $this->signInAs($this->owner)->patchJson("/api/v1/custom-breeds/{$breed->id}", ['is_active' => false])->assertOk();
 
-        $this->getJson("/api/v1/master/species/{$rabbit}/breeds")->assertJsonCount(0, 'data');
+        $this->assertNotContains($breed->id, collect($this->getJson("/api/v1/master/species/{$rabbit}/breeds")->assertOk()->json('data'))->pluck('id')->all());
         $this->getJson('/api/v1/custom-breeds')->assertJsonCount(0, 'data');
         $this->getJson('/api/v1/custom-breeds?include_inactive=true')->assertJsonCount(1, 'data');
         $this->assertDatabaseHas('breeds', ['id' => $breed->id, 'is_active' => false]);
@@ -211,7 +211,7 @@ class CustomMasterDataTest extends MasterDataTestCase
             $this->postJson('/api/v1/custom-varieties', ['crop_type_id' => $this->crop('yam')->id, 'name' => 'Attempt'])->assertForbidden();
             $this->getJson('/api/v1/custom-breeds')->assertOk()->assertJsonCount(1, 'data');
         }
-        $this->assertSame(1, Breed::count());
+        $this->assertSame(1, Breed::whereNotNull('farm_id')->count());
     }
 
     public function test_permissions_are_centralised_in_the_role_map(): void

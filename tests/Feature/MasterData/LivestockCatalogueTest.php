@@ -250,7 +250,7 @@ class LivestockCatalogueTest extends MasterDataTestCase
         foreach ([['turkey', 'poultry'], ['horse', 'horse'], ['honeybee', 'honeybee']] as [$species, $operation]) {
             $this->postJson('/api/v1/production-cycles', [
                 'kind' => 'livestock', 'name' => ucfirst($species).' group', 'operation_type_id' => $this->species($species)->operationType->id,
-                'species_id' => $this->species($species)->id, 'initial_population' => 10, 'start_date' => '2026-09-01',
+                'species_id' => $this->species($species)->id, 'production_purpose' => ($species === 'honeybee' ? 'colony_breeding' : 'breeding'), 'initial_population' => 10, 'start_date' => '2026-09-01',
             ])->assertCreated()->assertJsonPath('data.livestock.species.code', $species);
             $this->assertSame($operation, $this->species($species)->operationType->code);
         }

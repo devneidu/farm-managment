@@ -39,7 +39,7 @@ class BreedingTest extends TeamTestCase
         $operation = Species::where('code', $species)->firstOrFail()->operationType->code;
 
         return $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => ucfirst($species).' '.Str::random(4), 'operation_type_id' => OperationType::where('code', $operation)->firstOrFail()->id,
-            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'initial_population' => $population, 'start_date' => $start])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'production_purpose' => ($species === 'honeybee' ? 'colony_breeding' : 'breeding'), 'initial_population' => $population, 'start_date' => $start])->assertCreated()->json('data.id');
     }
 
     private function population(string $cycle): int
