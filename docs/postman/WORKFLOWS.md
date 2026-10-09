@@ -224,7 +224,7 @@ Platform admin -> change the farm plan (Farm Business)
 |---|---|
 | `meat` | Meat: raised to be sold or eaten as meat. |
 | `eggs` | Eggs: raised for egg production (layers). |
-| `dual_purpose` | Dual purpose (eggs and meat; for cattle: milk and meat): kept for both uses. |
+| `dual_purpose` | The API now returns the name `Dual purpose (eggs & meat)` (cattle: `Dual purpose (milk & meat)`): kept for both uses. |
 | `dairy` | Dairy: raised for milk (cattle). |
 | `hide` | Hide: raised for hides/skins (cattle). |
 | `draught` | Draught: work animals used for pulling or carrying (cattle). |

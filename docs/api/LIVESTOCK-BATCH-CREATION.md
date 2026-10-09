@@ -100,7 +100,7 @@ Deploy backend/schema and updated clients together: newly submitted livestock ba
 
 ## Exact approved reference data
 
-The catalogue below is supplied by the product owner; no additional breed, purpose or stage is seeded. Labels use readable code words (for example `dual_purpose` → `Dual purpose`, `queen_rearing` → `Queen rearing`).
+The catalogue below is supplied by the product owner; no additional breed, purpose or stage is seeded. Labels use readable code words (for example `queen_rearing` → `Queen rearing`). `dual_purpose` is shown with its two uses spelled out: `Dual purpose (eggs & meat)` for poultry and quail, `Dual purpose (milk & meat)` for cattle. The code is unchanged; an existing database is updated by migration `2026_10_26_100000` only where the name is still the old default, so a name an administrator edited is kept.
 
 - Chicken: Local/Indigenous, Fulani, Noiler, FUNAAB Alpha, Shika-Brown, ISA Brown, Kuroiler, Sasso, Cobb 500, Ross 308, Marshall, Arbor Acres, Rhode Island Red, White Leghorn.
 - Cattle: White Fulani (Bunaji), Red Bororo (Rahaji), Sokoto Gudali, Adamawa Gudali, Wadara, Azawak, Muturu, N'Dama, Kuri, Keteku, Holstein-Friesian, Jersey, Brahman.

@@ -86,6 +86,29 @@ class LivestockBatchCreationTest extends TeamTestCase
         $this->assertSame('Edited label', $species->fresh()->breed_field_label);
     }
 
+    public function test_dual_purpose_label_explains_its_two_uses_and_keeps_the_code(): void
+    {
+        $names = fn (string $species) => collect($this->getJson('/api/v1/master/species/'.Species::where('code', $species)->firstOrFail()->id.'/batch-reference')->assertOk()->json('data.purposes'))->pluck('name', 'code');
+
+        $this->assertSame('Dual purpose (eggs & meat)', $names('chicken')['dual_purpose']);
+        $this->assertSame('Dual purpose (eggs & meat)', $names('duck')['dual_purpose']);
+        $this->assertSame('Dual purpose (milk & meat)', $names('cattle')['dual_purpose']);
+        $this->assertSame('Meat', $names('chicken')['meat']);
+    }
+
+    public function test_reseeding_upgrades_the_old_dual_purpose_name_but_not_an_admin_edited_one(): void
+    {
+        $chicken = ReferenceValue::where('list', 'livestock_purpose_chicken')->where('code', 'dual_purpose')->firstOrFail();
+        $cattle = ReferenceValue::where('list', 'livestock_purpose_cattle')->where('code', 'dual_purpose')->firstOrFail();
+        $chicken->update(['name' => 'Dual purpose']);
+        $cattle->update(['name' => 'Layers and broilers']);
+        $id = $chicken->id;
+        (new LivestockBatchReferenceSeeder)->run();
+        $this->assertSame('Dual purpose (eggs & meat)', $chicken->fresh()->name);
+        $this->assertSame($id, $chicken->fresh()->id);
+        $this->assertSame('Layers and broilers', $cattle->fresh()->name);
+    }
+
     public function test_existing_uncoded_system_breed_is_reused_without_overwriting_or_reactivation(): void
     {
         $species = Species::where('code', 'chicken')->firstOrFail();

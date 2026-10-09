@@ -63,6 +63,24 @@ class LivestockBatchReferenceSeeder extends Seeder
         'fish' => ['table_fish, fingerling_production, breeding, other', 'larva, fry, fingerling, juvenile, adult, unknown'],
     ];
 
+    /**
+     * Purpose labels that need a hint a farmer can understand. Codes never change; only the shown name does.
+     * Species not listed keep the default readable code word (for example `queen_rearing` -> `Queen rearing`).
+     */
+    private const PURPOSE_LABELS = [
+        'dual_purpose' => ['cattle' => 'Dual purpose (milk & meat)', '*' => 'Dual purpose (eggs & meat)'],
+    ];
+
+    public static function purposeLabel(string $speciesCode, string $code): string
+    {
+        return self::PURPOSE_LABELS[$code][$speciesCode] ?? self::PURPOSE_LABELS[$code]['*'] ?? self::defaultLabel($code);
+    }
+
+    private static function defaultLabel(string $code): string
+    {
+        return Str::ucfirst(str_replace('_', ' ', $code));
+    }
+
     public function run(): void
     {
         DB::transaction(function () {
@@ -83,9 +101,14 @@ class LivestockBatchReferenceSeeder extends Seeder
                 }
                 foreach (['purpose', 'stage'] as $index => $kind) {
                     foreach (explode(', ', self::OPTIONS[$speciesCode][$index]) as $sort => $code) {
-                        ReferenceValue::firstOrCreate(['list' => ReferenceValue::livestockList($speciesCode, $kind), 'code' => $code], [
-                            'name' => Str::ucfirst(str_replace('_', ' ', $code)), 'sort_order' => $sort * 10,
+                        $label = $kind === 'purpose' ? self::purposeLabel($speciesCode, $code) : self::defaultLabel($code);
+                        $row = ReferenceValue::firstOrCreate(['list' => ReferenceValue::livestockList($speciesCode, $kind), 'code' => $code], [
+                            'name' => $label, 'sort_order' => $sort * 10,
                         ]);
+                        // Upgrade a name still equal to the old auto-generated one; an admin-edited name is never overwritten.
+                        if (! $row->wasRecentlyCreated && $row->name === self::defaultLabel($code) && $label !== $row->name) {
+                            $row->update(['name' => $label]);
+                        }
                     }
                 }
             }
