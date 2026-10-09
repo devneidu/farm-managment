@@ -216,6 +216,21 @@ Platform admin -> change the farm plan (Farm Business)
 | Breed / Strain (optional) | `breed_id` | Step 5, `breeds[].id` (system breeds plus the farm's custom breeds, e.g. the one from Flow S) |
 | Name, count, dates | `name`, `initial_population`, `start_date` | Entered by the user |
 
+**Production purpose codes, spelled out** (show the `name` with this hint in the form)
+
+| Code | Meaning |
+|---|---|
+| `meat` | Meat: raised to be sold or eaten as meat. |
+| `eggs` | Eggs: raised for egg production (layers). |
+| `dual_purpose` | Dual purpose (eggs and meat; for cattle: milk and meat): kept for both uses. |
+| `dairy` | Dairy: raised for milk (cattle). |
+| `hide` | Hide: raised for hides/skins (cattle). |
+| `draught` | Draught: work animals used for pulling or carrying (cattle). |
+| `breeding` | Breeding: kept as breeding stock to produce young. |
+| `other` | Other: any purpose not listed. |
+
+The codes offered depend on the species (Chicken has no `dairy`); read them from step 5. Growth stages: `hatchling` (newly hatched), `chick`/`keet`/`duckling`/`calf` (young animal), `weaner`, `grower`, `adult`, `unknown`.
+
 **Variables produced.** `op_poultry_id`, `op_crops_id`, `species_chicken_id`, `batch_purpose_code`, `batch_growth_stage_code`, `cycle_id`, `cycle_reference`, `record_mortality_id`, `record_adjust_id`.
 
 **Chain of effects**
