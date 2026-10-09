@@ -9,7 +9,7 @@ Quick rules: `login-admin`/`login-farmer` requests switch the cookie session bet
 | 1 | Email registration & onboarding | 8 | None (fresh environment). |
 | 2 | Login & farm context | 7 | Flow 1. |
 | S | Demo farm setup (run once after Flow 1) | 22 | Flow 1 (platform admin account optional for the first four requests). |
-| 3 | Livestock batch & daily activity | 11 | Flows 1-2 and Flow S (needs `breed_id`, `area_id`). |
+| 3 | Livestock batch & daily activity | 13 | Flows 1-2 and Flow S (needs `breed_id`, `area_id`). |
 | 4 | Crop project | 14 | Flow S (`store_id`, `item_seed_id`, `item_fert_id`, `item_yam_id`). |
 | 5 | Inventory | 10 | Flow S (`store_id`). |
 | 6 | Health & medicine | 13 | Flow S (`item_med_id`, `lot_med_id`, `store_id`) and Flow 3 (`cycle_id`). |
@@ -193,16 +193,30 @@ Platform admin -> change the farm plan (Farm Business)
 | 1 | List farm operations (production types) | `GET /master/farm-operations` (200) | `op_poultry_id`, `op_crops_id` |
 | 2 | List species | `GET /master/species` (200) | `species_chicken_id` |
 | 3 | Get species capabilities | `GET /master/species/{species_chicken_id}/capabilities` (200) |  |
-| 4 | Start a livestock batch | `POST /production-cycles` (201) | `cycle_id`, `cycle_reference` |
-| 5 | Show a production cycle | `GET /production-cycles/{cycle_id}` (200) |  |
-| 6 | Record feed use (not linked to stock) | `POST /records` (201) |  |
-| 7 | Record mortality | `POST /records` (201) | `record_mortality_id` |
-| 8 | Reconcile population (population adjustment) | `POST /records` (201) | `record_adjust_id` |
-| 9 | Re-read the cycle after records | `GET /production-cycles/{cycle_id}` (200) |  |
-| 10 | List operational records | `GET /records` (200) |  |
-| 11 | Production summary | `GET /production-cycles/{cycle_id}/summary` (200) |  |
+| 4 | List production areas (the "Default Location" picker) | `GET /production-areas?is_active=true` (200) | `area_id` (only if empty) |
+| 5 | Batch-creation options: purpose, growth stage and breed | `GET /master/species/{species_chicken_id}/batch-reference` (200) | `batch_purpose_code`, `batch_growth_stage_code` |
+| 6 | Start a livestock batch | `POST /production-cycles` (201) | `cycle_id`, `cycle_reference` |
+| 7 | Show a production cycle | `GET /production-cycles/{cycle_id}` (200) |  |
+| 8 | Record feed use (not linked to stock) | `POST /records` (201) |  |
+| 9 | Record mortality | `POST /records` (201) | `record_mortality_id` |
+| 10 | Reconcile population (population adjustment) | `POST /records` (201) | `record_adjust_id` |
+| 11 | Re-read the cycle after records | `GET /production-cycles/{cycle_id}` (200) |  |
+| 12 | List operational records | `GET /records` (200) |  |
+| 13 | Production summary | `GET /production-cycles/{cycle_id}/summary` (200) |  |
 
-**Variables produced.** `op_poultry_id`, `op_crops_id`, `species_chicken_id`, `cycle_id`, `cycle_reference`, `record_mortality_id`, `record_adjust_id`.
+**What the "Start livestock batch" form needs and where each value comes from**
+
+| Form field | Request field | Source |
+|---|---|---|
+| Production type | `operation_type_id` | Step 1 (`GET /master/farm-operations`) |
+| Animal | `species_id` | Step 2 (`GET /master/species`) |
+| Default Location (optional) | `production_area_id` | Step 4 (`GET /production-areas`); "+ New Location" is `POST /production-areas` (folder 07) |
+| Production purpose (required) | `production_purpose` | Step 5, `purposes[].code` |
+| Growth stage (optional) | `growth_stage` | Step 5, `growth_stages[].code` |
+| Breed / Strain (optional) | `breed_id` | Step 5, `breeds[].id` (system breeds plus the farm's custom breeds, e.g. the one from Flow S) |
+| Name, count, dates | `name`, `initial_population`, `start_date` | Entered by the user |
+
+**Variables produced.** `op_poultry_id`, `op_crops_id`, `species_chicken_id`, `batch_purpose_code`, `batch_growth_stage_code`, `cycle_id`, `cycle_reference`, `record_mortality_id`, `record_adjust_id`.
 
 **Chain of effects**
 
@@ -1147,3 +1161,5 @@ For other animals use folder 05: **List species (all animals)** captures `specie
 Newman (live local server, throwaway MySQL 8, queue worker running, Flow 1 + platform admin + Flow S first): folders 05 + 08 = 37 requests, 84 assertions, 0 failures; Flows 3-12, 14 and 13 on a fresh database = 136 requests, 284 assertions, 0 failures (see COVERAGE.md addendum).
 
 Test-data notes: Flow S step 8 reuses the existing breed (`409 duplicate_name` -> `details.existing_id`) when rerun; `Close a production cycle` (folder 08) starts its own disposable batch and captures `cycle_pilot_id` for `Reopen`, so run Close before Reopen and `cycle_id` is never closed; folder 05 names its custom breed with `{{custom_breed_name}}` (timestamp) so it never collides with Flow S.
+
+Flow 3 follow-up (2026-10-09): two lookup steps were added before the batch is started - step 4 lists production areas (Default Location) and step 5 reads the species batch-reference (purpose, growth stage, breed). Step 6 sends the captured `batch_purpose_code` and `batch_growth_stage_code`. Flow 3 now has 13 steps; Newman on a fresh database: 13 requests, 31 assertions, 0 failures.
