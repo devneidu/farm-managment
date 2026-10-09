@@ -8,6 +8,7 @@ use App\Models\CropType;
 use App\Models\CropVariety;
 use App\Models\Farm;
 use App\Models\OperationType;
+use App\Models\ReferenceValue;
 use App\Models\Species;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -63,6 +64,13 @@ class MasterDataCatalogue
         return CropVariety::query()->visibleTo($farm)->where('crop_type_id', $crop->id)
             ->when(! $includeInactive, fn ($q) => $q->active())
             ->orderByRaw('farm_id is not null')->orderBy('name')->get();
+    }
+
+    public function batchOptions(Species $species, string $kind, bool $includeInactive = false): Collection
+    {
+        return ReferenceValue::where('list', ReferenceValue::livestockList($species->code, $kind))
+            ->when(! $includeInactive, fn ($q) => $q->where('is_active', true))
+            ->orderBy('sort_order')->orderBy('code')->get();
     }
 
     private function filterByOperation(Builder $query, Farm $farm, array $f): void

@@ -123,6 +123,46 @@ reconciliation, deployment runbook.
 Do not combine phases merely to reduce file count. Each phase must
 finish migrations/models/services/API/policies/tests before moving on.
 
+## Post-V1 — Phase 22 (Marketplace foundation & seller shops)
+
+Implemented as a post-launch addition: seller-shop onboarding, private contact configuration, publishing lifecycle, verification, shop members, public discovery and platform oversight. Listings, negotiation, deals, payments and delivery are later phases. See [41-PHASE-22-MARKETPLACE.md](41-PHASE-22-MARKETPLACE.md) and [`docs/api/PHASE-22-MARKETPLACE.md`](../api/PHASE-22-MARKETPLACE.md).
+
+## Post-V1 — Phase 23 (Marketplace product listings, pricing & images)
+
+Implemented as a post-launch addition: seller product listings (master-data products, flexible NGN-priced selling units, seller-declared packages, negotiable flag as data only, seller-arranged fulfilment), an illustrative image catalogue plus seller photos, an optional informational inventory link, a listing lifecycle with immediate publishing for active shops, the anonymous feed and platform-admin restrict/lift. Offers/negotiation (Phase 24), deals (25), monetisation (26), community (28), payments, logistics and stock reservation are later phases. See [42-PHASE-23-MARKETPLACE-LISTINGS.md](42-PHASE-23-MARKETPLACE-LISTINGS.md) and [`docs/api/PHASE-23-MARKETPLACE-LISTINGS.md`](../api/PHASE-23-MARKETPLACE-LISTINGS.md).
+
+## Post-V1 — Phase 24 (Buyer enquiries & controlled negotiation)
+
+Offers on negotiable listings (price floor, attempt limit, expiry, accept/reject), "proceed at listed price" purchase intents, shop permissions `offer.view|respond`. No chat, escrow, checkout, stock reservation or seller contact exchange. Design: `43-PHASE-24-MARKETPLACE-OFFERS.md`; contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`. Phase 25 (deals, contact exchange) is implemented below.
+
+## Post-V1 — Phase 25 (Marketplace deal summary & fulfilment)
+
+A lightweight deal summary: the buyer confirms an accepted offer (A), or the seller confirms a fixed-price purchase request and then the buyer confirms the exact terms (B). Frozen product/unit/quantity/price/total and fulfilment terms (pickup or seller delivery, delivery charge never added to the total), two-sided self-reported completion, cancellation, confidential reports (Phase 27 owns moderation), audited contact exchange (address only for pickup), shop permissions `deal.view|respond`, platform admin read-only. Farmvest is not an escrow, payment processor or logistics provider: no payment, stock reservation, sale, invoice or delivery. Design: `44-PHASE-25-MARKETPLACE-DEALS.md`; contract: `docs/api/PHASE-25-MARKETPLACE-DEALS.md`. Phase 26 (monetisation) is implemented below.
+
+## Post-V1 — Phase 26 (Marketplace monetisation)
+
+Shop-scoped prepaid seller plans (Free = 10 published listings; Seller Plus / Pro configured by admins) and fixed-price promoted listings ("Sponsored", priority on page 1, cap 3), paid to Farmvest through Paystack with server-side verification, idempotent settlement and signed, de-duplicated webhooks. Feature flags off by default; expiry evaluated at read time; no commissions, escrow, wallets, payouts, buyer-seller payments or stock effects. Design: `45-PHASE-26-MARKETPLACE-MONETISATION.md`; contract: `docs/api/PHASE-26-MARKETPLACE-MONETISATION.md`.
+
 ## V1 launch status (Phase 21)
 
 Phases 0–19 are committed through `f1e51e5`. Phase 21 hardening is implemented and locally verified; see [audit and acceptance record](../operations/PHASE-21-VERIFICATION.md) and [deployment runbook](../operations/LAUNCH.md) for final test evidence and remaining infrastructure gates. No unconditional production-readiness claim until restore, reconciliation, staging smoke and representative concurrent load gates are signed off. Phase 20 — Deferred from V1 / post-launch enhancement (WhatsApp integration, AI-assisted parsing); it is not a V1 launch blocker.
+
+## Post-V1 — Phase 27 (Marketplace trust, safety and administration)
+
+Implemented: platform status summaries and offer oversight; confidential shop/listing reporting; existing deal-report triage (`open -> in_review -> dismissed|resolved`), active issue deduplication and later reporting after closure; append-only report history and required administrative reasons; explicit linked enforcement using existing shop/listing services, platform roles and audit. Reports never automatically enforce; existing deal lifecycle and paid periods remain intact. Design: `46-PHASE-27-MARKETPLACE-SAFETY.md`; contract: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. Phase 28 is deferred from V1; Phase 29 is the next active phase, not started.
+
+## Phase 28 — Community Features (Deferred from V1 / post-launch enhancement)
+
+**Product decision — 2026-10-08:** Defer Phase 28 entirely to post-launch, as with Phase 20 (WhatsApp and AI Parsing). Community posts, comments, likes, discussions and all related functionality are excluded from Farmvest V1 and are not V1 launch blockers. Do not implement Phase 28 as part of the current release.
+
+Preserve the original Phase 28 requirements for future implementation; this decision changes scheduling and V1 scope, not the retained requirements. Existing community specifications and the [community feedback backlog](38-COMMUNITY-FEEDBACK-BACKLOG.md) remain available for future planning.
+
+## Phase 29 — Postman Finalization and Backend Handover (Completed 2026-10-08; scope revised)
+
+**Revised scope:** finalize the Postman collection against all 343 implemented routes (marketplace Phases 22–27 included, deferred Phases 20 and 28 excluded), run it with Newman on a disposable database, record what cannot be executed (Paystack test-mode flows), and publish the frontend reference and the backend handover (`docs/operations/BACKEND-HANDOVER.md`). No new backend features and no repeat of the full Laravel suite. Results: `docs/postman/COVERAGE.md`, Phase 29 addendum. **Status: complete.** Phases 20 and 28 stay deferred to post-launch. Open pre-launch checks (documented, not blockers of this phase): real Paystack test-mode checkout and signed-webhook verification; administrative handling of paid-but-not-applied payments; infrastructure and deployment checks (`docs/operations/LAUNCH.md`); outstanding concurrency validation.
+
+Original heading and notes follow:
+
+**User-directed livestock batch improvement — 2026-10-09:** Extends completed Phases 4/7 with the exact approved 22-animal system breed/type catalogue, species-specific purposes and biological starting stages in existing reference_values, a combined selected-animal selector response, and required purpose/optional stage/NGN acquisition unit price/supplier on new batches. Historical nulls and ledgers remain intact; no automatic financial booking or individual tracking. Contract: `docs/api/LIVESTOCK-BATCH-CREATION.md`. This scoped task does not start a new phase or change the Phase 20/28 deferrals.
+
+Phase 29 followed completed Phase 27 and bypassed deferred Phase 28; it is complete. The Phase 27 migration was applied on a disposable database and its Postman requests run through Newman (Flows 18–19). Still open as pre-launch checks: verify the migration on the real development/staging database and the process-concurrency scenarios skipped in some environments.

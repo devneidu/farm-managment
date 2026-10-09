@@ -14,6 +14,7 @@ use App\Models\ReferenceValue;
 use App\Models\Species;
 use App\Models\SpeciesCapability;
 use App\Services\MasterData\SpeciesCapabilityService;
+use Database\Seeders\LivestockBatchReferenceSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -36,8 +37,8 @@ class SystemMasterDataTest extends MasterDataTestCase
             ['maize', 'cassava', 'yam', 'vegetables', 'fruits'],
             CropType::orderBy('sort_order')->pluck('code')->all(),
         );
-        // No unconfirmed agricultural data is invented.
-        $this->assertSame(0, Breed::count());
+        // The user-approved batch catalogue seeds system breeds; crop varieties remain unconfirmed.
+        $this->assertSame(array_sum(array_map('count', LivestockBatchReferenceSeeder::BREEDS)), Breed::system()->count());
         $this->assertSame(0, CropVariety::count());
     }
 

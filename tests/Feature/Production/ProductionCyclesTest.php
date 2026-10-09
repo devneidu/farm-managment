@@ -46,7 +46,7 @@ class ProductionCyclesTest extends TeamTestCase
 
     private function livestock(array $overrides = []): array
     {
-        return array_replace(['kind' => 'livestock', 'name' => 'October Broilers', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id, 'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 500, 'start_date' => '2026-01-10'], $overrides);
+        return array_replace(['kind' => 'livestock', 'name' => 'October Broilers', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id, 'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 500, 'start_date' => '2026-01-10'], $overrides);
     }
 
     private function crop(array $overrides = []): array
@@ -149,7 +149,7 @@ class ProductionCyclesTest extends TeamTestCase
         $this->postJson(self::URL, $this->livestock(['operation_type_id' => OperationType::where('code', 'crops')->first()->id]))->assertUnprocessable()->assertJsonValidationErrors('operation_type_id');
         $this->postJson(self::URL, $this->crop(['operation_type_id' => $cattle->operation_type_id]))->assertUnprocessable();
         $fish = Species::where('code', 'fish')->firstOrFail();
-        $batch = $this->create($this->livestock(['name' => 'Catfish Batch A', 'operation_type_id' => $fish->operation_type_id, 'species_id' => $fish->id, 'initial_population' => 2000]));
+        $batch = $this->create($this->livestock(['name' => 'Catfish Batch A', 'operation_type_id' => $fish->operation_type_id, 'species_id' => $fish->id, 'production_purpose' => 'table_fish', 'initial_population' => 2000]));
         $this->assertSame('population', $batch['operation']['tracking_model']);
         $this->assertSame(2000, $batch['livestock']['current_population']);
         $this->assertSame('fish', $batch['livestock']['species']['code']);
@@ -377,7 +377,7 @@ class ProductionCyclesTest extends TeamTestCase
         $this->patchJson($url, ['area' => ['quantity' => 0, 'unit' => 'hectare']])->assertUnprocessable();
         $this->patchJson($url, ['area' => ['quantity' => -2, 'unit' => 'hectare']])->assertUnprocessable();
         $this->patchJson($url, ['expected_germination_date' => '2026-01-15', 'expected_end_date' => '2026-08-10'])->assertOk();
-        $this->postJson($url.'/close', ['end_date' => now()->addDay()->toDateString(), 'reason' => 'Future'])->assertUnprocessable();
+        $this->postJson($url.'/close', ['end_date' => now('Africa/Lagos')->addDay()->toDateString(), 'reason' => 'Future'])->assertUnprocessable();
         $this->postJson($url.'/close', ['end_date' => '2026-08-10', 'reason' => 'Season ended'])->assertOk()->assertJsonPath('data.crop.initial_planting_units', 50);
         $this->getJson($url)->assertOk()->assertJsonPath('data.status', 'closed');
         $this->postJson($url.'/reopen', ['reason' => 'Resume'])->assertOk();

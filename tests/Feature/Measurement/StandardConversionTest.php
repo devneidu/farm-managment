@@ -38,7 +38,7 @@ class StandardConversionTest extends MeasurementTestCase
         $this->assertEqualsCanonicalizing(['sq_m', 'hectare', 'acre'], $this->codes('area'));
         $this->assertEqualsCanonicalizing(['celsius', 'fahrenheit'], $this->codes('temperature'));
         $this->assertEqualsCanonicalizing(['piece', 'egg', 'head', 'planting_unit'], $this->codes('count'));
-        $this->assertEqualsCanonicalizing(['bag', 'sack', 'crate', 'tray', 'carton', 'bottle'], $this->codes('package'));
+        $this->assertEqualsCanonicalizing(['bag', 'sack', 'crate', 'tray', 'carton', 'bottle', 'basket', 'tuber', 'bunch'], $this->codes('package'));
 
         $this->assertSame(Unit::count(), Unit::distinct()->count('code'));
     }

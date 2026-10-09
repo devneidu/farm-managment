@@ -32,6 +32,9 @@ class MasterRecordResource extends JsonResource
         if ($has('livestock_group')) {
             $out['livestock_group'] = $r->livestock_group?->value;
         }
+        if ($has('breed_field_label')) {
+            $out['breed_field_label'] = $r->breed_field_label;
+        }
         if ($has('list')) {
             $out['list'] = $r->list;
         }

@@ -14,6 +14,7 @@ use App\Models\FeatureFlag;
 use App\Models\OperationType;
 use App\Models\Plan;
 use App\Models\PlatformAdmin;
+use App\Models\ReferenceValue;
 use App\Models\Species;
 use App\Models\User;
 use App\Models\WorkTemplate;
@@ -69,6 +70,25 @@ class PlatformAdminTest extends TeamTestCase
             'code' => 'test_broiler_plan', 'name' => 'Test broiler plan', 'applies_to' => 'production_cycle', 'cycle_kind' => 'livestock',
             'items' => [['title' => 'Weigh a sample', 'category' => 'growth_monitoring', 'anchor' => 'cycle_start', 'offset_days' => 7]],
         ], $extra);
+    }
+
+    public function test_livestock_reference_lists_reuse_platform_administration_and_audit(): void
+    {
+        $list = 'livestock_purpose_chicken';
+        $this->getJson($this->url('/master/reference-values?list='.$list))->assertOk()->assertJsonCount(5, 'data');
+        $row = ReferenceValue::where('list', $list)->where('code', 'eggs')->firstOrFail();
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['name' => 'Egg production', 'is_active' => false])->assertOk();
+        $this->assertDatabaseHas('audit_logs', ['action' => 'platform.master_updated', 'resource_id' => $row->id]);
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['list' => 'livestock_purpose_cattle'])->assertUnprocessable();
+        $this->postJson($this->url('/master/reference-values'), ['list' => 'livestock_purpose_nonexistent', 'code' => 'meat', 'name' => 'Meat'])->assertUnprocessable();
+        $species = Species::where('code', 'fish')->firstOrFail();
+        $this->patchJson($this->url('/master/species/'.$species->id), ['breed_field_label' => 'Species / Type'])->assertOk()->assertJsonPath('data.breed_field_label', 'Species / Type');
+        $this->signInAs($this->platformUser(PlatformRole::Support, 'Reference support'));
+        $this->getJson($this->url('/master/reference-values?list='.$list))->assertOk();
+        $this->patchJson($this->url('/master/reference-values/'.$row->id), ['is_active' => true])->assertForbidden();
+        $this->signInAs($this->owner);
+        $data = $this->getJson('/api/v1/master/species/'.Species::where('code', 'chicken')->value('id').'/batch-reference')->assertOk()->json('data');
+        $this->assertNotContains('eggs', array_column($data['purposes'], 'code'));
     }
 
     // ------------------------------------------------------------------ authorization
@@ -578,11 +598,15 @@ class PlatformAdminTest extends TeamTestCase
 
     public function test_settings_are_a_validated_closed_registry(): void
     {
-        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('data.0.value', null);
+        $this->getJson($this->url('/settings'))->assertOk()->assertJsonCount(9, 'data')->assertJsonPath('data.0.value', null);
         $this->putJson($this->url('/settings/support_email'), ['value' => 'help@farm.example'])->assertOk()->assertJsonPath('data.value', 'help@farm.example');
         $this->putJson($this->url('/settings/support_email'), ['value' => 'not-an-email'])->assertStatus(422);
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => '+2348012345678'])->assertOk();
         $this->putJson($this->url('/settings/support_whatsapp'), ['value' => 'call me'])->assertStatus(422);
+        foreach ([0, 21, 'many'] as $bad) {
+            $this->putJson($this->url('/settings/marketplace_max_shops_per_user'), ['value' => $bad])->assertStatus(422);
+        }
+        $this->putJson($this->url('/settings/marketplace_max_shops_per_user'), ['value' => 5])->assertOk()->assertJsonPath('data.value', 5);
         $this->putJson($this->url('/settings/announcement'), ['value' => str_repeat('a', 501)])->assertStatus(422);
         $this->putJson($this->url('/settings/announcement'), [])->assertStatus(422);
         $this->putJson($this->url('/settings/default_currency'), ['value' => 'USD'])->assertNotFound()->assertJsonPath('code', 'unknown_setting');
@@ -606,7 +630,10 @@ class PlatformAdminTest extends TeamTestCase
         $this->assertTrue(app(PlatformConfigService::class)->flag('new_dashboard'));
         $this->patchJson($this->url('/feature-flags/missing'), ['enabled' => true])->assertNotFound();
         $this->patchJson($this->url('/feature-flags/new_dashboard'), ['enabled' => 'maybe'])->assertStatus(422);
-        $this->getJson($this->url('/feature-flags'))->assertJsonPath('data.0.key', 'new_dashboard');
+        // The two Phase 26 monetisation flags are seeded (off); keys sort alphabetically.
+        $flags = $this->getJson($this->url('/feature-flags'))->assertJsonPath('data.0.key', 'marketplace_promotions')->assertJsonPath('data.0.enabled', false)
+            ->assertJsonPath('data.1.key', 'marketplace_seller_plans')->assertJsonPath('data.1.enabled', false)->json('data');
+        $this->assertSame('new_dashboard', $flags[2]['key']);
 
         $this->expectException(\LogicException::class);
         FeatureFlag::firstOrFail()->delete();

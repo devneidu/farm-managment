@@ -28,11 +28,11 @@ class StoreMasterRecordRequest extends FormRequest
 
         return match ($this->route('kind')) {
             'operation-types' => $common + ['code' => $code('operation_types'), 'category' => ['required', Rule::enum(OperationCategory::class)], 'tracking_model' => ['missing']],
-            'species' => $common + ['code' => $code('species'), 'operation_type_id' => ['required', 'uuid', 'exists:operation_types,id'], 'livestock_group' => ['sometimes', 'nullable', Rule::enum(LivestockGroup::class)]],
+            'species' => $common + ['code' => $code('species'), 'operation_type_id' => ['required', 'uuid', 'exists:operation_types,id'], 'livestock_group' => ['sometimes', 'nullable', Rule::enum(LivestockGroup::class)], 'breed_field_label' => ['sometimes', 'nullable', 'string', 'max:64']],
             'crop-types' => $common + ['code' => $code('crop_types'), 'operation_type_id' => ['required', 'uuid', 'exists:operation_types,id']],
             'breeds' => ['name' => $common['name'], 'is_active' => $common['is_active'], 'species_id' => ['required', 'uuid', 'exists:species,id'], 'code' => ['sometimes', 'nullable', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('breeds', 'code')->where('species_id', $this->input('species_id'))]],
             'varieties' => ['name' => $common['name'], 'is_active' => $common['is_active'], 'crop_type_id' => ['required', 'uuid', 'exists:crop_types,id'], 'code' => ['sometimes', 'nullable', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('crop_varieties', 'code')->where('crop_type_id', $this->input('crop_type_id'))]],
-            'reference-values' => $common + ['list' => ['required', Rule::in([ReferenceValue::PLANTING_MATERIAL_TYPE, ReferenceValue::PLANTING_UNIT_TYPE])], 'code' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('reference_values', 'code')->where('list', $this->input('list'))]],
+            'reference-values' => $common + ['list' => ['required', Rule::in(ReferenceValue::managedLists())], 'code' => ['required', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique('reference_values', 'code')->where('list', $this->input('list'))]],
             default => [],
         };
     }

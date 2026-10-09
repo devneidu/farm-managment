@@ -39,7 +39,7 @@ class BreedingTest extends TeamTestCase
         $operation = Species::where('code', $species)->firstOrFail()->operationType->code;
 
         return $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => ucfirst($species).' '.Str::random(4), 'operation_type_id' => OperationType::where('code', $operation)->firstOrFail()->id,
-            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'initial_population' => $population, 'start_date' => $start])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'production_purpose' => ($species === 'honeybee' ? 'colony_breeding' : 'breeding'), 'initial_population' => $population, 'start_date' => $start])->assertCreated()->json('data.id');
     }
 
     private function population(string $cycle): int
@@ -246,7 +246,8 @@ class BreedingTest extends TeamTestCase
         $this->assertSame('completed', $this->getJson('/api/v1/breeding-projects/'.$project['id'])->json('data.status'));
         $this->assertSame(['live_count' => 37, 'expected_offspring' => 40, 'variance' => -3], array_intersect_key($this->getJson('/api/v1/breeding-projects/'.$project['id'])->json('data.result'), array_flip(['live_count', 'expected_offspring', 'variance'])));
         $this->assertSame($payload['recorded_at'], substr($first['recorded_at'], 0, 19).'Z');
-        $this->assertSame(now('Africa/Lagos')->toDateString(), $first['outcome_date']);
+        // The outcome date is the farm-local date of recorded_at (2 h ago), which is not 'today' just after Lagos midnight.
+        $this->assertSame(now('Africa/Lagos')->subHours(2)->toDateString(), $first['outcome_date']);
     }
 
     public function test_mammal_birth_adds_live_offspring_only(): void

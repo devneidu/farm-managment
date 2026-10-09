@@ -57,7 +57,7 @@ class OutputStockTest extends TeamTestCase
         $operation = Species::where('code', $species)->firstOrFail()->operationType->code;
 
         return $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => $name.' '.Str::random(4), 'operation_type_id' => OperationType::where('code', $operation)->firstOrFail()->id,
-            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', $species)->firstOrFail()->id, 'production_purpose' => ($species === 'honeybee' ? 'colony_breeding' : 'breeding'), 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
     }
 
     private function crates(int $perCrate = 30): string
@@ -775,7 +775,7 @@ class OutputStockTest extends TeamTestCase
 
         // Their own first collection builds their own item and store, never touching mine.
         $theirCycle = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Theirs', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 10, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 10, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
         $this->eggs($theirCycle, [['quantity' => 7, 'unit' => 'piece']])->assertCreated();
         $this->assertSame(2, InventoryItem::where('system_key', 'output:eggs')->count());
         $this->assertSame('7', $this->available('eggs')['quantity']);

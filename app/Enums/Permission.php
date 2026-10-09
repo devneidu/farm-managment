@@ -92,6 +92,9 @@ enum Permission: string
     case ReportExport = 'report.export';
     case AuditView = 'audit.view';
 
+    // Phase 22 - marketplace: may create a seller shop linked to THIS farm (Owner and Manager). Shop management itself uses shop-scoped roles, not farm roles.
+    case MarketplaceManage = 'marketplace.manage';
+
     // Reserved identifiers for later phases (granted per 34-PERMISSIONS-MATRIX; no routes use them yet)
     case LivestockBatchCreate = 'livestock.batch.create';
 }

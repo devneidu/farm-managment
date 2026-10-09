@@ -28,7 +28,8 @@ Re-run and commit `docs/api/openapi.json` whenever an endpoint changes.
 | [`FRONTEND-INTEGRATION.md`](FRONTEND-INTEGRATION.md) | How to use the API from the React app (client setup, startup, routing, permissions, errors, idempotency, refresh-after-write, downloads, exports, notifications). |
 | [`../postman/Farm-Management-API.postman_collection.json`](../postman/Farm-Management-API.postman_collection.json) | Postman collection (v2.1): every route documented with bodies, rules, side effects and real saved responses, plus executable workflows. |
 | [`../postman/Farm-Management-Local.postman_environment.json`](../postman/Farm-Management-Local.postman_environment.json) | Local environment (placeholders only, no credentials). |
-| [`../postman/WORKFLOWS.md`](../postman/WORKFLOWS.md) | The 14 Postman flows: sequence, produced variables, state changes, business rules. |
+| [`../postman/WORKFLOWS.md`](../postman/WORKFLOWS.md) | The 20 Postman flows (Flows 1-19 and S): sequence, produced variables, state changes, business rules. |
+| [`../operations/BACKEND-HANDOVER.md`](../operations/BACKEND-HANDOVER.md) | Backend handover: scope, configuration, Postman use, pre-launch follow-ups, known limits. |
 | [`../postman/COVERAGE.md`](../postman/COVERAGE.md) | Route coverage, verification results, docs/code discrepancies and frontend integration gaps. |
 
 ## Postman
@@ -102,11 +103,13 @@ Every auth endpoint (register, login, google, email/verify, onboarding/farm, `GE
     "next_action": "verify_email",
     "user": { "id": "uuid", "email": "a@b.com", "name": null, "email_verified_at": null, "has_password": true, "providers": [] },
     "farm": null,
-    "farms": [] },
+    "farms": [],
+    "marketplace": { "shop_count": 0 } },
   "meta": {}, "message": null }
 ```
 
-`next_action` -> screen: `verify_email` -> `/verify-email`; `complete_farm_setup` -> `/onboarding/farm`; `no_active_farm` -> a "you have no
+`next_action` -> screen: `verify_email` -> `/verify-email`; `marketplace` -> the seller dashboard (verified, no farm, member of a
+Marketplace shop; `marketplace.shop_count > 0`); `complete_farm_setup` -> `/onboarding/farm`; `no_active_farm` -> a "you have no
 farm" screen (see below); `none` -> app.
 
 These are four distinct states, never derive one from another: email verified (`email_verified`), onboarding completed
@@ -626,7 +629,7 @@ Common required fields: `kind` (`livestock` or `crop`), `name` (1–100 characte
 
 | Domain | Required fields | Optional fields |
 |---|---|---|
-| livestock | `species_id`, `initial_population`, `start_date` | `breed_id` |
+| livestock | `species_id`, `production_purpose`, `initial_population`, `start_date` | `breed_id`, `growth_stage`, `acquisition_price_per_animal` (NGN), `supplier_contact_id` |
 | crop | `crop_type_id`, `planting_material_type`, `planting_unit_type`, `initial_planting_units`, `planting_date` | `crop_variety_id`, `area`, `expected_germination_date` |
 
 Counts must be positive whole numbers, 1–999999999999. Booleans, fractional counts, unit strings, zero and negatives are rejected. Counts may be JSON integers or canonical digit strings without leading zeroes. Livestock counts always mean heads, including fish; no kg/litre/package population. Optional master UUIDs accept null. Dates must be actual `YYYY-MM-DD` calendar dates; historical dates are valid and independent of entry time. Future start/planting dates are accepted without inventing a draft status. Expected dates are nullable, user-entered estimates; they cannot precede start/planting. No biological duration is assumed. `expected_germination_date` is crop-only.
@@ -653,6 +656,7 @@ Poultry → Chicken → optional breed → 500 heads → optional Broiler Pen:
   "name": "October Broilers",
   "operation_type_id": "<poultry-uuid>",
   "species_id": "<chicken-uuid>",
+  "production_purpose": "meat",
   "breed_id": null,
   "initial_population": 500,
   "start_date": "2026-10-01",
@@ -670,6 +674,7 @@ Fishery → Fish → 2,000 heads → optional Pond A (same livestock model):
   "name": "Catfish Batch A",
   "operation_type_id": "<fishery-uuid>",
   "species_id": "<fish-uuid>",
+  "production_purpose": "table_fish",
   "initial_population": 2000,
   "start_date": "2026-09-01",
   "production_area_id": "<pond-a-production-area-uuid>"
@@ -857,6 +862,10 @@ The complete contract is [Phase 18 platform administration](PHASE-18-PLATFORM-AD
 
 The complete contract is [Phase 19 localization](PHASE-19-LOCALIZATION.md): public `GET /locales` and `GET /translations/{locale}` (UI text bundles with per-key English fallback and `fallback_keys`), and `GET|PATCH /me/preferences` (user-level `locale`). English is the only available language; Hausa/Yoruba/Igbo/Pidgin are registered but `pending_terminology_review`. `locale` is added to `GET /account` and `data.user.locale` of the auth-state payload. Locale never changes stored values, codes, exact decimal money, canonical quantities or UTC timestamps; user-entered farm records are not translated. Existing API messages remain English; machine `code`s are language-independent.
 
+## Phase 22 - Marketplace foundation & seller shops
+
+The complete contract is [Phase 22 marketplace](PHASE-22-MARKETPLACE.md): `GET /marketplace/my/shops`, `POST /marketplace/shops`, `GET|PATCH /marketplace/shops/{shop}`, `GET|PATCH …/contact` (PRIVATE), `POST …/submit|close|reopen|request-verification`, shop members under `…/members` (shop roles `owner|manager|staff`); anonymous discovery `GET /public/marketplace/shops` and `/{slug}` (active shops only, no private data); platform oversight `/platform-admin/marketplace/shops` (approve, reject, suspend, reinstate, verification). Sellers need only a verified email — no farm, no farm onboarding. New farm permission `marketplace.manage` (Owner, Manager) for linking a shop to a farm; new platform setting `marketplace_max_shops_per_user`.
+
 ## 32. Phase 21 launch hardening
 
 See [production runbook](../operations/LAUNCH.md) and [audit/verification](../operations/PHASE-21-VERIFICATION.md). No new public endpoint or request field.
@@ -872,3 +881,29 @@ Production readiness is conditional on the deployment gates; Phase 20 (WhatsApp 
 ## 33. Feed, eggs and milk stock
 
 The complete frontend integration contract is [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md): one event → one entry → every effect. `egg_collection` and `milk` records stock-in automatically on a farm-owned Eggs/Milk item (no inventory setup; a "Main Store" is created when the farm has no store), `feed_use` is the single entry for feed used for livestock, a breeding project can take eggs from stock (`consume_egg_stock`) with explicit returns on cancel, `POST /sales` can sell feed as well as produce, donated/purchased/received eggs and milk are stock-only (never a production record), the reason catalogue with labels and authoritative routes is served by `GET /master/inventory-options`, `GET /inventory/output-balances` is the read-only balance card, and `output: eggs|milk` replaces the item id on manual stock-in/out. These endpoints are also included in openapi.json.
+
+## Phase 23 - Marketplace product listings, pricing & images
+
+The complete contract is [Phase 23 marketplace listings](PHASE-23-MARKETPLACE-LISTINGS.md) (image assets: [runbook](PHASE-23-IMAGE-ASSET-RUNBOOK.md)). Seller side (signed in + verified email, **no farm**, always inside a shop the caller belongs to): `GET /marketplace/product-options`, `GET /marketplace/image-library`, `GET|POST /marketplace/shops/{shop}/listings`, `GET|PATCH|DELETE …/listings/{listing}`, `POST …/publish|pause|archive|restore|price-preview`, `GET …/listings/eligible-inventory`, photos under `…/listings/{listing}/images`. Public (anonymous): `GET /public/marketplace/listings` (search, product/species/crop, location, price, unit, negotiable, fulfilment, sort, pagination), `…/listings/{slug}`, `…/{slug}/price-preview`, and the image files. Platform admin: `GET /platform-admin/marketplace/listings[/{listing}]`, `POST …/restrict|lift-restriction`. Money and quantities are decimal strings (NGN, kobo as `amount_minor`); package contents are seller-declared and never converted; publishing never touches inventory; an image is optional (placeholder indicator); shop roles gain `listing.view|manage|publish` (staff: drafts only).
+
+## Phase 24 - Buyer enquiries & controlled negotiation
+
+The complete contract is [Phase 24 marketplace offers](PHASE-24-MARKETPLACE-OFFERS.md). Buyer (signed in + verified email, **no farm**): `POST /marketplace/listings/{slug}/offers`, `GET …/{slug}/offer-status`, `POST …/{slug}/purchase-intent`, `GET /marketplace/my/enquiries`, `GET /marketplace/my/offers/{offer}`. Shop members: `GET /marketplace/shops/{shop}/offers[/{offer}]`, `POST …/offers/{offer}/accept|reject`, `GET …/shops/{shop}/purchase-intents`. Shop permissions `offer.view` (all roles) and `offer.respond` (owner, manager). Platform settings `marketplace_max_offers_per_buyer` (3), `marketplace_offer_expiry_hours` (48), `marketplace_min_offer_percent` (70). Offers expire (hourly `marketplace:expire-offers` plus enforcement on read/write); material listing edits void pending offers; accepted offers are immutable snapshots; no stock is reserved and no seller contact is returned (Phase 25).
+
+## Phase 25 - Marketplace deal summary & fulfilment
+
+The complete contract is [Phase 25 marketplace deals](PHASE-25-MARKETPLACE-DEALS.md). Buyer (signed in + verified email, **no farm**): `POST /marketplace/my/offers/{offer}/deal`, `GET /marketplace/my/deal-confirmations/{id}`, `POST …/deal-confirmations/{id}/confirm`, `GET /marketplace/my/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`. Shop members: `POST /marketplace/shops/{shop}/purchase-intents/{intent}/confirm`, `POST …/deal-confirmations/{id}/withdraw`, `GET …/shops/{shop}/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`. Platform admin (read-only): `GET /platform-admin/marketplace/deals[/{deal}]`, `…/deals/{deal}/contact`, `…/deal-reports`. Shop permissions `deal.view` (all roles) and `deal.respond` (owner, manager). Platform setting `marketplace_deal_confirmation_hours` (72). A deal needs two yeses (the buyer always confirms last), freezes product/unit/quantity/price/total and the fulfilment terms, is completed only when both sides self-report it, and is cancelled by either side; reports never change it. Contact is released only through the audited contact endpoints (address only for pickup). No payment, escrow, stock reservation, sale, invoice or delivery is created (hourly `marketplace:expire-confirmations` only lapses unanswered seller confirmations).
+
+## Phase 26 - Marketplace monetisation (seller plans & promoted listings)
+
+The complete contract is [Phase 26 marketplace monetisation](PHASE-26-MARKETPLACE-MONETISATION.md). Shop members (signed in + verified email, **no farm**), under `/marketplace/shops/{shop}`: `GET plan|allowance|plans|promotion-packages` (`listing.view`), `POST subscription/checkout`, `POST listings/{listing}/promotions/checkout`, `POST payments/{reference}/verify` (`billing.manage`: owner, manager), `GET payments|promotions` (`billing.view`). Publishing past the plan's limit answers `409 listing_limit_reached`. Public listings gain `promotion: {label: "Sponsored"} | null`. Webhook: `POST /public/marketplace/payments/paystack/webhook` (signature only; server-to-server). Platform admin under `/platform-admin/marketplace/`: `seller-plans`, `promotion-packages`, `service-payments`, `promotions`, `promotions/{id}/cancel`; features switched with flags `marketplace_seller_plans` / `marketplace_promotions` (off by default) and setting `marketplace_max_promoted_per_page`. Farmvest collects only its own service fees: no commission, escrow, wallet, payout or buyer-seller payment. Activation happens only after server-side Paystack verification of reference, amount, currency and status.
+
+## Phase 27 — Marketplace trust, safety and administration
+
+See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing shop approval, verification, suspension and listing restriction are reused. New participant APIs file shop/listing complaints and list/read owned content or deal reports. New platform APIs provide `/platform-admin/marketplace/summary`, read-only `/offers[/{offer}]`, and `/reports[/{type}/{report}[/transition]]`. Report states are `open -> in_review -> dismissed|resolved`; every handling action requires a reason. A report never enforces automatically. Only explicit `enforcement_action` plus the related target UUID can invoke existing suspension/restriction. All report counts are available by status, including zeros. Read permissions remain platform admin/support, writes admin only.
+
+**Frontend contract changes:** reinstatement and lifting listing restrictions now require `{reason}`. Active duplicate reports use reporter + target + issue; a closed case permits a new report. Intake throttling is shared across content/deal reports, 20/hour/user. Show own complaint/outcome privately; internal history and reporter identities belong only in the platform administration area. Existing deals, stock and financial records are preserved; paid periods are not extended or refunded by enforcement.
+
+## Livestock batch creation update (2026-10-09)
+
+New livestock/fish creation requires `production_purpose`; optional growth stage, NGN acquisition unit price and supplier contact are supported. Use `GET /master/species/{species}/batch-reference` for all dependent selectors and the backend breed/type label. Existing null metadata stays readable. See [full contract and approved catalogue](LIVESTOCK-BATCH-CREATION.md) for validation, responses, immutable metadata, no automatic financial effects and deployment.

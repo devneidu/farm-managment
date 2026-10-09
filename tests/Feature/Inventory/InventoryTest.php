@@ -91,7 +91,7 @@ class InventoryTest extends TeamTestCase
     private function cycle(): string
     {
         return $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Layer flock', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
     }
 
     private function feedRecord(string $cycle, string $item, string $loc, string $qty = '10', string $unit = 'kg', array $inventory = [], array $extra = [])
@@ -714,7 +714,7 @@ class InventoryTest extends TeamTestCase
         $this->issue($item, $loc, '1', extra: ['recorded_at' => $this->at(1), 'reason' => 'wasted'])->assertCreated();
         $this->getJson('/api/v1/inventory/movements?type=stock_out')->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('data.0.reason', 'wasted');
         $this->getJson('/api/v1/inventory/items/'.$item.'/movements?per_page=2&page=2')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 3);
-        $this->getJson('/api/v1/inventory/movements?recorded_from='.now('Africa/Lagos')->toDateString())->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/v1/inventory/movements?recorded_from='.now('Africa/Lagos')->subHours(2)->toDateString())->assertOk()->assertJsonCount(2, 'data');
         $this->getJson('/api/v1/inventory/movements?type=bogus')->assertStatus(422);
         $this->getJson('/api/v1/inventory/movements?inventory_item_id=not-a-uuid')->assertStatus(422);
         $this->postJson('/api/v1/inventory/stock-in', $this->inPayload($item, $loc, extra: ['recorded_at' => now()->addDay()->utc()->format('Y-m-d\TH:i:s\Z')]))->assertStatus(422)->assertJsonValidationErrors('recorded_at');

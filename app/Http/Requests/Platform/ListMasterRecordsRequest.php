@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Platform;
 
+use App\Models\ReferenceValue;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class ListMasterRecordsRequest extends FormRequest
             /** Operation types only. */
             'category' => ['sometimes', Rule::in(['livestock', 'aquaculture', 'crop'])],
             /** Reference values only. */
-            'list' => ['sometimes', Rule::in(['planting_material_type', 'planting_unit_type'])],
+            'list' => ['sometimes', Rule::in(ReferenceValue::managedLists())],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
         ];

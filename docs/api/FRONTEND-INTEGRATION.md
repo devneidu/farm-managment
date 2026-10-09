@@ -49,12 +49,13 @@ Every auth endpoint returns the same state object. **Route on `data.next_action`
 | `next_action` | Screen |
 |---|---|
 | `verify_email` | OTP entry (`POST /auth/email/verify {code}`), "resend" (`POST /auth/email/resend`, 60 s cooldown → `429` + `Retry-After`: show a countdown) |
-| `complete_farm_setup` | Farm name → `POST /onboarding/farm {name}` |
+| `marketplace` | A verified user with **no farm** who already runs a Marketplace shop: show the seller dashboard (`GET /marketplace/my/shops`). Farm routes stay locked (`403 onboarding_required` / `no_active_farm`); offer an optional "Set up a farm" → `POST /onboarding/farm`. Never returned to a user with a farm (`data.marketplace.shop_count` is returned to everyone for showing both areas) |
+| `complete_farm_setup` | Farm name → `POST /onboarding/farm {name}`. A user who only wants to sell on the Marketplace can instead go straight to `POST /marketplace/shops` (no farm needed); once they have a shop the state becomes `marketplace` |
 | `no_active_farm` | "You have no farm" screen (the user was removed from their last farm). Not the setup screen: `POST /onboarding/farm` would be `409 already_onboarded`. Offer "accept an invitation". |
 | `none` | the app |
 
 ```ts
-const ROUTES = { verify_email: '/verify-email', complete_farm_setup: '/onboarding', no_active_farm: '/no-farm', none: '/' } as const;
+const ROUTES = { verify_email: '/verify-email', marketplace: '/marketplace/seller', complete_farm_setup: '/onboarding', no_active_farm: '/no-farm', none: '/' } as const;
 export const routeFor = (s: { next_action: keyof typeof ROUTES }) => ROUTES[s.next_action];
 ```
 
@@ -393,3 +394,77 @@ The frontend-handoff correction pass resolved GAP-01 … GAP-08 in the API (no w
 | GAP-P5 | Flow 14 was not executed | **Resolved.** Flow 14 (22 requests) was executed with Newman against the final behaviour: 0 failures |
 
 Also noted: farm operation selection is advisory (a cycle can be created for an unselected operation); `dashboard.quick_record` is capped at 6 types; the `GET /settings/package-conversions` description lists only `crop_type|custom` for `context_type` although `inventory_item` is accepted; the member-role endpoint descriptions omit `vet`, which is accepted.
+
+## 25. Marketplace listings (Phase 23)
+
+Contract: `PHASE-23-MARKETPLACE-LISTINGS.md`. Everything below needs sign-in + verified email only; **no `X-Farm-Id`** (a marketplace-only seller has no farm).
+
+1. **Build the form from `GET /marketplace/product-options`** — never hard-code kinds or units. Pick a `product_kind`; show only that kind's `units`; offer its `products` (existing species / crop types) or a free `custom_product_name` (`allows_custom_name`, required when `custom_name_required`). When the chosen unit has `requires_package_details`, ask "what does one crate/bag/basket hold?" (`package.quantity` + `package.unit`) — the seller declares it; never assume or convert.
+2. **Money/quantity are strings.** Send `unit_price: "8000"` and `available_quantity: "2.5"` as strings; display `price.amount`, compute nothing with floats. For whole-number units (`integer_only`) use a stepper of 1; otherwise limit input to `decimal_places`. Show a total with `GET …/price-preview?quantity=` (non-binding) rather than multiplying client-side.
+3. **Images are optional.** If `image.has_image` is `false` render your own placeholder for `image.placeholder_kind`. When `image.illustrative` is `true` show a caption such as "Illustrative image" — catalogue pictures are not photos of the goods. Seller photos: `multipart/form-data` `image` (JPEG/PNG/WebP ≤5 MB), up to 6, `PATCH position` to reorder. Never send an image URL. `GET /marketplace/image-library` is empty until assets are seeded; hide the picker when empty.
+4. **Lifecycle & roles.** Use `abilities.edit` / `abilities.publish` and `shop.viewer.permissions` to show buttons: staff can prepare drafts but never see Publish. Always send the `version` you loaded on `PATCH` and transitions; on `409 stale_listing` reload (`details.current_version`). Transitions are idempotent, so a retry after a timeout is safe. `422 listing_incomplete` → `details.missing`; `409 shop_not_active` → the shop must be approved/open first.
+5. **Visibility flags.** `is_public` / `hidden_because: "shop_not_active"` explain why a published listing is not on the feed (shop suspended or closed). A `restricted` listing shows `restriction.reason` and is read-only.
+6. **Public feed.** Anonymous `GET /public/marketplace/listings`: debounce `q`, send `min_price`/`max_price` only together with `unit`, treat `fulfilment=pickup|seller_delivery` as "offers it". Quantities are `seller_declared` — word them as "seller says N available", never as guaranteed stock. Use `price.amount_minor` for sorting/formatting in kobo.
+7. **Inventory link (farm-backed shops).** `GET …/listings/eligible-inventory?product_kind=` then send `inventory_item_id`. It is informational: show `inventory.changed_since_link` / `exceeds_stock` as a hint to update the declared quantity; publishing does not reserve or deduct stock.
+8. **Do not call** farm inventory/sales endpoints to "sync" a listing, and see §26 for offers and purchase intents (Phase 24).
+
+## 26. Marketplace offers & purchase intents (Phase 24)
+
+Contract: `PHASE-24-MARKETPLACE-OFFERS.md`. Sign-in + verified email only; **no `X-Farm-Id`**. This is controlled negotiation, not chat or checkout: nothing is reserved, paid or sold, and **seller contact is never returned by any offer payload** (not even after acceptance; contact is released only by a confirmed deal, §27).
+
+1. **Before showing the offer form** call `GET /marketplace/listings/{slug}/offer-status`. Use `can_offer` / `blocked_reason` to decide what to render, `rules.minimum_unit_price` to hint the lowest price, `rules.attempts_remaining` to show "2 offers left", and `pending_offer.expires_at` for a countdown. Never hard-code 3 attempts, 48 hours or 70% - they are platform settings.
+2. **Offer = price per unit + quantity.** Send both as strings. The price must be below the listed price and not below the floor; show the `422` message on `unit_price` as-is (it names the lowest accepted price). Validation errors do not use an attempt.
+3. **Offer next to "Proceed at listed price".** The second button calls `POST …/purchase-intent`; it is idempotent and means "I am interested at the listed price", not "I bought it". Word it that way.
+4. **Statuses.** `pending`, `accepted`, `rejected`, `expired`, `voided`. `expired` is also what you get for a lapsed pending offer before the server has persisted it. `voided` means the seller changed the listing; the buyer's attempt is refunded - show "the listing changed, you can offer again".
+5. **Accepted is not a sale.** Show "The seller accepted your offer in principle" and nothing about contact details, payment or delivery: `contact` is `null`, availability is not reserved.
+6. **Seller screens.** Gate Accept/Reject on `offer.respond` (owner, manager) via `shop.viewer.permissions`; staff only read. Show the buyer by `buyer.name` only. Use `respondable` and handle `409 offer_expired | offer_voided | listing_unavailable | shop_not_active | offer_not_pending` by refetching the offer.
+7. **Refetch after writes:** offer-status, `GET /my/enquiries`, and for sellers `GET /shops/{shop}/offers`.
+8. **Do not** call farm sales/inventory endpoints from an offer, and do not poll faster than every 30 s (use the `expires_at` countdown).
+
+## 27. Marketplace deals & contact exchange (Phase 25)
+
+Contract: `PHASE-25-MARKETPLACE-DEALS.md`. Sign-in + verified email only; **no `X-Farm-Id`**. A deal is a **summary of agreed terms**, not an order: Farmvest takes no payment, holds no funds, reserves no stock, delivers nothing and creates no sale. Say so in the UI (every deal response carries `notice`).
+
+1. **Two yeses.** Negotiated: after the seller accepts, show the buyer "Confirm deal" until `offer.deal_confirmation.deadline` (countdown; `open=false` = hide). `POST /marketplace/my/offers/{offer}/deal`. Fixed price: the seller sees `can_confirm` on each purchase request and calls `POST /marketplace/shops/{shop}/purchase-intents/{intent}/confirm`; the buyer then sees `confirmation` (`deal_flow: awaiting_buyer`) with the **exact terms** and confirms with `POST /marketplace/my/deal-confirmations/{id}/confirm {accept_terms:true}`. Until then it is **not an agreement**: never show contact, "deal" or "accepted" wording.
+2. **Fulfilment choice.** If the listing offers both pickup and delivery (`listing.fulfilment.mode = both`) the confirming party must send `fulfilment_method`; otherwise it is implied. Offer the optional `contact_phone` field ("Share a phone number for this deal - optional; your email is used otherwise"). Never ask for it as mandatory and do not add it to the profile.
+3. **Delivery charge.** Render `fulfilment.delivery_charge.display` exactly. `amount: null` => "To be agreed directly". It is never added to `terms.product_total`; do not compute a grand total. Neither side can edit the charge or fulfilment terms after confirmation - there is no edit endpoint.
+4. **Frozen terms.** Show `terms.*` from the deal, never from the live listing. A paused/edited listing does not change a deal (`listing.currently_live` is only informational).
+5. **Completion.** Show `completion.state`: `awaiting_both | awaiting_seller | awaiting_buyer | completed | cancelled`. Always label it **self-reported** (`completion.verification`). One side confirming does not complete the deal and nothing completes it automatically. Hide the button when `can.complete=false`.
+6. **Cancel / report.** `can.cancel` and `can.report` drive the buttons. Cancel needs a reason code; after it, the contact panel must disappear (`contact_available=false`) and you should warn that details already shared cannot be recalled. A report never changes the deal, so keep showing the normal actions; do not tell the other side about it.
+7. **Contact panel.** Load `GET .../deals/{deal}/contact` only when the user opens it (30/min limit; every read is audited). Buyer sees the shop's channels (`preferred_contact_method` first); show the pickup `address_line` only when `contact.pickup` is present. Seller (owner/manager) sees the buyer's name, email and optional phone. `409 deal_contact_unavailable` => deal cancelled. Do not cache contact or put it in logs/analytics.
+8. **Roles.** Staff can list/open deals (`deal.view`) but get `can.* = false`, and `403` on contact/actions. Gate on `shop.viewer.permissions` (`deal.view`, `deal.respond`).
+9. **Errors to handle:** `409 deal_window_closed | confirmation_lapsed | confirmation_stale | confirmation_voided | confirmation_withdrawn | intent_stale | quantity_unavailable | listing_unavailable | shop_not_active | deal_not_open | deal_contact_unavailable`; refetch the offer / enquiry / deal after any `409`. All creation calls are idempotent: a retry after a timeout is safe (`200` with the same deal).
+10. **Do not** call farm sales/inventory endpoints from a deal, imply stock is held, or show payment status. A farmer who sold the goods records the sale separately in the farm app.
+
+## 28. Marketplace monetisation: plans, allowance, promotions (Phase 26)
+
+Contract: `PHASE-26-MARKETPLACE-MONETISATION.md`. Sign-in + verified email only; **no `X-Farm-Id`**. Farmvest charges *sellers* for its own services only; buyers never pay Farmvest and no product payment passes through it.
+
+1. **Show the allowance wherever a seller publishes.** `GET /marketplace/shops/{shop}/allowance` -> `published_count / listing_limit`, `can_publish`, `over_limit_by`. Disable or explain "Publish" when `can_publish=false`; the server still enforces it (`409 listing_limit_reached` with `details`). An over-limit shop keeps all its listings - offer "pause or archive a listing, or upgrade", never "your listings were removed".
+2. **Hide purchase UI unless enabled.** `GET .../plans` and `.../promotion-packages` return `meta.features.seller_plans|promotions`. Both are `false` until a platform admin switches them on; paid plans appear only once priced. Show prices from the response (naira decimal strings, 30 and 365 days) - never hard-code.
+3. **Checkout.** `POST .../subscription/checkout {plan_id, interval_days}` or `POST .../listings/{listing}/promotions/checkout {package_id}` (owner/manager; hide for staff via `shop.viewer.permissions` containing `billing.manage`). Redirect to `data.authorization_url`. A repeated click returns the same pending payment (`200`).
+4. **Return page.** Paystack sends the browser to the configured callback URL with `?reference=MSP-...`. **The redirect proves nothing.** Call `POST .../payments/{reference}/verify`; show "Payment confirmed" only when `status="paid"` and `benefit_granted=true`. If `pending`, show "Waiting for confirmation" and re-check every few seconds (max ~1 min), then point to payment history; `failed` -> offer to try again; `502 gateway_unavailable` -> "We couldn't confirm yet - nothing is lost, check again shortly". `needs_attention=true` -> "Paid, our team is sorting this out".
+5. **History.** `GET .../payments` and `.../promotions` (owner/manager). Use `state` + `benefit_active` on promotions: a running promotion with `benefit_active=false` means the shop is suspended or the listing is paused/restricted.
+6. **Discovery.** Always render `promotion.label` ("Sponsored") when present on a listing card or detail. Do not re-sort client-side; the server puts up to 3 promoted listings first on page 1 and keeps organic order otherwise.
+7. **Admin screens.** Plans/prices/limits (`seller-plans`), packages, service payments (filter `needs_attention`), promotions (cancel with a reason). Use `PATCH /platform-admin/feature-flags/{key}` to switch the two features on; the free listing limit is the Free plan's `listing_limit`.
+8. **Do not** treat a payment as successful from the URL, store/display the Paystack secret, call the webhook from the frontend, or imply refunds are automatic.
+
+## Phase 27 — Marketplace trust, safety and administration
+
+See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing shop approval, verification, suspension and listing restriction are reused. New participant APIs file shop/listing complaints and list/read owned content or deal reports. New platform APIs provide `/platform-admin/marketplace/summary`, read-only `/offers[/{offer}]`, and `/reports[/{type}/{report}[/transition]]`. Report states are `open -> in_review -> dismissed|resolved`; every handling action requires a reason. A report never enforces automatically. Only explicit `enforcement_action` plus the related target UUID can invoke existing suspension/restriction. All report counts are available by status, including zeros. Read permissions remain platform admin/support, writes admin only.
+
+**Frontend contract changes:** reinstatement and lifting listing restrictions now require `{reason}`. Active duplicate reports use reporter + target + issue; a closed case permits a new report. Intake throttling is shared across content/deal reports, 20/hour/user. Show own complaint/outcome privately; internal history and reporter identities belong only in the platform administration area. Existing deals, stock and financial records are preserved; paid periods are not extended or refunded by enforcement.
+
+## 29. V1 scope, Postman and handover (Phase 29)
+
+- **Not in V1 (do not build UI for them):** WhatsApp integration and AI-assisted parsing (Phase 20) and Community features (Phase 28). There are no routes for either. Marketplace buyers and sellers pay each other outside Farmvest; Farmvest's only payment flow is the seller's Paystack checkout for plans and promotions, and it is switched off until a platform admin enables `marketplace_seller_plans` / `marketplace_promotions`.
+- **Postman is the executable reference.** Folders 00-28 hold one request per route (343 of 343 `/api/v1` routes); folder 99 holds 20 flows (1-19 and S). Marketplace: folders 23-28 and Flows 15-19 (listings, negotiation, deals, reports and moderation, plans and promotions). Run the flows on a disposable database only.
+- **Marketplace endpoint map** (all under `/api/v1`): seller shops `/marketplace/shops...`; listings `/marketplace/shops/{shop}/listings...`; public discovery `/public/marketplace/...`; buyer offers/intents `/marketplace/listings/{listing}/...`, `/marketplace/my/...`; deals `/marketplace/my/deals...`, `/marketplace/shops/{shop}/deals...`; billing `/marketplace/shops/{shop}/{plan,allowance,plans,promotion-packages,subscription/checkout,payments,promotions}`; reports `/marketplace/reports/{shop|listing}/{slug}`, `/marketplace/my/reports...`; admin `/platform-admin/marketplace/...`.
+- **Paystack cannot be exercised end to end without test-mode credentials.** Build the checkout return page from `FRONTEND-INTEGRATION.md` section 28 and verify it against a real test transaction before launch.
+- Operator and release notes: `../operations/BACKEND-HANDOVER.md`.
+
+## 30. Livestock batch creation selectors and acquisition metadata
+
+Follow [LIVESTOCK-BATCH-CREATION.md](LIVESTOCK-BATCH-CREATION.md). After selecting the species from `GET /master/species`, request `GET /master/species/{species}/batch-reference`; render its `breed_field_label`, `breeds`, `purposes` and `growth_stages`. Clear dependent selections when changing animals. Submit breed UUID, required purpose code, optional stage code, optional NGN price as a decimal string and optional supplier UUID with the existing livestock body. Supplier selection reuses `GET /contacts?role=supplier`; creating a supplier still uses the existing contacts permission. Never send another farm id or currency to select acquisition ownership/currency.
+
+Show new metadata from `data.livestock` on list/detail/summary; nullable objects contain code/name/is_active, price is a two-decimal string and supplier is an id/name/is_active summary. Render historical nulls as unspecified. These starting values cannot be edited through PATCH; growth stage does not advance automatically. An acquisition price is informational and does not appear in finance totals without an explicit existing finance workflow. Update clients before enabling new livestock submissions; older create payloads without purpose get 422. Fish, Snail and Honeybee retain integer head units. No individual tracking was added.

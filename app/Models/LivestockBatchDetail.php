@@ -20,7 +20,7 @@ class LivestockBatchDetail extends Model
 
     protected function casts(): array
     {
-        return ['initial_population' => 'integer', 'baseline_measurement' => 'array'];
+        return ['initial_population' => 'integer', 'baseline_measurement' => 'array', 'acquisition_price_per_animal' => 'decimal:2'];
     }
 
     protected static function booted(): void
@@ -37,5 +37,20 @@ class LivestockBatchDetail extends Model
     public function breed(): BelongsTo
     {
         return $this->belongsTo(Breed::class);
+    }
+
+    public function productionPurpose(): BelongsTo
+    {
+        return $this->belongsTo(ReferenceValue::class, 'production_purpose_id');
+    }
+
+    public function growthStage(): BelongsTo
+    {
+        return $this->belongsTo(ReferenceValue::class, 'growth_stage_id');
+    }
+
+    public function supplierContact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class, 'supplier_contact_id');
     }
 }

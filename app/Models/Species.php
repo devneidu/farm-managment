@@ -15,7 +15,7 @@ class Species extends Model
 
     protected $table = 'species';
 
-    protected $fillable = ['operation_type_id', 'code', 'name', 'livestock_group', 'sort_order', 'is_active'];
+    protected $fillable = ['operation_type_id', 'code', 'name', 'livestock_group', 'breed_field_label', 'sort_order', 'is_active'];
 
     protected function casts(): array
     {

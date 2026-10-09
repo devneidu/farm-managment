@@ -7,6 +7,7 @@ use App\Http\Requests\Contacts\StoreContactRequest;
 use App\Http\Requests\Contacts\UpdateContactRequest;
 use App\Models\Contact;
 use App\Models\Farm;
+use App\Models\LivestockBatchDetail;
 use App\Models\Purchase;
 use App\Models\Sale;
 use App\Support\Access\FarmContext;
@@ -80,8 +81,9 @@ class ContactService
             }
             if (isset($data['roles'])) {
                 $supplier = in_array('supplier', $data['roles'], true);
-                if ($contact->is_supplier && ! $supplier && Purchase::where('farm_id', $ctx->farm->id)->where('contact_id', $contact->id)->exists()) {
-                    throw new ApiHttpException(409, 'contact_in_use', 'This contact has purchases; it stays a supplier. Deactivate it instead.');
+                if ($contact->is_supplier && ! $supplier && (Purchase::where('farm_id', $ctx->farm->id)->where('contact_id', $contact->id)->exists()
+                    || LivestockBatchDetail::where('supplier_contact_id', $contact->id)->exists())) {
+                    throw new ApiHttpException(409, 'contact_in_use', 'This contact has purchases or livestock batches; it stays a supplier. Deactivate it instead.');
                 }
                 $customer = in_array('customer', $data['roles'], true);
                 if ($contact->is_customer && ! $customer && Sale::where('farm_id', $ctx->farm->id)->where('contact_id', $contact->id)->exists()) {

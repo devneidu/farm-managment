@@ -36,7 +36,7 @@ class OperationalRecordsTest extends TeamTestCase
         parent::setUp();
         $this->signInAs($this->owner);
         $this->cycle = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Layer flock', 'operation_type_id' => OperationType::where('code', 'poultry')->firstOrFail()->id,
-            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            'species_id' => Species::where('code', 'chicken')->firstOrFail()->id, 'production_purpose' => 'breeding', 'initial_population' => 100, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
     }
 
     private function payload(string $type = 'mortality', array $details = ['quantity' => 10, 'cause' => 'Unknown'], array $extra = []): array
@@ -354,7 +354,7 @@ class OperationalRecordsTest extends TeamTestCase
     {
         foreach (['fish', 'cattle'] as $code) {
             $species = Species::where('code', $code)->firstOrFail();
-            $id = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => $code, 'operation_type_id' => $species->operation_type_id, 'species_id' => $species->id, 'initial_population' => 20, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
+            $id = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => $code, 'operation_type_id' => $species->operation_type_id, 'species_id' => $species->id, 'production_purpose' => 'breeding', 'initial_population' => 20, 'start_date' => '2026-01-01'])->assertCreated()->json('data.id');
             if ($code === 'fish') {
                 $this->record($this->payload(extra: ['production_cycle_id' => $id]));
                 $this->getJson('/api/v1/production-cycles/'.$id)->assertOk()->assertJsonPath('data.livestock.current_population', 10);

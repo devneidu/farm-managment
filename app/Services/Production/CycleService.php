@@ -14,6 +14,7 @@ use App\Http\Requests\Production\ReopenCycleRequest;
 use App\Http\Requests\Production\StoreCycleRequest;
 use App\Http\Requests\Production\UpdateCycleRequest;
 use App\Models\Breed;
+use App\Models\Contact;
 use App\Models\CropType;
 use App\Models\CropVariety;
 use App\Models\Farm;
@@ -33,6 +34,7 @@ use App\Services\Records\PopulationLedger;
 use App\Services\Subscription\EntitlementService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
+use App\Support\Finance\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -43,13 +45,13 @@ use Illuminate\Validation\ValidationException;
 
 class CycleService
 {
-    public const BASELINE_FIELDS = ['kind', 'operation_type_id', 'species_id', 'breed_id', 'initial_population', 'start_date', 'crop_type_id', 'crop_variety_id', 'planting_material_type', 'planting_unit_type', 'initial_planting_units', 'planting_date'];
+    public const BASELINE_FIELDS = ['kind', 'operation_type_id', 'species_id', 'breed_id', 'production_purpose', 'growth_stage', 'acquisition_price_per_animal', 'supplier_contact_id', 'initial_population', 'start_date', 'crop_type_id', 'crop_variety_id', 'planting_material_type', 'planting_unit_type', 'initial_planting_units', 'planting_date'];
 
     public function __construct(private readonly QuantityNormalizer $quantities, private readonly PlaceService $places, private readonly EntitlementService $entitlements) {}
 
     public static function relations(): array
     {
-        return ['operation', 'productionArea.'.PlaceService::ancestryRelation(), 'livestock.species', 'livestock.breed', 'crop.cropType', 'crop.variety', 'crop.materialType', 'crop.unitType'];
+        return ['operation', 'productionArea.'.PlaceService::ancestryRelation(), 'livestock.species', 'livestock.breed', 'livestock.productionPurpose', 'livestock.growthStage', 'livestock.supplierContact', 'crop.cropType', 'crop.variety', 'crop.materialType', 'crop.unitType'];
     }
 
     public function find(Farm $farm, string $id): ProductionCycle
@@ -149,8 +151,18 @@ class CycleService
                 $this->invalid('breed_id', 'Breed does not belong to this species.');
             }
         }
+        $purpose = $this->reference(ReferenceValue::livestockList($species->code, 'purpose'), $data['production_purpose'], 'production_purpose');
+        $stage = isset($data['growth_stage']) ? $this->reference(ReferenceValue::livestockList($species->code, 'stage'), $data['growth_stage'], 'growth_stage') : null;
+        $supplier = isset($data['supplier_contact_id']) ? Contact::ofFarm($farm)->lockForUpdate()->findOrFail($data['supplier_contact_id']) : null;
+        if ($supplier && (! $supplier->is_active || ! $supplier->is_supplier)) {
+            $this->invalid('supplier_contact_id', 'Choose an active supplier contact on this farm.');
+        }
         $measurement = $this->quantities->normalize($farm, [['quantity' => $data['initial_population'], 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
-        $cycle->livestock()->create(['species_id' => $species->id, 'breed_id' => $breed?->id, 'initial_population' => $data['initial_population'], 'baseline_measurement' => $measurement]);
+        $cycle->livestock()->create([
+            'species_id' => $species->id, 'breed_id' => $breed?->id, 'initial_population' => $data['initial_population'], 'baseline_measurement' => $measurement,
+            'production_purpose_id' => $purpose->id, 'growth_stage_id' => $stage?->id, 'supplier_contact_id' => $supplier?->id,
+            'acquisition_price_per_animal' => isset($data['acquisition_price_per_animal']) ? Money::parse($data['acquisition_price_per_animal']) : null,
+        ]);
         PopulationMovement::create([
             'farm_id' => $farm->id, 'production_cycle_id' => $cycle->id, 'type' => 'initial', 'source_key' => 'initial',
             'quantity' => $data['initial_population'], 'recorded_at' => CarbonImmutable::parse($cycle->start_date->toDateString(), $farm->timezone)->startOfDay()->utc(), 'created_by' => $actor->id,
@@ -328,7 +340,7 @@ class CycleService
     {
         $row = ReferenceValue::where('list', $list)->where('code', $code)->where('is_active', true)->lockForUpdate()->first();
         if (! $row) {
-            $this->invalid($field, 'Choose an active code from the planting reference catalogue.');
+            $this->invalid($field, 'Choose an active code from the selected reference catalogue.');
         }
 
         return $row;

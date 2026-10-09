@@ -8,25 +8,25 @@ Figures below were measured on the final collection after the frontend-handoff c
 
 | Metric | Value |
 |---|---|
-| Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **233** (GET 121, PATCH 23, PUT 9, POST 78, DELETE 2; `HEAD` aliases of `GET` not counted) |
-| OpenAPI (`docs/api/openapi.json`) | **184 paths, 233 operations** |
+| Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **343** (GET 177, POST 121, PUT 10, PATCH 30, DELETE 5; `HEAD` aliases of `GET` not counted) - re-measured in Phase 29 |
+| OpenAPI (`docs/api/openapi.json`) | **284 paths, 343 operations** |
 | Routes intentionally excluded | 0 of the `/api/v1` routes (see §2 for the 7 non-API framework routes) |
-| Postman requests in the reference folders (00-22, 90) | **283** |
-| Postman requests inside workflows (99) | **170** (copies of reference requests plus the Flow 14 steps) |
-| Total Postman requests | **453** |
-| Endpoint coverage (distinct method+route in the reference folders, matched against `route:list`) | **233 / 233 = 100.0 %**; 0 requests point at an unknown route |
-| Requests with a saved success example | 450 (of 453) |
-| Requests with at least one saved error example | 94 |
-| Saved example responses | 622 |
-| Workflows | **14** (Flows 1-13 plus Flow S, the demo-farm setup) = 170 requests |
-| Environment variables | **111** |
+| Postman requests in the reference folders (00-28, 90) | **405** |
+| Postman requests inside workflows (99) | **457** (copies of reference requests plus flow-only steps) |
+| Total Postman requests | **862** |
+| Endpoint coverage (distinct method+route in the reference folders, matched against `route:list`) | **343 / 343 = 100.0 %**; 0 requests point at an unknown route (one flow step, `POST /platform-admin/marketplace/deals/{deal}`, deliberately asserts `405`) |
+| Requests with a saved success example | 516 (of 862); folders 27-28 and Flows 15-19 carry executable assertions instead |
+| Requests with at least one saved error example | 103 |
+| Saved example responses | 690 |
+| Workflows | **20** (Flows 1-19 plus Flow S) = 457 requests |
+| Environment variables | **151** |
 | Undocumented endpoints | **none** |
 
 Saved responses come from executing the scenario against the real application (earlier packages: a throwaway Laravel-test-client harness; this pass: Newman against a live local server and real HTTP, driven by an uncommitted script). The only exceptions are seven Auth-state examples that were not re-executed (the reference-folder copies of register, verify email, login (two examples) and onboarding, plus `Accept a farm invitation` in folder 03 and in Flow 13): their `farms[]` field was derived mechanically from the example's own `farm` object (single-farm users), see the addendum. The workflows were executed in their own order on a fresh database: 170 requests, 361 assertions, 0 failures (addendum).
 
 ## 2. Routes and exclusions
 
-All 232 `/api/v1` routes are in the collection. The seven routes outside `/api/v1` were deliberately not documented because they are not part of the frontend API:
+All 343 `/api/v1` routes are in the collection (232 at the time this section was written; Phases 22-27 added the rest). The seven routes outside `/api/v1` were deliberately not documented because they are not part of the frontend API:
 
 | Route | Why excluded |
 |---|---|
@@ -35,7 +35,7 @@ All 232 `/api/v1` routes are in the collection. The seven routes outside `/api/v
 | `GET /docs/api`, `GET /docs/api.json`, `GET /_scramble/dev-tools/devtools.js` | Scramble API documentation UI, available only with `APP_ENV=local` |
 | `GET\|PUT /storage/{path}` | Laravel's local-disk file-serving/upload helper (`storage.local`): signed-URL infrastructure, not an application endpoint |
 
-Phase 20 (WhatsApp / AI parsing) is deferred and has no routes. The word *WhatsApp* appears in the package only in (a) the Platform Admin setting key `support_whatsapp` (a real V1 setting holding a support phone number) and (b) explicit statements that WhatsApp is not part of V1.
+Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have no routes. The word *WhatsApp* appears in the package only in (a) the Platform Admin setting key `support_whatsapp` (a real V1 setting holding a support phone number) and (b) explicit statements that WhatsApp is not part of V1.
 
 ## 3. Modules covered
 
@@ -157,7 +157,7 @@ The collection and contract document the **running code**; these differences exi
 
 * Sanctum first-party SPA cookie auth; **no bearer tokens** are issued by any endpoint. Required: CSRF cookie + `X-XSRF-TOKEN` on writes + a stateful `Origin` on **every** request (an existing session cookie without it gets `401`; register without it `400 stateful_request_required`; missing CSRF `419 session_expired`). Verified over real HTTP.
 * Session cookie `farm_management_api_session` (HttpOnly, SameSite=Lax, 120 min); `XSRF-TOKEN` readable.
-* `next_action` ∈ `verify_email`, `complete_farm_setup`, `no_active_farm`, `none` (computed in that order). `onboarded` is never cleared.
+* `next_action` ∈ `verify_email`, `marketplace`, `complete_farm_setup`, `no_active_farm`, `none` (computed in that order; `marketplace` only for a verified user with no active farm who belongs to a Marketplace shop — Phase 22 final review). `onboarded` is never cleared.
 * Farm context: oldest ACTIVE membership by default, optional `X-Farm-Id` header (`403 farm_access_denied` for a farm you do not actively belong to, `403 no_active_farm` when none). `GET /auth/me → data.farms[]` lists the farms you actively belong to (GAP-07, resolved); there is still no switch endpoint (the header is the switch).
 * OTP/invitation tokens exist only in email; locally they are in `storage/logs/laravel.log`.
 * A suspended account gets `403 account_suspended` on every request and its session is ended.
@@ -234,3 +234,91 @@ New reference requests (each also a Flow 14 step except the schema request): `Sh
 * **Execution (Flow 14 and all others):** Newman against `php artisan serve` on a fresh MySQL 8 database (migrate + seed, a platform admin granted by `platform:grant-admin`), flows in the order 1, 2, S, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 13: **170 requests, 361 assertions, 0 failures.** Flow 11 needs a running queue worker (the harness started `queue:work` and spaced the requests 1.5 s) and Flow 12 needs `notifications:generate`; without them Flow 11 `Download an export` answers `409` (not ready) and Flow 12 `Mark a notification read` `404` — both are the documented prerequisites, not regressions. The OTP and invitation token were read from `storage/logs/laravel.log` between requests.
 * **Not re-verified:** validation against the official Postman Collection v2.1 JSON Schema (the schema host is not reachable from the build sandbox). The collection loads and runs in Newman, and every new item is a structural clone of an existing valid item.
 * The tool used for the capture/verification run is a throwaway script and is **not** committed.
+
+## Addendum — Phase 22 (Marketplace foundation & seller shops)
+
+* 19 new `/api/v1` routes (OpenAPI 184 -> 203 paths; no existing path or schema changed): 14 seller routes, 2 public routes, 7 platform-admin routes (14+2+7 = 23 operations, 19 new path items).
+* Postman: new folder **23 — Marketplace (seller shops)** (17 requests incl. the two public ones) and **90 — Platform Admin → Marketplace Shops** (7 requests); +3 environment variables (`shop_id`, `shop_slug`, `shop_member_id`; 114 total). These requests carry descriptions and Tests scripts but **no saved example responses and were not executed with Newman** (the contract is verified by `tests/Feature/Marketplace/MarketplaceShopTest.php` and the OpenAPI test instead). Earlier counts in this report are not updated.
+* Contract: `docs/api/PHASE-22-MARKETPLACE.md`.
+
+## Addendum — Phase 22 final review: marketplace-only seller routing (2026-10-07)
+
+The auth state gained `marketplace.shop_count` and the `next_action` value `marketplace` (verified, no active farm, member of at least one shop). Affected Postman requests (descriptions extended; `Get current auth state (me)` asserts `marketplace.shop_count`): register, verify email, me, login, Google, onboarding (reference folders and flow copies). Saved Auth-state examples that were not re-captured received `marketplace: {shop_count: 0}` mechanically (they all belong to users without shops); three **real** examples captured from a live server were added to folder 01 (`me` before the first shop, `me` after creating a shop, login as a marketplace-only seller). Request count unchanged by this correction (collection total 477, of which 170 in the flows). The 14 flows were re-run with Newman after the change: see WORKLOG for the result.
+
+## Addendum — Phase 23 (Marketplace product listings, pricing & images)
+
+* 23 new `/api/v1` path items / **27 new operations** (OpenAPI 203 -> **226 paths, 256 -> 283 operations**; no existing path changed; `AuthStateResource.marketplace.shop_count` gained `minimum: 0` after the redundant `@var` warning was removed): 17 seller operations (2 lookups, listing CRUD, lifecycle, price preview, eligible inventory, photos), 5 public, 5 platform-admin. Laravel `/api/v1` operations: **283** (GET 143, POST 98, PATCH 28, PUT 9, DELETE 5); every one is in the reference folders (parameterised literal paths such as `/public/marketplace/catalogue-images/chicken` count for their route).
+* Postman: new folder **24 — Marketplace listings** (26 requests), **90 — Platform Admin → Marketplace Listings** (5 requests) and the executable **Flow 15 — Marketplace listings** (48 requests); +8 environment variables (`seller_email`, `listing_id`, `listing_slug`, `listing_version`, `listing_b_id`, `listing_b_slug`, `listing_image_id`, `catalog_image_id`) = **122**. Reference requests 338, workflow requests 218, total **556**; 516 have a saved example, 690 saved examples, 103 requests with an error example.
+* `docs/postman/samples/listing-photo.png` is a small generated picture (no third-party imagery) used by the upload request.
+* **Execution:** Flow 15 was run with Newman (`--working-dir docs/postman`) against `php artisan serve` on a fresh MySQL 8 database with a queue worker: **48 requests, 88 assertions, 0 failures**. The saved examples of folders 24/90/Flow 15 come from that run (log-in/out, register and OTP responses are not saved). Two folder-24 requests have no saved example (`Fetch a photo file (member)`, `Public photo file`: binary responses). Flows 1-14 were not re-run in this pass (no change to their requests).
+* Not executed against the real application: `Eligible inventory` for a farm-backed shop (the flow's shop is marketplace-only, so it shows the `422`); farm-backed behaviour is covered by `MarketplaceListingInventoryTest`.
+* Contract: `docs/api/PHASE-23-MARKETPLACE-LISTINGS.md`; image runbook `docs/api/PHASE-23-IMAGE-ASSET-RUNBOOK.md`.
+
+## Addendum — Phase 24 (Buyer enquiries & controlled negotiation)
+
+* 8 new `/api/v1` path items / **10 new operations** (see `docs/api/openapi.json`; no existing path changed): buyer `POST /marketplace/listings/{slug}/offers|purchase-intent`, `GET …/{slug}/offer-status`, `GET /marketplace/my/enquiries`, `GET /marketplace/my/offers/{offer}`; shop `GET /marketplace/shops/{shop}/offers[/{offer}]`, `POST …/offers/{offer}/accept|reject`, `GET …/shops/{shop}/purchase-intents`.
+* Postman: new folder **25 — Marketplace offers & purchase intents** (10 requests), +2 environment variables (`offer_id`, `intent_id`), and the executable **Flow 16 — Marketplace negotiation** (79 requests, +4 environment variables: `neg_seller_email`, `buyer_email`, `staff_email`, `manager_email`; 128 in total). The reference folder 25 carries Tests scripts but no saved examples; behaviour is also covered by the PHPUnit suites listed in `WORKLOG.md`, including multi-process concurrency tests.
+* **Execution (Flow 16):** Newman against `php artisan serve` on the isolated test database (`farm_management_test`, fresh `migrate:fresh --seed`, platform admin granted): **79 requests, 197 assertions, 0 failures** (83 requests counted by Newman incl. 4 harness OTP lookups). Covers: buyer offer, seller accept and reject, offer limit, fixed-price refusal, purchase intent, staff/non-member refusals, and a no-leak check of the seller's phone, e-mail and address on every negotiation response. Database check after the run: `marketplace_offers` 4, `marketplace_offer_events` 8, `marketplace_purchase_intents` 2 and **0 rows** in inventory items/lots/movements, sales, sale items, invoices, payments, purchases and finance transactions. Flows 1-15 were not re-run (no change to their requests).
+* Three new platform settings are exposed through the existing Platform Admin settings requests (`marketplace_max_offers_per_buyer`, `marketplace_offer_expiry_hours`, `marketplace_min_offer_percent`).
+* Contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`.
+
+## Addendum — Phase 25 (Marketplace deal summary & fulfilment)
+
+* 21 new `/api/v1` path items / **21 new operations** (OpenAPI 236 -> 257 paths, 293 -> 314 operations, 0 warnings) (see `docs/api/openapi.json`; no existing path changed): buyer `POST /marketplace/my/offers/{offer}/deal`, `GET /marketplace/my/deal-confirmations/{confirmation}`, `POST …/deal-confirmations/{confirmation}/confirm`, `GET /marketplace/my/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; shop `POST /marketplace/shops/{shop}/purchase-intents/{intent}/confirm`, `POST …/deal-confirmations/{confirmation}/withdraw`, `GET …/shops/{shop}/deals[/{deal}]`, `POST …/deals/{deal}/complete|cancel|report`, `GET …/deals/{deal}/contact`; platform admin (read-only) `GET /platform-admin/marketplace/deals[/{deal}]`, `…/deals/{deal}/contact`, `…/deal-reports`.
+* Postman: new folder **26 — Marketplace deals & contact exchange** (21 reference requests, no saved examples), +2 environment variables used by the reference requests (`deal_id`, `confirmation_id`) and the executable **Flow 17 — Marketplace deals** (92 requests, +8 environment variables: `deal_seller_email`, `deal_buyer_email`, `deal_buyer2_email`, `deal_staff_email`, `deal_manager_email`, `deal_b_id`, `deal_offer_id`, `deal_intent_id`).
+* **Execution (Flow 17):** Newman against `php artisan serve` on the isolated test database (`farm_management_test`, fresh `migrate:fresh --seed`, platform admin granted): **92 requests, 226 assertions, 0 failures** (97 requests counted by Newman incl. 5 harness OTP lookups). Covers both deal doors, frozen terms, the null delivery charge, two-sided self-reported completion, cancellation ending contact, a report after cancellation invisible to the other party, contact exchange with the pickup-only address, staff/stranger refusals and the read-only admin review, with a no-leak check on every non-contact response. Database check after the run: 2 deals, 1 confirmation, 1 report, 4 contact-access rows, and **0 rows** in inventory items/movements, sales, invoices, payments and finance transactions. Flows 1-16 were not re-run (no change to their requests).
+* One new platform setting is exposed through the existing Platform Admin settings requests (`marketplace_deal_confirmation_hours`).
+
+## Addendum — Phase 26 (marketplace monetisation)
+
+Folder **27 — Marketplace monetisation (seller plans & promotions)** adds 19 reference requests (9 seller, 9 platform-admin, 1 webhook) covering the 19 new routes plus 6 environment variables (`seller_plan_id`, `promotion_package_id`, `payment_reference`, `admin_plan_id`, `admin_package_id`, `promotion_id`). **No saved example responses.** Superseded in Phase 29: Flow 19 now executes the non-payment steps (catalogue, flags, seller reads, checkout refusal without a key, unsigned webhook 401). The payment steps need a real Paystack test-mode transaction and are listed under "Not executable" below; the behaviour is covered by the PHPUnit suite against a faked Paystack. OpenAPI regenerated (275 paths).
+
+## Phase 27 — Safety administration
+
+Folder 28 adds 16 reference requests for shop/listing intake, owned reports, admin summary/offers/reports, triage outcomes, explicit linked enforcement, and reason-required reinstatement/lifting. `report_id` and `report_type` are environment variables; intake saves them. Use a verified participant for intake/my reports, support/admin for platform reads and admin for handling. Review before resolving/dismissing. Resolution, dismissal and enforcement examples are alternatives, not a sequential runner. Deal reports keep existing participant endpoints; select `report_type=deal` for their admin workflow. All statuses/counts and errors: `docs/api/PHASE-27-MARKETPLACE-SAFETY.md`. No saved HTTP responses for this folder; Phase 29 added Flow 18 (executed with Newman, see the Phase 29 addendum) and feature tests validate the workflows. Prior reinstate/lift reference requests were updated to supply the newly required reason.
+
+## Addendum — Phase 29 (Postman finalization and backend handover)
+
+**Route audit.** `php artisan route:list --path=api/v1 --json` (343 method+path routes) was matched against every request URL in the collection after normalising `{{base_url}}`, `{{variables}}` and literal sample ids to path parameters: **343 / 343 routes have a request in the reference folders; 0 requests point at an unknown route** (one flow step, `POST /platform-admin/marketplace/deals/{deal}`, deliberately asserts `405`). 187 of the 343 routes are also exercised by an executable flow. Every request's method and URL matched a route; the bodies of folders 27-28 were checked against the Phase 26/27 contracts and are now executed by Flows 18-19. The only contract-level corrections were the header and sample-body fixes below.
+
+**Changes in this pass (collection and environment only; no backend code changed).**
+- New executable **Flow 18 - Marketplace reports & moderation** (38 requests) and **Flow 19 - Marketplace seller plans & promotions** (30 requests, Paystack not exercised). Both build on Flow 17's seller shop.
+- Folder 27: the promotion-package sample body now includes `"is_active": true` (packages are created inactive; without it the next promotion checkout answers `409 package_not_available`); both checkout requests accept `502/503` when Paystack is not configured or reachable; the webhook request carries the `x-paystack-signature` header (`{{paystack_signature}}`) instead of the frontend CSRF/Origin headers it does not use.
+- Environment: +5 variables (`paystack_signature`, `report_a_id` ... `report_d_id`), 151 in total.
+- `docs/operations/BACKEND-HANDOVER.md` added; `LAUNCH.md` no longer claims there is no payment integration.
+
+**Newman execution (disposable MySQL 8 database `farm_newman`, fresh `migrate --seed` of every migration including the Phase 26/27 ones, platform admin granted, `php artisan serve`, a queue worker, `MAIL_MAILER=log`, no Paystack key).**
+
+| Run | Requests | Assertions | Failures |
+|---|---:|---:|---:|
+| **All 20 flows in one process** (order 1, 2, S, 3-12, 14, 13, 15-19) | **457** | **1042** | **0** |
+| (breakdown) Flow 17 / Flow 18 / Flow 19 | 92 / 38 / 30 | 226 / 101 / 64 | 0 / 0 / 0 |
+| Reference folders 00-28 and 90 run once, in order, on a fresh database | 405 | 682 | 171 state-dependent assertion failures; 0 transport failures |
+
+The reference folders are one request per route, not a sequential runner: they depend on plan limits, prior state and out-of-band inputs that the flows set up (for example a farm plan upgrade, an invitation token from the email, a published listing), so a straight run produces cascading 404/409/422 results. Those failures were **not triaged individually and are not claimed as passes**; executable correctness is established by the flows. Harness notes: the OTP and the invitation token are read from `storage/logs/laravel.log`, `php artisan notifications:generate` runs before Flow 12, the cache is cleared between flows (registration is limited to 10/hour/IP), and Flow 11's export needs a few seconds for the queue worker.
+
+**Requests that cannot be executed here.**
+- Paystack-dependent (need `PAYSTACK_SECRET_KEY` test-mode credentials and a real card payment): `POST /marketplace/shops/{shop}/payments/{reference}/verify` on a real payment, a correctly signed `POST /public/marketplace/payments/paystack/webhook`, `POST /platform-admin/marketplace/promotions/{promotion}/cancel` (needs a paid promotion), and the happy-path `200/201` of both checkouts.
+- Not covered by any executable flow (reference-only; examples were captured in earlier phases, not re-run now): 156 routes, mostly single-resource reads/updates and admin screens (for example `PATCH /account`, `PUT /account/password`, password-reset requests, `POST /auth/google`, `/platform-admin/plans*`, `/platform-admin/users/*`, `/platform-admin/work-templates*`, `/subscription/cancel|resume`, shop `close|reopen|request-verification`, `/platform-admin/marketplace/shops/{shop}/reject|suspend|verification`, `POST /records/{record}/attachments`).
+- Google sign-in needs a real Google ID token.
+
+**Deferred features.** The collection and environment contain no Phase 20 (WhatsApp/AI) or Phase 28 (Community) request. The only "WhatsApp" strings are the `support_whatsapp` platform setting, a marketplace contact channel preference, and statements that WhatsApp is not in V1.
+
+## Livestock batch creation addendum — 2026-10-09
+
+One GET route added: `/master/species/{species}/batch-reference` (344 total application operations; no further route). Postman changes for the livestock batch-creation contract (`docs/api/LIVESTOCK-BATCH-CREATION.md`):
+
+* **Folder 05:** `Selected animal batch reference` (Chicken, now with the documented `include_inactive` query, real 200/404/422 examples), new `… (Cattle)` and `… (Fish)`, new `List species (all animals)`; `List farm operations` also captures `op_cattle_id`/`op_fishery_id`; stale "no system breeds" note and empty example of `List breeds of a species` replaced with the real list.
+* **Folder 08:** `Start a livestock batch` (Chicken) documents every field and has fresh 201/409/422 examples; new `… (Cattle — dairy, with price and supplier)`, `… (Fish — table fish)` and four negative requests (missing `production_purpose`; purpose, growth stage and breed from another species). `Edit an active cycle` notes the `baseline_locked` rule for the four new fields. Saved read examples (list, show, summary) and Flow 3 steps 4/5/9/11 were re-captured and show the new `livestock` fields.
+* **Environment:** +9 empty capture variables (`op_cattle_id`, `op_fishery_id`, `species_cattle_id`, `species_fish_id`, `breed_cattle_id`, `breed_fish_id`, `breed_chicken_system_id`, `cycle_cattle_id`, `cycle_fish_id`). No new auth, farm id or token; existing `supplier_id`, `area_id`, `breed_id` are reused (the Cattle request creates a supplier contact only if `supplier_id` is still empty).
+
+**Postman follow-up (2026-10-09, after `091a28d`).** Root causes and fixes of the three requests that failed in the first Newman run:
+
+* `Create a custom breed` (folder 05) returned `409 duplicate_name` because Flow S had already created `Isa Brown (Ibadan strain)` in the same database (case/space-insensitive duplicate, a correct backend answer). The request now names the breed `{{custom_breed_name}}` (`Isa Brown (Ibadan strain) <timestamp>`, set by a pre-request script) and the rename request derives its name from it, so the folder is repeatable. New request `Create a custom breed — duplicate name (409)` posts the same name again and asserts `409 duplicate_name` with `details.existing_id == breed_id`, so the conflict stays covered. Flow S step 8 keeps the stable name later flows rely on; its test accepts `201` or the documented `409` (active farm breed) and reuses `details.existing_id`, so Flow S can be rerun.
+* `Close`/`Reopen a production cycle` used `{{cycle_pilot_id}}`, which nothing ever captured (the docs pointed at a "second batch" request that does not exist), so the URL had an empty id. `Close` now starts its own disposable Chicken batch (`Pilot flock <timestamp>`) in a pre-request script and captures `cycle_pilot_id`; `Reopen` reuses it. `{{cycle_id}}` (Flow 3 and folders 09-17) is never closed. The tests assert the pilot batch (not `cycle_id`) becomes `closed` and then `active` again with no end date.
+* Saved examples re-captured from real responses: `Edit an active cycle`, `Close` (200 and the 409 already-closed), `Reopen`, Flow 7 step 6, Flow 10 step 4, the Chicken create `403` (a real `farm_worker` response with the current body), and the custom-breed 201/409/rename examples.
+* Environment: +1 variable `custom_breed_name`. Descriptions of Close/Reopen/Create custom breed/Flow S step 8 and the collection variable table updated.
+
+**Newman (2026-10-09, live `php artisan serve`, throwaway MySQL 8 database `farm_management_newman`, queue worker running; Flow 1, a platform admin and Flow S run first, 22 requests / 44 assertions / 0 failures).** Folders 05 + 08 in collection order: 37 requests, 84 assertions, 0 failures (38 requests while capturing, with a temporary Close-again probe for the 409 example). Dependent workflows Flows 3-12 and 14, then Flow 13 (including a temporary probe for the 403 example), on a fresh database: 136 requests, 284 assertions, 0 failures. Probe requests exist only in the temporary run collection.
+
+**Remaining gaps.** Platform-admin reference-value maintenance (`/platform-admin/master/reference-values`, `breed_field_label` on species) is documented in the API doc but has no livestock-specific Postman example; Honeybee/Snail examples are not included. Reference folders use stable names for some records (the Chicken batch `October Broilers`, the crop project and the custom crop variety), so running folders 05/08 a second time against the same database returns the backend's `409` duplicate-name answers there; run them on a fresh database or Flow S/Flow 3 state, as documented. The backend's misleading "at most two decimal places" message for a negative `acquisition_price_per_animal` is unchanged (backend not in scope). Flow 11 (export) and Flow 12 (notifications) depend on a running queue worker polling quickly.
