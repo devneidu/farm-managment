@@ -13,6 +13,7 @@ Frontend integration contract for **Feed IN/OUT**, **Eggs IN/OUT** and **Milk IN
 | Used 25 kg Starter for Broiler Batch A | `POST /records` `feed_use` with `details.inventory` | `feed_use` | `stock_out` **−25 kg**, reason `production_use` | batch history |
 | Put 40 eggs into Incubator A | `POST /breeding-projects` with `consume_egg_stock: true` | – (a breeding project) | `stock_out` **−40**, reason `incubation`, linked to the project | project `egg_stock` |
 | Sold 2 crates of eggs / 25 L milk / 50 kg surplus feed | `POST /sales` stock line | – | `stock_out`, reason `sale`, linked to the sale line | invoice, income on payment |
+| Sold eggs / milk / harvested produce **without** a customer, invoice or payment (quick farm-gate or roadside sale) | `POST /inventory/stock-out` reason `sold` ("Sold (not invoiced)"), optional `production_cycle_id` for context | – | `stock_out`, manual (no `sale_id`) | **none**: no sale, invoice, customer transaction, payment or income. Reversible via `POST /inventory/movements/{id}/reverse`. Enter the same event in Sales **or** here, never both |
 | Gave away 1 crate | `POST /inventory/stock-out` reason `donation` | – | `stock_out` −30 | no sale, no income |
 | Eggs broken / milk spoiled / feed lost | `POST /inventory/stock-out` reason `damaged` / `spoiled` / `lost` | – | `stock_out` | – |
 | Eggs/milk/feed donated, bought, received | `POST /inventory/stock-in` (or `POST /purchases` to book the expense too) | **none** | `stock_in` | no production record, ever |
@@ -73,6 +74,7 @@ Milk is identical with `milk` / `output: milk`.
 | `sale` | Sold | no | `POST /sales` |
 | `production_use` | Used for livestock | no | `POST /records` `feed_use` |
 | `incubation` | Put into incubation | no | `POST /breeding-projects` |
+| `sold` | Sold (not invoiced) | yes — **produce only** (eggs, milk, harvested crops; 422 for other categories) | `POST /inventory/stock-out`. No Sale, invoice, customer transaction or payment; appended after the other reasons in each list |
 | `donation` | Gift / Donation | yes | |
 | `internal_use` | Personal / Internal use | yes | |
 | `damaged` | Damaged / Broken | yes | |

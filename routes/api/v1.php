@@ -346,6 +346,8 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     });
 
     Route::get('/master/record-types', [OperationalRecordController::class, 'types'])->middleware('farm.permission:record.view')->name('api.v1.record-types.index');
+    Route::get('/master/record-operations', [OperationalRecordController::class, 'operations'])->middleware('farm.permission:record.view')->name('api.v1.record-operations.index');
+    Route::get('/master/record-operations/{code}', [OperationalRecordController::class, 'operation'])->middleware('farm.permission:record.view')->name('api.v1.record-operations.show');
     Route::get('/record-types/{type}/schema', [OperationalRecordController::class, 'schema'])->middleware('farm.permission:record.view')->name('api.v1.record-types.schema');
     Route::prefix('records')->group(function () {
         $controller = OperationalRecordController::class;

@@ -208,10 +208,11 @@ class InventoryController extends Controller
      * Issue stock (stock-out)
      *
      * Requires inventory.use. Appends a negative stock_out movement. Reasons accepted here: donation, internal_use, damaged, spoiled, lost, disposal, expired,
-     * wasted, other, and use (legacy "other use"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,
+     * wasted, other, sold (produce only: eggs, milk, harvested crops leaving the farm WITHOUT a sale, invoice, customer transaction or payment; it is manual, has no sale_id and
+     * reverses through POST /inventory/movements/{id}/reverse; use POST /sales when the sale must be invoiced), and use (legacy "other use"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,
      * production_use (feed used for livestock) -> POST /records type feed_use, incubation -> POST /breeding-projects, so one event is never entered twice.
      * Send `output: eggs|milk` instead of `inventory_item_id` for the farm's own egg / milk stock (never created here: 409 insufficient_stock when there is none;
-     * `storage_location_id` optional when the farm has a single active store). Stock can never go negative:
+     * `storage_location_id` optional when the farm has a single active store). Optional `production_cycle_id` (farm-scoped, 404 otherwise) is context only: pooled output is never attributed to a batch. Stock can never go negative:
      * the (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id
      * (no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.
      */

@@ -9,7 +9,7 @@ An inventory item has **no quantity field**. Current stock is always `SUM(invent
 | Movement `type` | Sign | Created by |
 |---|---|---|
 | `stock_in` | + | `POST /inventory/stock-in` (reason `opening_balance`, `purchase`, `donation`, `aid`, `received`, `production` (not for produce), `other`); egg/milk/crop production and eggs returned from a cancelled incubation are written by their own workflow (reasons `production`, `harvest`, `returned`) |
-| `stock_out` | − | `POST /inventory/stock-out` (reason `donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`; legacy `use` (not for feed), `expired`, `wasted`), linked feed-use records (reason `production_use`), sales (`sale`) and incubation (`incubation`) |
+| `stock_out` | − | `POST /inventory/stock-out` (reason `donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`, and for produce only `sold` ("Sold (not invoiced)": no sale/invoice/payment); legacy `use` (not for feed), `expired`, `wasted`), linked feed-use records (reason `production_use`), sales (`sale`) and incubation (`incubation`) |
 | `adjustment` | ± or 0 | `POST /inventory/adjustments` (physical count reconciliation) |
 | `transfer_out` / `transfer_in` | − / + | `POST /inventory/transfers` (always a linked pair) |
 | `reversal` | opposite of the original | `POST /inventory/movements/{id}/reverse`, or reversing a linked operational record |

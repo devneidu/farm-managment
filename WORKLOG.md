@@ -9,6 +9,22 @@
 
 ---
 
+## Latest task — Farm operations catalogue and Records-only "sold" OUT (COMPLETED locally, not committed)
+
+**Agent:** Claude. **Date:** 2026-10-13. Phase 1 (read-only audit) approved with ten decisions; Phases 2-4 implemented.
+
+**Endpoints (new, read-only, `record.view`):** `GET /master/record-operations`, `GET /master/record-operations/{code}`. Static service `App\Services\Records\OperationCatalogue` composing `RecordTypeRegistry` + `StockReasonCatalogue`; no table. Operations: `eggs`, `milk` (`in_out`), `feed_use` (`out_only`), `crop_harvest` (`in_only`), `produce_out` (`out_only`, item-based manual stock-out), every other record type `normal`. `display_mode` is derived from the actions. `sale` and `incubation` appear only as `workflow_redirects`.
+
+**Rule/contract changes (additive):** new manual `StockOutReason::Sold` ("Sold (not invoiced)"), produce only (eggs, milk, produce category; 422 otherwise), appended after the existing reasons so list order is unchanged; `sale` stays system-only and `sale_id`-linked. `POST /inventory/stock-out` accepts optional `production_cycle_id` (farm-scoped, 404 otherwise; context only, stored on the movement). No existing response shape changed.
+
+**Tests:** new `tests/Feature/Records/OperationCatalogueTest.php` (10). Docs: PHASE-08-RECORDS, PHASE-09-INVENTORY, FEED-EGGS-MILK-STOCK, openapi.json (additions only), Postman (+2 requests).
+
+**Open business decisions / limitations:** the same sale entered in Sales AND as `sold` is two events (no cross-check; documented); `sold` cannot be converted into a Sale later; `produce_out` has no unit/list of produce items of its own (use `GET /inventory/items?category=produce`); fertilizer/pesticide/planting stay `normal` with an optional stock link.
+
+**Recommended commit:** `feat: farm operations catalogue and non-invoiced "sold" stock-out for produce`
+
+---
+
 ## Latest task — Medicine catalogue finalisation: type filter and request idempotency (COMPLETED, committed locally, not pushed)
 
 **Agent:** Claude. **Date:** 2026-10-13. Follow-up to `006ffa8`. Git state checked first: local `master` is 1 ahead / 0 behind `origin/master` (merge-base = origin/master `b8b3759`), so it is a pure fast-forward; no push, merge, cherry-pick or branch switch was done.

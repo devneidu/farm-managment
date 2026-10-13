@@ -21,6 +21,7 @@ use App\Models\InventoryItem;
 use App\Models\InventoryLot;
 use App\Models\InventoryMovement;
 use App\Models\OperationalRecord;
+use App\Models\ProductionCycle;
 use App\Models\StorageLocation;
 use App\Services\Locations\PlaceService;
 use App\Services\Measurement\PackageConversionService;
@@ -185,6 +186,8 @@ class InventoryService
                 $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
             }
             $this->assertManualOutReason($item, $data['reason']);
+            // Optional context only: pooled output is never attributed to a batch, so the cycle is a label, not a stock source.
+            $cycleId = isset($data['production_cycle_id']) ? ProductionCycle::ofFarm($ctx->farm)->findOrFail($data['production_cycle_id'])->id : null;
             $when = $this->when($data['recorded_at']);
             $lot = $this->lot($ctx, $item, $data, create: false);
             if ($data['reason'] === 'use') {
@@ -195,7 +198,7 @@ class InventoryService
             $this->assertAvailable($item, $location->id, $lot?->id, $qty);
 
             return [$this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockOut, $data['reason'], Decimal::sub('0', $qty), $result->toArray(), $when, [
-                'notes' => $data['notes'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
+                'notes' => $data['notes'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash, 'production_cycle_id' => $cycleId,
             ], guard: true)];
         });
     }
@@ -706,6 +709,10 @@ class InventoryService
         // Medicine given to animals is entered once, as a health record; a manual "use" would decrement the same stock a second time.
         if ($item->category === InventoryCategory::Medicine && ($route = StockReasonCatalogue::medicineOutRoutes()[$reason] ?? null) !== null) {
             $this->invalid('reason', 'Medicine used on animals is recorded through POST '.$route['path'].' (types vaccination, medication, deworming or treatment) so the event is entered once; the reason "'.$reason.'" is not accepted for medicine. Use donation, damaged, expired, spoiled, lost, disposal or other for medicine leaving stock in another way.');
+        }
+        // "Sold (not invoiced)" is for produce only (eggs, milk, harvest); other stock that is sold goes through POST /sales.
+        if ($reason === 'sold' && $item->category !== InventoryCategory::Produce) {
+            $this->invalid('reason', 'The reason "sold" is only for produce (eggs, milk, harvested crops). Record a sale of other stock through POST /sales.');
         }
         if ($reason === 'use' && $item->category === InventoryCategory::Feed) {
             $this->invalid('reason', 'Feed used for livestock is recorded through POST /records (type feed_use) so the event is entered once; the generic "use" reason is not accepted for feed. Use donation, spoiled, lost, disposal, internal_use or other for feed leaving the farm in another way.');

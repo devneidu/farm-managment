@@ -209,6 +209,7 @@ class StockReasonCatalogue
             $this->out(StockOutReason::Spoiled, 'Spoiled'),
             $this->out(StockOutReason::Lost, 'Lost / Stolen'),
             $this->out(StockOutReason::Other, 'Other'),
+            $this->out(StockOutReason::Sold, 'Sold (not invoiced)'), // appended: keeps the order of the existing reasons
             ...$this->movementActions('out'),
         ];
     }
@@ -222,6 +223,7 @@ class StockReasonCatalogue
             $this->out(StockOutReason::Spoiled, 'Spoiled / Contaminated'),
             $this->out(StockOutReason::Lost, 'Lost'),
             $this->out(StockOutReason::Other, 'Other'),
+            $this->out(StockOutReason::Sold, 'Sold (not invoiced)'),
             ...$this->movementActions('out'),
         ];
     }
@@ -252,6 +254,8 @@ class StockReasonCatalogue
             $this->out(StockOutReason::Lost, 'Lost / Stolen'),
             $this->out(StockOutReason::Disposal, 'Disposal'),
             $this->out(StockOutReason::Other, 'Other'),
+            // Produce only (enforced by InventoryService): harvested crops leaving the farm without a Sale or invoice.
+            $this->out(StockOutReason::Sold, 'Sold (not invoiced)') + ['only_for_categories' => ['produce']],
             ...$this->movementActions('out'),
         ];
     }

@@ -25,6 +25,8 @@ class StockOutRequest extends InventoryRequest
             /** Required for lot-tracked items. There is no automatic FIFO/FEFO: the caller names the lot. */
             ...InventoryRules::lotChoice(),
             'reason' => ['required', Rule::enum(StockOutReason::class), new ManualStockReason('out')],
+            /** Optional context for eggs / milk / produce leaving stock. Never required and never a stock source: pooled output is not attributed to a batch. */
+            'production_cycle_id' => ['sometimes', 'nullable', 'uuid'],
             ...InventoryRules::components('components'),
             ...InventoryRules::event(),
         ];

@@ -15576,7 +15576,7 @@
         "/inventory/stock-out": {
             "post": {
                 "operationId": "v1.inventory.stock-out",
-                "description": "Requires inventory.use. Appends a negative stock_out movement. Reasons accepted here: donation, internal_use, damaged, spoiled, lost, disposal, expired,\nwasted, other, and use (legacy \"other use\"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,\nproduction_use (feed used for livestock) -> POST /records type feed_use, incubation -> POST /breeding-projects, so one event is never entered twice.\nSend `output: eggs|milk` instead of `inventory_item_id` for the farm's own egg / milk stock (never created here: 409 insufficient_stock when there is none;\n`storage_location_id` optional when the farm has a single active store). Stock can never go negative:\nthe (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id\n(no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.\n\n**Requires farm permission:** `inventory.use`.",
+                "description": "Requires inventory.use. Appends a negative stock_out movement. Reasons accepted here: donation, internal_use, damaged, spoiled, lost, disposal, expired,\nwasted, other, sold (produce only: eggs, milk, harvested crops leaving the farm WITHOUT a sale, invoice, customer transaction or payment; it is manual, has no sale_id and\nreverses through POST /inventory/movements/{id}/reverse; use POST /sales when the sale must be invoiced), and use (legacy \"other use\"; 422 for feed items - feed used for livestock is a feed_use record). Reasons owned by another workflow are refused with 422 naming the endpoint: sale -> POST /sales,\nproduction_use (feed used for livestock) -> POST /records type feed_use, incubation -> POST /breeding-projects, so one event is never entered twice.\nSend `output: eggs|milk` instead of `inventory_item_id` for the farm's own egg / milk stock (never created here: 409 insufficient_stock when there is none;\n`storage_location_id` optional when the farm has a single active store). Optional `production_cycle_id` (farm-scoped, 404 otherwise) is context only: pooled output is never attributed to a batch. Stock can never go negative:\nthe (item, location, lot) bucket is re-checked chronologically under a farm lock (409 insufficient_stock). Lot-tracked items require lot_id\n(no automatic FIFO/FEFO). Reason `use` is refused for an expired lot (409 lot_expired); write expired stock off with `expired` or `wasted`.\n\n**Requires farm permission:** `inventory.use`.",
                 "summary": "Issue stock (stock-out)",
                 "tags": [
                     "Inventory"
@@ -68622,6 +68622,329 @@
                     }
                 }
             }
+        },
+        "/master/record-operations": {
+            "get": {
+                "operationId": "v1.record-operations.index",
+                "description": "Requires record.view. One entry per operation a farm form can be built for: `display_mode` is `normal` (a plain record), `in_only`, `out_only`\nor `in_out`, derived from the actions the operation really has, so the frontend never hardcodes it. Eggs and milk are one operation each\n(the record plus the pooled stock); crop harvest (IN) and crop produce out (OUT) are separate operations. Read-only; composed from the\nrecord type registry and the stock reason catalogue, so it cannot drift from what POST /records and POST /inventory/stock-in|out accept.\n\n**Requires farm permission:** `record.view`.",
+                "summary": "List farm operations",
+                "tags": [
+                    "OperationalRecord"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "code": {
+                                                        "type": "string"
+                                                    },
+                                                    "label": {
+                                                        "type": "string"
+                                                    },
+                                                    "display_mode": {
+                                                        "type": "string",
+                                                        "enum": [
+                                                            "normal",
+                                                            "in_only",
+                                                            "out_only",
+                                                            "in_out"
+                                                        ]
+                                                    },
+                                                    "cycle_kind": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "capability": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "inventory_kind": {
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required": [
+                                                    "code",
+                                                    "label",
+                                                    "display_mode",
+                                                    "cycle_kind",
+                                                    "capability",
+                                                    "inventory_kind"
+                                                ]
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/master/record-operations/{code}": {
+            "get": {
+                "operationId": "v1.record-operations.show",
+                "description": "Requires record.view; unknown codes return 404. Describes everything a form needs: `measurement` (dimension, units endpoint), `actions.in` /\n`actions.out` / `actions.record` (each with `submission` method, url and `body_defaults`, `fields.required` / `fields.optional`,\n`production_cycle` required|optional|not_applicable, `permissions_required`, `inventory_effect`, `commercial_effects`, `reversal`) and\n`workflow_redirects` for events another workflow owns (a sale -> POST /sales, incubation -> POST /breeding-projects), which are never stock-out forms.\nPermissions are listed, not filtered: intersect them with the member's permissions (GET /farm). Submitting is always the existing endpoint.\n\n**Requires farm permission:** `record.view`.",
+                "summary": "Get one farm operation",
+                "tags": [
+                    "OperationalRecord"
+                ],
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resource not found (or it belongs to another farm)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "not_found"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -76845,7 +77168,7 @@
             },
             "StockOutReason": {
                 "type": "string",
-                "description": "Stable, domain-level reasons for stock going OUT (never channel-specific codes such as \"farmers_market\": those belong to the sale). `use`, `expired` and `wasted` are kept for existing clients and records. System-only reasons are written by the workflow that owns the real-world event and are refused on POST /inventory/stock-out so one event can never be entered twice: sale -> POST /sales, production_use -> POST /records (feed_use), incubation -> POST /breeding-projects.\n",
+                "description": "Stable, domain-level reasons for stock going OUT (never channel-specific codes such as \"farmers_market\": those belong to the sale). `use`, `expired` and `wasted` are kept for existing clients and records. System-only reasons are written by the workflow that owns the real-world event and are refused on POST /inventory/stock-out so one event can never be entered twice: sale -> POST /sales, production_use -> POST /records (feed_use), incubation -> POST /breeding-projects.  `sold` is the manual counterpart of `sale` for produce: a quick Records/Inventory deduction with no Sale, invoice, customer or payment. It is never linked to a sale, so it reverses through POST /inventory/movements/{id}/reverse. Use `sale` (POST /sales) when the sale must be invoiced.\n",
                 "enum": [
                     "use",
                     "damaged",
@@ -76859,7 +77182,8 @@
                     "internal_use",
                     "spoiled",
                     "lost",
-                    "disposal"
+                    "disposal",
+                    "sold"
                 ],
                 "title": "StockOutReason"
             },
@@ -76931,6 +77255,14 @@
                             "null"
                         ],
                         "maxLength": 5000
+                    },
+                    "production_cycle_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid",
+                        "description": "Optional context for eggs / milk / produce leaving stock. Never required and never a stock source: pooled output is not attributed to a batch."
                     }
                 },
                 "required": [

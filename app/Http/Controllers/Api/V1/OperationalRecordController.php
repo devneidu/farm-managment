@@ -13,6 +13,7 @@ use App\Http\Resources\RecordAttachmentResource;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
 use App\Services\Locations\PlaceService;
+use App\Services\Records\OperationCatalogue;
 use App\Services\Records\RecordAttachmentService;
 use App\Services\Records\RecordService;
 use App\Services\Records\RecordTypeRegistry;
@@ -141,5 +142,36 @@ class OperationalRecordController extends Controller
         abort_unless(Storage::disk('local')->exists($file->path), 404);
 
         return Storage::disk('local')->download($file->path, $file->original_name, ['Content-Type' => 'application/octet-stream', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
+    }
+
+    /**
+     * List farm operations
+     *
+     * Requires record.view. One entry per operation a farm form can be built for: `display_mode` is `normal` (a plain record), `in_only`, `out_only`
+     * or `in_out`, derived from the actions the operation really has, so the frontend never hardcodes it. Eggs and milk are one operation each
+     * (the record plus the pooled stock); crop harvest (IN) and crop produce out (OUT) are separate operations. Read-only; composed from the
+     * record type registry and the stock reason catalogue, so it cannot drift from what POST /records and POST /inventory/stock-in|out accept.
+     *
+     * @response array{data: array<int, array{code: string, label: string, display_mode: 'normal'|'in_only'|'out_only'|'in_out', cycle_kind: string|null, capability: string|null, inventory_kind: string|null}>, meta: object, message: null}
+     */
+    public function operations(OperationCatalogue $catalogue): JsonResponse
+    {
+        return ApiResponse::success($catalogue->all());
+    }
+
+    /**
+     * Get one farm operation
+     *
+     * Requires record.view; unknown codes return 404. Describes everything a form needs: `measurement` (dimension, units endpoint), `actions.in` /
+     * `actions.out` / `actions.record` (each with `submission` method, url and `body_defaults`, `fields.required` / `fields.optional`,
+     * `production_cycle` required|optional|not_applicable, `permissions_required`, `inventory_effect`, `commercial_effects`, `reversal`) and
+     * `workflow_redirects` for events another workflow owns (a sale -> POST /sales, incubation -> POST /breeding-projects), which are never stock-out forms.
+     * Permissions are listed, not filtered: intersect them with the member's permissions (GET /farm). Submitting is always the existing endpoint.
+     *
+     * @response array{data: array<string, mixed>, meta: object, message: null}
+     */
+    public function operation(OperationCatalogue $catalogue, string $code): JsonResponse
+    {
+        return ApiResponse::success($catalogue->find($code) ?? abort(404));
     }
 }

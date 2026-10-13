@@ -7,6 +7,8 @@ All paths below have prefix `/api/v1`. Use the existing Sanctum SPA session, CSR
 | Method | Path | Permission | Success |
 |---|---|---|---|
 | GET | `/master/record-types` | `record.view` | 200, type schemas |
+| GET | `/master/record-operations` | `record.view` | 200, farm operations catalogue (list) |
+| GET | `/master/record-operations/{code}` | `record.view` | 200, one operation; unknown code 404 |
 | GET | `/record-types/{type}/schema` | `record.view` | 200, one schema; unknown type 404 |
 | GET | `/records` | `record.view` | 200, paginated records |
 | POST | `/records` | `record.create` | 201, saved record or identical retry |
@@ -154,3 +156,21 @@ Error envelope messages may vary; branch on code. Common errors: 401 unauthentic
 Upload `multipart/form-data` with field `file`; retain CSRF/session headers and request JSON error responses. Defaults in `config/records.php`: max 10 MiB/file, 10 attachments/record; jpg/jpeg/png/webp/pdf/csv/txt/xls/xlsx. Extension and server-detected content must agree. SVG, HTML and executable formats are excluded. Files get generated storage names on the private local disk; user filenames are display/download metadata only. Identical file SHA-256 for the same record returns the existing attachment. Filesystem writes are compensated if the DB transaction fails. Uploading evidence does not affect population.
 
 Attachment response: `{data:{id,original_name,mime_type,size,created_by,created_at,download_url},meta:{},message:"Evidence attached."}`. GET download_url requires the same authenticated farm access and parent record ownership, returns `Content-Disposition: attachment`, `application/octet-stream`, `X-Content-Type-Options:nosniff` and private/no-store caching. No public or unprotected URL is returned. Attachments remain readable after reversal/closure and cannot be replaced/deleted through this API. Virus scanning and remote object storage are not implemented.
+
+
+## Farm operations catalogue (`GET /master/record-operations`)
+
+A read-only catalogue so the frontend renders operation forms without hardcoding IN / OUT / both / normal. It has no table and no rules of its own: it composes `RecordTypeRegistry` (record types, fields, measurement, permissions, stock link) and `StockReasonCatalogue` (which stock reasons are manual), so it cannot drift from `POST /records` or `POST /inventory/stock-in|out`. Requires `record.view`; action-specific permissions are listed per action and enforced by the endpoint the action submits to.
+
+| `code` | `display_mode` | Actions |
+|---|---|---|
+| `eggs` | `in_out` | IN `collected` (`POST /records` `egg_collection`, always writes stock) + manual IN (purchase, donation, received, opening_balance, other: `POST /inventory/stock-in` `output: eggs`, `inventory.manage`); OUT manual reasons incl. `sold` (`POST /inventory/stock-out` `output: eggs`, `inventory.use`) |
+| `milk` | `in_out` | same with `milk`, litres; no incubation |
+| `feed_use` | `out_only` | OUT `used_for_livestock` (`POST /records` `feed_use`, optional stock link) |
+| `crop_harvest` | `in_only` | IN `harvested` (`POST /records` `crop_harvest`, optional stock link) |
+| `produce_out` | `out_only` | OUT of produce items through `POST /inventory/stock-out` with `inventory_item_id` (`sold`, donation, internal_use, damaged, spoiled, lost, disposal, other). Not a record: harvesting stays the only IN |
+| every other record type (`water`, `weight`, `mortality`, `temperature`, crop activities, ...) | `normal` | one `actions.record` entry; an optional stock link (fertilizer, pesticide, planting) is described in `inventory_effect` (`mode: optional_link`) and does not change the mode |
+
+`display_mode` is derived from the actions an operation really has. Events another workflow owns are listed under `workflow_redirects` (never as forms): a sale -> `POST /sales`, incubation -> `POST /breeding-projects` (eggs only). `production_cycle` per action is `required` (records), `optional` (egg / milk / produce OUT: context only, pooled output is never attributed to a batch) or `not_applicable` (manual IN). Every action lists `submission` (method, `url`, `body_defaults`), `fields.required|optional`, `permissions_required`, `inventory_effect`, `commercial_effects` and `reversal`.
+
+**Records-only sold.** Reason `sold` ("Sold (not invoiced)") reduces stock and writes an auditable manual movement; it creates **no** sale, invoice, customer transaction or payment, carries no `sale_id`, and is reversible through `POST /inventory/movements/{id}/reverse`. The system-only `sale` reason (Sales) is unchanged. Stock never goes negative (409 `insufficient_stock`), the farm-wide `idempotency_key` makes a retry the same event, and a changed payload under the same key is 409 `idempotency_conflict`. `POST /inventory/stock-out` additionally accepts an optional `production_cycle_id` (farm-scoped, 404 otherwise) as context.
