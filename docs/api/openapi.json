@@ -11931,6 +11931,14 @@
                         }
                     },
                     {
+                        "name": "medicine_type",
+                        "in": "query",
+                        "description": "antibiotic | vaccine | supplement | dewormer | other. Only medicines whose profile has that type; medicines with no type are excluded. Omit for all.",
+                        "schema": {
+                            "$ref": "#/components/schemas/MedicineType"
+                        }
+                    },
+                    {
                         "name": "include_inactive",
                         "in": "query",
                         "schema": {
@@ -85141,7 +85149,7 @@
                             },
                             "idempotency_key": {
                                 "type": "string",
-                                "description": "Retrying the same request with this key never double-receives: it returns the medicine already created.",
+                                "description": "Required unless the request-level `idempotency_key` is sent (then derived from it). Retrying with this key never double-receives: it returns the medicine already created.",
                                 "pattern": "^[A-Za-z0-9._:-]+$",
                                 "maxLength": 80
                             },
@@ -85161,6 +85169,12 @@
                             "idempotency_key",
                             "notes"
                         ]
+                    },
+                    "idempotency_key": {
+                        "type": "string",
+                        "description": "Optional request idempotency key (max 64; letters, digits, . _ : -), farm-scoped. An identical retry returns the original medicine (200) and creates nothing; the same key with a different payload is 409 idempotency_conflict. Works with or without opening stock.",
+                        "pattern": "^[A-Za-z0-9._:-]+$",
+                        "maxLength": 64
                     }
                 },
                 "required": [

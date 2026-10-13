@@ -298,4 +298,89 @@ class MedicineCatalogueTest extends TeamTestCase
         $reasons = collect($this->getJson('/api/v1/inventory/movements?inventory_item_id='.$med['id'])->assertOk()->json('data'))->pluck('reason');
         $this->assertTrue($reasons->contains('use'));
     }
+
+    // ----------------------------------------------------------- medicine_type filter
+
+    public function test_medicine_type_filter_validates_and_is_farm_scoped(): void
+    {
+        $vaccine = $this->create($this->body(['name' => 'Lasota', 'medicine_type' => 'vaccine']))->assertCreated()->json('data.id');
+        $this->create($this->body(['name' => 'Penstrep', 'medicine_type' => 'antibiotic']))->assertCreated();
+        $legacy = $this->postJson('/api/v1/inventory/items', ['name' => 'Legacy med', 'category' => 'medicine', 'stock_unit' => 'ml'])->assertCreated()->json('data.id');
+
+        $this->assertCount(3, $this->getJson('/api/v1/health/medicines')->assertOk()->json('data')); // unfiltered unchanged
+        $this->assertSame([$vaccine], array_column($this->getJson('/api/v1/health/medicines?medicine_type=vaccine')->assertOk()->json('data'), 'id'));
+        $this->assertSame([], $this->getJson('/api/v1/health/medicines?medicine_type=dewormer')->assertOk()->json('data'));
+        $this->assertNotContains($legacy, array_column($this->getJson('/api/v1/health/medicines?medicine_type=other')->json('data'), 'id'));
+        $this->getJson('/api/v1/health/medicines?medicine_type=vaccine&search=penstrep')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/health/medicines?medicine_type=tonic')->assertUnprocessable()->assertJsonValidationErrors('medicine_type');
+
+        // Same type in another farm: never visible here, and ours never there.
+        [$other] = $this->otherFarm();
+        $this->signInAs($other);
+        $mine = $this->create($this->body(['name' => 'Their vaccine', 'medicine_type' => 'vaccine']))->assertCreated()->json('data.id');
+        $this->assertSame([$mine], array_column($this->getJson('/api/v1/health/medicines?medicine_type=vaccine')->json('data'), 'id'));
+    }
+
+    // ----------------------------------------------------------- request-level idempotency
+
+    public function test_request_key_without_opening_stock_replays_and_conflicts(): void
+    {
+        $body = $this->body(['name' => 'Keyed', 'idempotency_key' => 'create-keyed-1', 'packaging' => ['unit' => 'vial', 'quantity_per_package' => '10']]);
+        $first = $this->create($body)->assertCreated()->json('data');
+        $replay = $this->create($body)->assertOk()->assertJsonPath('message', 'Medicine already created.')->json('data');
+        $this->assertSame($first['id'], $replay['id']);
+        $this->assertSame(1, DB::table('inventory_items')->where('category', 'medicine')->count());
+        $this->assertSame(1, DB::table('package_conversions')->count());
+
+        foreach ([['name' => 'Renamed'], ['medicine_type' => 'vaccine'], ['packaging' => ['unit' => 'vial', 'quantity_per_package' => '20']], ['default_withdrawal_days' => 3]] as $change) {
+            $this->create(array_replace($body, $change))->assertConflict()->assertJsonPath('code', 'idempotency_conflict');
+        }
+        $this->assertSame(1, DB::table('inventory_items')->where('category', 'medicine')->count());
+        $this->assertSame(1, DB::table('package_conversions')->count());
+        $this->create(array_replace($body, ['idempotency_key' => 'bad key!']))->assertUnprocessable()->assertJsonValidationErrors('idempotency_key');
+        // A different key with the same name is the existing duplicate-name conflict, not a replay.
+        $this->create(array_replace($body, ['idempotency_key' => 'other-key']))->assertConflict()->assertJsonPath('code', 'inventory_item_exists');
+    }
+
+    public function test_request_key_governs_opening_stock_without_a_second_key(): void
+    {
+        $loc = $this->store();
+        $stock = ['storage_location_id' => $loc, 'components' => [['quantity' => '5', 'unit' => 'bottle']], 'recorded_at' => $this->at(48)];
+        $body = $this->body(['name' => 'Keyed stock', 'idempotency_key' => 'create-keyed-2', 'packaging' => ['unit' => 'bottle', 'quantity_per_package' => '100'], 'opening_stock' => $stock]);
+
+        $first = $this->create($body)->assertCreated()->json('data');
+        $this->assertSame('500', $first['stock']['quantity']);
+        $replay = $this->create($body)->assertOk()->json('data');
+        $this->assertSame($first['id'], $replay['id']);
+        $this->assertSame('500', $replay['stock']['quantity']);
+        $this->assertSame(1, InventoryMovement::where('inventory_item_id', $first['id'])->count());
+        $this->assertSame('medicine-open:create-keyed-2', InventoryMovement::where('inventory_item_id', $first['id'])->value('idempotency_key'));
+
+        // Changed stock under the same key: conflict, nothing added.
+        $changed = $body;
+        $changed['opening_stock']['components'] = [['quantity' => '6', 'unit' => 'bottle']];
+        $this->create($changed)->assertConflict()->assertJsonPath('code', 'idempotency_conflict');
+        $this->assertSame(1, InventoryMovement::where('inventory_item_id', $first['id'])->count());
+        $this->assertSame('500', $this->getJson('/api/v1/health/medicines/'.$first['id'])->json('data.stock.quantity'));
+
+        // Without any key the opening-stock key is still required (existing contract).
+        $this->create($this->body(['opening_stock' => $stock]))->assertUnprocessable()->assertJsonValidationErrors('opening_stock.idempotency_key');
+    }
+
+    public function test_request_keys_are_farm_scoped_and_failed_attempts_do_not_burn_the_key(): void
+    {
+        $body = $this->body(['name' => 'Scoped', 'idempotency_key' => 'create-keyed-3']);
+        $mine = $this->create($body)->assertCreated()->json('data.id');
+        [$other] = $this->otherFarm();
+        $this->signInAs($other);
+        $theirs = $this->create($body)->assertCreated()->json('data.id');
+        $this->assertNotSame($mine, $theirs);
+
+        // A rolled-back attempt leaves no key behind: the corrected retry with the same key succeeds.
+        $bad = $this->body(['name' => 'Retry me', 'idempotency_key' => 'create-keyed-4', 'opening_stock' => ['storage_location_id' => $this->store(), 'components' => [['quantity' => '1', 'unit' => 'bottle']], 'recorded_at' => $this->at(2)]]);
+        $this->create($bad)->assertUnprocessable()->assertJsonPath('code', 'conversion_not_configured');
+        $good = $bad;
+        $good['packaging'] = ['unit' => 'bottle', 'quantity_per_package' => '50'];
+        $this->create($good)->assertCreated()->assertJsonPath('data.stock.quantity', '50');
+    }
 }

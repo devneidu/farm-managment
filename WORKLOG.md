@@ -9,7 +9,15 @@
 
 ---
 
-## Latest task — V1 medicine catalogue, packaging and health-inventory integration (COMPLETED, committed locally, not pushed)
+## Latest task — Medicine catalogue finalisation: type filter and request idempotency (COMPLETED, committed locally, not pushed)
+
+**Agent:** Claude. **Date:** 2026-10-13. Follow-up to `006ffa8`. Git state checked first: local `master` is 1 ahead / 0 behind `origin/master` (merge-base = origin/master `b8b3759`), so it is a pure fast-forward; no push, merge, cherry-pick or branch switch was done.
+
+**`GET /health/medicines?medicine_type=`**: validated enum, filters through `medicine_profiles` (farm-scoped subquery), untyped medicines excluded when used, unfiltered behaviour unchanged.
+
+**`POST /health/medicines` idempotency**: optional top-level `idempotency_key` (max 64), works with and without opening stock. Additive migration `2026_10_28_100000_add_medicine_creation_idempotency` adds nullable `medicine_profiles.idempotency_key` (utf8mb4_bin) + `request_hash`, unique (farm_id, key). Identical retry -> original medicine (200, nothing duplicated); changed payload -> 409 `idempotency_conflict`. With a request key `opening_stock.idempotency_key` is optional (ledger key `medicine-open:<key>`); without one, the earlier behaviour is unchanged. Failed/rolled-back attempts store nothing. Tests added to `MedicineCatalogueTest` (filter, replay/conflict with and without stock, farm scope, retry after failure). Docs, OpenAPI (additions only), Postman updated. Limits: a retry with no key and no stock stays `409 inventory_item_exists`; the key cannot be added to an existing medicine.
+
+## Previous task — V1 medicine catalogue, packaging and health-inventory integration (COMPLETED, committed locally, not pushed)
 
 **Agent:** Claude. **Date:** 2026-10-13. Follow-up to a read-only audit; reuses the Phase 9/10 ledger, medicine profile, package conversions and stock-in. No new ledger, no duplicate medicine table.
 

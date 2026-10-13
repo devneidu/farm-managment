@@ -17,6 +17,8 @@ class StoreMedicineRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /** Optional request idempotency key (max 64; letters, digits, . _ : -), farm-scoped. An identical retry returns the original medicine (200) and creates nothing; the same key with a different payload is 409 idempotency_conflict. Works with or without opening stock. */
+            'idempotency_key' => ['sometimes', 'string', 'max:64', 'regex:/^[A-Za-z0-9._:-]+$/'],
             /** Unique on the farm (case/space-insensitive) across ALL inventory items. */
             'name' => ['required', 'string', 'max:150'],
             /** antibiotic | vaccine | supplement | dewormer | other (GET /master/medicine-options). */
@@ -58,8 +60,8 @@ class StoreMedicineRequest extends FormRequest
             'opening_stock.lot.expires_on' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             /** ISO-8601 with offset, not in the future. */
             'opening_stock.recorded_at' => ['required_with:opening_stock', 'date', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/'],
-            /** Retrying the same request with this key never double-receives: it returns the medicine already created. */
-            'opening_stock.idempotency_key' => ['required_with:opening_stock', 'string', 'max:80', 'regex:/^[A-Za-z0-9._:-]+$/'],
+            /** Required unless the request-level `idempotency_key` is sent (then derived from it). Retrying with this key never double-receives: it returns the medicine already created. */
+            'opening_stock.idempotency_key' => [Rule::requiredIf(fn () => $this->has('opening_stock') && ! $this->filled('idempotency_key')), 'string', 'max:80', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'opening_stock.notes' => ['sometimes', 'nullable', 'string', 'max:5000'],
             /** @ignoreParam */
             'farm_id' => ['missing'],

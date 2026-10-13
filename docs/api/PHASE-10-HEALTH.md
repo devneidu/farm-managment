@@ -130,6 +130,7 @@ Medicines are ordinary Phase 9 inventory items (`category: "medicine"`). Create 
 
 ```json
 {
+  "idempotency_key": "create-oxytet-001",
   "name": "Oxytetracycline 20% LA",
   "medicine_type": "antibiotic",
   "stock_unit": "ml",
@@ -142,7 +143,6 @@ Medicines are ordinary Phase 9 inventory items (`category: "medicine"`). Create 
     "components": [{"quantity": "5", "unit": "bottle"}],
     "lot": {"code": "OXY-2026-01", "expires_on": "2028-06-30"},
     "recorded_at": "2026-10-01T08:00:00Z",
-    "idempotency_key": "open-oxytet-001",
     "notes": "Opening shelf count"
   }
 }
@@ -153,14 +153,14 @@ Medicines are ordinary Phase 9 inventory items (`category: "medicine"`). Create 
 - `tracks_lots` / `tracks_expiry` default to true when the opening-stock `lot` / `lot.expires_on` is sent, else false; an expiry-tracked medicine needs a lot code and expiry on its first stock. They cannot change after the first movement (`409 item_has_movements`).
 - `opening_stock` is written through the inventory ledger as a `stock_in` with reason `opening_balance` (same lot, expiry, future-date and negative-balance rules as `POST /inventory/stock-in`). **No expense, supplier or purchase is created**; use `POST /purchases` for a bought-in lot with its cost.
 - Permissions: `health.manage` AND `inventory.manage` (and `measurement.manage` when `packaging` is sent). Owner and Manager hold all three; Vet and Farm worker do not (403) — they keep using the existing endpoints they already could.
-- Idempotency: with `opening_stock`, repeating the identical request returns the existing medicine (`200`, `message: "Medicine already created."`, nothing received twice); the same `opening_stock.idempotency_key` with a different medicine/location is `409 idempotency_conflict`. Without opening stock a repeat is `409 inventory_item_exists` (names are unique per farm across all items). Keys are farm-scoped.
+- Idempotency: send the optional request-level `idempotency_key` (max 64; letters, digits, `. _ : -`; farm-scoped), with or without opening stock. An identical retry returns the original medicine (`200`, `message: "Medicine already created."`) and creates nothing — no second item, conversion or stock movement. The same key with any changed payload is `409 idempotency_conflict`. The key and a hash of the payload are stored on the medicine profile; a rolled-back attempt stores nothing, so the corrected retry succeeds. When the key is sent, `opening_stock.idempotency_key` is optional and the ledger entry is keyed `medicine-open:<key>`. Without a request key the previous behaviour holds: opening stock requires `opening_stock.idempotency_key` (identical retry → 200, different request under it → `409 idempotency_conflict`), and a repeat of a no-stock create is `409 inventory_item_exists`.
 - Response: the full medicine (see below) with `balances` and `lots`.
 
 Every medicine resource (`GET /health/medicines`, `GET /health/medicines/{item}`, profile `PUT`, create) now also carries `medicine_type` (`null` = not specified: every medicine that existed before the type was added keeps `null`; it is never guessed), `medicine_type_label`, and `packaging[]` (active conversions of that medicine: `conversion_id`, `package_unit`, `package_unit_label`, `quantity_per_package`, `unit`; empty when none). `kind` stays `general` for medicines.
 
 **Medicine stock movement reasons.** IN: `opening_balance`, `purchase`, `donation`, `aid`, `received`, `other`. OUT: routine treatment use is **only** a health record (`POST /health-records`, which writes one `use` stock-out per line, linked by `health_record_id`). `POST /inventory/stock-out` now rejects reasons `use` and `internal_use` for medicine items with `422` (field `reason`, message names `POST /health-records`); `donation`, `damaged`, `expired`, `spoiled`, `lost`, `disposal`, `other` stay available, as do adjustments and transfers. This does not alter any existing movement or balance, and old manual `use` rows stay readable.
 
-- `GET /health/medicines` — query: `search`, `include_inactive`, `low_stock`, `page`, `per_page`. Each row is the inventory item resource (derived `stock`, `is_low_stock`…) plus `profile: {default_withdrawal_days, notes}`.
+- `GET /health/medicines` — query: `search`, `medicine_type` (`antibiotic|vaccine|supplement|dewormer|other`; filters on the profile type, untyped medicines are excluded when used, unknown value `422`), `include_inactive`, `low_stock`, `page`, `per_page`. Each row is the inventory item resource (derived `stock`, `is_low_stock`…) plus `profile: {default_withdrawal_days, notes}`.
 - `GET /health/medicines/{item}` — adds `balances` (per location and lot) and `lots` (`code`, `expires_on`, `is_expired`, `stock`), soonest expiry first. Items of other categories are 404.
 - `PUT /health/medicines/{item}/profile` — body `{"default_withdrawal_days": 7|null, "notes": "…", "medicine_type": "vaccine"}` (`default_withdrawal_days` is required, `null` clears; `medicine_type` is optional: omit = unchanged, `null` = not specified). Applies to future health lines only.
 

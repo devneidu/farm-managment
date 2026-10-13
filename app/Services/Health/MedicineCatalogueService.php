@@ -17,6 +17,7 @@ use App\Services\Inventory\StockReasonCatalogue;
 use App\Services\Measurement\PackageConversionService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
+use App\Support\Idempotency\RequestHash;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -68,14 +69,24 @@ class MedicineCatalogueService
             $ctx->authorize(Permission::MeasurementManage);
         }
         $stock = $data['opening_stock'] ?? null;
+        $key = $data['idempotency_key'] ?? null;
+        if ($stock !== null && $key !== null) {
+            $stock['idempotency_key'] ??= 'medicine-open:'.$key; // one request key governs the whole workflow, so the ledger entry is keyed by it too
+        }
+        $hash = $key !== null ? RequestHash::of(array_diff_key($data, ['idempotency_key' => 1])) : null;
         $lot = $stock['lot'] ?? null;
         $tracksExpiry = (bool) ($data['tracks_expiry'] ?? ($lot['expires_on'] ?? null) !== null);
         $tracksLots = (bool) ($data['tracks_lots'] ?? ($tracksExpiry || $lot !== null));
 
         $itemId = null;
-        $created = DB::transaction(function () use ($ctx, $actor, $data, $packaging, $stock, $lot, $tracksLots, $tracksExpiry, &$itemId) {
+        $created = DB::transaction(function () use ($ctx, $actor, $data, $packaging, $stock, $lot, $key, $hash, $tracksLots, $tracksExpiry, &$itemId) {
             Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
-            if ($stock !== null && ($existing = $this->replayOf($ctx, $data, $stock)) !== null) {
+            if ($key !== null && ($existing = $this->replayOfKey($ctx, $key, $hash)) !== null) {
+                $itemId = $existing;
+
+                return false;
+            }
+            if ($key === null && $stock !== null && ($existing = $this->replayOf($ctx, $data, $stock)) !== null) {
                 $itemId = $existing;
 
                 return false;
@@ -88,6 +99,7 @@ class MedicineCatalogueService
             MedicineProfile::create([
                 'farm_id' => $ctx->farm->id, 'inventory_item_id' => $item->id, 'medicine_type' => $data['medicine_type'],
                 'default_withdrawal_days' => $data['default_withdrawal_days'] ?? null, 'notes' => $data['notes'] ?? null, 'updated_by' => $actor->id,
+                'idempotency_key' => $key, 'request_hash' => $hash,
             ]);
             if ($packaging !== null) {
                 $this->packages->create($ctx, $actor, [
@@ -107,6 +119,20 @@ class MedicineCatalogueService
         }, 3);
 
         return [$this->queries->medicine($ctx, $itemId), $created];
+    }
+
+    /** The medicine an earlier request created under this request-level key: identical payload replays it, any other payload is a conflict. */
+    private function replayOfKey(FarmContext $ctx, string $key, string $hash): ?string
+    {
+        $profile = MedicineProfile::where('farm_id', $ctx->farm->id)->where('idempotency_key', $key)->first();
+        if ($profile === null) {
+            return null;
+        }
+        if (! hash_equals((string) $profile->request_hash, $hash)) {
+            throw new ApiHttpException(409, 'idempotency_conflict', 'This idempotency key was already used for a different request.');
+        }
+
+        return $profile->inventory_item_id;
     }
 
     /** The medicine an earlier identical request already created under this opening-stock key; a different use of the key is a conflict. */

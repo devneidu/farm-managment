@@ -75,6 +75,9 @@ class HealthQueries
         if (! filter_var($f['include_inactive'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
             $q->where('is_active', true);
         }
+        if (! empty($f['medicine_type'])) {
+            $q->whereIn('inventory_items.id', MedicineProfile::where('farm_id', $ctx->farm->id)->where('medicine_type', $f['medicine_type'])->select('inventory_item_id'));
+        }
         if (! empty($f['search'])) {
             $q->where('normalized_name', 'like', '%'.addcslashes(InventoryItem::normalizeName($f['search']), '%_\\').'%');
         }
