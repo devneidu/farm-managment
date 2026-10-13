@@ -2,6 +2,7 @@
 
 namespace App\Services\Health;
 
+use App\Enums\ConversionContextType;
 use App\Enums\InventoryCategory;
 use App\Enums\Permission;
 use App\Models\HealthRecord;
@@ -9,6 +10,7 @@ use App\Models\HealthRecordMedicine;
 use App\Models\InventoryItem;
 use App\Models\InventoryLot;
 use App\Models\MedicineProfile;
+use App\Models\PackageConversion;
 use App\Models\ProductionCycle;
 use App\Support\Access\FarmContext;
 use Carbon\CarbonImmutable;
@@ -104,7 +106,9 @@ class HealthQueries
         return DB::transaction(function () use ($ctx, $id, $data) {
             $item = InventoryItem::ofFarm($ctx->farm)->with('stockUnit.dimension')->whereIn('category', $this->categories())->lockForUpdate()->findOrFail($id);
             $profile = MedicineProfile::firstOrNew(['inventory_item_id' => $item->id], ['farm_id' => $ctx->farm->id]);
-            $profile->fill(['default_withdrawal_days' => $data['default_withdrawal_days']] + (array_key_exists('notes', $data) ? ['notes' => $data['notes']] : []));
+            $profile->fill(['default_withdrawal_days' => $data['default_withdrawal_days']]
+                + (array_key_exists('notes', $data) ? ['notes' => $data['notes']] : [])
+                + (array_key_exists('medicine_type', $data) ? ['medicine_type' => $data['medicine_type']] : []));
             $profile->updated_by = $ctx->membership->user_id;
             $profile->save();
             $this->attachProfiles(collect([$item]));
@@ -127,11 +131,16 @@ class HealthQueries
         return [InventoryCategory::Medicine->value];
     }
 
-    private function attachProfiles($items): void
+    /** Profile (withdrawal, type) and the active package conversions of each medicine, loaded in two queries for the whole page. */
+    public function attachProfiles($items): void
     {
-        $profiles = MedicineProfile::whereIn('inventory_item_id', $items->pluck('id'))->get()->keyBy('inventory_item_id');
+        $ids = $items->pluck('id');
+        $profiles = MedicineProfile::whereIn('inventory_item_id', $ids)->get()->keyBy('inventory_item_id');
+        $packaging = PackageConversion::with(['packageUnit', 'targetUnit'])->where('context_type', ConversionContextType::InventoryItem->value)
+            ->whereIn('context_id', $ids)->where('is_active', true)->get()->sortBy(fn (PackageConversion $c) => [$c->packageUnit->code, $c->id])->groupBy('context_id');
         foreach ($items as $item) {
             $item->setRelation('medicineProfile', $profiles->get($item->id));
+            $item->setRelation('medicinePackaging', $packaging->get($item->id, collect())->values());
         }
     }
 }

@@ -9,7 +9,23 @@
 
 ---
 
-## Latest task — Livestock batch creation and approved reference catalogue (COMPLETED)
+## Latest task — V1 medicine catalogue, packaging and health-inventory integration (COMPLETED, committed locally, not pushed)
+
+**Agent:** Claude. **Date:** 2026-10-13. Follow-up to a read-only audit; reuses the Phase 9/10 ledger, medicine profile, package conversions and stock-in. No new ledger, no duplicate medicine table.
+
+**Schema/seed:** additive `2026_10_27_100000_add_medicine_type_and_packaging_units`: nullable `medicine_profiles.medicine_type` (NULL = not specified; existing medicines are not guessed or backfilled) and a re-run of the insert-only `MeasurementSeeder`, which now also provisions package units `box`, `card`, `sachet`, `vial` (existing units/conversions untouched; repeatable). Updated two catalogue-list assertions in Measurement tests.
+
+**API:** `GET /master/medicine-options` (types, primary units mg/g/kg/ml/l/piece, package units, medicine reasons); `POST /health/medicines` (one transaction: item -> profile -> optional package conversion -> optional `opening_balance` stock-in; idempotent via `opening_stock.idempotency_key`; 201, 200 on replay; no expense/supplier/purchase); medicine resources gain `medicine_type`, `medicine_type_label`, `packaging[]`; profile `PUT` accepts optional `medicine_type`. Existing item/profile endpoints unchanged.
+
+**Rule change (server-side):** `POST /inventory/stock-out` rejects `use` and `internal_use` for medicine items (422, names `POST /health-records`), mirroring the feed guard, so a treatment cannot be deducted twice. expired/damaged/lost/disposal/spoiled/donation/other remain. Health-record deductions, reversals, withdrawal, lot expiry and tenant isolation untouched; no existing movement or balance changed. `by_item_kind.general.out` `use` carries `not_for_categories: ["medicine"]`; item `kind` stays `general` (no breaking change).
+
+**Permissions:** the workflow needs `health.manage` + `inventory.manage` (+ `measurement.manage` with packaging): Owner/Manager only. Vet lacks `inventory.manage`, so cannot use it (existing endpoints unchanged for them).
+
+**Tests:** new `tests/Feature/Health/MedicineCatalogueTest.php` (12). Existing `OutputStockTest` expectation that manual medicine `use` is accepted was intentionally inverted. Docs: `PHASE-10-HEALTH.md`, `PHASE-09-INVENTORY.md`, Postman (two requests + profile example), `WORKFLOWS.md`, regenerated `openapi.json` (only additions; path ordering of the committed file kept).
+
+**Limitations:** no tablet/dose units (counted medicines use `piece`); one package unit at create time (more via `/settings/package-conversions`); no dose-based quantity calculation, expense or supplier at creation; replay without opening stock is `409 inventory_item_exists`; medicine type is not yet checked against health record type.
+
+## Previous task — Livestock batch creation and approved reference catalogue (COMPLETED)
 
 **Final local verification — 2026-10-09, Codex:** Verified committed `master` at `ebb8af5b4fe30bf607275839011a43c50cee9420`, initially clean. Applied ONLY `2026_10_25_100000_extend_livestock_batch_creation` to configured development MySQL `farm_management` (migration batch 22); eight unrelated output-stock/marketplace migrations remain pending. No development reset/refresh. Confirmed all 22 approved species with exactly 122 system breeds/types, 101 purposes and 101 stages, no duplicate system breed names or reference list/code pairs. Standalone reseeding preserved every breed/reference row, including UUIDs and timestamps.
 

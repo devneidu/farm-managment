@@ -38,6 +38,8 @@ Health is the **livestock/fish** domain only. Every type is refused on a crop cy
 | GET | `/health-records/{record}` | `health.view` | 200 |
 | POST | `/health-records/{record}/reverse` | `health.reverse` | 201 reversal record |
 | GET | `/health/withdrawals` | `health.view` | 200 paginated |
+| GET | `/master/medicine-options` | `health.view` | 200 |
+| POST | `/health/medicines` | `health.manage` + `inventory.manage` (+ `measurement.manage` with `packaging`) | 201 (200 on idempotent replay) |
 | GET | `/health/medicines` | `health.view` | 200 paginated |
 | GET | `/health/medicines/{item}` | `health.view` | 200 with `balances` and `lots` |
 | PUT | `/health/medicines/{item}/profile` | `health.manage` | 200 |
@@ -120,9 +122,47 @@ Each medicine line stores its effective `withdrawal.days`, where it came from (`
 
 Medicines are ordinary Phase 9 inventory items (`category: "medicine"`). Create the item with `POST /inventory/items`, receive stock/lots with `POST /inventory/stock-in`, count with adjustments, and define packaging with package conversions — all in Phase 9. The health endpoints add the withdrawal profile and a medicine-centred read model.
 
+### Medicine catalogue (V1)
+
+`GET /master/medicine-options` (`health.view`) returns `medicine_types` (`antibiotic`, `vaccine`, `supplement`, `dewormer`, `other`), `primary_units` (`mg`, `g`, `kg`, `ml`, `l`, `piece` — counted medicines use `piece`; there are no tablet/dose units), `package_units` (`bottle`, `box`, `card`, `sachet`, `bag`, `vial`), `withdrawal_days` limits and `reasons.in` / `reasons.out` (the permitted stock movement reasons for medicine; see below).
+
+`POST /health/medicines` creates a medicine in one all-or-nothing transaction using the existing services (inventory item → profile → package conversion → stock-in). Body:
+
+```json
+{
+  "name": "Oxytetracycline 20% LA",
+  "medicine_type": "antibiotic",
+  "stock_unit": "ml",
+  "packaging": {"unit": "bottle", "quantity_per_package": "100"},
+  "default_withdrawal_days": 14,
+  "notes": "Keep below 25 C",
+  "tracks_lots": true, "tracks_expiry": true,
+  "opening_stock": {
+    "storage_location_id": "<uuid>",
+    "components": [{"quantity": "5", "unit": "bottle"}],
+    "lot": {"code": "OXY-2026-01", "expires_on": "2028-06-30"},
+    "recorded_at": "2026-10-01T08:00:00Z",
+    "idempotency_key": "open-oxytet-001",
+    "notes": "Opening shelf count"
+  }
+}
+```
+
+- Required: `name`, `medicine_type`, `stock_unit`. Everything else is optional; `packaging` and `opening_stock` can be sent independently, but opening stock in a package unit needs `packaging` (otherwise `422 conversion_not_configured`; nothing is guessed).
+- `packaging.quantity_per_package` must be positive (whole when `stock_unit` is `piece`). It creates the per-medicine conversion, so `5 bottle × 100 ml = 500 ml` in the opening stock and in every later health line, stock-in or stock-out.
+- `tracks_lots` / `tracks_expiry` default to true when the opening-stock `lot` / `lot.expires_on` is sent, else false; an expiry-tracked medicine needs a lot code and expiry on its first stock. They cannot change after the first movement (`409 item_has_movements`).
+- `opening_stock` is written through the inventory ledger as a `stock_in` with reason `opening_balance` (same lot, expiry, future-date and negative-balance rules as `POST /inventory/stock-in`). **No expense, supplier or purchase is created**; use `POST /purchases` for a bought-in lot with its cost.
+- Permissions: `health.manage` AND `inventory.manage` (and `measurement.manage` when `packaging` is sent). Owner and Manager hold all three; Vet and Farm worker do not (403) — they keep using the existing endpoints they already could.
+- Idempotency: with `opening_stock`, repeating the identical request returns the existing medicine (`200`, `message: "Medicine already created."`, nothing received twice); the same `opening_stock.idempotency_key` with a different medicine/location is `409 idempotency_conflict`. Without opening stock a repeat is `409 inventory_item_exists` (names are unique per farm across all items). Keys are farm-scoped.
+- Response: the full medicine (see below) with `balances` and `lots`.
+
+Every medicine resource (`GET /health/medicines`, `GET /health/medicines/{item}`, profile `PUT`, create) now also carries `medicine_type` (`null` = not specified: every medicine that existed before the type was added keeps `null`; it is never guessed), `medicine_type_label`, and `packaging[]` (active conversions of that medicine: `conversion_id`, `package_unit`, `package_unit_label`, `quantity_per_package`, `unit`; empty when none). `kind` stays `general` for medicines.
+
+**Medicine stock movement reasons.** IN: `opening_balance`, `purchase`, `donation`, `aid`, `received`, `other`. OUT: routine treatment use is **only** a health record (`POST /health-records`, which writes one `use` stock-out per line, linked by `health_record_id`). `POST /inventory/stock-out` now rejects reasons `use` and `internal_use` for medicine items with `422` (field `reason`, message names `POST /health-records`); `donation`, `damaged`, `expired`, `spoiled`, `lost`, `disposal`, `other` stay available, as do adjustments and transfers. This does not alter any existing movement or balance, and old manual `use` rows stay readable.
+
 - `GET /health/medicines` — query: `search`, `include_inactive`, `low_stock`, `page`, `per_page`. Each row is the inventory item resource (derived `stock`, `is_low_stock`…) plus `profile: {default_withdrawal_days, notes}`.
 - `GET /health/medicines/{item}` — adds `balances` (per location and lot) and `lots` (`code`, `expires_on`, `is_expired`, `stock`), soonest expiry first. Items of other categories are 404.
-- `PUT /health/medicines/{item}/profile` — body `{"default_withdrawal_days": 7|null, "notes": "…"}` (`default_withdrawal_days` is required, `null` clears). Applies to future health lines only.
+- `PUT /health/medicines/{item}/profile` — body `{"default_withdrawal_days": 7|null, "notes": "…", "medicine_type": "vaccine"}` (`default_withdrawal_days` is required, `null` clears; `medicine_type` is optional: omit = unchanged, `null` = not specified). Applies to future health lines only.
 
 ## Reverse and correct
 

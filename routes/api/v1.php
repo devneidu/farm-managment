@@ -357,6 +357,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/{record}/attachments/{attachment}', [$controller, 'download'])->middleware('farm.permission:record.view')->name('api.v1.records.attachments.download');
     });
 
+    Route::get('/master/medicine-options', [HealthRecordController::class, 'medicineOptions'])->middleware('farm.permission:health.view')->name('api.v1.medicine-options');
     Route::get('/master/health-record-types', [HealthRecordController::class, 'types'])->middleware('farm.permission:health.view')->name('api.v1.health-record-types.index');
     Route::prefix('health-records')->group(function () {
         $c = HealthRecordController::class;
@@ -416,6 +417,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     Route::prefix('health')->group(function () {
         $c = HealthRecordController::class;
         Route::get('/withdrawals', [$c, 'withdrawals'])->middleware('farm.permission:health.view')->name('api.v1.health.withdrawals');
+        Route::post('/medicines', [$c, 'storeMedicine'])->middleware(['farm.permission:health.manage', 'throttle:health-write'])->name('api.v1.health.medicines.store');
         Route::get('/medicines', [$c, 'medicines'])->middleware('farm.permission:health.view')->name('api.v1.health.medicines.index');
         Route::get('/medicines/{item}', [$c, 'medicine'])->middleware('farm.permission:health.view')->name('api.v1.health.medicines.show');
         Route::put('/medicines/{item}/profile', [$c, 'updateProfile'])->middleware(['farm.permission:health.manage', 'throttle:health-write'])->name('api.v1.health.medicines.profile');

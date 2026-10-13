@@ -670,10 +670,14 @@ class OutputStockTest extends TeamTestCase
         $this->assertSame('feed_use', $codes['production_use']['route']['record_type']);
         $this->assertSame('Used for livestock', $codes['production_use']['label']);
 
-        // Generic use remains legitimate for categories that have no dedicated workflow.
+        // Generic use remains legitimate for categories that have no dedicated workflow (medicine now has one: health records).
+        $supply = $this->postJson('/api/v1/inventory/items', ['name' => 'Gloves', 'category' => 'general_supply', 'stock_unit' => 'kg'])->assertCreated()->json('data.id');
+        $this->stockIn(['inventory_item_id' => $supply, 'storage_location_id' => $store], 'purchase', '5', 'kg')->assertCreated();
+        $this->stockOut(['inventory_item_id' => $supply, 'storage_location_id' => $store], 'use', '1', 'kg')->assertCreated();
         $medicine = $this->postJson('/api/v1/inventory/items', ['name' => 'Dewormer', 'category' => 'medicine', 'stock_unit' => 'kg'])->assertCreated()->json('data.id');
         $this->stockIn(['inventory_item_id' => $medicine, 'storage_location_id' => $store], 'purchase', '5', 'kg')->assertCreated();
-        $this->stockOut(['inventory_item_id' => $medicine, 'storage_location_id' => $store], 'use', '1', 'kg')->assertCreated();
+        $this->stockOut(['inventory_item_id' => $medicine, 'storage_location_id' => $store], 'use', '1', 'kg')->assertUnprocessable();
+        $this->stockOut(['inventory_item_id' => $medicine, 'storage_location_id' => $store], 'expired', '1', 'kg')->assertCreated();
     }
 
     public function test_only_roles_with_record_create_and_inventory_use_can_record_eggs_and_milk(): void

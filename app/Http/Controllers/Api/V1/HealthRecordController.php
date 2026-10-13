@@ -8,6 +8,7 @@ use App\Http\Requests\Health\ListMedicinesRequest;
 use App\Http\Requests\Health\ListWithdrawalsRequest;
 use App\Http\Requests\Health\ReverseHealthRecordRequest;
 use App\Http\Requests\Health\StoreHealthRecordRequest;
+use App\Http\Requests\Health\StoreMedicineRequest;
 use App\Http\Requests\Health\UpdateMedicineProfileRequest;
 use App\Http\Resources\HealthRecordResource;
 use App\Http\Resources\MedicineResource;
@@ -15,6 +16,7 @@ use App\Http\Resources\WithdrawalResource;
 use App\Services\Health\HealthQueries;
 use App\Services\Health\HealthService;
 use App\Services\Health\HealthTypeRegistry;
+use App\Services\Health\MedicineCatalogueService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiResponse;
 use Dedoc\Scramble\Attributes\Response;
@@ -149,5 +151,47 @@ class HealthRecordController extends Controller
     public function updateProfile(UpdateMedicineProfileRequest $request, FarmContext $ctx, HealthQueries $queries, string $item): JsonResponse
     {
         return ApiResponse::success((new MedicineResource($queries->updateProfile($ctx, $item, $request->validated())))->resolve($request), message: 'Medicine profile updated.');
+    }
+
+    /**
+     * Medicine master data: types, primary units, package units and permitted stock reasons
+     *
+     * Requires health.view. `medicine_types` (antibiotic, vaccine, supplement, dewormer, other), `primary_units` (the stock units a medicine may use),
+     * `package_units` (bottle, box, card, sachet, bag, vial) and `reasons.in` / `reasons.out`: the stock movement reasons for medicine. In `reasons.out`,
+     * `use` has `manual: false` - treatment consumption is recorded through POST /health-records, and POST /inventory/stock-out rejects `use` and
+     * `internal_use` for medicines (422). Manual reductions stay available: donation, damaged, expired, spoiled, lost, disposal, other.
+     *
+     * @response array{data: array<string, mixed>, meta: object, message: null}
+     */
+    public function medicineOptions(MedicineCatalogueService $catalogue): JsonResponse
+    {
+        return ApiResponse::success($catalogue->options());
+    }
+
+    /**
+     * Create a medicine (item + profile + optional packaging + optional opening stock) in one transaction
+     *
+     * Requires health.manage AND inventory.manage (plus measurement.manage when `packaging` is sent). Creates the inventory item (category medicine),
+     * its type/withdrawal profile, an optional package conversion (`packaging`: 1 package = quantity_per_package of `stock_unit`, defined only for this
+     * medicine) and an optional opening balance (`opening_stock`: a stock-in with reason opening_balance through the ledger; components may use the
+     * packaging unit, e.g. 5 bottle of 100 ml = 500 ml). No expense, supplier or purchase is created; record a bought-in lot with POST /purchases instead.
+     * All-or-nothing. Idempotency: with `opening_stock`, repeating the request with the same `opening_stock.idempotency_key` returns the existing medicine
+     * (200, nothing received twice); a different request under that key is 409 idempotency_conflict. Without opening stock a repeat is 409 inventory_item_exists.
+     * Returns the full medicine (type, profile, packaging, stock, lots). The existing item and profile endpoints are unchanged.
+     *
+     * Errors: `403`, `404` (location), `409 inventory_item_exists | idempotency_conflict | conversion_exists`, `422` validation / `lot_required` /
+     * `invalid_conversion_ratio` / `conversion_not_configured`, `429`.
+     *
+     * @response 201 array{data: MedicineResource, meta: object, message: string}
+     */
+    public function storeMedicine(StoreMedicineRequest $request, FarmContext $ctx, MedicineCatalogueService $catalogue): JsonResponse
+    {
+        [$item, $created] = $catalogue->create($ctx, $request->user(), $request->validated());
+
+        return ApiResponse::success(
+            (new MedicineResource($item))->withBalances()->withLots($ctx->farm->timezone)->resolve($request),
+            message: $created ? 'Medicine created.' : 'Medicine already created.',
+            status: $created ? 201 : 200,
+        );
     }
 }

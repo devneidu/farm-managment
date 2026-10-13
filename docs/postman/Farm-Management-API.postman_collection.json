@@ -21911,6 +21911,228 @@
           ]
         },
         {
+          "name": "Medicine master data (types, units, packaging, stock reasons)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/master/medicine-options",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "master",
+                "medicine-options"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nReturns what the medicine form needs: `medicine_types`, `primary_units`, `package_units`, `withdrawal_days` limits and `reasons.in` / `reasons.out` for medicine stock.\n\n**IMPORTANT BEHAVIOR**\n- Requires `health.view`.\n- In `reasons.out`, `use` has `manual: false` and points to `POST /health-records`: medicine given to animals is recorded once, by a health record. `POST /inventory/stock-out` rejects `use` and `internal_use` for medicines (`422`). Manual reductions stay available: `donation`, `damaged`, `expired`, `spoiled`, `lost`, `disposal`, `other`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks the required permission(s); other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `opening_stock.lot.code`); `conversion_not_configured` / `invalid_conversion_ratio` for packaging problems.\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK — Medicine options",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/master/medicine-options",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "master",
+                    "medicine-options"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"medicine_types\": [\n            {\n                \"code\": \"antibiotic\",\n                \"label\": \"Antibiotic\"\n            },\n            {\n                \"code\": \"vaccine\",\n                \"label\": \"Vaccine\"\n            },\n            {\n                \"code\": \"supplement\",\n                \"label\": \"Supplement\"\n            },\n            {\n                \"code\": \"dewormer\",\n                \"label\": \"Dewormer\"\n            },\n            {\n                \"code\": \"other\",\n                \"label\": \"Other\"\n            }\n        ],\n        \"primary_units\": [\n            {\n                \"code\": \"mg\",\n                \"label\": \"Milligram\",\n                \"symbol\": \"mg\",\n                \"dimension\": \"weight\",\n                \"integer_only\": false\n            },\n            {\n                \"code\": \"g\",\n                \"label\": \"Gram\",\n                \"symbol\": \"g\",\n                \"dimension\": \"weight\",\n                \"integer_only\": false\n            },\n            {\n                \"code\": \"kg\",\n                \"label\": \"Kilogram\",\n                \"symbol\": \"kg\",\n                \"dimension\": \"weight\",\n                \"integer_only\": false\n            },\n            {\n                \"code\": \"ml\",\n                \"label\": \"Millilitre\",\n                \"symbol\": \"ml\",\n                \"dimension\": \"volume\",\n                \"integer_only\": false\n            },\n            {\n                \"code\": \"l\",\n                \"label\": \"Litre\",\n                \"symbol\": \"L\",\n                \"dimension\": \"volume\",\n                \"integer_only\": false\n            },\n            {\n                \"code\": \"piece\",\n                \"label\": \"Piece\",\n                \"symbol\": \"pc\",\n                \"dimension\": \"count\",\n                \"integer_only\": true\n            }\n        ],\n        \"package_units\": [\n            {\n                \"code\": \"bottle\",\n                \"label\": \"Bottle\"\n            },\n            {\n                \"code\": \"box\",\n                \"label\": \"Box\"\n            },\n            {\n                \"code\": \"card\",\n                \"label\": \"Card\"\n            },\n            {\n                \"code\": \"sachet\",\n                \"label\": \"Sachet\"\n            },\n            {\n                \"code\": \"bag\",\n                \"label\": \"Bag\"\n            },\n            {\n                \"code\": \"vial\",\n                \"label\": \"Vial\"\n            }\n        ],\n        \"withdrawal_days\": {\n            \"min\": 0,\n            \"max\": 3650\n        },\n        \"opening_stock\": {\n            \"reason\": \"opening_balance\",\n            \"route\": {\n                \"method\": \"POST\",\n                \"path\": \"/health/medicines\",\n                \"field\": \"opening_stock\"\n            }\n        },\n        \"reasons\": {\n            \"in\": [\n                {\n                    \"code\": \"purchase\",\n                    \"label\": \"Purchased\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"donation\",\n                    \"label\": \"Gift / Donation\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"aid\",\n                    \"label\": \"Aid / Support\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"received\",\n                    \"label\": \"Received\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"opening_balance\",\n                    \"label\": \"Opening balance\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"other\",\n                    \"label\": \"Other\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-in\",\n                        \"url\": \"/api/v1/inventory/stock-in\"\n                    }\n                },\n                {\n                    \"code\": \"transfer_in\",\n                    \"label\": \"Moved between stores\",\n                    \"manual\": false,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"transfer\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/transfers\",\n                        \"url\": \"/api/v1/inventory/transfers\"\n                    }\n                },\n                {\n                    \"code\": \"adjustment\",\n                    \"label\": \"Stock count correction\",\n                    \"manual\": false,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"adjustment\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/adjustments\",\n                        \"url\": \"/api/v1/inventory/adjustments\"\n                    }\n                }\n            ],\n            \"out\": [\n                {\n                    \"code\": \"use\",\n                    \"label\": \"Used on animals\",\n                    \"manual\": false,\n                    \"creates_operational_record\": true,\n                    \"route\": {\n                        \"kind\": \"record\",\n                        \"method\": \"POST\",\n                        \"path\": \"/health-records\",\n                        \"record_type\": \"vaccination|medication|deworming|treatment\",\n                        \"note\": \"Choose the cycle and add medicine lines; one request writes the health record and the stock-out of every line.\",\n                        \"url\": \"/api/v1/health-records\"\n                    }\n                },\n                {\n                    \"code\": \"donation\",\n                    \"label\": \"Gift / Donation\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"damaged\",\n                    \"label\": \"Damaged\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"expired\",\n                    \"label\": \"Expired\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"spoiled\",\n                    \"label\": \"Spoiled\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"lost\",\n                    \"label\": \"Lost / Stolen\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"disposal\",\n                    \"label\": \"Disposal\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"other\",\n                    \"label\": \"Other\",\n                    \"manual\": true,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"inventory\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/stock-out\",\n                        \"url\": \"/api/v1/inventory/stock-out\"\n                    }\n                },\n                {\n                    \"code\": \"transfer_out\",\n                    \"label\": \"Moved between stores\",\n                    \"manual\": false,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"transfer\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/transfers\",\n                        \"url\": \"/api/v1/inventory/transfers\"\n                    }\n                },\n                {\n                    \"code\": \"adjustment\",\n                    \"label\": \"Stock count correction\",\n                    \"manual\": false,\n                    \"creates_operational_record\": false,\n                    \"route\": {\n                        \"kind\": \"adjustment\",\n                        \"method\": \"POST\",\n                        \"path\": \"/inventory/adjustments\",\n                        \"url\": \"/api/v1/inventory/adjustments\"\n                    }\n                }\n            ]\n        }\n    },\n    \"meta\": [],\n    \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create a medicine (type, packaging, withdrawal, opening stock)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/health/medicines",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health",
+                "medicines"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Oxytetracycline 20% LA\",\n    \"medicine_type\": \"antibiotic\",\n    \"stock_unit\": \"ml\",\n    \"packaging\": {\n        \"unit\": \"bottle\",\n        \"quantity_per_package\": \"100\"\n    },\n    \"default_withdrawal_days\": 14,\n    \"notes\": \"Keep below 25 C\",\n    \"opening_stock\": {\n        \"storage_location_id\": \"01a135b0-9289-70f0-9e18-e89b1135a808\",\n        \"components\": [\n            {\n                \"quantity\": \"5\",\n                \"unit\": \"bottle\"\n            }\n        ],\n        \"lot\": {\n            \"code\": \"OXY-2026-01\",\n            \"expires_on\": \"2028-06-30\"\n        },\n        \"recorded_at\": \"2026-10-01T08:00:00Z\",\n        \"idempotency_key\": \"open-oxytet-001\",\n        \"notes\": \"Opening shelf count\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nCreates a medicine in ONE all-or-nothing call: the inventory item (category `medicine`), its type/withdrawal profile, an optional package conversion and an optional opening balance written through the inventory ledger.\n\n**WHEN TO USE IT**\nThe \"Add medicine\" form. Existing endpoints (`POST /inventory/items`, `PUT /health/medicines/{item}/profile`, `POST /settings/package-conversions`, `POST /inventory/stock-in`) keep working.\n\n**IMPORTANT INPUTS**\n- Required: `name` (unique on the farm), `medicine_type` (`antibiotic|vaccine|supplement|dewormer|other`), `stock_unit` (`mg|g|kg|ml|l|piece`).\n- `packaging` `{unit: bottle|box|card|sachet|bag|vial, quantity_per_package: positive}` — 1 package = that many `stock_unit` (whole number for `piece`).\n- `default_withdrawal_days` 0–3650, `notes`, `tracks_lots`, `tracks_expiry` (default to true when the opening-stock lot has a code / `expires_on`; cannot change after the first movement).\n- `opening_stock` `{storage_location_id, components[{quantity,unit}], lot{code,expires_on}, recorded_at, idempotency_key, notes}` — components may use the packaging unit (5 bottle × 100 ml = 500 ml). Written as a stock-in with reason `opening_balance`.\n\n**IMPORTANT BEHAVIOR**\n- Requires `health.manage` AND `inventory.manage` (plus `measurement.manage` when `packaging` is sent). Owner and Manager have all three; Vet and Farm worker do not.\n- No expense, supplier or purchase is created. To book a bought-in lot with its cost use `POST /purchases`.\n- Idempotent with `opening_stock.idempotency_key`: repeating the identical request returns the existing medicine with `200` and receives nothing twice; the same key with a different request is `409 idempotency_conflict`. Without opening stock a repeat is `409 inventory_item_exists`.\n- Any failure rolls everything back (no item, profile, conversion or movement is left behind).\n\n**SUCCESS**\n`201 Created` with the full medicine: item fields, `stock`, `balances`, `lots`, `profile`, `medicine_type`, `medicine_type_label` and `packaging[]`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks the required permission(s); other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `opening_stock.lot.code`); `conversion_not_configured` / `invalid_conversion_ratio` for packaging problems.\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "201 Created — Medicine created.",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/health/medicines",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "health",
+                    "medicines"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Oxytetracycline 20% LA\",\n    \"medicine_type\": \"antibiotic\",\n    \"stock_unit\": \"ml\",\n    \"packaging\": {\n        \"unit\": \"bottle\",\n        \"quantity_per_package\": \"100\"\n    },\n    \"default_withdrawal_days\": 14,\n    \"notes\": \"Keep below 25 C\",\n    \"opening_stock\": {\n        \"storage_location_id\": \"01a135b0-9289-70f0-9e18-e89b1135a808\",\n        \"components\": [\n            {\n                \"quantity\": \"5\",\n                \"unit\": \"bottle\"\n            }\n        ],\n        \"lot\": {\n            \"code\": \"OXY-2026-01\",\n            \"expires_on\": \"2028-06-30\"\n        },\n        \"recorded_at\": \"2026-10-01T08:00:00Z\",\n        \"idempotency_key\": \"open-oxytet-001\",\n        \"notes\": \"Opening shelf count\"\n    }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"id\": \"01a135b0-92a7-7272-b144-8ff1b266e8b9\",\n        \"name\": \"Oxytetracycline 20% LA\",\n        \"category\": \"medicine\",\n        \"description\": null,\n        \"kind\": \"general\",\n        \"is_system_managed\": false,\n        \"stock_unit\": \"ml\",\n        \"dimension\": \"volume\",\n        \"tracks_lots\": true,\n        \"tracks_expiry\": true,\n        \"is_active\": true,\n        \"stock\": {\n            \"quantity\": \"500\",\n            \"unit\": \"ml\",\n            \"normalized\": {\n                \"quantity\": \"500\",\n                \"unit\": \"ml\"\n            }\n        },\n        \"low_stock_threshold\": null,\n        \"is_low_stock\": false,\n        \"created_at\": \"2026-10-13T14:35:26.000000Z\",\n        \"updated_at\": \"2026-10-13T14:35:26.000000Z\",\n        \"balances\": [\n            {\n                \"storage_location_id\": \"01a135b0-9289-70f0-9e18-e89b1135a808\",\n                \"inventory_lot_id\": \"01a135b0-92be-7273-b6ad-768b26068078\",\n                \"quantity\": \"500\",\n                \"unit\": \"ml\",\n                \"normalized\": {\n                    \"quantity\": \"500\",\n                    \"unit\": \"ml\"\n                }\n            }\n        ],\n        \"profile\": {\n            \"default_withdrawal_days\": 14,\n            \"notes\": \"Keep below 25 C\"\n        },\n        \"medicine_type\": \"antibiotic\",\n        \"medicine_type_label\": \"Antibiotic\",\n        \"packaging\": [\n            {\n                \"conversion_id\": \"01a135b0-92b0-7058-85b3-d7b270777303\",\n                \"package_unit\": \"bottle\",\n                \"package_unit_label\": \"Bottle\",\n                \"quantity_per_package\": \"100\",\n                \"unit\": \"ml\"\n            }\n        ],\n        \"lots\": [\n            {\n                \"id\": \"01a135b0-92be-7273-b6ad-768b26068078\",\n                \"code\": \"OXY-2026-01\",\n                \"expires_on\": \"2028-06-30\",\n                \"is_expired\": false,\n                \"stock\": {\n                    \"quantity\": \"500\",\n                    \"unit\": \"ml\"\n                }\n            }\n        ]\n    },\n    \"meta\": [],\n    \"message\": \"Medicine created.\"\n}"
+            }
+          ]
+        },
+        {
           "name": "Set a medicine's default withdrawal period",
           "event": [
             {
@@ -21970,14 +22192,14 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"default_withdrawal_days\": 7,\n  \"notes\": \"Lasota - hold eggs and meat for 7 days\"\n}",
+              "raw": "{\n  \"default_withdrawal_days\": 7,\n  \"medicine_type\": \"vaccine\",\n  \"notes\": \"Lasota - hold eggs and meat for 7 days\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
                 }
               }
             },
-            "description": "**WHAT IT DOES**\nStores the medicine's default withdrawal period (days before animal products are safe). `default_withdrawal_days` is required (`null` clears it). It applies to FUTURE health lines only; past lines keep the value they were saved with.\n\n**WHEN TO USE IT**\nSetting a medicine's default withdrawal period in medicine settings.\n\n**IMPORTANT INPUTS**\n- Path ids (UUIDv7): `{{item_med_id}}`.\n- Required body fields: `default_withdrawal_days`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `health.manage` (taken from the current farm context; never sent by the client).\n- The item must be a `medicine` item (other categories are `404`).\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`health.manage`** — granted to: `owner`, `manager`, `vet`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `health-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`PUT {{base_url}}/health/medicines/{{item_med_id}}/profile`\n\n**PATH PARAMETERS**\n- `{{item_med_id}}` — UUID. Captured by \"Create an inventory item (lot-tracked medicine)\" (10 — Inventory) or from the list endpoint of this resource.\n\n**REQUEST BODY** (`application/json`)\n- `default_withdrawal_days` — integer, **required**, min 0, max 3650, nullable. Default withdrawal period in days applied to new health lines that do not state their own. null clears it. Past records keep the days they used.\n- `notes` — string, optional, max 2000 chars, nullable\n\n**VARIABLES USED**\n- `{{item_med_id}}` — captured by \"Create an inventory item (lot-tracked medicine)\"\n\n**BUSINESS RULES**\n- Requires `health.manage` (Owner, Manager, Vet).\n- The item must be a `medicine` item (other categories are `404`).\n\n**SUCCESS**\n`200 OK` — message: \"Medicine profile updated.\"\n\n`data` fields: `id`, `name`, `category`, `description`, `stock_unit`, `dimension`, `tracks_lots`, `tracks_expiry`, `is_active`, `stock`, `low_stock_threshold`, `is_low_stock`, `created_at`, `updated_at`, `profile`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `health.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+            "description": "**WHAT IT DOES**\nStores the medicine's default withdrawal period (days before animal products are safe). `default_withdrawal_days` is required (`null` clears it). It applies to FUTURE health lines only; past lines keep the value they were saved with.\n\n**WHEN TO USE IT**\nSetting a medicine's default withdrawal period in medicine settings.\n\n**IMPORTANT INPUTS**\n- Optional `medicine_type` (`antibiotic|vaccine|supplement|dewormer|other`; omit = unchanged, `null` = not specified).\n- Path ids (UUIDv7): `{{item_med_id}}`.\n- Required body fields: `default_withdrawal_days`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `health.manage` (taken from the current farm context; never sent by the client).\n- The item must be a `medicine` item (other categories are `404`).\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`health.manage`** — granted to: `owner`, `manager`, `vet`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `health-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`PUT {{base_url}}/health/medicines/{{item_med_id}}/profile`\n\n**PATH PARAMETERS**\n- `{{item_med_id}}` — UUID. Captured by \"Create an inventory item (lot-tracked medicine)\" (10 — Inventory) or from the list endpoint of this resource.\n\n**REQUEST BODY** (`application/json`)\n- `default_withdrawal_days` — integer, **required**, min 0, max 3650, nullable. Default withdrawal period in days applied to new health lines that do not state their own. null clears it. Past records keep the days they used.\n- `notes` — string, optional, max 2000 chars, nullable\n\n**VARIABLES USED**\n- `{{item_med_id}}` — captured by \"Create an inventory item (lot-tracked medicine)\"\n\n**BUSINESS RULES**\n- Requires `health.manage` (Owner, Manager, Vet).\n- The item must be a `medicine` item (other categories are `404`).\n\n**SUCCESS**\n`200 OK` — message: \"Medicine profile updated.\"\n\n`data` fields: `id`, `name`, `category`, `description`, `stock_unit`, `dimension`, `tracks_lots`, `tracks_expiry`, `is_active`, `stock`, `low_stock_threshold`, `is_low_stock`, `created_at`, `updated_at`, `profile`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `health.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
           },
           "response": [
             {

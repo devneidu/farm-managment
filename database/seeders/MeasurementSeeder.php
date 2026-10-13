@@ -63,6 +63,8 @@ class MeasurementSeeder extends Seeder
         ['bag', 'Bag'], ['sack', 'Sack'], ['crate', 'Crate'], ['tray', 'Tray'], ['carton', 'Carton'], ['bottle', 'Bottle'],
         // Marketplace selling units (Phase 23). Still package units: no family, no conversion. A tuber is counted whole.
         ['basket', 'Basket'], ['tuber', 'Tuber', true], ['bunch', 'Bunch'],
+        // Medicine packaging (V1 medicine catalogue). Package units: no family, no conversion until a per-medicine definition exists.
+        ['box', 'Box'], ['card', 'Card'], ['sachet', 'Sachet'], ['vial', 'Vial'],
     ];
 
     public function run(): void

@@ -30,6 +30,19 @@ class MedicineResource extends InventoryItemResource
         $profile = $this->resource->relationLoaded('medicineProfile') ? $this->resource->getRelation('medicineProfile') : null;
         /** @var array{default_withdrawal_days: int|null, notes: string|null} */
         $out['profile'] = ['default_withdrawal_days' => $profile?->default_withdrawal_days, 'notes' => $profile?->notes];
+        /** antibiotic|vaccine|supplement|dewormer|other; null = not specified (medicines created before the type existed). */
+        $out['medicine_type'] = $profile?->medicine_type?->value;
+        $out['medicine_type_label'] = $profile?->medicine_type?->label();
+        /**
+         * Active package conversions of THIS medicine (one package holds `quantity_per_package` of the stock unit). Empty = quantities can only be entered in the stock unit.
+         *
+         * @var array<int, array{conversion_id: string, package_unit: string, package_unit_label: string, quantity_per_package: string, unit: string}>
+         */
+        $out['packaging'] = $this->resource->relationLoaded('medicinePackaging')
+            ? $this->resource->getRelation('medicinePackaging')->map(fn ($c) => [
+                'conversion_id' => $c->id, 'package_unit' => $c->packageUnit->code, 'package_unit_label' => $c->packageUnit->name,
+                'quantity_per_package' => Decimal::trim((string) $c->quantity_per_package), 'unit' => $c->targetUnit->code,
+            ])->all() : [];
         if ($this->lotTimezone !== null) {
             $ledger = app(StockLedger::class);
             /** @var array<int, array{id: string, code: string, expires_on: string|null, is_expired: bool, stock: array{quantity: string, unit: string}}> */

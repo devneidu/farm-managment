@@ -75,6 +75,46 @@ class StockReasonCatalogue
         return $reason === StockInReason::Returned ? ApiRoute::withUrl(self::incubation()) : null;
     }
 
+    /**
+     * Where routine medicine consumption is recorded instead of the manual stock-out. Enforced server-side (InventoryService) for items in
+     * the medicine category; `use` (given to animals) and `internal_use` (personal use) are both routine consumption.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public static function medicineOutRoutes(): array
+    {
+        return ['use' => self::healthRecord(), 'internal_use' => self::healthRecord()];
+    }
+
+    /**
+     * Stock movement reasons permitted for medicines: `in` and `out` entries as in by_item_kind, where the `use` entry is NOT manual
+     * (treatment consumption is recorded once, by a health record) and the manual OUT reasons are the legitimate non-treatment reductions.
+     *
+     * @return array{in: list<array<string, mixed>>, out: list<array<string, mixed>>}
+     */
+    public function medicineReasons(): array
+    {
+        return [
+            'in' => $this->generalIn(),
+            'out' => [
+                ['code' => StockOutReason::Use->value, 'label' => 'Used on animals', 'manual' => false, 'creates_operational_record' => true, 'route' => ApiRoute::withUrl(self::healthRecord())],
+                $this->out(StockOutReason::Donation, 'Gift / Donation'),
+                $this->out(StockOutReason::Damaged, 'Damaged'),
+                $this->out(StockOutReason::Expired, 'Expired'),
+                $this->out(StockOutReason::Spoiled, 'Spoiled'),
+                $this->out(StockOutReason::Lost, 'Lost / Stolen'),
+                $this->out(StockOutReason::Disposal, 'Disposal'),
+                $this->out(StockOutReason::Other, 'Other'),
+                ...$this->movementActions('out'),
+            ],
+        ];
+    }
+
+    private static function healthRecord(): array
+    {
+        return ['kind' => 'record', 'method' => 'POST', 'path' => '/health-records', 'record_type' => 'vaccination|medication|deworming|treatment', 'note' => 'Choose the cycle and add medicine lines; one request writes the health record and the stock-out of every line.'];
+    }
+
     /** @return array<string, mixed> */
     public function options(): array
     {
@@ -202,7 +242,8 @@ class StockReasonCatalogue
     private function generalOut(): array
     {
         return [
-            $this->out(StockOutReason::Use, 'Used'),
+            // Not for medicine items (category medicine): their treatment use is a health record. See GET /master/medicine-options.
+            $this->out(StockOutReason::Use, 'Used') + ['not_for_categories' => ['medicine']],
             $this->out(StockOutReason::Sale, 'Sold'),
             $this->out(StockOutReason::Donation, 'Gift / Donation'),
             $this->out(StockOutReason::Damaged, 'Damaged'),

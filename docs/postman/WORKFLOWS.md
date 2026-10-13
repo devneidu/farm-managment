@@ -384,6 +384,7 @@ Create item (no quantity)
 | # | Request | Call | Captures |
 |---|---|---|---|
 | 1 | List health record types and field contracts | `GET /master/health-record-types` (200) |  |
+| 1a | (Optional) Medicine master data; create a medicine with packaging and opening stock | `GET /master/medicine-options` (200), `POST /health/medicines` (201) | see the 11 — Health folder |
 | 2 | Set a medicine's default withdrawal period | `PUT /health/medicines/{item_med_id}/profile` (200) |  |
 | 3 | List medicines with derived stock and withdrawal profile | `GET /health/medicines` (200) |  |
 | 4 | Show a medicine with stock by location and lot | `GET /health/medicines/{item_med_id}` (200) |  |

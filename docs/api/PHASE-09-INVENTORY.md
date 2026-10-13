@@ -118,7 +118,7 @@ POST /inventory/stock-in
 ```
 
 ### Stock-out
-`POST /inventory/stock-out` with `reason` (`donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`, legacy `use` (`422` for feed items: use a `feed_use` record) / `expired` / `wasted`; `sale`, `production_use` and `incubation` are owned by `/sales`, `feed_use` records and breeding projects and are `422` here) — same body shape. `output: eggs|milk` may replace `inventory_item_id` (see the Feed, eggs and milk contract). Stock can **never go negative**: under a per-farm lock the affected (item, location, lot) bucket is re-checked, and the whole dated history is replayed so a back-dated issue that would have been negative at that moment is also rejected. `409 insufficient_stock` carries `details.available` and `details.requested`; nothing is written.
+`POST /inventory/stock-out` with `reason` (`donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`, legacy `use` (`422` for feed items: use a `feed_use` record; `422` for medicine items, together with `internal_use`: use a health record, `POST /health-records`) / `expired` / `wasted`; `sale`, `production_use` and `incubation` are owned by `/sales`, `feed_use` records and breeding projects and are `422` here) — same body shape. `output: eggs|milk` may replace `inventory_item_id` (see the Feed, eggs and milk contract). Stock can **never go negative**: under a per-farm lock the affected (item, location, lot) bucket is re-checked, and the whole dated history is replayed so a back-dated issue that would have been negative at that moment is also rejected. `409 insufficient_stock` carries `details.available` and `details.requested`; nothing is written.
 
 ### Adjustments (physical counts)
 ```json

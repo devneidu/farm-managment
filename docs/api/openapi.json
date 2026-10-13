@@ -12101,6 +12101,189 @@
                         }
                     }
                 }
+            },
+            "post": {
+                "operationId": "v1.health.medicines.store",
+                "description": "Requires health.manage AND inventory.manage (plus measurement.manage when `packaging` is sent). Creates the inventory item (category medicine),\nits type/withdrawal profile, an optional package conversion (`packaging`: 1 package = quantity_per_package of `stock_unit`, defined only for this\nmedicine) and an optional opening balance (`opening_stock`: a stock-in with reason opening_balance through the ledger; components may use the\npackaging unit, e.g. 5 bottle of 100 ml = 500 ml). No expense, supplier or purchase is created; record a bought-in lot with POST /purchases instead.\nAll-or-nothing. Idempotency: with `opening_stock`, repeating the request with the same `opening_stock.idempotency_key` returns the existing medicine\n(200, nothing received twice); a different request under that key is 409 idempotency_conflict. Without opening stock a repeat is 409 inventory_item_exists.\nReturns the full medicine (type, profile, packaging, stock, lots). The existing item and profile endpoints are unchanged.\n\nErrors: `403`, `404` (location), `409 inventory_item_exists | idempotency_conflict | conversion_exists`, `422` validation / `lot_required` /\n`invalid_conversion_ratio` / `conversion_not_configured`, `429`.\n\n**Requires farm permission:** `health.manage`.",
+                "summary": "Create a medicine (item + profile + optional packaging + optional opening stock) in one transaction",
+                "tags": [
+                    "HealthRecord"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreMedicineRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "integer",
+                                    "const": 201
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited (see Retry-After header)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "too_many_requests"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "419": {
+                        "description": "CSRF token missing or expired: call GET /auth/csrf-cookie and retry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "session_expired"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/health/medicines/{item}": {
@@ -68315,6 +68498,122 @@
                     }
                 }
             }
+        },
+        "/master/medicine-options": {
+            "get": {
+                "operationId": "v1.medicine-options",
+                "description": "Requires health.view. `medicine_types` (antibiotic, vaccine, supplement, dewormer, other), `primary_units` (the stock units a medicine may use),\n`package_units` (bottle, box, card, sachet, bag, vial) and `reasons.in` / `reasons.out`: the stock movement reasons for medicine. In `reasons.out`,\n`use` has `manual: false` - treatment consumption is recorded through POST /health-records, and POST /inventory/stock-out rejects `use` and\n`internal_use` for medicines (422). Manual reductions stay available: donation, damaged, expired, spoiled, lost, disposal, other.\n\n**Requires farm permission:** `health.view`.",
+                "summary": "Medicine master data: types, primary units, package units and permitted stock reasons",
+                "tags": [
+                    "HealthRecord"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": {}
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        },
+                                        "message": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "meta",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated (no valid session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "unauthenticated"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden: account state does not allow this request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Human-readable summary."
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "description": "Machine-readable error code.",
+                                            "enum": [
+                                                "account_suspended",
+                                                "email_verification_required",
+                                                "onboarding_required",
+                                                "no_active_farm",
+                                                "farm_access_denied",
+                                                "forbidden"
+                                            ]
+                                        },
+                                        "request_id": {
+                                            "type": "string",
+                                            "description": "Echo of the X-Request-Id header, for support."
+                                        },
+                                        "details": {
+                                            "type": "object",
+                                            "description": "Optional structured context. Entitlement errors (feature_not_available, subscription_inactive, plan_limit_reached) carry entitlement_key and, for limits, limit, usage and remaining."
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "code",
+                                        "request_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {
@@ -72191,6 +72490,33 @@
                     "lots": {
                         "type": "array",
                         "items": {}
+                    },
+                    "medicine_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "medicine_type_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "packaging": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "minItems": 0,
+                                "maxItems": 0
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -72212,6 +72538,9 @@
                     "updated_at",
                     "balances",
                     "profile",
+                    "medicine_type",
+                    "medicine_type_label",
+                    "packaging",
                     "lots"
                 ],
                 "title": "MedicineResource"
@@ -80642,6 +80971,17 @@
                             "null"
                         ],
                         "maxLength": 2000
+                    },
+                    "medicine_type": {
+                        "anyOf": [
+                            {
+                                "description": "antibiotic | vaccine | supplement | dewormer | other. Omit to leave it unchanged; null returns it to \"not specified\".",
+                                "$ref": "#/components/schemas/MedicineType"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -84655,6 +84995,181 @@
                     "reason"
                 ],
                 "title": "TransitionReportRequest"
+            },
+            "MedicineType": {
+                "type": "string",
+                "description": "What kind of product a medicine is. Stored on the medicine profile; NULL there means \"not specified\" (medicines created before this existed).\n",
+                "enum": [
+                    "antibiotic",
+                    "vaccine",
+                    "supplement",
+                    "dewormer",
+                    "other"
+                ],
+                "title": "MedicineType"
+            },
+            "StoreMedicineRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Unique on the farm (case/space-insensitive) across ALL inventory items.",
+                        "maxLength": 150
+                    },
+                    "medicine_type": {
+                        "description": "antibiotic | vaccine | supplement | dewormer | other (GET /master/medicine-options).",
+                        "$ref": "#/components/schemas/MedicineType"
+                    },
+                    "stock_unit": {
+                        "type": "string",
+                        "description": "Primary unit all stock is measured in: mg, g, kg, ml, l or piece. Fixed once the medicine has stock history.",
+                        "enum": [
+                            "mg",
+                            "g",
+                            "kg",
+                            "ml",
+                            "l",
+                            "piece"
+                        ]
+                    },
+                    "packaging": {
+                        "type": "object",
+                        "description": "Optional packaging: one package holds `quantity_per_package` of the stock unit (e.g. bottle = 100 ml). Creates the per-medicine package conversion.",
+                        "properties": {
+                            "unit": {
+                                "type": "string",
+                                "description": "bottle | box | card | sachet | bag | vial",
+                                "enum": [
+                                    "bottle",
+                                    "box",
+                                    "card",
+                                    "sachet",
+                                    "bag",
+                                    "vial"
+                                ]
+                            },
+                            "quantity_per_package": {
+                                "type": "string",
+                                "description": "Positive decimal in the stock unit (whole number when the stock unit is `piece`)."
+                            }
+                        },
+                        "required": [
+                            "unit",
+                            "quantity_per_package"
+                        ]
+                    },
+                    "default_withdrawal_days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Default withdrawal period in days for future health lines (0-3650).",
+                        "minimum": 0,
+                        "maximum": 3650
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2000
+                    },
+                    "tracks_lots": {
+                        "type": "boolean",
+                        "description": "Track lots (batch numbers). Defaults to true when opening stock names a lot or an expiry. Cannot change after the first movement."
+                    },
+                    "tracks_expiry": {
+                        "type": "boolean",
+                        "description": "Track expiry per lot (requires tracks_lots). Defaults to true when the opening-stock lot has `expires_on`. Cannot change after the first movement."
+                    },
+                    "opening_stock": {
+                        "type": "object",
+                        "description": "Optional opening balance, written through the inventory ledger as a stock-in with reason opening_balance. No expense, supplier or purchase is created.",
+                        "properties": {
+                            "storage_location_id": {
+                                "type": "string",
+                                "format": "uuid"
+                            },
+                            "components": {
+                                "type": "array",
+                                "description": "Quantity parts in the stock unit or the medicine's packaging unit (e.g. 5 bottle).",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "quantity": {
+                                            "type": "string"
+                                        },
+                                        "unit": {
+                                            "type": "string",
+                                            "maxLength": 32
+                                        }
+                                    },
+                                    "required": [
+                                        "quantity",
+                                        "unit"
+                                    ]
+                                },
+                                "minItems": 1,
+                                "maxItems": 10
+                            },
+                            "lot": {
+                                "type": "object",
+                                "description": "Lot code and expiry date (Y-m-d). Required when the medicine tracks lots / expiry.",
+                                "properties": {
+                                    "code": {
+                                        "type": "string",
+                                        "maxLength": 100
+                                    },
+                                    "expires_on": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "expires_on"
+                                ]
+                            },
+                            "recorded_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "description": "ISO-8601 with offset, not in the future.",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(Z|[+-]\\d{2}:\\d{2})$"
+                            },
+                            "idempotency_key": {
+                                "type": "string",
+                                "description": "Retrying the same request with this key never double-receives: it returns the medicine already created.",
+                                "pattern": "^[A-Za-z0-9._:-]+$",
+                                "maxLength": 80
+                            },
+                            "notes": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 5000
+                            }
+                        },
+                        "required": [
+                            "storage_location_id",
+                            "components",
+                            "lot",
+                            "recorded_at",
+                            "idempotency_key",
+                            "notes"
+                        ]
+                    }
+                },
+                "required": [
+                    "name",
+                    "medicine_type",
+                    "stock_unit",
+                    "opening_stock"
+                ],
+                "title": "StoreMedicineRequest"
             }
         },
         "responses": {

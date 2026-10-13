@@ -703,6 +703,10 @@ class InventoryService
     /** Feed eaten by livestock is entered once, as a feed_use record; the generic "use" reason would decrement it a second time. */
     private function assertManualOutReason(InventoryItem $item, string $reason): void
     {
+        // Medicine given to animals is entered once, as a health record; a manual "use" would decrement the same stock a second time.
+        if ($item->category === InventoryCategory::Medicine && ($route = StockReasonCatalogue::medicineOutRoutes()[$reason] ?? null) !== null) {
+            $this->invalid('reason', 'Medicine used on animals is recorded through POST '.$route['path'].' (types vaccination, medication, deworming or treatment) so the event is entered once; the reason "'.$reason.'" is not accepted for medicine. Use donation, damaged, expired, spoiled, lost, disposal or other for medicine leaving stock in another way.');
+        }
         if ($reason === 'use' && $item->category === InventoryCategory::Feed) {
             $this->invalid('reason', 'Feed used for livestock is recorded through POST /records (type feed_use) so the event is entered once; the generic "use" reason is not accepted for feed. Use donation, spoiled, lost, disposal, internal_use or other for feed leaving the farm in another way.');
         }

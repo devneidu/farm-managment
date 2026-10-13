@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\MedicineType;
 use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +15,6 @@ class MedicineProfile extends Model
 
     protected function casts(): array
     {
-        return ['default_withdrawal_days' => 'integer'];
+        return ['default_withdrawal_days' => 'integer', 'medicine_type' => MedicineType::class];
     }
 }
