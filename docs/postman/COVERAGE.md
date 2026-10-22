@@ -11,11 +11,11 @@ Figures below were measured on the final collection after the frontend-handoff c
 | Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **343** (GET 177, POST 121, PUT 10, PATCH 30, DELETE 5; `HEAD` aliases of `GET` not counted) - re-measured in Phase 29 |
 | OpenAPI (`docs/api/openapi.json`) | **284 paths, 343 operations** |
 | Routes intentionally excluded | 0 of the `/api/v1` routes (see §2 for the 7 non-API framework routes) |
-| Postman requests in the reference folders (00-28, 90) | **405** |
+| Postman requests in the reference folders (00-28, 90) | **406** |
 | Postman requests inside workflows (99) | **457** (copies of reference requests plus flow-only steps) |
-| Total Postman requests | **862** |
+| Total Postman requests | **863** |
 | Endpoint coverage (distinct method+route in the reference folders, matched against `route:list`) | **343 / 343 = 100.0 %**; 0 requests point at an unknown route (one flow step, `POST /platform-admin/marketplace/deals/{deal}`, deliberately asserts `405`) |
-| Requests with a saved success example | 516 (of 862); folders 27-28 and Flows 15-19 carry executable assertions instead |
+| Requests with a saved success example | 517 (of 863); folders 27-28 and Flows 15-19 carry executable assertions instead |
 | Requests with at least one saved error example | 103 |
 | Saved example responses | 690 |
 | Workflows | **20** (Flows 1-19 plus Flow S) = 457 requests |

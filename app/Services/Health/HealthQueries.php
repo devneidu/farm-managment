@@ -33,6 +33,9 @@ class HealthQueries
         if (isset($f['type'])) {
             $q->where('type', $f['type']);
         }
+        if (isset($f['problem_type'])) {
+            $q->where('details->problem_type', $f['problem_type']);
+        }
         if (isset($f['inventory_item_id'])) {
             InventoryItem::ofFarm($ctx->farm)->findOrFail($f['inventory_item_id']);
             $q->whereHas('medicines', fn ($m) => $m->where('inventory_item_id', $f['inventory_item_id']));

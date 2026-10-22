@@ -16,13 +16,37 @@ A health record is a **real farm event that happened** (a vaccination given, a m
 
 | `type` | Cycle kinds | Medicines | `details` |
 |---|---|---|---|
-| `vaccination` | livestock | required (≥1) | `target_disease` (required) |
-| `medication` | livestock | required | `condition` (required) |
-| `deworming` | livestock | required | `parasite_target` (optional) |
-| `treatment` | livestock | required | `condition` (required) |
-| `disease_issue` | livestock | forbidden | `condition`, `severity` (`low`/`moderate`/`high`) required; `symptoms` optional |
-| `vet_visit` | livestock | forbidden | `vet_name` required; `findings` optional |
+| `vaccination` | livestock | required (≥1) | `problem_type`, `target_disease` (both optional; text required when `problem_type` = `other`) |
+| `medication` | livestock | required | `problem_type`, `condition` (same) |
+| `deworming` | livestock | required | `problem_type`, `parasite_target` (same) |
+| `treatment` | livestock | required | `problem_type`, `condition` (same) |
+| `disease_issue` | livestock | forbidden | `severity` (`low`/`moderate`/`high`) required; `problem_type`, `condition` (same), `symptoms` optional |
+| `vet_visit` | livestock | forbidden | `vet_name` required; `problem_type`, `condition` (same), `findings` optional |
 | `reversal` | (server) | — | `reason` — created by the reverse endpoint only |
+
+### Problem type (the "what is the problem" dropdown)
+
+Every type accepts `details.problem_type`, one of 13 fixed codes (the list is in code, `App\Enums\HealthProblemType`, and is returned by `GET /master/health-record-types` as `problem_types[] {code, label}`):
+
+`breathing`, `digestive`, `worms_internal_parasites`, `skin_external_parasites`, `nervous`, `leg_foot_movement`, `eye`, `injury_wound`, `reproduction_udder_laying`, `weak_not_eating`, `sudden_death_unknown`, `routine_prevention`, `other`.
+
+| `type` | `question` (form label) | `default_problem_type` | "Disease name (if known)" box (`text_field.key`) |
+|---|---|---|---|
+| `vaccination` | What is it protecting against? | — | `target_disease` (≤200) |
+| `medication` | What is it for? | — | `condition` (≤300) |
+| `deworming` | What is it for? | `worms_internal_parasites` | `parasite_target` (≤200) |
+| `treatment` | What are you treating? | — | `condition` (≤300) |
+| `disease_issue` | What's the problem? | — | `condition` (≤300) |
+| `vet_visit` | Reason for the visit? | — | `condition` (≤300) |
+
+Rules:
+
+- `problem_type` is optional **for the API** (see backward compatibility below) but **required in the UI**. A value outside the 13 codes is `422` on `details.problem_type`.
+- The text box is always optional **except** when `problem_type` = `other`: then it is required (`422` on `details.<text_field.key>`, message `Describe the problem in "Disease name (if known)" when the problem type is Other.`).
+- **Backward compatibility:** when `problem_type` is omitted (or `null`) the request is accepted, the text box is not required, and the stored value is `worms_internal_parasites` for `deworming` and `other` for every other type. Existing clients that send only the text keep working. This is for backward compatibility with older clients only: **new UI must require a selection on every health form and always send `problem_type`** (deworming preselects `worms_internal_parasites`; other types start empty and the form cannot be submitted until one is chosen).
+- Stored inside the existing `details` JSON (no schema change). Records written before this field existed are **not** backfilled: the resource returns `problem_type: null`, `problem_type_label: null` for them.
+- A reversal row carries the original record's `problem_type` (nothing is added when the original has none). A correction is a normal `POST` and is validated exactly like any other write.
+- The response adds top-level `problem_type` and `problem_type_label` (the same value also appears in `details.problem_type`). No existing response field changed.
 
 Common optional top-level fields: `animals_affected` (livestock; whole count ≤ current cycle population), `follow_up_on` (`Y-m-d`, not before the event's farm-local day; **stored only — no task is created until the Work phase**), `mortality_record_id` (livestock; an existing, non-reversed Phase 8 `mortality` record of the same cycle), `notes`.
 
@@ -56,7 +80,7 @@ Role presets: **Owner/Manager** all four (`view`, `create`, `reverse`, `manage`)
   "type": "vaccination",
   "recorded_at": "2026-10-01T08:30:00+01:00",
   "idempotency_key": "a-unique-key-per-real-event",
-  "details": {"target_disease": "Newcastle disease"},
+  "details": {"problem_type": "routine_prevention", "target_disease": "Newcastle disease"},
   "animals_affected": 100,
   "follow_up_on": "2026-10-22",
   "mortality_record_id": null,
@@ -94,7 +118,8 @@ The whole request is atomic: any failure (`409 insufficient_stock` for any line 
 ```json
 {"data": {
   "id": "0198…", "production_cycle_id": "0198…", "type": "vaccination",
-  "details": {"target_disease": "Newcastle disease"},
+  "details": {"problem_type": "routine_prevention", "target_disease": "Newcastle disease"},
+  "problem_type": "routine_prevention", "problem_type_label": "Routine care or prevention (check-ups, vitamins, general vaccination)",
   "animals_affected": 100, "follow_up_on": "2026-10-22", "mortality_record_id": null,
   "recorded_at": "2026-10-01T07:30:00.000000Z", "notes": "Whole flock",
   "reverses_record_id": null, "corrects_record_id": null, "reversed_by_record_id": null,
@@ -174,7 +199,7 @@ Stock movements created by health cannot be reversed through `POST /inventory/mo
 
 ## Listing
 
-`GET /health-records` — query: `production_cycle_id`, `type` (including `reversal`), `inventory_item_id` (records using that medicine), `recorded_from`/`recorded_to` (`Y-m-d`, inclusive farm-local days), `page` (≥1), `per_page` (1–100, default 50). Ordered by `recorded_at` desc, then id. A foreign `production_cycle_id`/`inventory_item_id` is 404.
+`GET /health-records` — query: `production_cycle_id`, `type` (including `reversal`), `problem_type` (one of the 13 codes; unknown value `422`), `inventory_item_id` (records using that medicine), `recorded_from`/`recorded_to` (`Y-m-d`, inclusive farm-local days), `page` (≥1), `per_page` (1–100, default 50). Ordered by `recorded_at` desc, then id. A foreign `production_cycle_id`/`inventory_item_id` is 404.
 
 ## Errors
 

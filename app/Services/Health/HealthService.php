@@ -63,7 +63,8 @@ class HealthService
             if (! in_array($kind, $definition['kinds'], true)) {
                 $this->invalid('type', 'This health record type is not applicable to this kind of cycle.');
             }
-            $details = (Validator::make(['details' => $data['details'] ?? []], $this->types->detailRules($data['type']))->validate()['details'] ?? []);
+            $details = (Validator::make(['details' => $data['details'] ?? []], $this->types->detailRules($data['type']), $this->types->detailMessages($data['type']))->validate()['details'] ?? []);
+            $details['problem_type'] = $this->types->problemTypeOrDefault($data['type'], $details['problem_type'] ?? null);
             $medicines = $data['medicines'] ?? [];
             if ($definition['medicines'] === 'required' && $medicines === []) {
                 $this->invalid('medicines', 'At least one medicine is required for this health record type.');
@@ -115,7 +116,7 @@ class HealthService
                 $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
             }
             $reversal = HealthRecord::create([
-                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'type' => HealthTypeRegistry::REVERSAL, 'details' => ['reason' => $data['reason']],
+                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'type' => HealthTypeRegistry::REVERSAL, 'details' => ['reason' => $data['reason']] + (isset($original->details['problem_type']) ? ['problem_type' => $original->details['problem_type']] : []),
                 'recorded_at' => $when, 'reverses_record_id' => $original->id, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
                 'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
             ]);

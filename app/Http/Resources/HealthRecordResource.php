@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\HealthProblemType;
 use App\Services\Inventory\StockLedger;
 use App\Support\Measurement\Decimal;
 use Illuminate\Http\Request;
@@ -13,11 +14,14 @@ class HealthRecordResource extends JsonResource
     {
         $ledger = app(StockLedger::class);
         $reversed = $this->reversal !== null;
+        $problem = HealthProblemType::tryFrom((string) ($this->details['problem_type'] ?? ''));
 
         return [
             'id' => $this->id, 'production_cycle_id' => $this->production_cycle_id, 'type' => $this->type,
             /** @var object */
             'details' => $this->details,
+            /** Plain-language problem category (see /master/health-record-types → problem_types). null for records written before it existed; never inferred. @var string|null */
+            'problem_type' => $problem?->value, 'problem_type_label' => $problem?->label(),
             'animals_affected' => $this->animals_affected, 'follow_up_on' => $this->follow_up_on?->toDateString(),
             /** The linked Phase 8 mortality record, if any. Population is only ever changed by that record. */
             'mortality_record_id' => $this->mortality_record_id,

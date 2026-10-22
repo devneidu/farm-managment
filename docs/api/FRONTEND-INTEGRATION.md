@@ -298,7 +298,7 @@ Sections 1–23 explain *how to talk to the API*. This section explains *what to
 | `GET /master/units?dimension=` | every quantity field | units of one dimension | the unit dropdown; pre-select from `GET /settings/units` |
 | `GET /master/inventory-options` | opening any stock, feed, egg or milk screen (cached) | `reasons.by_item_kind.<feed|eggs|milk|general>.{in,out}`, `sellable_categories`, `categories` | the list of actions (labels), and for each: **which endpoint** to call (`route`) |
 | `GET /inventory/output-balances` | any egg/milk screen, before sale/incubation | `eggs|milk.{exists, inventory_item_id, available, by_storage_location}` | available stock, which store, the item id for sales and package conversions |
-| `GET /master/health-record-types` | health form | `fields`, `medicines` (`required`/`forbidden`) | medicine-lines section |
+| `GET /master/health-record-types` | health form | `fields`, `medicines` (`required`/`forbidden`), `problem_types[] {code,label}`, `question`, `default_problem_type`, `text_field {key,label,required_when_problem_type}` | required problem-type dropdown (titled `question`; deworming preselects `default_problem_type`, others start empty and block submit until chosen; always send `details.problem_type`), optional "Disease name (if known)" box (`text_field.key`, required when `other`), medicine-lines section |
 | `GET /master/task-categories`, `GET /master/location-types`, `GET /finance/categories`, `GET /reports`, `GET /roles` | the respective form | codes / flags | dropdowns, report visibility (`relevant`, `available`, `exportable`), assignable roles |
 | `GET /dashboard` | landing | `sections`, `operations.relevant`, `quick_record`, `quick_add`, `empty_state` | which blocks exist |
 

@@ -151,7 +151,8 @@ class HealthTest extends TeamTestCase
     {
         [$cycle, $item, $loc] = $this->ready();
         $line = $this->line($item, $loc);
-        $this->health($this->payload($cycle, [$line], ['details' => ['target_disease' => null]]))->assertStatus(422)->assertJsonValidationErrors('details.target_disease');
+        // The disease name box is optional; it is only required when the problem type is "other" (HealthProblemTypeTest).
+        $this->health($this->payload($cycle, [$line], ['details' => ['target_disease' => str_repeat('x', 201)]]))->assertStatus(422)->assertJsonValidationErrors('details.target_disease');
         $this->health($this->payload($cycle, [$line], ['details' => ['target_disease' => 'x', 'surprise' => 'y']]))->assertStatus(422);
         $this->health($this->payload($cycle, [], ['type' => 'medication', 'details' => ['condition' => 'Coryza']]))->assertStatus(422)->assertJsonValidationErrors('medicines');
         $this->health($this->payload($cycle, [$line], ['type' => 'disease_issue', 'details' => ['condition' => 'Coryza', 'severity' => 'moderate']]))->assertStatus(422)->assertJsonValidationErrors('medicines');
