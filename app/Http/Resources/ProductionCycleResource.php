@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Enums\CycleKind;
+use App\Services\Breeding\BreedingReference;
 use App\Services\Records\RecordTypeRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,13 +20,26 @@ class ProductionCycleResource extends JsonResource
         return $this;
     }
 
+    /** One capability lookup per species per request, however many batches a list shows. */
+    private function breedingWorkflow(Request $request): ?string
+    {
+        $cache = $request->attributes->get('breeding_workflow_by_species', []);
+        $id = $this->livestock->species_id;
+        if (! array_key_exists($id, $cache)) {
+            $cache[$id] = app(BreedingReference::class)->workflowFor($this->livestock->species)?->value;
+            $request->attributes->set('breeding_workflow_by_species', $cache);
+        }
+
+        return $cache[$id];
+    }
+
     /**
      * @return array{
      * id: string, kind: 'livestock'|'crop', name: string, reference: string, status: 'active'|'closed',
      * operation: array{id: string, code: string, name: string, tracking_model: string},
      * production_area: PlaceResource|null, start_date: string|null, planting_date: string|null,
      * expected_end_date: string|null, end_date: string|null, notes: string|null, baseline_locked: bool,
-     * livestock: array{species: array{id: string, code: string, name: string}, breed: array{id: string, name: string, is_active: bool}|null, production_purpose: array{code: string, name: string, is_active: bool}|null, growth_stage: array{code: string, name: string, is_active: bool}|null, acquisition_price_per_animal: string|null, acquisition_currency: string|null, supplier_contact: array{id: string, name: string, is_active: bool}|null, initial_population: int, current_population: int, population_unit: string, population_basis: string}|null,
+     * livestock: array{species: array{id: string, code: string, name: string}, breed: array{id: string, name: string, is_active: bool}|null, production_purpose: array{code: string, name: string, is_active: bool}|null, growth_stage: array{code: string, name: string, is_active: bool}|null, acquisition_price_per_animal: string|null, acquisition_currency: string|null, supplier_contact: array{id: string, name: string, is_active: bool}|null, initial_population: int, current_population: int, breeding_workflow: 'incubation'|'pregnancy'|null, population_unit: string, population_basis: string}|null,
      * crop: array{crop_type: array{id: string, code: string, name: string}, variety: array{id: string, name: string, is_active: bool}|null, planting_material_type: string, planting_material_label: string, planting_unit_type: string, planting_unit_label: string, initial_planting_units: int, expected_germination_date: string|null, area: array{entered: list<array{quantity: string, unit: string}>, normalized: array{quantity: string, unit: string}}|null}|null,
      * created_at: string, updated_at: string,
      * available_record_types?: list<array{type: string, permissions_required: array{always: list<string>, when_inventory_linked: list<string>, when_correcting: list<string>}}>
@@ -58,6 +72,13 @@ class ProductionCycleResource extends JsonResource
                 'acquisition_price_per_animal' => $this->livestock->acquisition_price_per_animal,
                 'acquisition_currency' => $this->livestock->acquisition_price_per_animal !== null ? 'NGN' : null,
                 'supplier_contact' => $this->livestock->supplierContact ? ['id' => $this->livestock->supplierContact->id, 'name' => $this->livestock->supplierContact->name, 'is_active' => $this->livestock->supplierContact->is_active] : null,
+                /**
+                 * Which breeding form this batch's species uses: `incubation` (eggs set, hatch), `pregnancy` (females bred, birth) or null when the species does not
+                 * breed here (fish, for example). Derived from the species capabilities; the same rule POST /breeding-projects applies.
+                 *
+                 * @var 'incubation'|'pregnancy'|null
+                 */
+                'breeding_workflow' => $this->breedingWorkflow($request),
                 'initial_population' => $this->livestock->initial_population,
                 'current_population' => (int) $this->current_population,
                 'population_unit' => 'head',

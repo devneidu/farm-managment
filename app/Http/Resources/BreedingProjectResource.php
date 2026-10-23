@@ -17,7 +17,17 @@ class BreedingProjectResource extends JsonResource
         $none = $this->expected_date === null && ! $window;
 
         return [
-            'id' => $this->id, 'reference' => $this->reference, 'production_cycle_id' => $this->production_cycle_id,
+            'id' => $this->id, 'reference' => $this->reference,
+            /** The name shown in lists: what the farmer typed, or "{Species} hatch|breeding – {start_date}". */
+            'title' => $this->title,
+            /** The mother batch: the batch the eggs come from or the females belong to. Also the dam. */
+            'production_cycle_id' => $this->production_cycle_id,
+            /**
+             * Where an outcome's offspring go when POST .../outcomes sends no `destination`: new_batch for incubation, mother_batch for pregnancy.
+             *
+             * @var 'mother_batch'|'new_batch'
+             */
+            'default_destination' => $this->workflow === \App\Enums\BreedingWorkflow::Incubation ? 'new_batch' : 'mother_batch',
             'workflow' => $this->workflow->value, 'status' => $this->status->value,
             'start_date' => $this->start_date->toDateString(),
             /** Incubation only; null otherwise. Eggs set are not live population. */

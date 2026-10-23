@@ -226,6 +226,23 @@ class RecordService
     }
 
     /**
+     * Undo of a hatch or birth that started its own batch: those animals are the batch's baseline (no outcome record exists to reverse), so the
+     * undo takes them off as a `population_adjustment` (details.reason says why). Same contract as appendForBreeding; the ledger refuses with
+     * 409 insufficient_population when the animals have since left the batch.
+     */
+    public function appendForBatchUndo(FarmContext $ctx, ProductionCycle $cycle, array $details, int $heads, CarbonImmutable $when, string $key, string $hash): OperationalRecord
+    {
+        $current = $this->ledger->reconcile($cycle);
+        $details += ['expected_population' => $current, 'actual_population' => $current - $heads, 'difference' => -$heads];
+        $measurement = $this->quantities->normalize($ctx->farm, [['quantity' => (string) max($current - $heads, 0), 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
+        $record = $this->insert($ctx, $cycle, ['type' => 'population_adjustment', 'idempotency_key' => $key], $details, $measurement, -$heads, $when, $hash);
+        $this->ledger->reconcile($cycle);
+        RecordCreated::dispatch($record);
+
+        return $record;
+    }
+
+    /**
      * Sales integration: animals leaving the farm by sale (or returning when the sale is cancelled) as an ordinary Phase 8 record + population
      * movement, so the ledger explains every head. The caller holds the farm and cycle locks and owns idempotency; the ledger is reconciled
      * before and after (a sale that would make the dated population negative fails here).

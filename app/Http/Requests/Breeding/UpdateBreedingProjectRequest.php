@@ -22,6 +22,7 @@ class UpdateBreedingProjectRequest extends FormRequest
             'eggs_returned_to_stock' => ['sometimes', 'integer', 'min:1', 'max:999999999'],
             /** Store the returned eggs go to; defaults to the store they were taken from. */
             'egg_storage_location_id' => ['sometimes', 'uuid'],
+            'title' => ['sometimes', 'nullable', 'string', 'max:120'],
             'females_bred' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:999999999'],
             'expected_offspring' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999'],
             'expected_date' => ['sometimes', 'date_format:Y-m-d', 'prohibits:expected_from,expected_to,revert_to_reference'],

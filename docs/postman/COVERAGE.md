@@ -53,7 +53,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 09 — Operational Records | 26 | 12 | 26 | 9 |
 | 10 — Inventory | 32 | 19 | 32 | 12 |
 | 11 — Health | 10 | 9 | 10 | 2 |
-| 12 — Breeding | 11 | 9 | 11 | 2 |
+| 12 — Breeding | 13 | 9 | 11 | 2 |
 | 13 — Tasks, Templates & Calendar | 20 | 20 | 20 | 5 |
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
 | 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
@@ -341,3 +341,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * New routes `GET /livestock-exits`, `POST /livestock-exits`, `POST /livestock-exits/{record}/reverse` (`docs/api/openapi.json` was intentionally not regenerated in this change).
 * Folder **09 — Operational Records** gains eight requests: slaughtered, culled, sold (quick sell), died, given away, moved to another batch, the list, and undo, with 20 saved examples captured from real responses (including the 422/409/403 cases, the idempotent retry, and the refused undo of a sold row and of a move through `POST /records/{id}/reverse`). The row for folder 09 in the table above was updated by hand; the other totals were not recomputed. The new requests use the existing `{{cycle_id}}` variable and a new, uncaptured `{{record_id}}` (set it from a list row).
 * Frontend contract: `docs/api/FRONTEND-HARVEST-FLOW.md`.
+
+## Addendum - breeding fixes (offspring destination, optional sire, limits, workflow on batches)
+
+* No new route (the 9 breeding routes are unchanged; `docs/api/openapi.json` was intentionally not regenerated in this change). New migration `2026_10_31_100000_add_breeding_title_and_outcome_destination` adds `breeding_projects.title` and `breeding_outcomes.destination`.
+* Folder **12 — Breeding** gains two requests (`Start a pregnancy project (optional sire, title)`, `Record the outcome into the mother batch (pregnancy default)`), now 13 requests; `Start a breeding project (incubation)` gets `title`, `Record the actual outcome` sends `destination: new_batch` with a new 201 example and a 422 example, and `Reverse a breeding outcome` gains the new-batch undo (201) and insufficient-population (409) examples. 10 new saved examples, captured from real responses. Environment: +3 variables (`breeding_project_preg_id`, `outcome_preg_id`, `bull_cycle_id`). The per-folder row in the table above was updated by hand for the request count only; the other totals in §1 were not recomputed.
+* Behaviour changes that affect existing requests: an incubation outcome without `destination` now starts a new batch (default `new_batch`; pregnancy stays `mother_batch`); a `dam` in `parents` must be the project's own batch; `females_bred` and parent `head_count` are capped by the batch's current head count; production-cycle responses carry `livestock.breeding_workflow`.
+* Frontend contract: `docs/api/FRONTEND-BREEDING-FLOW.md`.

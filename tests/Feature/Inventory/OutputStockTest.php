@@ -272,7 +272,7 @@ class OutputStockTest extends TeamTestCase
         // Without the flag nothing touches stock (compatibility with existing clients), and hatching changes nothing either.
         $legacy = $this->postJson('/api/v1/breeding-projects', ['production_cycle_id' => $cycle, 'workflow' => 'incubation', 'start_date' => $this->today(), 'eggs_set' => 50, 'idempotency_key' => $this->key()])->assertCreated()->json('data');
         $this->assertNull($legacy['egg_stock']);
-        $this->postJson('/api/v1/breeding-projects/'.$first['id'].'/outcomes', ['live_count' => 20, 'loss_count' => 5, 'recorded_at' => $this->at(1), 'idempotency_key' => $this->key()])->assertCreated();
+        $this->postJson('/api/v1/breeding-projects/'.$first['id'].'/outcomes', ['live_count' => 20, 'destination' => 'mother_batch', 'loss_count' => 5, 'recorded_at' => $this->at(1), 'idempotency_key' => $this->key()])->assertCreated();
         $this->assertSame('5', $this->available('eggs')['quantity']);
     }
 

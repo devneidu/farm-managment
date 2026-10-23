@@ -16,7 +16,10 @@ class StoreBreedingProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /** The mother batch: the batch the eggs come from or the females belong to. It is the single source for the dam; a `dam` entry in parents is optional and, if sent, must be this same batch. */
             'production_cycle_id' => ['required', 'uuid'],
+            /** Optional name. Left blank it becomes "{Species} hatch – {start_date}" (incubation) or "{Species} breeding – {start_date}" (pregnancy). */
+            'title' => ['sometimes', 'nullable', 'string', 'max:120'],
             /** incubation needs the species capability supports_incubation; pregnancy needs supports_pregnancy. */
             'workflow' => ['required', Rule::enum(BreedingWorkflow::class)],
             /** Incubation start / service date (farm-local day), between the cycle start and today. */
@@ -27,7 +30,7 @@ class StoreBreedingProjectRequest extends FormRequest
             'consume_egg_stock' => ['sometimes', 'boolean'],
             /** Store the eggs are taken from. Optional when the farm has exactly one active storage location; required when it has several. */
             'egg_storage_location_id' => ['sometimes', 'uuid'],
-            /** Pregnancy only: how many females were bred. */
+            /** Pregnancy only: how many females were bred. At most the mother batch's current head count. */
             'females_bred' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:999999999'],
             /** Expected offspring is an estimate and never changes population. */
             'expected_offspring' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999'],
@@ -35,6 +38,7 @@ class StoreBreedingProjectRequest extends FormRequest
             'expected_date' => ['sometimes', 'date_format:Y-m-d', 'prohibits:expected_from,expected_to'],
             'expected_from' => ['sometimes', 'date_format:Y-m-d', 'required_with:expected_to', 'prohibits:expected_date'],
             'expected_to' => ['sometimes', 'date_format:Y-m-d', 'required_with:expected_from', 'after_or_equal:expected_from'],
+            /** Optional. The sire (father batch, any batch of this farm and species, the mother batch included) is never required. A dam entry must be the mother batch; the dam is added from production_cycle_id when omitted. head_count, if sent, is at most that batch's current head count. */
             'parents' => ['sometimes', 'array', 'max:10'],
             'parents.*' => ['required', 'array:role,production_cycle_id,head_count'],
             'parents.*.role' => ['required', 'in:dam,sire'],

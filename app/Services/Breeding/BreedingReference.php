@@ -5,6 +5,7 @@ namespace App\Services\Breeding;
 use App\Enums\BreedingWorkflow;
 use App\Enums\Capability;
 use App\Models\ProductionCycle;
+use App\Models\Species;
 use App\Models\SpeciesCapability;
 use Carbon\CarbonImmutable;
 
@@ -34,6 +35,22 @@ class BreedingReference
         }
 
         return $enabled($workflow->capability())->first();
+    }
+
+    /** The breeding workflow a species offers (supports_breeding plus its workflow capability), or null; the same rule capabilityRow() applies per request. */
+    public function workflowFor(Species $species): ?BreedingWorkflow
+    {
+        $enabled = $species->speciesCapabilities()->where('enabled', true)->with('capability')->get()->pluck('capability.code')->all();
+        if (! in_array(Capability::SupportsBreeding->value, $enabled, true)) {
+            return null;
+        }
+        foreach (BreedingWorkflow::cases() as $workflow) {
+            if (in_array($workflow->capability()->value, $enabled, true)) {
+                return $workflow;
+            }
+        }
+
+        return null;
     }
 
     /** The immutable, self-contained reference stored on the project at creation. */

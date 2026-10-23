@@ -19,6 +19,8 @@ class StoreBreedingOutcomeRequest extends FormRequest
             'live_count' => ['required', 'integer', 'min:0', 'max:999999999'],
             /** Stillborn / dead-in-shell / infertile; informational. For incubation live + loss cannot exceed eggs_set. */
             'loss_count' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999'],
+            /** Where the offspring go. `mother_batch` adds them to the project's own batch; `new_batch` starts a new batch (same species, started on the outcome date, named like the project title) holding them. Default: new_batch for incubation, mother_batch for pregnancy. new_batch needs live_count of at least 1. */
+            'destination' => ['sometimes', 'in:mother_batch,new_batch'],
             /** Reversed outcome this one replaces (needs breeding.reverse). */
             'corrects_outcome_id' => ['sometimes', 'nullable', 'uuid'],
             'recorded_at' => InventoryRules::event()['recorded_at'],

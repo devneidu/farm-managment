@@ -4,7 +4,7 @@ All paths have prefix `/api/v1`. Use the existing Sanctum SPA session, CSRF setu
 
 ## Model
 
-A **breeding project** is one reproductive attempt on one livestock cycle (group-managed; there is no individual animal or pedigree). It keeps three things apart:
+A **breeding project** is one reproductive attempt on one livestock cycle, the **mother batch** (group-managed; there is no individual animal or pedigree). Frontend walkthrough with real examples: [FRONTEND-BREEDING-FLOW.md](FRONTEND-BREEDING-FLOW.md). It keeps three things apart:
 
 | Part | Fields | Nature |
 |---|---|---|
@@ -12,7 +12,7 @@ A **breeding project** is one reproductive attempt on one livestock cycle (group
 | Expectation | `expectation`, `expected_offspring` | An **estimate**: derived from the reference or entered manually. Never changes population. |
 | Actual | `outcomes`, `result` | What really happened. Only a confirmed live outcome changes population. |
 
-`reference` is a readable code (`BRD-2026-00001`); `id` is the UUID.
+`reference` is a readable code (`BRD-2026-00001`); `id` is the UUID. `title` is the display name: what the farmer typed, or "{Species} hatch – {start_date}" (incubation) / "{Species} breeding – {start_date}" (pregnancy).
 
 ## Workflows (capability driven)
 
@@ -20,6 +20,8 @@ A **breeding project** is one reproductive attempt on one livestock cycle (group
 |---|---|---|
 | `incubation` | `supports_breeding` + `supports_incubation` | `eggs_set` (required) |
 | `pregnancy` | `supports_breeding` + `supports_pregnancy` | `females_bred` (optional) |
+
+Which workflow a batch uses is `livestock.breeding_workflow` on every production-cycle response (`incubation`, `pregnancy` or `null`), derived from the species capabilities by the same rule that decides the `422` below. A species with `supports_breeding` but no workflow capability, and species without breeding (fish: the seed gives them `supports_harvest` only), get `null` and cannot start a project. One workflow per species is unchanged.
 
 An unsupported workflow is `422` on `workflow`; `eggs_set` is rejected for pregnancy and `females_bred` for incubation. Crop cycles are refused. Checks accept `fertile_count` for incubation only.
 
@@ -65,11 +67,14 @@ Roles: Owner and Manager all three permissions; Farm Worker and Vet `breeding.vi
 ```json
 POST /breeding-projects
 {"production_cycle_id":"…","workflow":"incubation","start_date":"2026-10-01","eggs_set":50,
- "expected_offspring":40,"parents":[{"role":"dam","production_cycle_id":"…","head_count":20}],
- "idempotency_key":"start-1"}
+ "expected_offspring":40,"title":"October hatch","idempotency_key":"start-1"}
 ```
 
-`start_date` is a farm-local day between the cycle start and today. `parents` (optional) are livestock cycles of the same farm **and species**; each role+cycle once. `idempotency_key` is farm-wide: an identical retry returns the original project, a changed payload is `409 idempotency_conflict`.
+`start_date` is a farm-local day between the cycle start and today. `title` is optional (blank = generated, see Model).
+
+**Parents.** `production_cycle_id` is the **mother batch** and the single source of the dam: `parents` is optional, the response always lists the dam (`role: dam`, that batch) and the request needs nothing more. A `dam` entry in `parents` is accepted only when it is that same batch (`422` on `parents.N.production_cycle_id` otherwise; the old shape that named the same batch keeps working). The **sire is optional**: any livestock batch of the same farm **and species** (the mother batch included), each role+cycle once.
+
+**Limits.** `females_bred` (pregnancy) and a parent `head_count`, when sent, may not exceed the head count that batch holds **now** (`422` on `females_bred` / `parents.N.head_count`; the message says how many it holds). The same check applies when `females_bred` is edited. `idempotency_key` is farm-wide: an identical retry returns the original project, a changed payload is `409 idempotency_conflict`.
 
 ### Record an outcome
 
@@ -79,7 +84,11 @@ POST /breeding-projects/{id}/outcomes
  "recorded_at":"2026-10-22T09:00:00+01:00","idempotency_key":"hatch-1"}
 ```
 
-- Eggs set and `expected_offspring` never change population. Live offspring join the project's own cycle automatically (there is no client flag): `live_count > 0` appends one Phase 8 operational record of type `breeding_outcome` (`population_delta = +live_count`) and its population movement in the same transaction. **50 eggs set, 40 expected, 37 hatched → population +37**, once.
+- Eggs set and `expected_offspring` never change population. Live offspring are added automatically, once, to the batch named by **`destination`**:
+  - `mother_batch`: the project's own batch. `live_count > 0` appends one Phase 8 operational record of type `breeding_outcome` (`population_delta = +live_count`) and its population movement in the same transaction. **50 eggs set, 40 expected, 37 hatched → mother batch +37**, once.
+  - `new_batch`: a new livestock batch (same species, breed, purpose and operation as the mother batch; started on the outcome's farm-local day; named "{Species} hatch – {date}", or "{Species} offspring – {date}" for pregnancy, with " (2)" etc. when the name is taken) is created in the same transaction, and `live_count` is its **starting head count**. Nothing is added to the mother batch and no `breeding_outcome` record exists for it (that would count the animals twice); `operational_record_id` is `null`. Reports show these animals as the new batch's *Initial stocking*.
+  - **Default when `destination` is omitted: `new_batch` for incubation, `mother_batch` for pregnancy** (`default_destination` on the project). `live_count: 0` creates no batch whatever the default (explicit `new_batch` with 0 is `422`).
+  - The outcome's `production_cycle_id` is the batch whose head count it changed; `destination_batch` `{id, name, reference, status, current_population}` names it. A new batch counts toward the plan's active-batch limit (409 when full) and `breeding.create` is enough to start it (`production_cycle.create` is not also required).
 - **Eggs from stock (optional).** An incubation project started with `consume_egg_stock: true` (+ optional `egg_storage_location_id`) takes `eggs_set` eggs out of the farm's available egg stock in the same transaction (stock-out reason `incubation`, linked to the project; needs `inventory.use`; `409 insufficient_stock` creates no project). Editing `eggs_set` reconciles the ledger; cancelling returns eggs **only** when `eggs_returned_to_stock` says so. Recording a hatch never changes egg stock. Details: [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md).\n- `live_count: 0` records an unsuccessful attempt and adds nothing. For incubation `live_count + loss_count ≤ eggs_set`.
 - `recorded_at` needs an explicit offset and lies between the project start and now; `outcome_date` is its farm-local day, kept separate from the expected date/window and from `created_at`.
 - Same `idempotency_key` + same payload returns the original outcome (201) with no second movement; a changed payload is `409 idempotency_conflict`.
@@ -87,7 +96,7 @@ POST /breeding-projects/{id}/outcomes
 
 ### Reverse and correct
 
-`POST …/outcomes/{outcome}/reverse` `{reason, recorded_at, idempotency_key}` appends a `reversal` outcome and, when the original added population, one compensating Phase 8 `reversal` record (−live). If that would make the dated ledger negative (animals died since) it is `409 insufficient_population`. A reversal cannot be reversed again (`409 outcome_already_reversed`). To correct, reverse and then `POST` a new outcome with `corrects_outcome_id` (reversed, replaced once, else `409 invalid_correction`). History is never edited or deleted. The generated Phase 8 record cannot be reversed through `/records/{id}/reverse` (`409 reverse_via_breeding_outcome`).
+`POST …/outcomes/{outcome}/reverse` `{reason, recorded_at, idempotency_key}` appends a `reversal` outcome and, when the original added population, one compensating Phase 8 `reversal` record (−live). If that would make the dated ledger negative (animals died, were sold or moved since) it is `409 insufficient_population`. For a `new_batch` outcome the reversal takes the animals off the new batch (a `population_adjustment` record, since they were its starting head count) and **closes that batch when nothing else was ever recorded for it**; a batch with any other activity stays open at 0 head (close it yourself). `409 cycle_closed` if the new batch was closed meanwhile. The mother batch is never touched. A replacement outcome may choose any destination (a second new batch gets a unique name). A reversal cannot be reversed again (`409 outcome_already_reversed`). To correct, reverse and then `POST` a new outcome with `corrects_outcome_id` (reversed, replaced once, else `409 invalid_correction`). History is never edited or deleted. The generated Phase 8 record cannot be reversed through `/records/{id}/reverse` (`409 reverse_via_breeding_outcome`).
 
 ### Checks and milestones
 
@@ -95,4 +104,4 @@ POST /breeding-projects/{id}/outcomes
 
 ## Errors
 
-`401`, `403` (permission), `404` (foreign/unknown ids), `409` (`cycle_closed`, `project_not_active`, `idempotency_conflict`, `invalid_correction`, `outcome_already_reversed`, `insufficient_population`), `422` (validation, unsupported workflow, field/workflow mismatch, invalid dates/counts), `429` (`breeding-write` 120/hour/user).
+`401`, `403` (permission), `404` (foreign/unknown ids), `409` (`cycle_closed`, plan limit when a new batch would exceed the active-batch limit, `project_not_active`, `idempotency_conflict`, `invalid_correction`, `outcome_already_reversed`, `insufficient_population`), `422` (validation, unsupported workflow, field/workflow mismatch, invalid dates/counts), `429` (`breeding-write` 120/hour/user).

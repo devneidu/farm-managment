@@ -11,6 +11,7 @@ use App\Models\MasterCapability;
 use App\Models\OperationalRecord;
 use App\Models\OperationType;
 use App\Models\PopulationMovement;
+use App\Models\ProductionCycle;
 use App\Models\Species;
 use App\Models\SpeciesCapability;
 use Illuminate\Support\Facades\Event;
@@ -55,7 +56,7 @@ class BreedingTest extends TeamTestCase
 
     private function outcome(string $project, array $extra = [])
     {
-        return $this->postJson('/api/v1/breeding-projects/'.$project.'/outcomes', array_replace(['live_count' => 37, 'loss_count' => 13,
+        return $this->postJson('/api/v1/breeding-projects/'.$project.'/outcomes', array_replace(['live_count' => 37, 'loss_count' => 13, 'destination' => 'mother_batch',
             'recorded_at' => $this->at(1), 'idempotency_key' => (string) Str::uuid()], $extra));
     }
 
@@ -223,7 +224,7 @@ class BreedingTest extends TeamTestCase
         Event::fake([BreedingOutcomeRecorded::class]);
         $cycle = $this->cycle();
         $project = $this->start($cycle, ['eggs_set' => 50, 'expected_offspring' => 40])->assertCreated()->json('data');
-        $payload = ['live_count' => 37, 'loss_count' => 13, 'recorded_at' => $this->at(2), 'idempotency_key' => 'hatch-1'];
+        $payload = ['live_count' => 37, 'loss_count' => 13, 'destination' => 'mother_batch', 'recorded_at' => $this->at(2), 'idempotency_key' => 'hatch-1'];
         $first = $this->postJson('/api/v1/breeding-projects/'.$project['id'].'/outcomes', $payload)->assertCreated()->json('data');
         $this->assertSame(137, $this->population($cycle));
 
@@ -444,12 +445,12 @@ class BreedingTest extends TeamTestCase
     public function test_parents_must_be_same_farm_same_species_livestock_cycles(): void
     {
         $cycle = $this->cycle();
-        $dam = $this->cycle();
+        $sire = $this->cycle();
         $cattle = $this->cycle('cattle');
-        $ok = $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $dam, 'head_count' => 20], ['role' => 'sire', 'production_cycle_id' => $dam, 'head_count' => 3]]])->assertCreated();
+        $ok = $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $cycle, 'head_count' => 20], ['role' => 'sire', 'production_cycle_id' => $sire, 'head_count' => 3]]])->assertCreated();
         $this->assertCount(2, $ok->json('data.parents'));
         $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $cattle]]])->assertStatus(422);
-        $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $dam], ['role' => 'dam', 'production_cycle_id' => $dam]]])->assertStatus(422);
+        $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $cycle], ['role' => 'dam', 'production_cycle_id' => $cycle]]])->assertStatus(422);
         [$otherOwner] = $this->otherFarm();
         $this->signInAs($otherOwner);
         $foreign = $this->cycle();
@@ -561,5 +562,179 @@ class BreedingTest extends TeamTestCase
         $this->getJson('/api/v1/breeding-projects?status=completed')->assertOk()->assertJsonCount(0, 'data');
         $this->getJson('/api/v1/breeding-projects?workflow=bogus')->assertStatus(422);
         $this->getJson('/api/v1/breeding-projects?per_page=1')->assertOk()->assertJsonPath('meta.total', 2)->assertJsonCount(1, 'data');
+    }
+
+    // ------------------------------------------------------------------ offspring destination, parents, limits, workflow on batches, title
+
+    private function outcomeRaw(string $project, array $extra = [])
+    {
+        return $this->postJson('/api/v1/breeding-projects/'.$project.'/outcomes', array_replace(['live_count' => 37, 'loss_count' => 13, 'recorded_at' => $this->at(1), 'idempotency_key' => (string) Str::uuid()], $extra));
+    }
+
+    private function batch(string $id): array
+    {
+        return $this->getJson('/api/v1/production-cycles/'.$id)->assertOk()->json('data');
+    }
+
+    public function test_incubation_outcome_defaults_to_a_new_batch_and_undo_closes_it(): void
+    {
+        $cycle = $this->cycle();
+        $project = $this->start($cycle)->assertCreated()->json('data');
+        $this->assertSame('new_batch', $project['default_destination']);
+        $outcome = $this->outcomeRaw($project['id'])->assertCreated()->json('data');
+
+        $day = now('Africa/Lagos')->subHour()->toDateString();
+        $this->assertSame('new_batch', $outcome['destination']);
+        $this->assertNotSame($cycle, $outcome['production_cycle_id']);
+        $this->assertSame($outcome['production_cycle_id'], $outcome['destination_batch']['id']);
+        $this->assertSame(['Chicken hatch – '.$day, 37, 'active'], [$outcome['destination_batch']['name'], $outcome['destination_batch']['current_population'], $outcome['destination_batch']['status']]);
+        $this->assertNull($outcome['operational_record_id']); // the hatchlings are the new batch's starting head count: no second +37 anywhere
+        $this->assertSame(100, $this->population($cycle));
+
+        $batch = $this->batch($outcome['production_cycle_id']);
+        $this->assertSame([$day, 37, 'chicken', 'incubation'], [$batch['start_date'], $batch['livestock']['initial_population'], $batch['livestock']['species']['code'], $batch['livestock']['breeding_workflow']]);
+        $this->assertSame(37, $this->getJson('/api/v1/breeding-projects/'.$project['id'])->json('data.result.live_count'));
+
+        // Undo: the new batch is emptied and closed, the mother batch never moves.
+        $reversal = $this->reverse($project['id'], $outcome['id'])->assertCreated()->json('data');
+        $this->assertSame(['new_batch', $outcome['production_cycle_id']], [$reversal['destination'], $reversal['production_cycle_id']]);
+        $this->assertSame(0, $reversal['destination_batch']['current_population']);
+        $this->assertSame('closed', $reversal['destination_batch']['status']);
+        $this->assertSame(100, $this->population($cycle));
+        $this->assertSame('active', $this->getJson('/api/v1/breeding-projects/'.$project['id'])->json('data.status'));
+
+        // A replacement starts another batch; the name stays unique.
+        $again = $this->outcomeRaw($project['id'], ['live_count' => 35, 'corrects_outcome_id' => $outcome['id']])->assertCreated()->json('data');
+        $this->assertSame('Chicken hatch – '.$day.' (2)', $again['destination_batch']['name']);
+        $this->assertSame(35, $again['destination_batch']['current_population']);
+
+        // Retry creates nothing more.
+        $other = $this->start($this->cycle())->json('data');
+        $payload = ['live_count' => 37, 'loss_count' => 13, 'recorded_at' => $this->at(1), 'idempotency_key' => 'hatch-nb'];
+        $first = $this->postJson('/api/v1/breeding-projects/'.$other['id'].'/outcomes', $payload)->assertCreated()->json('data');
+        $before = ProductionCycle::count();
+        $this->postJson('/api/v1/breeding-projects/'.$other['id'].'/outcomes', $payload)->assertCreated()->assertJsonPath('data.id', $first['id']);
+        $this->assertSame($before, ProductionCycle::count());
+    }
+
+    public function test_mother_batch_destination_is_unchanged_and_pregnancy_defaults_to_it(): void
+    {
+        $cycle = $this->cycle('cattle', 10);
+        $project = $this->start($cycle, ['workflow' => 'pregnancy', 'eggs_set' => null, 'females_bred' => 2, 'start_date' => '2026-01-10'])->assertCreated()->json('data');
+        $this->assertSame('mother_batch', $project['default_destination']);
+        $outcome = $this->outcomeRaw($project['id'], ['live_count' => 2, 'loss_count' => 0])->assertCreated()->json('data');
+        $this->assertSame(['mother_batch', $cycle, 12], [$outcome['destination'], $outcome['production_cycle_id'], $outcome['destination_batch']['current_population']]);
+        $this->assertNotNull($outcome['operational_record_id']);
+        $this->assertSame(12, $this->population($cycle));
+        $reversal = $this->reverse($project['id'], $outcome['id'])->assertCreated()->json('data');
+        $this->assertSame(['mother_batch', 10], [$reversal['destination'], $reversal['destination_batch']['current_population']]);
+        $this->assertSame('active', $reversal['destination_batch']['status']);
+
+        // Explicit new_batch works for pregnancy too, and undoing it leaves the mother batch alone.
+        $born = $this->outcomeRaw($project['id'], ['live_count' => 3, 'loss_count' => 0, 'destination' => 'new_batch', 'corrects_outcome_id' => $outcome['id']])->assertCreated()->json('data');
+        $this->assertSame('Cattle offspring – '.now('Africa/Lagos')->subHour()->toDateString(), $born['destination_batch']['name']);
+        $this->assertSame(10, $this->population($cycle));
+        $this->reverse($project['id'], $born['id'])->assertCreated()->assertJsonPath('data.destination_batch.status', 'closed');
+        $this->assertSame(10, $this->population($cycle));
+
+        // The explicit choice and the live count are checked.
+        $this->outcomeRaw($project['id'], ['live_count' => 0, 'loss_count' => 0, 'destination' => 'new_batch'])->assertStatus(422)->assertJsonValidationErrors('destination');
+        $this->outcomeRaw($project['id'], ['destination' => 'elsewhere'])->assertStatus(422)->assertJsonValidationErrors('destination');
+    }
+
+    public function test_a_failed_hatch_by_default_creates_no_batch(): void
+    {
+        $project = $this->start($this->cycle())->json('data');
+        $batches = ProductionCycle::count();
+        $outcome = $this->outcomeRaw($project['id'], ['live_count' => 0, 'loss_count' => 50])->assertCreated()->json('data');
+        $this->assertSame('mother_batch', $outcome['destination']);
+        $this->assertSame($batches, ProductionCycle::count());
+        $this->assertNull($outcome['operational_record_id']);
+    }
+
+    public function test_undoing_a_new_batch_is_refused_when_animals_have_left_and_a_batch_with_other_activity_stays_open(): void
+    {
+        $cycle = $this->cycle();
+        $project = $this->start($cycle)->json('data');
+        $outcome = $this->outcomeRaw($project['id'], ['recorded_at' => $this->at(10)])->assertCreated()->json('data');
+        $batch = $outcome['production_cycle_id'];
+        $this->postJson('/api/v1/records', ['production_cycle_id' => $batch, 'type' => 'mortality', 'recorded_at' => $this->at(5), 'idempotency_key' => (string) Str::uuid(), 'details' => ['quantity' => 2, 'cause' => 'Chill']])->assertCreated();
+        $this->reverse($project['id'], $outcome['id'])->assertStatus(409)->assertJsonPath('code', 'insufficient_population');
+        $this->assertSame(35, $this->population($batch));
+        $this->assertSame(1, BreedingOutcome::count());
+
+        // Any other activity keeps the emptied batch open instead of closing it behind the farmer's back.
+        $other = $this->start($cycle)->json('data');
+        $second = $this->outcomeRaw($other['id'], ['recorded_at' => $this->at(10)])->assertCreated()->json('data');
+        $this->postJson('/api/v1/records', ['production_cycle_id' => $second['production_cycle_id'], 'type' => 'general_note', 'recorded_at' => $this->at(5), 'idempotency_key' => (string) Str::uuid(), 'details' => ['text' => 'Moved to brooder']])->assertCreated();
+        $this->reverse($other['id'], $second['id'])->assertCreated()->assertJsonPath('data.destination_batch.current_population', 0)->assertJsonPath('data.destination_batch.status', 'active');
+    }
+
+    public function test_a_worker_can_record_a_hatch_into_a_new_batch_without_batch_creation_rights(): void
+    {
+        $project = $this->start($this->cycle())->json('data');
+        $this->signInAs($this->member(FarmRole::FarmWorker));
+        $this->postJson('/api/v1/production-cycles', [])->assertForbidden();
+        $this->outcomeRaw($project['id'])->assertCreated()->assertJsonPath('data.destination', 'new_batch');
+    }
+
+    public function test_the_sire_is_optional_and_the_mother_batch_is_the_single_source(): void
+    {
+        $cycle = $this->cycle();
+        $none = $this->start($cycle)->assertCreated()->json('data');
+        $this->assertSame([['dam', $cycle]], array_map(fn ($p) => [$p['role'], $p['production_cycle_id']], $none['parents']));
+
+        $sire = $this->cycle();
+        $withSire = $this->start($cycle, ['parents' => [['role' => 'sire', 'production_cycle_id' => $sire, 'head_count' => 5]]])->assertCreated()->json('data');
+        $this->assertSame([['dam', $cycle, null], ['sire', $sire, 5]], array_map(fn ($p) => [$p['role'], $p['production_cycle_id'], $p['head_count']], $withSire['parents']));
+        $this->assertSame($cycle, $withSire['production_cycle_id']);
+
+        // The old shape (dam sent explicitly) keeps working when it is the same batch; a different dam batch is refused.
+        $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $cycle, 'head_count' => 30]]])->assertCreated()->assertJsonCount(1, 'data.parents');
+        $this->start($cycle, ['parents' => [['role' => 'dam', 'production_cycle_id' => $sire]]])->assertStatus(422)->assertJsonValidationErrors('parents.0.production_cycle_id');
+    }
+
+    public function test_females_bred_and_parent_head_counts_cannot_exceed_the_batch(): void
+    {
+        $cattle = $this->cycle('cattle', 10);
+        $pregnancy = ['workflow' => 'pregnancy', 'eggs_set' => null, 'start_date' => '2026-01-10'];
+        $this->start($cattle, $pregnancy + ['females_bred' => 11])->assertStatus(422)->assertJsonValidationErrors('females_bred');
+        $this->start($cattle, $pregnancy + ['females_bred' => 3, 'parents' => [['role' => 'dam', 'production_cycle_id' => $cattle, 'head_count' => 11]]])->assertStatus(422)->assertJsonValidationErrors('parents.0.head_count');
+        $bull = $this->cycle('cattle', 2);
+        $this->start($cattle, $pregnancy + ['females_bred' => 3, 'parents' => [['role' => 'sire', 'production_cycle_id' => $bull, 'head_count' => 3]]])->assertStatus(422)->assertJsonValidationErrors('parents.0.head_count');
+        $project = $this->start($cattle, $pregnancy + ['females_bred' => 10, 'parents' => [['role' => 'sire', 'production_cycle_id' => $bull, 'head_count' => 2]]])->assertCreated()->json('data');
+        $this->patchJson('/api/v1/breeding-projects/'.$project['id'], ['females_bred' => 11])->assertStatus(422)->assertJsonValidationErrors('females_bred');
+        $this->patchJson('/api/v1/breeding-projects/'.$project['id'], ['females_bred' => 4])->assertOk()->assertJsonPath('data.females_bred', 4);
+        // It is the head count NOW: animals that left no longer count.
+        $this->postJson('/api/v1/records', ['production_cycle_id' => $cattle, 'type' => 'mortality', 'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid(), 'details' => ['quantity' => 8, 'cause' => 'Disease']])->assertCreated();
+        $this->start($cattle, $pregnancy + ['females_bred' => 3])->assertStatus(422)->assertJsonValidationErrors('females_bred');
+    }
+
+    public function test_batches_report_their_breeding_workflow_and_fish_have_none(): void
+    {
+        $chicken = $this->cycle('chicken');
+        $cattle = $this->cycle('cattle');
+        $fish = $this->postJson('/api/v1/production-cycles', ['kind' => 'livestock', 'name' => 'Pond 1', 'operation_type_id' => OperationType::where('code', 'fishery')->firstOrFail()->id,
+            'species_id' => Species::where('code', 'fish')->firstOrFail()->id, 'production_purpose' => 'table_fish', 'initial_population' => 500, 'start_date' => '2026-01-01'])->assertCreated();
+        $this->assertSame('incubation', $this->batch($chicken)['livestock']['breeding_workflow']);
+        $this->assertSame('pregnancy', $this->batch($cattle)['livestock']['breeding_workflow']);
+        $this->assertNull($fish->json('data.livestock.breeding_workflow'));
+        $list = collect($this->getJson('/api/v1/production-cycles')->assertOk()->json('data'))->mapWithKeys(fn ($c) => [$c['id'] => $c['livestock']['breeding_workflow']]);
+        $this->assertSame(['incubation', 'pregnancy', null], [$list[$chicken], $list[$cattle], $list[$fish->json('data.id')]]);
+        $this->start($fish->json('data.id'))->assertStatus(422)->assertJsonValidationErrors('workflow');
+        $this->start($chicken, ['workflow' => 'pregnancy', 'eggs_set' => null, 'females_bred' => 1])->assertStatus(422)->assertJsonValidationErrors('workflow');
+    }
+
+    public function test_the_title_defaults_per_workflow_and_can_be_set_or_changed(): void
+    {
+        $chicken = $this->start($this->cycle())->assertCreated()->json('data');
+        $this->assertSame('Chicken hatch – 2026-08-01', $chicken['title']);
+        $cattle = $this->start($this->cycle('cattle', 10), ['workflow' => 'pregnancy', 'eggs_set' => null, 'females_bred' => 2, 'start_date' => '2026-08-02', 'title' => '   '])->assertCreated()->json('data');
+        $this->assertSame('Cattle breeding – 2026-08-02', $cattle['title']);
+        $named = $this->start($this->cycle(), ['title' => 'Spring batch'])->assertCreated()->json('data');
+        $this->assertSame('Spring batch', $named['title']);
+        $this->patchJson('/api/v1/breeding-projects/'.$named['id'], ['title' => ''])->assertOk()->assertJsonPath('data.title', 'Chicken hatch – 2026-08-01');
+        $this->patchJson('/api/v1/breeding-projects/'.$named['id'], ['title' => 'Second round'])->assertOk()->assertJsonPath('data.title', 'Second round');
+        $this->assertSame('Second round', $this->getJson('/api/v1/breeding-projects/'.$named['id'])->json('data.title'));
     }
 }

@@ -94,6 +94,13 @@ class CycleService
     public function create(FarmContext $ctx, User $actor, array $data): ProductionCycle
     {
         $ctx->authorize(Permission::ProductionCycleCreate);
+
+        return $this->createUnchecked($ctx, $actor, $data);
+    }
+
+    /** The same creation without the production_cycle.create check, for a workflow that is itself permitted to start a batch (a hatch or birth recorded through breeding). */
+    public function createUnchecked(FarmContext $ctx, User $actor, array $data): ProductionCycle
+    {
         $data = Validator::make($data, (new StoreCycleRequest)->rules())->validate();
         try {
             $id = DB::transaction(function () use ($ctx, $actor, $data) {
@@ -285,6 +292,18 @@ class CycleService
         }, 3);
 
         return $this->find($ctx->farm, $id);
+    }
+
+    /** Closes a batch the system itself started and has just emptied (an undone hatch). The caller holds the farm and cycle locks. */
+    public function closeEmptied(ProductionCycle $cycle, User $actor, string $endDate, string $reason): void
+    {
+        $cycle->load(self::relations());
+        $before = $this->snapshot($cycle);
+        $this->reconcile($cycle);
+        $cycle->status = CycleStatus::Closed;
+        $cycle->end_date = $endDate;
+        $cycle->save();
+        $this->record($cycle, $actor, 'closed', $before, $this->snapshot($cycle), $reason);
     }
 
     /** Shared ledger reconciliation under the farm/cycle locks, including operational effects. */

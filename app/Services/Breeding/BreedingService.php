@@ -23,9 +23,11 @@ use App\Models\Farm;
 use App\Models\InventoryItem;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
+use App\Models\User;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\OutputStockService;
 use App\Services\Inventory\StockReasonCatalogue;
+use App\Services\Production\CycleService;
 use App\Services\Records\RecordService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -45,9 +47,13 @@ use Illuminate\Validation\ValidationException;
  */
 class BreedingService
 {
+    public const MOTHER_BATCH = 'mother_batch';
+
+    public const NEW_BATCH = 'new_batch';
+
     private const RELATIONS = ['parents', 'checks', 'outcomes.reversal', 'stockMovements'];
 
-    public function __construct(private BreedingReference $reference, private RecordService $records, private InventoryService $inventory, private OutputStockService $outputs) {}
+    public function __construct(private BreedingReference $reference, private RecordService $records, private InventoryService $inventory, private OutputStockService $outputs, private CycleService $cycles) {}
 
     public function find(FarmContext $ctx, string $id): BreedingProject
     {
@@ -111,10 +117,12 @@ class BreedingService
             $this->assertStart($ctx, $cycle, $data['start_date']);
             $snapshot = $this->reference->snapshot($cycle, $workflow, $row, CarbonImmutable::now());
             $expectation = $this->expectation($snapshot, $data['start_date'], $data);
+            $this->assertHeadCount($cycle, $data['females_bred'] ?? null, 'females_bred', 'females bred');
             $parents = $this->parents($ctx, $cycle, $data['parents'] ?? []);
+            $title = trim((string) ($data['title'] ?? '')) ?: $this->title($cycle, $workflow, $data['start_date']);
             $number = BreedingProject::where('farm_id', $ctx->farm->id)->count() + 1;
             $project = BreedingProject::create([
-                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'reference' => 'BRD-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'reference' => 'BRD-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT), 'title' => $title,
                 'workflow' => $workflow, 'status' => BreedingStatus::Active, 'start_date' => $data['start_date'],
                 'eggs_set' => $data['eggs_set'] ?? null, 'females_bred' => $data['females_bred'] ?? null, 'expected_offspring' => $data['expected_offspring'] ?? null,
                 'reference_snapshot' => $snapshot, 'expectation_source' => $expectation['source'],
@@ -146,6 +154,7 @@ class BreedingService
             $workflow = $project->workflow;
             $this->assertWorkflowFields($workflow, $data);
             $start = $data['start_date'] ?? $project->start_date->toDateString();
+            $changed = [];
             if (isset($data['start_date'])) {
                 $this->assertStart($ctx, $cycle, $start);
                 if ($project->checks()->where('checked_on', '<', $start)->exists()) {
@@ -156,14 +165,19 @@ class BreedingService
             if ($eggs !== null && $project->checks()->where('fertile_count', '>', $eggs)->exists()) {
                 $this->invalid('eggs_set', 'Fewer eggs than a recorded fertile count.');
             }
+            if (array_key_exists('females_bred', $data)) {
+                $this->assertHeadCount($cycle, $data['females_bred'], 'females_bred', 'females bred');
+            }
+            if (array_key_exists('title', $data)) {
+                $changed['title'] = trim((string) $data['title']) ?: $this->title($cycle, $workflow, $start);
+            }
             $manual = isset($data['expected_date']) || isset($data['expected_from']);
-            $changed = [];
             if ($manual || ! empty($data['revert_to_reference'])) {
                 $e = $this->expectation($project->reference_snapshot, $start, $data);
-                $changed = ['expectation_source' => $e['source'], 'expected_date' => $e['date'], 'expected_from' => $e['from'], 'expected_to' => $e['to']];
+                $changed += ['expectation_source' => $e['source'], 'expected_date' => $e['date'], 'expected_from' => $e['from'], 'expected_to' => $e['to']];
             } elseif (isset($data['start_date']) && $project->expectation_source !== 'manual') {
                 $e = $this->reference->expectation($project->reference_snapshot, $start);
-                $changed = ['expectation_source' => $e['source'], 'expected_date' => $e['date'], 'expected_from' => $e['from'], 'expected_to' => $e['to']];
+                $changed += ['expectation_source' => $e['source'], 'expected_date' => $e['date'], 'expected_from' => $e['from'], 'expected_to' => $e['to']];
             } elseif (isset($data['start_date'])) {
                 $this->assertManualAfterStart($start, $project->expected_date?->toDateString() ?? $project->expected_from?->toDateString());
             }
@@ -246,19 +260,27 @@ class BreedingService
             }
             $live = (int) $data['live_count'];
             $loss = (int) ($data['loss_count'] ?? 0);
+            $destination = $data['destination'] ?? ($project->workflow === BreedingWorkflow::Incubation ? self::NEW_BATCH : self::MOTHER_BATCH);
+            if ($destination === self::NEW_BATCH && $live === 0) {
+                if (isset($data['destination'])) {
+                    $this->invalid('destination', 'A new batch needs at least one live offspring.');
+                }
+                $destination = self::MOTHER_BATCH; // nothing was born or hatched: no batch, no population change
+            }
             if ($project->workflow === BreedingWorkflow::Incubation && $live + $loss > $project->eggs_set) {
                 $this->invalid('live_count', 'Hatched plus lost cannot exceed the eggs set.');
             }
             $when = $this->when($ctx, $project, $data['recorded_at']);
             $this->assertCorrection($ctx, $project, $data['corrects_outcome_id'] ?? null);
+            $target = $destination === self::NEW_BATCH ? $this->startBatch($ctx, $cycle, $project, $live, $when) : $cycle;
             $outcome = BreedingOutcome::create([
-                'farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id, 'production_cycle_id' => $cycle->id, 'kind' => BreedingOutcome::OUTCOME,
+                'farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id, 'production_cycle_id' => $target->id, 'destination' => $destination, 'kind' => BreedingOutcome::OUTCOME,
                 'live_count' => $live, 'loss_count' => $data['loss_count'] ?? null, 'outcome_date' => $when->setTimezone($ctx->farm->timezone)->toDateString(),
                 'corrects_outcome_id' => $data['corrects_outcome_id'] ?? null, 'recorded_at' => $when,
                 'notes' => $data['notes'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
                 'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
             ]);
-            if ($live > 0) {
+            if ($live > 0 && $destination === self::MOTHER_BATCH) {
                 $record = $this->records->appendForBreeding($ctx, $cycle, ['breeding_project_id' => $project->id, 'breeding_outcome_id' => $outcome->id, 'reference' => $project->reference, 'workflow' => $project->workflow->value],
                     $live, $when, 'breeding:'.$outcome->id, $hash);
                 DB::table('breeding_outcomes')->where('id', $outcome->id)->update(['operational_record_id' => $record->id]);
@@ -292,14 +314,23 @@ class BreedingService
             if ($when->isFuture() || $when->lessThan($original->recorded_at)) {
                 $this->invalid('recorded_at', 'A reversal must be between the original event and now.');
             }
+            // The animals sit in the batch the outcome named: the project's own, or the batch started for them.
+            $target = $original->production_cycle_id === $cycle->id ? $cycle : ProductionCycle::ofFarm($ctx->farm)->with('livestock.species')->lockForUpdate()->findOrFail($original->production_cycle_id);
+            $this->activeCycle($target);
             $reversal = BreedingOutcome::create([
-                'farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id, 'production_cycle_id' => $cycle->id, 'kind' => BreedingOutcome::REVERSAL,
+                'farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id, 'production_cycle_id' => $target->id, 'destination' => $original->destination, 'kind' => BreedingOutcome::REVERSAL,
                 'reverses_outcome_id' => $original->id, 'reason' => $data['reason'], 'recorded_at' => $when, 'idempotency_key' => $data['idempotency_key'],
                 'request_hash' => $hash, 'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
             ]);
-            if ($original->operational_record_id !== null) {
+            if ($original->destination === self::NEW_BATCH) {
+                $record = $this->records->appendForBatchUndo($ctx, $target, ['reason' => $data['reason'], 'breeding_outcome_id' => $reversal->id, 'reverses_breeding_outcome_id' => $original->id], (int) $original->live_count, $when, 'breeding:'.$reversal->id, $hash);
+                DB::table('breeding_outcomes')->where('id', $reversal->id)->update(['operational_record_id' => $record->id]);
+                if (! $this->batchHasOtherActivity($target, $record->id)) {
+                    $this->cycles->closeEmptied($target, User::findOrFail($ctx->membership->user_id), $when->setTimezone($ctx->farm->timezone)->toDateString(), 'The '.$project->reference.' outcome was undone and nothing else was recorded for this batch.');
+                }
+            } elseif ($original->operational_record_id !== null) {
                 $originalRecord = OperationalRecord::where('farm_id', $ctx->farm->id)->findOrFail($original->operational_record_id);
-                $record = $this->records->appendForBreeding($ctx, $cycle, ['reason' => $data['reason'], 'breeding_outcome_id' => $reversal->id], -$originalRecord->population_delta, $when, 'breeding:'.$reversal->id, $hash, $originalRecord);
+                $record = $this->records->appendForBreeding($ctx, $target, ['reason' => $data['reason'], 'breeding_outcome_id' => $reversal->id], -$originalRecord->population_delta, $when, 'breeding:'.$reversal->id, $hash, $originalRecord);
                 DB::table('breeding_outcomes')->where('id', $reversal->id)->update(['operational_record_id' => $record->id]);
             }
             if ($project->status === BreedingStatus::Completed) {
@@ -463,7 +494,10 @@ class BreedingService
         }
     }
 
-    /** Parent sources are livestock cycles of the SAME farm and species (group-managed; no individual identity). */
+    /**
+     * Parent sources are livestock cycles of the SAME farm and species (group-managed; no individual identity). The mother batch is the project's own cycle:
+     * a dam entry must be that cycle (and is added when left out); the sire is optional and may be any such batch, the mother batch included.
+     */
     private function parents(FarmContext $ctx, ProductionCycle $cycle, array $parents): array
     {
         $rows = [];
@@ -472,13 +506,81 @@ class BreedingService
             if (! $source || $source->kind !== CycleKind::Livestock || $source->livestock?->species_id !== $cycle->livestock->species_id) {
                 $this->invalid('parents.'.$index.'.production_cycle_id', 'A parent must be a livestock cycle of this farm with the same species.');
             }
+            if ($parent['role'] === 'dam' && $source->id !== $cycle->id) {
+                $this->invalid('parents.'.$index.'.production_cycle_id', 'The dam is the mother batch (production_cycle_id); send the same batch or leave the dam out.');
+            }
+            $this->assertHeadCount($source, $parent['head_count'] ?? null, 'parents.'.$index.'.head_count', 'parent head count');
             $rows[$parent['role'].'|'.$source->id] = ['role' => $parent['role'], 'parent_cycle_id' => $source->id, 'head_count' => $parent['head_count'] ?? null];
         }
         if (count($rows) !== count($parents)) {
             $this->invalid('parents', 'Each parent role and cycle may appear once.');
         }
+        $rows['dam|'.$cycle->id] ??= ['role' => 'dam', 'parent_cycle_id' => $cycle->id, 'head_count' => null];
 
         return array_values($rows);
+    }
+
+    /**
+     * The new batch an outcome's offspring join: same species, breed, purpose and operation as the mother batch, started on the outcome day with the
+     * live offspring as its starting head count (so no separate "birth" record is added - that would count them twice). Created through the
+     * ordinary batch creation, so plan limits and name rules apply; breeding.create is enough, production_cycle.create is not also required.
+     */
+    private function startBatch(FarmContext $ctx, ProductionCycle $mother, BreedingProject $project, int $live, CarbonImmutable $when): ProductionCycle
+    {
+        $mother->loadMissing('livestock.productionPurpose', 'livestock.breed');
+        $date = $when->setTimezone($ctx->farm->timezone)->toDateString();
+        $word = $project->workflow === BreedingWorkflow::Incubation ? 'hatch' : 'offspring';
+
+        return $this->cycles->createUnchecked($ctx, User::findOrFail($ctx->membership->user_id), array_filter([
+            'kind' => CycleKind::Livestock->value, 'name' => $this->freeBatchName($ctx, $mother->livestock->species->name.' '.$word.' – '.$date),
+            'operation_type_id' => $mother->operation_type_id, 'species_id' => $mother->livestock->species_id, 'breed_id' => $mother->livestock->breed_id,
+            'production_purpose' => $mother->livestock->productionPurpose->code, 'start_date' => $date, 'initial_population' => $live,
+            'notes' => 'From breeding project '.$project->reference.'.',
+        ], fn ($v) => $v !== null));
+    }
+
+    /** Anything recorded against the batch besides the undo itself (records, health, tasks, money, stock, other projects). */
+    private function batchHasOtherActivity(ProductionCycle $batch, string $undoRecordId): bool
+    {
+        if (OperationalRecord::where('production_cycle_id', $batch->id)->where('id', '<>', $undoRecordId)->exists()) {
+            return true;
+        }
+        foreach (['health_records', 'tasks', 'schedules', 'template_applications', 'purchases', 'finance_transactions', 'sale_items', 'inventory_movements', 'breeding_projects'] as $table) {
+            if (DB::table($table)->where('production_cycle_id', $batch->id)->exists()) {
+                return true;
+            }
+        }
+
+        return DB::table('breeding_parents')->where('parent_cycle_id', $batch->id)->exists();
+    }
+    /** What the batch holds right now, from its population movements. */
+    private function headCount(ProductionCycle $cycle): int
+    {
+        return (int) $cycle->movements()->sum('quantity');
+    }
+
+    private function assertHeadCount(ProductionCycle $cycle, ?int $count, string $field, string $what): void
+    {
+        if ($count !== null && $count > ($held = $this->headCount($cycle))) {
+            $this->invalid($field, 'The '.$what.' ('.$count.') is more than the '.$held.' head the batch holds now.');
+        }
+    }
+
+    private function title(ProductionCycle $cycle, BreedingWorkflow $workflow, string $date): string
+    {
+        return $cycle->livestock->species->name.($workflow === BreedingWorkflow::Incubation ? ' hatch' : ' breeding').' – '.$date;
+    }
+
+    /** A free batch name: the wanted one, or "name (2)", "name (3)" ... (batch names are unique per farm, closed batches included). */
+    private function freeBatchName(FarmContext $ctx, string $name): string
+    {
+        $taken = fn (string $n) => ProductionCycle::ofFarm($ctx->farm)->where('kind', CycleKind::Livestock->value)->where('normalized_name', mb_strtolower($n))->exists();
+        $candidate = $name;
+        for ($i = 2; $taken($candidate); $i++) {
+            $candidate = $name.' ('.$i.')';
+        }
+
+        return $candidate;
     }
 
     private function assertCorrection(FarmContext $ctx, BreedingProject $project, ?string $correctsId): void

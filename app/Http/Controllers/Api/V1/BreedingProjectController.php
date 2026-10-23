@@ -56,6 +56,10 @@ class BreedingProjectController extends Controller
      * one stock-out (reason incubation) linked to the project and its cycle, from `egg_storage_location_id` (optional when the farm has one active store).
      * Too few eggs is 409 insufficient_stock and nothing - project included - is written. Omit the flag to leave stock untouched. `egg_stock` on the project
      * is derived from its stock movements.
+     *
+     * The mother batch is `production_cycle_id`; it is also the dam. `parents` is optional: a dam entry must be that same batch (422 otherwise) and is added when left out; the sire is optional and may be
+     * any batch of this farm and species. `females_bred` and any parent `head_count` may not exceed that batch's current head count (422). `title` is optional; blank becomes
+     * "{Species} hatch – {start_date}" (incubation) or "{Species} breeding – {start_date}" (pregnancy). Which workflow to send comes from `livestock.breeding_workflow` on the batch.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\BreedingProjectResource, meta: object, message:string}')]
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"idempotency_conflict"|"insufficient_stock", request_id:string}')]
@@ -125,6 +129,11 @@ class BreedingProjectController extends Controller
      * Example: 50 eggs set, expected 40, 37 hatched -> population +37. live_count 0 adds nothing; there is no client flag. The required idempotency_key
      * is farm-wide: an identical retry returns the original outcome (201) with no second movement, a changed payload is 409.
      * One effective outcome per project (409 project_not_active); to correct, reverse then record a replacement.
+     *
+     * `destination` says where the live offspring go. `mother_batch`: they join the project's batch as above. `new_batch`: a new batch of the same species is started on the outcome date
+     * (named "{Species} hatch – {date}", or "{Species} offspring – {date}" for pregnancy) with them as its starting head count - nothing is added to the mother batch. Omitted: new_batch for
+     * incubation, mother_batch for pregnancy (see `default_destination` on the project). new_batch needs live_count >= 1 and counts toward the plan's active-batch limit (409 when full);
+     * breeding.create is enough, production_cycle.create is not also required. The response names the batch in `destination_batch`.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\BreedingOutcomeResource, meta: object, message:string}')]
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"project_not_active"|"idempotency_conflict"|"invalid_correction"|"insufficient_population", request_id:string}')]
@@ -139,6 +148,8 @@ class BreedingProjectController extends Controller
      * Requires breeding.reverse. Appends a reversal outcome and, when the original added population, one compensating Phase 8
      * record (409 insufficient_population when that would make the dated ledger negative). The project becomes active again
      * so a replacement outcome (corrects_outcome_id) can be recorded. Cannot reverse a reversal or reverse twice.
+     * An outcome that started its own batch takes those animals off that batch (409 insufficient_population when some were since sold, died or moved) and closes the batch
+     * when nothing else was ever recorded for it; a batch with other activity stays open at 0 head. 409 cycle_closed if that batch was closed meanwhile (reopen it first).
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\BreedingOutcomeResource, meta: object, message:string}')]
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"outcome_already_reversed"|"idempotency_conflict"|"insufficient_population", request_id:string}')]
