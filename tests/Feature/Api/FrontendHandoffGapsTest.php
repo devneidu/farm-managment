@@ -448,7 +448,7 @@ class FrontendHandoffGapsTest extends TeamTestCase
         $this->assertSame('35', $this->balance('eggs')['available']['quantity']);
         $movement = InventoryMovement::where('sale_id', $sale['id'])->sole();
         $this->assertSame(['sale', $item->id], [$movement->reason, $movement->inventory_item_id]);
-        $this->assertSame('crop_sales', Sale::findOrFail($sale['id'])->category->code); // produce, like the id-based line
+        $this->assertSame('egg_sales', Sale::findOrFail($sale['id'])->category->code); // the farm's own eggs book egg_sales (quick-sell category rule)
 
         $this->sale([$this->line(['output' => 'eggs'], '100', 'piece', '1.00')])->assertStatus(409)->assertJsonPath('code', 'insufficient_stock'); // normal domain behaviour
         $this->assertSame('35', $this->balance('eggs')['available']['quantity']);

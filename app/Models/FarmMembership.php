@@ -9,6 +9,8 @@ use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Str;
 
 /**
  * A user's relationship to one farm: role + lifecycle (active|removed).
@@ -20,6 +22,19 @@ class FarmMembership extends Model
 
     public const ROLE_OWNER = 'owner';
 
+    private static int $lastIdMillis = 0;
+
+    /**
+     * A UUIDv7 that always sorts after the one this process issued before it, even within the same millisecond (or under a frozen clock).
+     * "Oldest membership first" - the order of /auth/me `farms` and of the default farm - is the id (not created_at, which has one-second
+     * resolution and follows the clock, which tests move): without this, two memberships created together would be ordered by random bits.
+     */
+    public function newUniqueId(): string
+    {
+        self::$lastIdMillis = max((int) (microtime(true) * 1000), self::$lastIdMillis + 1);
+
+        return (string) Str::uuid7(CarbonImmutable::createFromTimestampMsUTC(self::$lastIdMillis));
+    }
     // Never populated from request input; set explicitly by services.
     protected $fillable = ['farm_id', 'user_id', 'role'];
 

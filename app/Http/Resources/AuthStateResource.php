@@ -69,12 +69,12 @@ class AuthStateResource extends JsonResource
                 'role' => $farm->pivot->role,
             ] : null,
             /**
-             * Every farm the user ACTIVELY belongs to (oldest membership first, the same order the default farm is chosen by). Send a farm's `id` as the
+             * Every farm the user ACTIVELY belongs to (oldest membership first - membership ids are time-ordered UUIDv7, strictly increasing - the same order the default farm is chosen by). Send a farm's `id` as the
              * `X-Farm-Id` header to work in it; permissions are never listed here - they come from GET /farm → membership.permissions for the selected farm.
              *
              * @var list<array{id: string, name: string, role: string}>
              */
-            'farms' => $user->memberships()->active()->with('farm')->orderBy('created_at')->orderBy('id')->get()
+            'farms' => $user->memberships()->active()->with('farm')->orderBy('id')->get()
                 ->filter(fn ($m) => $m->farm !== null)
                 ->map(fn ($m) => ['id' => $m->farm->id, 'name' => $m->farm->name, 'role' => $m->role->value])->values()->all(),
             /**

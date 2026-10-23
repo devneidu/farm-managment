@@ -92,6 +92,6 @@ class User extends Authenticatable
     /** Default farm context: the oldest ACTIVE membership (an X-Farm-Id header can select another one). */
     public function currentFarm(): ?Farm
     {
-        return $this->farms()->orderBy('farm_memberships.created_at')->first();
+        return $this->farms()->orderBy('farm_memberships.id')->first();
     }
 }

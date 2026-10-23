@@ -29,7 +29,7 @@ class ResolveFarmContext
             }
         } else {
             /** @var FarmMembership|null $membership */
-            $membership = $memberships->orderBy('created_at')->orderBy('id')->first();
+            $membership = $memberships->orderBy('id')->first();
 
             if (! $membership) {
                 throw new ApiHttpException(403, 'no_active_farm', 'You do not belong to an active farm.');
