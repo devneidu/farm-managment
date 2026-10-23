@@ -16,7 +16,7 @@ class OperationalRecordResource extends JsonResource
             'measurement' => $this->measurement,
             'population_delta' => $this->population_delta, 'recorded_at' => $this->recorded_at->toISOString(),
             'notes' => $this->notes, 'reverses_record_id' => $this->reverses_record_id, 'corrects_record_id' => $this->corrects_record_id,
-            'reversed_by_record_id' => $this->reversal?->id, 'inventory_movement_id' => $this->inventoryMovement?->id, 'created_by' => $this->created_by,
+            'linked_record_id' => $this->linked_record_id, 'reversed_by_record_id' => $this->reversal?->id, 'inventory_movement_id' => $this->inventoryMovement?->id, 'created_by' => $this->created_by,
             'created_at' => $this->created_at->toISOString(), 'attachments' => RecordAttachmentResource::collection($this->attachments)];
     }
 }

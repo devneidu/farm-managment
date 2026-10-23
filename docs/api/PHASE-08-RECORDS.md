@@ -149,7 +149,7 @@ Validation example:
 {"message":"The given data was invalid.","code":"validation_failed","request_id":"<request-uuid>","errors":{"details.quantity":["A positive whole count is required."]}}
 ```
 
-Error envelope messages may vary; branch on code. Common errors: 401 unauthenticated; 403 forbidden/account/email/onboarding/farm access errors; 404 not_found; 419 CSRF/session failure; 422 validation_failed or Phase 5 measurement errors (`unit_dimension_mismatch`, `incompatible_units`, `invalid_quantity`, `unknown_unit`, `unit_not_selectable`, `conversion_context_required`, `conversion_not_configured`, `ambiguous_conversion`); 429 throttling. Conflict codes: `cycle_closed`, `insufficient_population`, `population_changed`, `record_already_reversed`, `invalid_correction`, `idempotency_conflict`, `cycle_reconciliation_failed`, `attachment_limit_reached`. 503 `attachment_storage_failed` is retryable. Reconciliation failures indicate inconsistent stored sources, not permission to edit the balance.
+Error envelope messages may vary; branch on code. Common errors: 401 unauthenticated; 403 forbidden/account/email/onboarding/farm access errors; 404 not_found; 419 CSRF/session failure; 422 validation_failed or Phase 5 measurement errors (`unit_dimension_mismatch`, `incompatible_units`, `invalid_quantity`, `unknown_unit`, `unit_not_selectable`, `conversion_context_required`, `conversion_not_configured`, `ambiguous_conversion`); 429 throttling. Conflict codes: `reverse_via_livestock_exit`, `cycle_closed`, `insufficient_population`, `population_changed`, `record_already_reversed`, `invalid_correction`, `idempotency_conflict`, `cycle_reconciliation_failed`, `attachment_limit_reached`. 503 `attachment_storage_failed` is retryable. Reconciliation failures indicate inconsistent stored sources, not permission to edit the balance.
 
 ## Private evidence
 
@@ -157,6 +157,31 @@ Upload `multipart/form-data` with field `file`; retain CSRF/session headers and 
 
 Attachment response: `{data:{id,original_name,mime_type,size,created_by,created_at,download_url},meta:{},message:"Evidence attached."}`. GET download_url requires the same authenticated farm access and parent record ownership, returns `Content-Disposition: attachment`, `application/octet-stream`, `X-Content-Type-Options:nosniff` and private/no-store caching. No public or unprotected URL is returned. Attachments remain readable after reversal/closure and cannot be replaced/deleted through this API. Virus scanning and remote object storage are not implemented.
 
+
+## Animals leaving a batch (`/livestock-exits`)
+
+One form covers every way animals leave a livestock batch: **sold, died, slaughtered, culled, given away, moved to another batch**. It is a front door over the writers that already exist; the full UI contract with real payloads is [FRONTEND-HARVEST-FLOW.md](FRONTEND-HARVEST-FLOW.md).
+
+| Method | Path | Permission | Success |
+|---|---|---|---|
+| POST | `/livestock-exits` | `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`) | 201, the event plus the batch's remaining `head_count` |
+| GET | `/livestock-exits` | `record.view` | 200, paginated list of exits (filters `production_cycle_id`, `type`, `recorded_from`, `recorded_to`) |
+| POST | `/livestock-exits/{record}/reverse` | `record.reverse` | 201, the reversal (and the linked reversal of a move) |
+
+Where each type is written:
+
+| Type | Writer | Record in the population ledger |
+|---|---|---|
+| `sold` | `SaleService::create` (quick sell: `buyer`, `unit_price`, `payment`) | `livestock_sale` (unchanged) |
+| `died` | `RecordService::create` | `mortality` (unchanged, same validation, `cause` defaults to "Unknown") |
+| `slaughtered`, `culled`, `given_away`, `moved` (out of the first batch) | `RecordService::appendForExit` | `livestock_exit`, with `details.exit_type` = `slaughtered` \| `culled` \| `given_away` \| `moved_out` |
+| `moved` (into the second batch) | `RecordService::appendForExit` | `livestock_move_in`, `linked_record_id` = the `moved_out` record |
+
+* `livestock_exit` and `livestock_move_in` are **not** public `POST /records` types (422 on `type`); only `/livestock-exits` writes them. They are append-only like every record and are listed by `GET /records` (filter `type`).
+* `operational_records.linked_record_id` (nullable, indexed, same farm) is returned on every record. It is set once, at insert, on the `livestock_move_in` record and points at the `moved_out` record of the other batch.
+* One `idempotency_key` covers the whole request; every internal key is derived from it, so a retry returns the original result and records nothing twice. The same key with a different body (or a different type) is `409 idempotency_conflict`.
+* A move writes both records in ONE transaction and needs an open livestock batch of the **same species** that is not the same batch. Slaughter writes the record and a stock-in of meat (kg) into the species' own item in the same transaction (see [FEED-EGGS-MILK-STOCK.md](FEED-EGGS-MILK-STOCK.md)).
+* `POST /records/{id}/reverse` answers `409 reverse_via_livestock_exit` for either side of a move (undo it with `POST /livestock-exits/{record}/reverse`, which corrects both batches together) and `409 reverse_via_sale` for a sale, as before.
 
 ## Farm operations catalogue (`GET /master/record-operations`)
 

@@ -79,5 +79,13 @@ void invoices (`invoice.*`), view, collect or reverse payments (`payment.*`),
 manage contacts, or use Finance (`finance.*`). The payment inside `POST /sales`
 is authorized by `sale.create` alone.
 
+Animals leaving a batch (`POST /livestock-exits`) adds no permission. It reuses
+existing ones per type: `record.create` for died, culled, given away, moved and
+slaughtered; `sale.create` for sold (a worker can sell animals); `inventory.use`
+as well for slaughtered (the meat is received into stock). Listing needs
+`record.view`. Undoing an exit (`POST /livestock-exits/{record}/reverse`) needs
+`record.reverse`, so Owner and Manager only; a Farm Worker can record but not
+undo, and a Vet can do none of it.
+
 Every permission remains backend enforced and can be refined without
 changing role names.

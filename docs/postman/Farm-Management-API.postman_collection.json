@@ -16216,6 +16216,1742 @@
               "body": "Field note\nPen 2 checked, feed trough cleaned.\n"
             }
           ]
+        },
+        {
+          "name": "Livestock exit: slaughtered (meat into stock)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });",
+                  "pm.test(\"head count returned\", function () { pm.expect(json.data.head_count).to.be.a(\"number\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nLowers the batch's head count and receives `meat_weight_kg` into the farm's \"{Species} meat\" item (kg, created on first use) in one transaction. Response `head_count` is what the batch holds now; `close_batch_suggested` is true at 0.\n\n**AUTH / PERMISSION**\nSession cookie. `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`).\n\n**ERRORS**\n422 missing `meat_weight_kg`, 409 `insufficient_population`, 409 `cycle_closed`, 409 `idempotency_conflict`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"slaughtered\",\n    \"head_count\": 12,\n    \"recorded_at\": \"2026-10-13T10:00:00Z\",\n    \"idempotency_key\": \"exit-slaughter-001\",\n    \"meat_weight_kg\": \"21.5\",\n    \"live_weight_kg\": \"30\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — chicken slaughtered",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"slaughtered\",\n    \"head_count\": 12,\n    \"recorded_at\": \"2026-10-13T10:00:00Z\",\n    \"idempotency_key\": \"exit-slaughter-001\",\n    \"meat_weight_kg\": \"21.5\",\n    \"live_weight_kg\": \"30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"slaughtered\",\n        \"label\": \"Slaughtered\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 95,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"slaughtered\",\n            \"label\": \"Slaughtered\",\n            \"head_count\": 12,\n            \"recorded_at\": \"2026-10-13T10:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"meat_weight_kg\": \"21.5\",\n                \"live_weight_kg\": \"30\",\n                \"meat_item_id\": \"01a16872-7fce-7371-9db3-cdfc22e350d0\",\n                \"meat_item\": \"Chicken meat\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": {\n            \"inventory_item_id\": \"01a16872-7fce-7371-9db3-cdfc22e350d0\",\n            \"name\": \"Chicken meat\",\n            \"quantity_kg\": \"21.5\",\n            \"storage_location_id\": \"01a16872-8016-735d-b705-bf5afa54341d\"\n        },\n        \"destination\": null,\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            },
+            {
+              "name": "201 Created — last goats, batch is empty",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"slaughtered\",\n    \"head_count\": 12,\n    \"recorded_at\": \"2026-10-13T10:00:00Z\",\n    \"idempotency_key\": \"exit-slaughter-001\",\n    \"meat_weight_kg\": \"21.5\",\n    \"live_weight_kg\": \"30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"slaughtered\",\n        \"label\": \"Slaughtered\",\n        \"production_cycle_id\": \"01a16872-75a4-7255-ab1d-030305531cfe\",\n        \"head_count\": 0,\n        \"close_batch_suggested\": true,\n        \"event\": {\n            \"id\": \"01a16872-8e27-706f-bb3d-405222ca4926\",\n            \"production_cycle_id\": \"01a16872-75a4-7255-ab1d-030305531cfe\",\n            \"type\": \"slaughtered\",\n            \"label\": \"Slaughtered\",\n            \"head_count\": 8,\n            \"recorded_at\": \"2026-10-14T02:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"meat_weight_kg\": \"96\",\n                \"live_weight_kg\": null,\n                \"meat_item_id\": \"01a16872-8da8-72c3-9b66-66ed9780069a\",\n                \"meat_item\": \"Goat meat\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-8e27-706f-bb3d-405222ca4926\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": {\n            \"inventory_item_id\": \"01a16872-8da8-72c3-9b66-66ed9780069a\",\n            \"name\": \"Goat meat\",\n            \"quantity_kg\": \"96\",\n            \"storage_location_id\": \"01a16872-8016-735d-b705-bf5afa54341d\"\n        },\n        \"destination\": null,\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            },
+            {
+              "name": "409 — more animals than the batch holds",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"slaughtered\",\n    \"head_count\": 12,\n    \"recorded_at\": \"2026-10-13T10:00:00Z\",\n    \"idempotency_key\": \"exit-slaughter-001\",\n    \"meat_weight_kg\": \"21.5\",\n    \"live_weight_kg\": \"30\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"This event would produce a negative population, including in the dated ledger history.\",\n    \"code\": \"insufficient_population\",\n    \"request_id\": \"01a16872-90f9-727a-b4a7-4128f0c02459\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Livestock exit: culled",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nLowers the head count. `reason` is required: `poor_production`, `sick_injured`, `old`, `other`.\n\n**AUTH / PERMISSION**\nSession cookie. `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"culled\",\n    \"head_count\": 4,\n    \"recorded_at\": \"2026-10-13T12:00:00Z\",\n    \"idempotency_key\": \"exit-cull-001\",\n    \"reason\": \"poor_production\",\n    \"notes\": \"Slow growers\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — culled",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"culled\",\n    \"head_count\": 4,\n    \"recorded_at\": \"2026-10-13T12:00:00Z\",\n    \"idempotency_key\": \"exit-cull-001\",\n    \"reason\": \"poor_production\",\n    \"notes\": \"Slow growers\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"culled\",\n        \"label\": \"Culled\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 91,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"culled\",\n            \"label\": \"Culled\",\n            \"head_count\": 4,\n            \"recorded_at\": \"2026-10-13T12:00:00.000000Z\",\n            \"notes\": \"Slow growers\",\n            \"details\": {\n                \"reason\": \"poor_production\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": null,\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            },
+            {
+              "name": "422 — reason missing",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"culled\",\n    \"head_count\": 4,\n    \"recorded_at\": \"2026-10-13T12:00:00Z\",\n    \"idempotency_key\": \"exit-cull-001\",\n    \"reason\": \"poor_production\",\n    \"notes\": \"Slow growers\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"The reason field is required when type is culled.\",\n    \"code\": \"validation_failed\",\n    \"request_id\": \"01a16872-8f59-700d-85f7-eaea12792973\",\n    \"errors\": {\n        \"reason\": [\n            \"The reason field is required when type is culled.\"\n        ]\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Livestock exit: sold (quick sell)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nCreates the sale (quick sell: `unit_price`, optional `buyer` and `payment`) with one animals line; the response carries `sale`.\n\n**PERMISSION**\n`sale.create` only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"sold\",\n    \"head_count\": 10,\n    \"recorded_at\": \"2026-10-13T06:00:00Z\",\n    \"idempotency_key\": \"exit-sold-001\",\n    \"unit_price\": \"4500.00\",\n    \"buyer\": {\n        \"name\": \"Mama Ngozi\",\n        \"phone\": \"08031234567\"\n    },\n    \"payment\": {\n        \"amount\": \"30000.00\",\n        \"method\": \"cash\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — part paid",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"sold\",\n    \"head_count\": 10,\n    \"recorded_at\": \"2026-10-13T06:00:00Z\",\n    \"idempotency_key\": \"exit-sold-001\",\n    \"unit_price\": \"4500.00\",\n    \"buyer\": {\n        \"name\": \"Mama Ngozi\",\n        \"phone\": \"08031234567\"\n    },\n    \"payment\": {\n        \"amount\": \"30000.00\",\n        \"method\": \"cash\"\n    }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"sold\",\n        \"label\": \"Sold\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 110,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-7934-7193-9b33-72d9dd0d7a28\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"sold\",\n            \"label\": \"Sold\",\n            \"head_count\": 10,\n            \"recorded_at\": \"2026-10-13T06:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"sale_id\": \"01a16872-78c8-7205-81b2-cadfa2f446f1\",\n                \"sale_reference\": \"SAL-2026-00001\",\n                \"buyer\": \"Mama Ngozi\",\n                \"amount\": \"45000.00\"\n            },\n            \"source\": {\n                \"type\": \"sale\",\n                \"id\": \"01a16872-78c8-7205-81b2-cadfa2f446f1\",\n                \"reference\": \"SAL-2026-00001\"\n            },\n            \"undo\": \"cancel_sale\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": null,\n        \"sale\": {\n            \"id\": \"01a16872-78c8-7205-81b2-cadfa2f446f1\",\n            \"reference\": \"SAL-2026-00001\",\n            \"status\": \"active\",\n            \"contact_id\": \"01a16872-7872-7122-83bb-713bb1c9b315\",\n            \"customer_name\": \"Mama Ngozi\",\n            \"recorded_at\": \"2026-10-13T06:00:00.000000Z\",\n            \"total_amount\": \"45000.00\",\n            \"currency\": \"NGN\",\n            \"finance_category\": {\n                \"id\": \"01a16871-8734-728c-8e28-300b56cb9678\",\n                \"code\": \"livestock_sales\",\n                \"name\": \"Livestock sales\"\n            },\n            \"payment_status\": \"partially_paid\",\n            \"amount_paid\": \"30000.00\",\n            \"outstanding\": \"15000.00\",\n            \"invoice\": {\n                \"id\": \"01a16872-79df-720e-88e5-cd3ef77aaa1d\",\n                \"reference\": \"INV-2026-00001\",\n                \"status\": \"issued\"\n            },\n            \"invoice_id\": \"01a16872-79df-720e-88e5-cd3ef77aaa1d\",\n            \"payments\": [\n                {\n                    \"id\": \"01a16872-7aa7-70d9-8ed4-1475c727f1a6\",\n                    \"reference\": \"PAY-2026-00001\",\n                    \"amount\": \"30000.00\",\n                    \"method\": \"cash\",\n                    \"received_on\": \"2026-10-13\"\n                }\n            ],\n            \"notes\": null,\n            \"corrects_sale_id\": null,\n            \"cancelled_at\": null,\n            \"cancel_reason\": null,\n            \"items\": [\n                {\n                    \"id\": \"01a16872-78eb-70d7-b5b6-25566012953f\",\n                    \"line_no\": 1,\n                    \"kind\": \"livestock\",\n                    \"description\": \"Livestock - Broiler batch 1\",\n                    \"inventory_item_id\": null,\n                    \"storage_location_id\": null,\n                    \"inventory_lot_id\": null,\n                    \"lot\": null,\n                    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n                    \"head_count\": 10,\n                    \"quantity\": null,\n                    \"measurement\": null,\n                    \"amount\": \"45000.00\",\n                    \"inventory_movement_id\": null,\n                    \"inventory_reversal_movement_id\": null,\n                    \"operational_record_id\": \"01a16872-7934-7193-9b33-72d9dd0d7a28\",\n                    \"reversal_record_id\": null\n                }\n            ],\n            \"created_by\": \"01a16872-6c04-7174-8dc0-1fd5989a5612\",\n            \"created_at\": \"2026-10-14T12:00:00.000000Z\"\n        }\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Livestock exit: died",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nThe ordinary mortality record; `cause` defaults to \"Unknown\".\n\n**AUTH / PERMISSION**\nSession cookie. `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"died\",\n    \"head_count\": 3,\n    \"recorded_at\": \"2026-10-13T08:00:00Z\",\n    \"idempotency_key\": \"exit-died-001\",\n    \"cause\": \"Heat stress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — died",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"died\",\n    \"head_count\": 3,\n    \"recorded_at\": \"2026-10-13T08:00:00Z\",\n    \"idempotency_key\": \"exit-died-001\",\n    \"cause\": \"Heat stress\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"died\",\n        \"label\": \"Died\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 107,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-7de7-71dc-9e46-015ade8a0274\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"died\",\n            \"label\": \"Died\",\n            \"head_count\": 3,\n            \"recorded_at\": \"2026-10-13T08:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"cause\": \"Heat stress\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-7de7-71dc-9e46-015ade8a0274\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": null,\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Livestock exit: given away",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nLowers the head count; `given_to` is optional text.\n\n**AUTH / PERMISSION**\nSession cookie. `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"given_away\",\n    \"head_count\": 2,\n    \"recorded_at\": \"2026-10-13T14:00:00Z\",\n    \"idempotency_key\": \"exit-gift-001\",\n    \"given_to\": \"Pastor Emeka\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — given away",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"given_away\",\n    \"head_count\": 2,\n    \"recorded_at\": \"2026-10-13T14:00:00Z\",\n    \"idempotency_key\": \"exit-gift-001\",\n    \"given_to\": \"Pastor Emeka\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"given_away\",\n        \"label\": \"Given away\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 89,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-8500-7024-a71c-c68d2130b40c\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"given_away\",\n            \"label\": \"Given away\",\n            \"head_count\": 2,\n            \"recorded_at\": \"2026-10-13T14:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"given_to\": \"Pastor Emeka\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-8500-7024-a71c-c68d2130b40c\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": null,\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Livestock exit: moved to another batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nLowers this batch and raises `destination_cycle_id` (open, same species, not the same batch) in one transaction. The two records are linked by `linked_record_id`. A retry with the same `idempotency_key` returns the original.\n\n**AUTH / PERMISSION**\nSession cookie. `record.create` (sold: `sale.create`; slaughtered: also `inventory.use`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"moved\",\n    \"head_count\": 15,\n    \"recorded_at\": \"2026-10-13T16:00:00Z\",\n    \"idempotency_key\": \"exit-move-001\",\n    \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — moved",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"moved\",\n    \"head_count\": 15,\n    \"recorded_at\": \"2026-10-13T16:00:00Z\",\n    \"idempotency_key\": \"exit-move-001\",\n    \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"moved\",\n        \"label\": \"Moved to another batch\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 74,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-873a-7282-8605-1b456e7999ad\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"moved\",\n            \"label\": \"Moved to another batch\",\n            \"head_count\": 15,\n            \"recorded_at\": \"2026-10-13T16:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"destination\": \"Broiler batch 2\"\n            },\n            \"source\": {\n                \"type\": \"production_cycle\",\n                \"id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"reference\": \"BAT-2026-00002\"\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": {\n            \"production_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n            \"reference\": \"BAT-2026-00002\",\n            \"head_count\": 55\n        },\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            },
+            {
+              "name": "201 Created — identical retry returns the same event",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"moved\",\n    \"head_count\": 15,\n    \"recorded_at\": \"2026-10-13T16:00:00Z\",\n    \"idempotency_key\": \"exit-move-001\",\n    \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"type\": \"moved\",\n        \"label\": \"Moved to another batch\",\n        \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n        \"head_count\": 74,\n        \"close_batch_suggested\": false,\n        \"event\": {\n            \"id\": \"01a16872-873a-7282-8605-1b456e7999ad\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"moved\",\n            \"label\": \"Moved to another batch\",\n            \"head_count\": 15,\n            \"recorded_at\": \"2026-10-13T16:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"destination\": \"Broiler batch 2\"\n            },\n            \"source\": {\n                \"type\": \"production_cycle\",\n                \"id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"reference\": \"BAT-2026-00002\"\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        \"meat\": null,\n        \"destination\": {\n            \"production_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n            \"reference\": \"BAT-2026-00002\",\n            \"head_count\": 55\n        },\n        \"sale\": null\n    },\n    \"meta\": [],\n    \"message\": \"Recorded.\"\n}"
+            },
+            {
+              "name": "422 — destination of another species",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"moved\",\n    \"head_count\": 15,\n    \"recorded_at\": \"2026-10-13T16:00:00Z\",\n    \"idempotency_key\": \"exit-move-001\",\n    \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"Animals can only be moved to a batch of the same species (Chicken).\",\n    \"code\": \"validation_failed\",\n    \"request_id\": \"01a16872-9607-7052-85af-bca9487385c2\",\n    \"errors\": {\n        \"destination_cycle_id\": [\n            \"Animals can only be moved to a batch of the same species (Chicken).\"\n        ]\n    }\n}"
+            },
+            {
+              "name": "409 — same key, different body",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n    \"type\": \"moved\",\n    \"head_count\": 15,\n    \"recorded_at\": \"2026-10-13T16:00:00Z\",\n    \"idempotency_key\": \"exit-move-001\",\n    \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"This idempotency key was already used for a different request.\",\n    \"code\": \"idempotency_conflict\",\n    \"request_id\": \"01a16872-978f-70da-b7e5-424a0eb84ef3\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "List animals that left a batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits?production_cycle_id={{cycle_id}}&type=culled",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nOne list built from sales, mortality and the new exit records. Hides reversed events and reversal rows. Filters: `production_cycle_id`, `type`, `recorded_from`, `recorded_to`, `page`, `per_page`.\n\n**PERMISSION**\n`record.view`."
+          },
+          "response": [
+            {
+              "name": "200 OK — newest four exits of a batch",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits?production_cycle_id={{cycle_id}}&type=culled",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"id\": \"01a16872-873a-7282-8605-1b456e7999ad\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"moved\",\n            \"label\": \"Moved to another batch\",\n            \"head_count\": 15,\n            \"recorded_at\": \"2026-10-13T16:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"destination_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"destination\": \"Broiler batch 2\"\n            },\n            \"source\": {\n                \"type\": \"production_cycle\",\n                \"id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n                \"reference\": \"BAT-2026-00002\"\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        {\n            \"id\": \"01a16872-8500-7024-a71c-c68d2130b40c\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"given_away\",\n            \"label\": \"Given away\",\n            \"head_count\": 2,\n            \"recorded_at\": \"2026-10-13T14:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"given_to\": \"Pastor Emeka\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-8500-7024-a71c-c68d2130b40c\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        {\n            \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"culled\",\n            \"label\": \"Culled\",\n            \"head_count\": 4,\n            \"recorded_at\": \"2026-10-13T12:00:00.000000Z\",\n            \"notes\": \"Slow growers\",\n            \"details\": {\n                \"reason\": \"poor_production\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        },\n        {\n            \"id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"slaughtered\",\n            \"label\": \"Slaughtered\",\n            \"head_count\": 12,\n            \"recorded_at\": \"2026-10-13T10:00:00.000000Z\",\n            \"notes\": null,\n            \"details\": {\n                \"meat_weight_kg\": \"21.5\",\n                \"live_weight_kg\": \"30\",\n                \"meat_item_id\": \"01a16872-7fce-7371-9db3-cdfc22e350d0\",\n                \"meat_item\": \"Chicken meat\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        }\n    ],\n    \"meta\": {\n        \"current_page\": 1,\n        \"per_page\": 4,\n        \"last_page\": 2,\n        \"total\": 6\n    },\n    \"message\": null\n}"
+            },
+            {
+              "name": "200 OK — culls in a date range",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits?production_cycle_id={{cycle_id}}&type=culled",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": [\n        {\n            \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"culled\",\n            \"label\": \"Culled\",\n            \"head_count\": 4,\n            \"recorded_at\": \"2026-10-13T12:00:00.000000Z\",\n            \"notes\": \"Slow growers\",\n            \"details\": {\n                \"reason\": \"poor_production\"\n            },\n            \"source\": {\n                \"type\": \"operational_record\",\n                \"id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n                \"reference\": null\n            },\n            \"undo\": \"reverse\",\n            \"reversed\": false\n        }\n    ],\n    \"meta\": {\n        \"current_page\": 1,\n        \"per_page\": 50,\n        \"last_page\": 1,\n        \"total\": 1\n    },\n    \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Undo a livestock exit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 2xx\", function () { pm.expect(pm.response.code).to.be.within(200, 299); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "livestock-exits",
+                "{{record_id}}",
+                "reverse"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nReverses a cull / gift / death; a slaughter also takes its meat out of stock; a move reverses both batches together. A sold row is refused (`reverse_via_sale`: cancel the sale). `POST /records/{id}/reverse` on a move answers `reverse_via_livestock_exit`.\n\n**PERMISSION**\n`record.reverse` (Owner, Manager).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created — culled undone",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"reversed_record_id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n        \"type\": \"culled\",\n        \"reversal\": {\n            \"id\": \"01a16872-a14c-737c-b14f-bf96ae92923f\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"reversal\",\n            \"details\": {\n                \"reason\": \"Entered on the wrong batch\"\n            },\n            \"measurement\": {\n                \"total\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"4\"\n                },\n                \"entered\": [\n                    {\n                        \"unit\": \"head\",\n                        \"quantity\": \"4\"\n                    }\n                ],\n                \"snapshot\": {\n                    \"total\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"4\"\n                    },\n                    \"schema\": 1,\n                    \"entered\": [\n                        {\n                            \"unit\": {\n                                \"code\": \"head\",\n                                \"factor\": \"1\",\n                                \"family\": \"head\",\n                                \"strategy\": \"linear\",\n                                \"dimension\": \"count\",\n                                \"integer_only\": true\n                            },\n                            \"quantity\": \"4\"\n                        }\n                    ],\n                    \"packages\": [],\n                    \"normalized\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"4\"\n                    },\n                    \"result_unit\": {\n                        \"code\": \"head\",\n                        \"factor\": \"1\",\n                        \"family\": \"head\",\n                        \"strategy\": \"linear\",\n                        \"dimension\": \"count\",\n                        \"integer_only\": true\n                    }\n                },\n                \"normalized\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"4\"\n                }\n            },\n            \"population_delta\": 4,\n            \"recorded_at\": \"2026-10-14T10:00:00.000000Z\",\n            \"notes\": null,\n            \"reverses_record_id\": \"01a16872-82b6-733a-bdc8-d62b1e9b1604\",\n            \"corrects_record_id\": null,\n            \"linked_record_id\": null,\n            \"reversed_by_record_id\": null,\n            \"inventory_movement_id\": null,\n            \"created_by\": \"01a16872-6c04-7174-8dc0-1fd5989a5612\",\n            \"created_at\": \"2026-10-14T12:00:00.000000Z\",\n            \"attachments\": []\n        },\n        \"linked_reversal\": null,\n        \"head_count\": 78,\n        \"close_batch_suggested\": false\n    },\n    \"meta\": [],\n    \"message\": \"Reversal recorded.\"\n}"
+            },
+            {
+              "name": "201 Created — move undone on both batches",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"reversed_record_id\": \"01a16872-873a-7282-8605-1b456e7999ad\",\n        \"type\": \"moved\",\n        \"reversal\": {\n            \"id\": \"01a16872-a48e-704e-80b5-df382023b009\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"reversal\",\n            \"details\": {\n                \"reason\": \"Moved the wrong pen\"\n            },\n            \"measurement\": {\n                \"total\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"15\"\n                },\n                \"entered\": [\n                    {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    }\n                ],\n                \"snapshot\": {\n                    \"total\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    },\n                    \"schema\": 1,\n                    \"entered\": [\n                        {\n                            \"unit\": {\n                                \"code\": \"head\",\n                                \"factor\": \"1\",\n                                \"family\": \"head\",\n                                \"strategy\": \"linear\",\n                                \"dimension\": \"count\",\n                                \"integer_only\": true\n                            },\n                            \"quantity\": \"15\"\n                        }\n                    ],\n                    \"packages\": [],\n                    \"normalized\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    },\n                    \"result_unit\": {\n                        \"code\": \"head\",\n                        \"factor\": \"1\",\n                        \"family\": \"head\",\n                        \"strategy\": \"linear\",\n                        \"dimension\": \"count\",\n                        \"integer_only\": true\n                    }\n                },\n                \"normalized\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"15\"\n                }\n            },\n            \"population_delta\": 15,\n            \"recorded_at\": \"2026-10-14T10:00:00.000000Z\",\n            \"notes\": null,\n            \"reverses_record_id\": \"01a16872-873a-7282-8605-1b456e7999ad\",\n            \"corrects_record_id\": null,\n            \"linked_record_id\": null,\n            \"reversed_by_record_id\": null,\n            \"inventory_movement_id\": null,\n            \"created_by\": \"01a16872-6c04-7174-8dc0-1fd5989a5612\",\n            \"created_at\": \"2026-10-14T12:00:00.000000Z\",\n            \"attachments\": []\n        },\n        \"linked_reversal\": {\n            \"id\": \"01a16872-a55b-7345-8679-6d1f6fae1198\",\n            \"production_cycle_id\": \"01a16872-72b7-70c9-b8df-7f9d913bf324\",\n            \"type\": \"reversal\",\n            \"details\": {\n                \"reason\": \"Moved the wrong pen\"\n            },\n            \"measurement\": {\n                \"total\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"15\"\n                },\n                \"entered\": [\n                    {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    }\n                ],\n                \"snapshot\": {\n                    \"total\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    },\n                    \"schema\": 1,\n                    \"entered\": [\n                        {\n                            \"unit\": {\n                                \"code\": \"head\",\n                                \"factor\": \"1\",\n                                \"family\": \"head\",\n                                \"strategy\": \"linear\",\n                                \"dimension\": \"count\",\n                                \"integer_only\": true\n                            },\n                            \"quantity\": \"15\"\n                        }\n                    ],\n                    \"packages\": [],\n                    \"normalized\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"15\"\n                    },\n                    \"result_unit\": {\n                        \"code\": \"head\",\n                        \"factor\": \"1\",\n                        \"family\": \"head\",\n                        \"strategy\": \"linear\",\n                        \"dimension\": \"count\",\n                        \"integer_only\": true\n                    }\n                },\n                \"normalized\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"15\"\n                }\n            },\n            \"population_delta\": -15,\n            \"recorded_at\": \"2026-10-14T10:00:00.000000Z\",\n            \"notes\": null,\n            \"reverses_record_id\": \"01a16872-87ff-71de-bc6e-730347a2d4e8\",\n            \"corrects_record_id\": null,\n            \"linked_record_id\": null,\n            \"reversed_by_record_id\": null,\n            \"inventory_movement_id\": null,\n            \"created_by\": \"01a16872-6c04-7174-8dc0-1fd5989a5612\",\n            \"created_at\": \"2026-10-14T12:00:00.000000Z\",\n            \"attachments\": []\n        },\n        \"head_count\": 93,\n        \"close_batch_suggested\": false\n    },\n    \"meta\": [],\n    \"message\": \"Reversal recorded.\"\n}"
+            },
+            {
+              "name": "201 Created — slaughter undone, meat out of stock",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"data\": {\n        \"reversed_record_id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n        \"type\": \"slaughtered\",\n        \"reversal\": {\n            \"id\": \"01a16872-a73a-70b4-91d3-a967cd5d8dec\",\n            \"production_cycle_id\": \"01a16872-6fc7-7140-89f2-ab222208f3e0\",\n            \"type\": \"reversal\",\n            \"details\": {\n                \"reason\": \"Counted twice\"\n            },\n            \"measurement\": {\n                \"total\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"12\"\n                },\n                \"entered\": [\n                    {\n                        \"unit\": \"head\",\n                        \"quantity\": \"12\"\n                    }\n                ],\n                \"snapshot\": {\n                    \"total\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"12\"\n                    },\n                    \"schema\": 1,\n                    \"entered\": [\n                        {\n                            \"unit\": {\n                                \"code\": \"head\",\n                                \"factor\": \"1\",\n                                \"family\": \"head\",\n                                \"strategy\": \"linear\",\n                                \"dimension\": \"count\",\n                                \"integer_only\": true\n                            },\n                            \"quantity\": \"12\"\n                        }\n                    ],\n                    \"packages\": [],\n                    \"normalized\": {\n                        \"unit\": \"head\",\n                        \"quantity\": \"12\"\n                    },\n                    \"result_unit\": {\n                        \"code\": \"head\",\n                        \"factor\": \"1\",\n                        \"family\": \"head\",\n                        \"strategy\": \"linear\",\n                        \"dimension\": \"count\",\n                        \"integer_only\": true\n                    }\n                },\n                \"normalized\": {\n                    \"unit\": \"head\",\n                    \"quantity\": \"12\"\n                }\n            },\n            \"population_delta\": 12,\n            \"recorded_at\": \"2026-10-14T10:00:00.000000Z\",\n            \"notes\": null,\n            \"reverses_record_id\": \"01a16872-8065-7283-98d6-3431044c8f9e\",\n            \"corrects_record_id\": null,\n            \"linked_record_id\": null,\n            \"reversed_by_record_id\": null,\n            \"inventory_movement_id\": \"01a16872-a77b-72a8-a8a8-86498f41cced\",\n            \"created_by\": \"01a16872-6c04-7174-8dc0-1fd5989a5612\",\n            \"created_at\": \"2026-10-14T12:00:00.000000Z\",\n            \"attachments\": []\n        },\n        \"linked_reversal\": null,\n        \"head_count\": 105,\n        \"close_batch_suggested\": false\n    },\n    \"meta\": [],\n    \"message\": \"Reversal recorded.\"\n}"
+            },
+            {
+              "name": "409 — sold: cancel the sale",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"This population effect belongs to a sale; cancel the sale instead.\",\n    \"code\": \"reverse_via_sale\",\n    \"request_id\": \"01a16872-a873-710f-9409-7ceff00faefe\",\n    \"details\": {\n        \"sale_id\": \"01a16872-78c8-7205-81b2-cadfa2f446f1\"\n    }\n}"
+            },
+            {
+              "name": "409 — move through POST /records/{id}/reverse",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"This record is one side of a move between batches; undo it with POST /livestock-exits/{record}/reverse so both batches are corrected together.\",\n    \"code\": \"reverse_via_livestock_exit\",\n    \"request_id\": \"01a16872-a225-73bd-8fc2-776ffee93b1b\"\n}"
+            },
+            {
+              "name": "403 — a farm worker cannot undo",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}",
+                    "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/livestock-exits/{{record_id}}/reverse",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "livestock-exits",
+                    "{{record_id}}",
+                    "reverse"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Entered on the wrong batch\",\n    \"recorded_at\": \"2026-10-14T10:00:00Z\",\n    \"idempotency_key\": \"undo-exit-001\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"message\": \"You are not allowed to perform this action.\",\n    \"code\": \"forbidden\",\n    \"request_id\": \"01a16872-a937-7006-b9bb-63dc7e0ec014\"\n}"
+            }
+          ]
         }
       ]
     },

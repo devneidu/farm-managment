@@ -26,7 +26,7 @@ class ActivityFeed
     public const LIMIT = 15;
 
     /** Record types that are shown by their own module instead (sales, breeding) or are corrections. */
-    private const HIDDEN_RECORD_TYPES = ['reversal', 'livestock_sale', 'breeding_outcome'];
+    private const HIDDEN_RECORD_TYPES = ['reversal', 'livestock_sale', 'breeding_outcome', 'livestock_move_in'];
 
     /** @return list<array<string, mixed>> newest first */
     public function recent(DashboardFacts $f, int $limit = self::LIMIT): array
@@ -42,7 +42,7 @@ class ActivityFeed
             foreach (OperationalRecord::where('farm_id', $farm->id)->whereNotIn('type', self::HIDDEN_RECORD_TYPES)->whereDoesntHave('reversal')->orderByDesc('recorded_at')->orderByDesc('id')->limit($limit)->get() as $r) {
                 $m = $r->measurement['normalized'] ?? null;
                 $summary = $r->population_delta !== 0 ? abs($r->population_delta).' head' : ($m ? $m['quantity'].' '.$m['unit'] : null);
-                $add('operational_record', $r->id, $this->label($r->type), $summary, $r->recorded_at, $r->created_by, $r->production_cycle_id, ['type' => 'operational_record', 'id' => $r->id, 'reference' => null]);
+                $add('operational_record', $r->id, $this->label($r->type === 'livestock_exit' ? ($r->details['exit_type'] ?? $r->type) : $r->type), $summary, $r->recorded_at, $r->created_by, $r->production_cycle_id, ['type' => 'operational_record', 'id' => $r->id, 'reference' => null]);
             }
         }
         if ($ctx->can(Permission::HealthView)) {

@@ -19,13 +19,14 @@ class LivestockPopulationReport extends Report
 {
     public function definition(): ReportDefinition
     {
-        return new ReportDefinition('livestock_population', 'Livestock population', 'livestock', 'Opening head, additions, deaths, sales and adjustments per livestock cycle, reconciled to the population ledger.',
+        return new ReportDefinition('livestock_population', 'Livestock population', 'livestock', 'Opening head, additions, deaths, sales, slaughter, culls, gifts, moves between batches and adjustments per livestock cycle, reconciled to the population ledger.',
             [Permission::RecordView, Permission::ProductionCycleView], ['from', 'to', 'status', 'production_cycle_id'], null, 'livestock');
     }
 
     public function run(FarmContext $ctx, ReportFilters $f): ReportResult
     {
         $effective = "(CASE WHEN r.type = 'reversal' THEN o.type ELSE m.type END)";
+        $exit = "(CASE WHEN r.type = 'reversal' THEN JSON_UNQUOTE(JSON_EXTRACT(o.details, '$.exit_type')) ELSE JSON_UNQUOTE(JSON_EXTRACT(r.details, '$.exit_type')) END)";
         $inPeriod = 'm.recorded_at >= ? AND m.recorded_at < ?';
         $sums = [
             ['opening', 'm.recorded_at < ?', [$f->fromTs()]],
@@ -33,8 +34,13 @@ class LivestockPopulationReport extends Report
             ['births', "$inPeriod AND $effective = 'breeding_outcome'", [$f->fromTs(), $f->toTs()]],
             ['deaths', "$inPeriod AND $effective = 'mortality'", [$f->fromTs(), $f->toTs()]],
             ['sold', "$inPeriod AND $effective = 'livestock_sale'", [$f->fromTs(), $f->toTs()]],
+            ['slaughtered', "$inPeriod AND $effective = 'livestock_exit' AND $exit = 'slaughtered'", [$f->fromTs(), $f->toTs()]],
+            ['culled', "$inPeriod AND $effective = 'livestock_exit' AND $exit = 'culled'", [$f->fromTs(), $f->toTs()]],
+            ['given_away', "$inPeriod AND $effective = 'livestock_exit' AND $exit = 'given_away'", [$f->fromTs(), $f->toTs()]],
+            ['moved_out', "$inPeriod AND $effective = 'livestock_exit' AND $exit = 'moved_out'", [$f->fromTs(), $f->toTs()]],
+            ['moved_in', "$inPeriod AND $effective = 'livestock_move_in'", [$f->fromTs(), $f->toTs()]],
             ['adjustments', "$inPeriod AND $effective = 'population_adjustment'", [$f->fromTs(), $f->toTs()]],
-            ['other', "$inPeriod AND $effective NOT IN ('initial', 'breeding_outcome', 'mortality', 'livestock_sale', 'population_adjustment')", [$f->fromTs(), $f->toTs()]],
+            ['other', "$inPeriod AND $effective NOT IN ('initial', 'breeding_outcome', 'mortality', 'livestock_sale', 'livestock_exit', 'livestock_move_in', 'population_adjustment')", [$f->fromTs(), $f->toTs()]],
         ];
         $select = [];
         $bindings = [];
@@ -61,7 +67,7 @@ class LivestockPopulationReport extends Report
 
         $cycles = ProductionCycle::ofFarm($ctx->farm)->whereIn('id', $data->keys()->all())->with('livestock.species')->orderBy('start_date')->orderBy('reference')->get();
         $rows = [];
-        $total = array_fill_keys(['opening', 'initial', 'births', 'deaths', 'sold', 'adjustments', 'other', 'closing'], 0);
+        $total = array_fill_keys(['opening', 'initial', 'births', 'deaths', 'sold', 'slaughtered', 'culled', 'given_away', 'moved_out', 'moved_in', 'adjustments', 'other', 'closing'], 0);
         foreach ($cycles as $c) {
             $d = $data[$c->id];
             $row = ['reference' => $c->reference, 'name' => $c->name, 'species' => $c->livestock?->species?->name, 'status' => $c->status->value];
@@ -72,10 +78,10 @@ class LivestockPopulationReport extends Report
             $rows[] = $row;
         }
         $cols = [ReportResult::col('reference', 'Reference'), ReportResult::col('name', 'Cycle'), ReportResult::col('species', 'Species'), ReportResult::col('status', 'Status')];
-        foreach (['opening' => 'Opening head', 'initial' => 'Initial stocking', 'births' => 'Births / hatched', 'deaths' => 'Deaths', 'sold' => 'Sold', 'adjustments' => 'Adjustments', 'other' => 'Other', 'closing' => 'Closing head'] as $k => $label) {
+        foreach (['opening' => 'Opening head', 'initial' => 'Initial stocking', 'births' => 'Births / hatched', 'deaths' => 'Deaths', 'sold' => 'Sold', 'slaughtered' => 'Slaughtered', 'culled' => 'Culled', 'given_away' => 'Given away', 'moved_out' => 'Moved out', 'moved_in' => 'Moved in', 'adjustments' => 'Adjustments', 'other' => 'Other', 'closing' => 'Closing head'] as $k => $label) {
             $cols[] = ReportResult::col($k, $label, 'integer');
         }
 
-        return new ReportResult($cols, $rows, $total + ['cycles' => count($rows)], ['Movements are signed (deaths and sales are negative) and net of reversals. Closing head = opening + the movements in the period.']);
+        return new ReportResult($cols, $rows, $total + ['cycles' => count($rows)], ['Movements are signed (deaths, sales, slaughter, culls, gifts and moves out are negative; moves in are positive) and net of reversals. Closing head = opening + the movements in the period.']);
     }
 }

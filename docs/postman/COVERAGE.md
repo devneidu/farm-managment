@@ -50,7 +50,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 06 — Measurements & Units | 12 | 11 | 12 | 4 |
 | 07 — Locations & Farm Structure | 13 | 13 | 13 | 1 |
 | 08 — Production Cycles | 9 | 8 | 9 | 3 |
-| 09 — Operational Records | 18 | 9 | 18 | 5 |
+| 09 — Operational Records | 26 | 12 | 26 | 9 |
 | 10 — Inventory | 32 | 19 | 32 | 12 |
 | 11 — Health | 10 | 9 | 10 | 2 |
 | 12 — Breeding | 11 | 9 | 11 | 2 |
@@ -335,3 +335,9 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * New route `GET /sales/sellables` (now 344 `/api/v1` routes; `docs/api/openapi.json` was intentionally not regenerated in this change and still lists 343 operations).
 * Folder **17 — Sales, Invoices & Payments** gains five requests: `What can I sell? (sellables)`, `Sell: paid in full, quick buyer, quantity x price`, `Sell: part payment (animals + stock)`, `Sell: not paid yet (no payment block)` and `Cancel a sale and reverse its payments (one step)`, with 10 saved examples captured from the running code (200/201 successes, an idempotent retry, `422` payment above total / amount mismatch / buyer conflict, `409 insufficient_stock`, `409 sale_has_payments`, worker `403`). The old example "Farm worker has no sale access (403)" is now "Vet has no sale access (403)" because Farm Worker holds `sale.view` and `sale.create`.
 * Frontend contract: `docs/api/FRONTEND-SALES-FLOW.md`. The per-folder counts in the table above (row 17) were updated by hand; the other totals in §1 were not recomputed.
+
+## Addendum - livestock exits (animals leaving a batch)
+
+* New routes `GET /livestock-exits`, `POST /livestock-exits`, `POST /livestock-exits/{record}/reverse` (`docs/api/openapi.json` was intentionally not regenerated in this change).
+* Folder **09 — Operational Records** gains eight requests: slaughtered, culled, sold (quick sell), died, given away, moved to another batch, the list, and undo, with 20 saved examples captured from real responses (including the 422/409/403 cases, the idempotent retry, and the refused undo of a sold row and of a move through `POST /records/{id}/reverse`). The row for folder 09 in the table above was updated by hand; the other totals were not recomputed. The new requests use the existing `{{cycle_id}}` variable and a new, uncaptured `{{record_id}}` (set it from a list row).
+* Frontend contract: `docs/api/FRONTEND-HARVEST-FLOW.md`.

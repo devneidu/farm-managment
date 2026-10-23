@@ -111,6 +111,16 @@ Eggs and milk are each **one inventory item per farm**, created automatically th
 3. else, if the farm has **none**, a root storage location **"Main Store"** (`type: store`) is created once (a taken name becomes "Main Store 2"…; an inactive store is never reactivated). Only IN paths create it — taking stock out never does;
 4. else (several active stores, none named) → `422` on the location field: **choose one**. The backend never guesses.
 
+### Meat (slaughter) — one automatic item per species
+
+Slaughtering animals (`POST /livestock-exits`, `type: "slaughtered"`, see [FRONTEND-HARVEST-FLOW.md](FRONTEND-HARVEST-FLOW.md)) follows the same pattern as eggs and milk, but per species:
+
+* On the first slaughter of a species the API creates the farm's meat item: `"{Species} meat"` (for example **Chicken meat**, **Goat meat**), category `produce`, stock unit **kg**, `system_key` = `output:meat:{species code}` (so it shows as system managed). It is resolved under the farm lock inside the same transaction, so two simultaneous first slaughters cannot create two. A name already taken by a farmer's own item gets a "(farm output)" suffix; a farmer's item is never adopted or changed.
+* Each slaughter writes one **stock-in, reason `production`**, `meat_weight_kg` into the chosen store (`storage_location_id`; optional when the farm has exactly one active store, a "Main Store" is created when it has none, 422 when several are active and none is chosen), linked to the slaughter record and the batch. The head count and the meat succeed or fail together.
+* Meat is stock like any produce: it appears in `GET /sales/sellables` (`in_store`) and is sold with a normal stock line, or leaves with `POST /inventory/stock-out` (`sold`, `donation`, `internal_use`, ...). A manual stock-in with reason `production` is refused for it, as for eggs and milk.
+* Undoing the slaughter (`POST /livestock-exits/{record}/reverse`) takes the same meat back out of stock; if it has since been sold or used the undo is `409 insufficient_stock` and nothing changes.
+* Meat sold through `POST /sales` is booked to the `crop_sales` income category (the existing rule for produce other than eggs and milk) unless a `finance_category_id` is sent.
+
 ## 4. Endpoints
 
 ### `POST /records` — `egg_collection` and `milk` (permission `record.create` **and** `inventory.use`)

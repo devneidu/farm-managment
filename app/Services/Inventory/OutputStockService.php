@@ -7,6 +7,7 @@ use App\Enums\PlaceKind;
 use App\Events\Locations\PlaceChanged;
 use App\Models\Farm;
 use App\Models\InventoryItem;
+use App\Models\Species;
 use App\Models\StorageLocation;
 use App\Models\User;
 use App\Services\Locations\PlaceService;
@@ -74,6 +75,40 @@ class OutputStockService
         }
         if (! $item->is_active) {
             throw new ApiHttpException(409, 'item_inactive', 'The '.$kind.' stock item is inactive; reactivate it to record eggs or milk.', details: ['inventory_item_id' => $item->id]);
+        }
+
+        return $item;
+    }
+
+    /**
+     * The farm's meat item for one species ("Goat meat", kilograms), created on first slaughter. Like eggs and milk it is identified by
+     * `system_key` (output:meat:{species code}), resolved inside the caller's transaction under the farm lock, and never adopted from a
+     * farmer's own item. Meat is a weight (kg) because carcasses are sold by weight; a taken name gets a numeric suffix.
+     */
+    public function resolveMeat(FarmContext $ctx, Species $species): InventoryItem
+    {
+        if (DB::transactionLevel() === 0) {
+            throw new LogicException('Output items are resolved inside the caller\'s transaction.');
+        }
+        Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
+        $key = StockReasonCatalogue::MEAT_KEY_PREFIX.mb_substr(mb_strtolower($species->code), 0, 28);
+        $item = InventoryItem::ofFarm($ctx->farm)->where('system_key', $key)->with('stockUnit.dimension')->lockForUpdate()->first();
+        if ($item === null) {
+            $unit = $this->units->selectable('kg');
+            $base = trim($species->name).' meat';
+            $name = $base;
+            for ($n = 2; InventoryItem::ofFarm($ctx->farm)->where('normalized_name', InventoryItem::normalizeName($name))->exists(); $n++) {
+                $name = $base.' (farm output'.($n > 2 ? ' '.($n - 1) : '').')';
+            }
+            $item = new InventoryItem([
+                'farm_id' => $ctx->farm->id, 'name' => $name, 'category' => InventoryCategory::Produce, 'stock_unit_id' => $unit->id, 'system_key' => $key,
+                'tracks_lots' => false, 'tracks_expiry' => false, 'is_active' => true, 'created_by' => $ctx->membership->user_id,
+            ]);
+            $item->save();
+            $item->load('stockUnit.dimension');
+        }
+        if (! $item->is_active) {
+            throw new ApiHttpException(409, 'item_inactive', 'The '.$item->name.' stock item is inactive; reactivate it to record a slaughter.', details: ['inventory_item_id' => $item->id]);
         }
 
         return $item;

@@ -34,7 +34,7 @@ Reports marked **advanced** also need the `advanced_reports` plan entitlement (`
 ```json
 { "data": [
   { "code": "livestock_population", "title": "Livestock population", "family": "livestock",
-    "description": "Opening head, additions, deaths, sales and adjustments per livestock cycle, reconciled to the population ledger.",
+    "description": "Opening head, additions, deaths, sales, slaughter, culls, gifts, moves between batches and adjustments per livestock cycle, reconciled to the population ledger.",
     "filters": ["from", "to", "status", "production_cycle_id"], "applies_to": "livestock", "relevant": true,
     "available": true, "unavailable_reason": null, "required_feature": null, "exportable": true, "export_formats": ["csv", "xlsx", "pdf"] }
 ], "meta": {}, "message": null }
@@ -45,7 +45,7 @@ Reports marked **advanced** also need the `advanced_reports` plan entitlement (`
 | Code | Family | Data permissions (all) | Plan | Rows | Notes |
 |---|---|---|---|---|---|
 | `cycle_performance` | production | `production_cycle.view`, `record.view` | advanced | one per cycle active in the period | dates, days in production, head at period start/end (ledger), deaths, mortality %, crop planting baseline |
-| `livestock_population` | livestock | `record.view`, `production_cycle.view` | – | one per livestock cycle | opening + initial/births/deaths/sold/adjustments/other = closing; signed movements, reversals netted against the event they reverse |
+| `livestock_population` | livestock | `record.view`, `production_cycle.view` | – | one per livestock cycle | opening + initial/births/deaths/sold/slaughtered/culled/given_away/moved_out/moved_in/adjustments/other = closing; signed movements (moved_out negative, moved_in positive), reversals netted against the event they reverse. `other` is only for movement types the report does not know |
 | `mortality` | livestock | `record.view`, `production_cycle.view` | – | cycle × cause | reversed mortality records excluded; causes compared case-/space-insensitively |
 | `livestock_growth` | livestock | `record.view`, `production_cycle.view` | – | cycle × weight unit | weigh-ins, sampled head, weighted average weight per head, latest sample average |
 | `production_output` | production | `record.view`, `production_cycle.view` | – | cycle × product × unit | egg collections and milk; summed only within one unit |

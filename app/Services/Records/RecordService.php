@@ -179,18 +179,35 @@ class RecordService
             if ($original->type === 'livestock_sale') {
                 throw new ApiHttpException(409, 'reverse_via_sale', 'This population effect belongs to a sale; cancel the sale instead.');
             }
-            $when = $this->when($ctx, $cycle, $data['recorded_at']);
-            if ($when->lessThan($original->recorded_at)) {
-                $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
+            if ($original->type === 'livestock_move_in' || ($original->type === 'livestock_exit' && ($original->details['exit_type'] ?? null) === 'moved_out')) {
+                throw new ApiHttpException(409, 'reverse_via_livestock_exit', 'This record is one side of a move between batches; undo it with POST /livestock-exits/{record}/reverse so both batches are corrected together.');
             }
-            $this->ledger->reconcile($cycle);
-            $record = $this->insert($ctx, $cycle, ['type' => 'reversal', 'reverses_record_id' => $original->id, ...$data], ['reason' => $data['reason']], $original->measurement, -$original->population_delta, $when, $hash);
-            $this->inventory->reverseForRecord($ctx, $original, $record);
-            $this->ledger->reconcile($cycle);
-            RecordCreated::dispatch($record);
 
-            return $record->load(['reversal', 'attachments', 'inventoryMovement']);
+            return $this->reverseLocked($ctx, $original, $cycle, $data, $hash);
         }, 3);
+    }
+
+    /**
+     * The reversal itself, for a caller that already holds the farm and cycle locks and owns idempotency (reverse(), and the livestock
+     * exit service, which reverses the two sides of a move together). Appends the opposite movement and compensates linked stock.
+     */
+    public function reverseLocked(FarmContext $ctx, OperationalRecord $original, ProductionCycle $cycle, array $data, string $hash): OperationalRecord
+    {
+        $this->active($cycle);
+        if ($original->type === 'reversal' || $original->reversal()->exists()) {
+            throw new ApiHttpException(409, 'record_already_reversed', 'This record cannot be reversed again.');
+        }
+        $when = $this->when($ctx, $cycle, $data['recorded_at']);
+        if ($when->lessThan($original->recorded_at)) {
+            $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
+        }
+        $this->ledger->reconcile($cycle);
+        $record = $this->insert($ctx, $cycle, ['type' => 'reversal', 'reverses_record_id' => $original->id, ...$data], ['reason' => $data['reason']], $original->measurement, -$original->population_delta, $when, $hash);
+        $this->inventory->reverseForRecord($ctx, $original, $record);
+        $this->ledger->reconcile($cycle);
+        RecordCreated::dispatch($record);
+
+        return $record->load(['reversal', 'attachments', 'inventoryMovement']);
     }
 
     /**
@@ -222,6 +239,29 @@ class RecordService
         RecordCreated::dispatch($record);
 
         return $record;
+    }
+
+    /**
+     * Livestock exits integration: animals leaving a batch other than by sale or death (slaughtered, culled, given away, moved out) as a
+     * `livestock_exit` record (details.exit_type says which), or arriving from another batch as a `livestock_move_in` record, each with its
+     * population movement. `$linked` is the record of the other side of a move. Same contract as appendForSale: the caller holds the farm and
+     * cycle locks and owns idempotency; the ledger is reconciled before and after.
+     */
+    public function appendForExit(FarmContext $ctx, ProductionCycle $cycle, string $type, array $details, int $delta, CarbonImmutable $when, string $key, string $hash, ?string $notes = null, ?OperationalRecord $linked = null): OperationalRecord
+    {
+        $this->ledger->reconcile($cycle);
+        $measurement = $this->quantities->normalize($ctx->farm, [['quantity' => (string) abs($delta), 'unit' => 'head']], requiredDimensions: ['count'])->toArray();
+        $record = $this->insert($ctx, $cycle, ['type' => $type, 'idempotency_key' => $key, 'notes' => $notes, 'linked_record_id' => $linked?->id], $details, $measurement, $delta, $when, $hash);
+        $this->ledger->reconcile($cycle);
+        RecordCreated::dispatch($record);
+
+        return $record;
+    }
+
+    /** An event time checked against the cycle (start <= event <= now), for callers that write records themselves. */
+    public function eventTime(FarmContext $ctx, ProductionCycle $cycle, string $value): CarbonImmutable
+    {
+        return $this->when($ctx, $cycle, $value);
     }
 
     /**
@@ -274,7 +314,7 @@ class RecordService
         $record = OperationalRecord::create([
             'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'type' => $data['type'], 'details' => $details, 'measurement' => $measurement,
             'population_delta' => $delta, 'recorded_at' => $when, 'notes' => $data['notes'] ?? null, 'reverses_record_id' => $data['reverses_record_id'] ?? null,
-            'corrects_record_id' => $data['corrects_record_id'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
+            'corrects_record_id' => $data['corrects_record_id'] ?? null, 'linked_record_id' => $data['linked_record_id'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
             'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
         ]);
         if ($delta !== 0 || in_array($record->type, ['mortality', 'population_adjustment'])) {

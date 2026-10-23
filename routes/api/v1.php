@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\InsightController;
 use App\Http\Controllers\Api\V1\InventoryController;
 use App\Http\Controllers\Api\V1\InvitationAcceptanceController;
 use App\Http\Controllers\Api\V1\InvoiceController;
+use App\Http\Controllers\Api\V1\LivestockExitController;
 use App\Http\Controllers\Api\V1\LocaleController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\LocationTypeController;
@@ -361,6 +362,13 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
 
     Route::get('/master/medicine-options', [HealthRecordController::class, 'medicineOptions'])->middleware('farm.permission:health.view')->name('api.v1.medicine-options');
     Route::get('/master/health-record-types', [HealthRecordController::class, 'types'])->middleware('farm.permission:health.view')->name('api.v1.health-record-types.index');
+    // Animals leaving a batch: one form for sold / died / slaughtered / culled / given away / moved. Per-type permissions are checked in the service.
+    Route::prefix('livestock-exits')->group(function () {
+        $c = LivestockExitController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:record.view')->name('api.v1.livestock-exits.index');
+        Route::post('/', [$c, 'store'])->middleware('throttle:record-write')->name('api.v1.livestock-exits.store');
+        Route::post('/{record}/reverse', [$c, 'reverse'])->middleware(['farm.permission:record.reverse', 'throttle:record-write'])->name('api.v1.livestock-exits.reverse');
+    });
     Route::prefix('health-records')->group(function () {
         $c = HealthRecordController::class;
         Route::get('/', [$c, 'index'])->middleware('farm.permission:health.view')->name('api.v1.health-records.index');

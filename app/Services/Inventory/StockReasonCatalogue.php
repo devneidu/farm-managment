@@ -28,6 +28,9 @@ class StockReasonCatalogue
     /** Outputs resolved automatically per farm: item kind => system_key. */
     public const OUTPUT_KEYS = [self::KIND_EGGS => 'output:eggs', self::KIND_MILK => 'output:milk'];
 
+    /** Meat from slaughter, one item per species: system_key = prefix + species code. Not an egg/milk output kind (kindOf() reports it as general stock). */
+    public const MEAT_KEY_PREFIX = 'output:meat:';
+
     public static function kindOf(InventoryItem $item): string
     {
         $kind = array_search($item->system_key, self::OUTPUT_KEYS, true);
