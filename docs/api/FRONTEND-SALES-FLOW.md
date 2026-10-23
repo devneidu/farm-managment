@@ -1177,6 +1177,7 @@ Response `409`:
 | `GET /sales/sellables`, `POST /sales` (with `buyer`, `payment`, quantity × price) | yes (`sale.create`) | yes |
 | `GET /sales`, `GET /sales/{id}` | yes (`sale.view`) | yes |
 | Payment inside `POST /sales` | yes — no `payment.create` needed | yes |
+| Sales reports (`GET /reports/sales_summary`; the sales columns of `contact_history`) | no (`403`; they need `finance.view` as well as `sale.view`) | yes |
 | `invoice` block, `POST /sales/{id}/invoice`, invoice list/PDF | no (`403`) | yes |
 | Collect a later payment (`POST /invoices/{id}/payments`), list payments | no | yes |
 | Cancel, `reverse_payments`, reverse a payment, void an invoice | no | yes (`sale.cancel`, `payment.reverse`, `invoice.void`) |

@@ -21,7 +21,7 @@ class SalesSummaryReport extends Report
     public function definition(): ReportDefinition
     {
         return new ReportDefinition('sales_summary', 'Sales summary', 'sales', 'Sales in the period by line kind (livestock, produce stock, other) with exact totals; cancelled sales are excluded.',
-            [Permission::SaleView], ['from', 'to'], Feature::AdvancedReports);
+            [Permission::SaleView, Permission::FinanceView], ['from', 'to'], Feature::AdvancedReports);
     }
 
     public function run(FarmContext $ctx, ReportFilters $f): ReportResult

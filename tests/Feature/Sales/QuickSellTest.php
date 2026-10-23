@@ -340,6 +340,19 @@ class QuickSellTest extends TeamTestCase
         $this->assertSame('egg_sales', FinanceTransaction::firstOrFail()->category->code); // the payment is booked to the sale's category
     }
 
+    public function test_selling_farm_meat_books_livestock_sales_and_a_mixed_sale_keeps_the_old_rule(): void
+    {
+        $cycle = $this->cycle(20);
+        $meat = $this->postJson('/api/v1/livestock-exits', ['production_cycle_id' => $cycle, 'type' => 'slaughtered', 'head_count' => 5, 'meat_weight_kg' => '12', 'recorded_at' => $this->at(3), 'idempotency_key' => $this->key()])
+            ->assertCreated()->json('data.meat');
+        $this->receiveOutput('eggs', '50', 'piece');
+        $line = ['kind' => 'stock', 'inventory_item_id' => $meat['inventory_item_id'], 'storage_location_id' => $meat['storage_location_id'], 'quantity' => '4', 'unit_price' => '3000'];
+
+        $this->assertSame('livestock_sales', $this->sale([$line], ['payment' => $this->payNow('1000')])->assertCreated()->json('data.finance_category.code'));
+        $eggs = ['kind' => 'stock', 'output' => 'eggs', 'quantity' => '10', 'amount' => '100'];
+        $this->assertSame('crop_sales', $this->sale([$line, $eggs])->assertCreated()->json('data.finance_category.code'));
+    }
+
     // ------------------------------------------------------------------ one-step cancel
 
     public function test_cancel_with_reverse_payments_undoes_money_stock_and_invoice_in_one_request(): void

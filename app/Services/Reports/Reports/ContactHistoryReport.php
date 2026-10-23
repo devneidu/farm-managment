@@ -23,13 +23,13 @@ class ContactHistoryReport extends Report
     public function definition(): ReportDefinition
     {
         return new ReportDefinition('contact_history', 'Supplier and customer history', 'contacts', 'Purchases from suppliers and sales to customers per contact in the period; cancelled purchases and sales are excluded.',
-            [Permission::ContactView], ['from', 'to'], Feature::AdvancedReports, null, [Permission::PurchaseView, Permission::SaleView]);
+            [Permission::ContactView], ['from', 'to'], Feature::AdvancedReports, null, [Permission::PurchaseView, Permission::SaleView]); // sales totals also need finance.view
     }
 
     public function run(FarmContext $ctx, ReportFilters $f): ReportResult
     {
         $purchases = $ctx->can(Permission::PurchaseView) ? $this->totals(Purchase::class, $ctx, $f) : null;
-        $sales = $ctx->can(Permission::SaleView) ? $this->totals(Sale::class, $ctx, $f) : null;
+        $sales = $ctx->can(Permission::SaleView) && $ctx->can(Permission::FinanceView) ? $this->totals(Sale::class, $ctx, $f) : null;
         $ids = array_values(array_unique([...array_keys($purchases ?? []), ...array_keys($sales ?? [])]));
         $contacts = Contact::ofFarm($ctx->farm)->whereIn('id', $ids)->orderBy('normalized_name')->orderBy('id')->get();
         $cur = $ctx->farm->currency;

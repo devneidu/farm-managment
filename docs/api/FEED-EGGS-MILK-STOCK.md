@@ -119,7 +119,7 @@ Slaughtering animals (`POST /livestock-exits`, `type: "slaughtered"`, see [FRONT
 * Each slaughter writes one **stock-in, reason `production`**, `meat_weight_kg` into the chosen store (`storage_location_id`; optional when the farm has exactly one active store, a "Main Store" is created when it has none, 422 when several are active and none is chosen), linked to the slaughter record and the batch. The head count and the meat succeed or fail together.
 * Meat is stock like any produce: it appears in `GET /sales/sellables` (`in_store`) and is sold with a normal stock line, or leaves with `POST /inventory/stock-out` (`sold`, `donation`, `internal_use`, ...). A manual stock-in with reason `production` is refused for it, as for eggs and milk.
 * Undoing the slaughter (`POST /livestock-exits/{record}/reverse`) takes the same meat back out of stock; if it has since been sold or used the undo is `409 insufficient_stock` and nothing changes.
-* Meat sold through `POST /sales` is booked to the `crop_sales` income category (the existing rule for produce other than eggs and milk) unless a `finance_category_id` is sent.
+* Meat sold through `POST /sales` is booked to the `livestock_sales` income category when every stock line is farm meat; a mixed sale (meat with eggs, crops, ...) keeps the previous rule (`crop_sales` for produce). An explicit `finance_category_id` always wins.
 
 ## 4. Endpoints
 

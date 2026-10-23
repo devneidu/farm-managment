@@ -76,7 +76,7 @@ Farm Worker sales access is exactly `sale.view` and `sale.create`: a worker can
 record a sale, including the optional paid-now `payment` block and the quick
 `buyer`, and read sales. A worker cannot cancel a sale (`sale.cancel`), issue or
 void invoices (`invoice.*`), view, collect or reverse payments (`payment.*`),
-manage contacts, or use Finance (`finance.*`). The payment inside `POST /sales`
+manage contacts, run the sales reports (`sales_summary` and the sales columns of `contact_history` also need `finance.view`), or use Finance (`finance.*`). The payment inside `POST /sales`
 is authorized by `sale.create` alone.
 
 Animals leaving a batch (`POST /livestock-exits`) adds no permission. It reuses

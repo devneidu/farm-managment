@@ -70,7 +70,7 @@ class ReportsTest extends TeamTestCase
         foreach (['livestock_population', 'mortality', 'production_output', 'inventory_stock', 'task_compliance', 'cycle_performance'] as $ok) {
             $this->assertContains($ok, $w);
         }
-        foreach (['income_expense', 'cycle_profitability', 'receivables', 'contact_history'] as $hidden) { // sales_summary needs sale.view, which a worker has
+        foreach (['income_expense', 'cycle_profitability', 'sales_summary', 'receivables', 'contact_history'] as $hidden) {
             $this->assertNotContains($hidden, $w, "$hidden must not be advertised to a farm worker's catalogue");
         }
 
@@ -98,6 +98,7 @@ class ReportsTest extends TeamTestCase
     {
         $this->signInAs($this->member(FarmRole::FarmWorker));
         $this->getJson('/api/v1/reports/income_expense')->assertForbidden()->assertJsonPath('code', 'forbidden');
+        $this->getJson('/api/v1/reports/sales_summary')->assertForbidden(); // a worker has sale.view but not finance.view
         $this->getJson('/api/v1/reports/receivables')->assertForbidden();
         $this->getJson('/api/v1/reports/nope')->assertNotFound()->assertJsonPath('code', 'report_not_found');
 

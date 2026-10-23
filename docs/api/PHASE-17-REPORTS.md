@@ -56,10 +56,10 @@ Reports marked **advanced** also need the `advanced_reports` plan entitlement (`
 | `input_consumption` | inventory | `inventory.view` | – | item × cycle × origin | stock used (reason `use`) net of reversals: feed and crop inputs, medicine, other |
 | `income_expense` | finance | `finance.view` | advanced | category × direction | reuses the finance summary; reversals offset their entries |
 | `cycle_profitability` | finance | `finance.view`, `production_cycle.view` | advanced | one per cycle (+ "not allocated") | income, expense, net |
-| `sales_summary` | sales | `sale.view` | advanced | line kind | cancelled sales excluded and counted separately |
+| `sales_summary` | sales | `sale.view` + `finance.view` | advanced | line kind | cancelled sales excluded and counted separately |
 | `receivables` | sales | `invoice.view`, `payment.view` | advanced | one per customer | invoiced, received (net of reversed payments), outstanding, overdue; void invoices excluded |
 | `task_compliance` | work | `task.view` | – | task category | only tasks the viewer may see; on time / late / overdue / upcoming; completion rate |
-| `contact_history` | contacts | `contact.view` + (`purchase.view` or `sale.view`) | advanced | one per contact | money columns appear only for the permissions the viewer holds |
+| `contact_history` | contacts | `contact.view` + (`purchase.view` or `sale.view`) | advanced | one per contact | money columns appear only for the permissions the viewer holds (sales totals need `sale.view` and `finance.view`) |
 
 ### Run — `GET /reports/{report}`
 

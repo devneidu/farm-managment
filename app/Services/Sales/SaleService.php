@@ -459,7 +459,7 @@ class SaleService
         return $this->finance->platformCategory($code, 'income');
     }
 
-    /** Produce lines that are all the farm's eggs -> egg_sales, all its milk -> milk_sales, any other produce (or a mix) -> crop_sales. */
+    /** Produce lines that are all the farm's eggs -> egg_sales, all its milk -> milk_sales, all farm meat (slaughter output) -> livestock_sales, any other produce (or a mix) -> crop_sales. */
     private function produceCategory(array $lines): string
     {
         $keys = InventoryItem::whereIn('id', collect($lines)->pluck('inventory_item_id')->all())->pluck('system_key')->unique()->values();
@@ -467,6 +467,7 @@ class SaleService
         return match (true) {
             $keys->count() === 1 && $keys->first() === StockReasonCatalogue::OUTPUT_KEYS[StockReasonCatalogue::KIND_EGGS] => 'egg_sales',
             $keys->count() === 1 && $keys->first() === StockReasonCatalogue::OUTPUT_KEYS[StockReasonCatalogue::KIND_MILK] => 'milk_sales',
+            $keys->isNotEmpty() && $keys->every(fn ($key) => str_starts_with((string) $key, StockReasonCatalogue::MEAT_KEY_PREFIX)) => 'livestock_sales',
             default => 'crop_sales',
         };
     }
