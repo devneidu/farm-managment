@@ -149,7 +149,7 @@ class DashboardTest extends TeamTestCase
 
     private function income(string $amount): void
     {
-        $this->postJson('/api/v1/income', ['finance_category_id' => $this->category('egg_sales', 'income'), 'amount' => $amount, 'occurred_on' => $this->today(), 'idempotency_key' => $this->key()])->assertCreated();
+        $this->postJson('/api/v1/income', ['finance_category_id' => $this->category('other_income', 'income'), 'amount' => $amount, 'occurred_on' => $this->today(), 'idempotency_key' => $this->key()])->assertCreated();
     }
 
     private function expense(string $amount): void
@@ -611,7 +611,7 @@ class DashboardTest extends TeamTestCase
         $this->income('0.10');
         $this->income('0.20');
         $this->expense('0.05');
-        $this->postJson('/api/v1/income', ['finance_category_id' => $this->category('egg_sales', 'income'), 'amount' => '999.99', 'occurred_on' => '2026-09-30', 'idempotency_key' => $this->key()])->assertCreated();
+        $this->postJson('/api/v1/income', ['finance_category_id' => $this->category('other_income', 'income'), 'amount' => '999.99', 'occurred_on' => '2026-09-30', 'idempotency_key' => $this->key()])->assertCreated();
 
         $k = $this->kpis($this->dash());
 

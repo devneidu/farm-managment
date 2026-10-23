@@ -31440,6 +31440,8 @@
                   "  { const row = (get(json, \"data\") || []).find((r) => get(r, \"code\") === \"labour\"); const v = row && get(row, \"id\"); if (v !== undefined && v !== null) pm.environment.set(\"cat_labour_id\", String(v)); else console.warn(\"Could not capture cat_labour_id\"); }",
                   "  { const row = (get(json, \"data\") || []).find((r) => get(r, \"code\") === \"utilities\"); const v = row && get(row, \"id\"); if (v !== undefined && v !== null) pm.environment.set(\"cat_utilities_id\", String(v)); else console.warn(\"Could not capture cat_utilities_id\"); }",
                   "  { const row = (get(json, \"data\") || []).find((r) => get(r, \"code\") === \"other_income\"); const v = row && get(row, \"id\"); if (v !== undefined && v !== null) pm.environment.set(\"cat_other_income_id\", String(v)); else console.warn(\"Could not capture cat_other_income_id\"); }",
+                  "  { const row = (get(json, \"data\") || []).find((r) => get(r, \"code\") === \"egg_sales\"); const v = row && get(row, \"id\"); if (v !== undefined && v !== null) pm.environment.set(\"cat_egg_sales_id\", String(v)); else console.warn(\"Could not capture cat_egg_sales_id\"); }",
+                  "  { const row = (get(json, \"data\") || []).find((r) => get(r, \"code\") === \"services\"); const v = row && get(row, \"id\"); if (v !== undefined && v !== null) pm.environment.set(\"cat_services_id\", String(v)); else console.warn(\"Could not capture cat_services_id\"); }",
                   "}"
                 ]
               }
@@ -31530,7 +31532,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045d-dcf8-73ce-a004-9375d14e7a4e\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\",\n      \"direction\": \"expense\",\n      \"is_system\": true\n    },\n    {\n      \"id\": \"01a1045d-dd1c-7299-96f9-413f50b4df25\",\n      \"code\": \"medicine_veterinary\",\n      \"name\": \"Medicine & veterinary\",\n      \"direction\": \"expense\",\n      \"is_system\": true\n    }\n  ],\n  \"meta\": {},\n  \"message\": null\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045d-dcf8-73ce-a004-9375d14e7a4e\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\",\n      \"direction\": \"expense\",\n      \"is_system\": true,\n      \"manual_entry\": true\n    },\n    {\n      \"id\": \"01a1045d-dd1c-7299-96f9-413f50b4df25\",\n      \"code\": \"medicine_veterinary\",\n      \"name\": \"Medicine & veterinary\",\n      \"direction\": \"expense\",\n      \"is_system\": true,\n      \"manual_entry\": true\n    }\n  ],\n  \"meta\": {},\n  \"message\": null\n}"
             }
           ]
         },
@@ -31600,7 +31602,7 @@
                 }
               }
             },
-            "description": "**WHAT IT DOES**\nBooks an expense in the money ledger (`direction` is pinned to `expense`). Optionally allocate it to an open production cycle so it counts toward that cycle's profitability.\n\n**WHEN TO USE IT**\n\"Add expense\" (labour, utilities, ...).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One expense row in the money ledger. No stock effect.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/expenses`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `expense`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_labour_id}}` — captured by \"List income and expense categories\"\n- `{{cycle_id}}` — captured by \"Start a livestock batch\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n- Optional `source {type: operational_record|health_record|purchase, id}` links the expense to the real event: ONE live transaction per source (`409 finance_already_recorded`, `details.transaction_id`).\n- Never send `farm_id`, `currency`, `created_by`, `entry_type`, `reference` (rejected).\n- Requires `finance.create` (Owner, Manager, Finance). Tasks never create transactions.\n\n**SUCCESS**\n`201 Created` — message: \"Expense recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+            "description": "**WHAT IT DOES**\nBooks an expense in the money ledger (`direction` is pinned to `expense`). Optionally allocate it to an open production cycle so it counts toward that cycle's profitability.\n\n**WHEN TO USE IT**\n\"Add expense\" (labour, utilities, ...).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One expense row in the money ledger. No stock effect.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/expenses`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `expense`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_labour_id}}` — captured by \"List income and expense categories\"\n- `{{cycle_id}}` — captured by \"Start a livestock batch\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n- Optional `source {type: operational_record|health_record|purchase, id}` links the expense to the real event: ONE live transaction per source (`409 finance_already_recorded`, `details.transaction_id`).\n- Never send `farm_id`, `currency`, `created_by`, `entry_type`, `reference` (rejected).\n- Requires `finance.create` (Owner, Manager, Finance). Tasks never create transactions.\n\n**SUCCESS**\n`201 Created` — message: \"Expense recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`.\n\n**TRANSACTIONS PAGE ADDITIONS**\n- Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.\n- Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.\n- Livestock, egg, milk and crop sales categories are refused here with 422 (\"Record this through Sales so your stock stays correct.\"). `GET /finance/categories` returns `manual_entry` so the form can hide them.\n- A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.\n- Every row carries `source {type, id, label, ...}` (\"Entered manually\" when manual) and `can_reverse_directly`."
           },
           "response": [
             {
@@ -31652,7 +31654,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-92a5-73a6-85ae-3d273c3b6afd\",\n    \"reference\": \"FIN-2026-00004\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-dda2-707a-9ab7-a7d82476be21\",\n      \"code\": \"labour\",\n      \"name\": \"Labour\"\n    },\n    \"amount\": \"15000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n    \"description\": \"Casual labour - house clean-out\",\n    \"source\": null,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Expense recorded.\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-92a5-73a6-85ae-3d273c3b6afd\",\n    \"reference\": \"FIN-2026-00004\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-dda2-707a-9ab7-a7d82476be21\",\n      \"code\": \"labour\",\n      \"name\": \"Labour\"\n    },\n    \"amount\": \"15000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n    \"description\": \"Casual labour - house clean-out\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Expense recorded.\"\n}"
             },
             {
               "name": "Amount with three decimals (422)",
@@ -31704,6 +31706,210 @@
               ],
               "cookie": [],
               "body": "{\n  \"message\": \"The amount must be an amount with at most two decimal places.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a1045e-92ba-7316-86cf-8560a88c1584\",\n  \"errors\": {\n    \"amount\": [\n      \"The amount must be an amount with at most two decimal places.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "Amount differs from quantity x unit price (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"amount\": \"100000.00\",\n  \"quantity\": \"12.5\",\n  \"unit_price\": \"8400.00\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"The amount must equal quantity x unit price (105000.00), or be left out.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a164f1-ac1f-739e-87fc-719a4af6745b\",\n  \"errors\": {\n    \"amount\": [\n      \"The amount must equal quantity x unit price (105000.00), or be left out.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "Quantity without unit price (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"amount\": \"105000.00\",\n  \"quantity\": \"12.5\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Send quantity and unit_price together, or neither.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a164f1-ac93-725c-9a87-16c38bcaddf2\",\n  \"errors\": {\n    \"unit_price\": [\n      \"Send quantity and unit_price together, or neither.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "Possible duplicate of a purchase (409)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"amount\": \"18000.00\",\n  \"contact_id\": \"{{supplier_id}}\",\n  \"description\": \"Diesel\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"A purchase with the same amount and date already exists. Send confirm_duplicate: true to record this expense anyway.\",\n  \"code\": \"possible_duplicate\",\n  \"request_id\": \"01a164f1-ae76-7028-b6e7-d70b6b556299\",\n  \"details\": {\n    \"purchase_id\": \"01a164f1-adb3-70d4-927a-83eb99f5d15e\",\n    \"label\": \"Purchase #1\",\n    \"reference\": \"PUR-2026-00001\"\n  }\n}"
+            },
+            {
+              "name": "201 Created — recorded anyway with confirm_duplicate",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"amount\": \"18000.00\",\n  \"contact_id\": \"{{supplier_id}}\",\n  \"description\": \"Diesel\",\n  \"confirm_duplicate\": true,\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a164f1-af75-715c-8f6a-d81db3f27e85\",\n    \"reference\": \"FIN-2026-00004\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a164f0-88d6-737b-a530-4ffe216603b7\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\"\n    },\n    \"amount\": \"18000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-14\",\n    \"recorded_at\": \"2026-10-14T12:00:00.000000Z\",\n    \"contact_id\": \"01a164f1-a9e9-7191-acb6-e439ec0b19d2\",\n    \"contact_name\": \"Green Valley Feeds\",\n    \"production_cycle_id\": null,\n    \"description\": \"Diesel\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a164f1-a71f-7332-bf6f-d05915768db8\",\n    \"created_at\": \"2026-10-14T12:00:00.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Expense recorded.\"\n}"
             }
           ]
         },
@@ -31771,7 +31977,7 @@
                 }
               }
             },
-            "description": "**WHAT IT DOES**\nBooks miscellaneous income (`direction` is pinned to `income`). Income from sales is booked by PAYMENTS, not here: recording a sale or invoice books no income.\n\n**WHEN TO USE IT**\n\"Add other income\" (not sales income).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One income row in the money ledger.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/income`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `income`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_other_income_id}}` — captured by \"List income and expense categories\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**SUCCESS**\n`201 Created` — message: \"Income recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+            "description": "**WHAT IT DOES**\nBooks miscellaneous income (`direction` is pinned to `income`). Income from sales is booked by PAYMENTS, not here: recording a sale or invoice books no income.\n\n**WHEN TO USE IT**\n\"Add other income\" (not sales income).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One income row in the money ledger.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/income`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `income`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_other_income_id}}` — captured by \"List income and expense categories\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**SUCCESS**\n`201 Created` — message: \"Income recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`.\n\n**TRANSACTIONS PAGE ADDITIONS**\n- Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.\n- Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.\n- Livestock, egg, milk and crop sales categories are refused here with 422 (\"Record this through Sales so your stock stays correct.\"). `GET /finance/categories` returns `manual_entry` so the form can hide them.\n- A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.\n- Every row carries `source {type, id, label, ...}` (\"Entered manually\" when manual) and `can_reverse_directly`."
           },
           "response": [
             {
@@ -31823,7 +32029,300 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-938b-727a-95b9-c434b88eb731\",\n    \"reference\": \"FIN-2026-00006\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"income\",\n    \"category\": {\n      \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n      \"code\": \"other_income\",\n      \"name\": \"Other income\"\n    },\n    \"amount\": \"5000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Sale of used feed bags\",\n    \"source\": null,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Income recorded.\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-938b-727a-95b9-c434b88eb731\",\n    \"reference\": \"FIN-2026-00006\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"income\",\n    \"category\": {\n      \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n      \"code\": \"other_income\",\n      \"name\": \"Other income\"\n    },\n    \"amount\": \"5000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Sale of used feed bags\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Income recorded.\"\n}"
+            },
+            {
+              "name": "Product sales category (422)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_egg_sales_id}}\",\n  \"amount\": \"5000.00\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Record this through Sales so your stock stays correct.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a164f1-ab96-702b-bad9-62c57179aa11\",\n  \"errors\": {\n    \"finance_category_id\": [\n      \"Record this through Sales so your stock stays correct.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Record an expense by quantity and unit price",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  const get = (o, p) => p.split(\".\").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);",
+                  "  { const v = get(json, \"data.id\"); if (v !== undefined && v !== null) pm.environment.set(\"expense_qty_id\", String(v)); else console.warn(\"Could not capture expense_qty_id from data.id\"); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/expenses",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "expenses"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"quantity\": \"12.5\",\n  \"unit_price\": \"8400.00\",\n  \"payment_method\": \"bank_transfer\",\n  \"occurred_on\": \"{{today}}\",\n  \"description\": \"12.5 bags of layer mash\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nSame as \"Record an expense\", but the amount is computed from `quantity` x `unit_price` (send both, leave `amount` out). Also records how it was paid (`payment_method`).\n\n**(base description follows)**\n\n**WHAT IT DOES**\nBooks an expense in the money ledger (`direction` is pinned to `expense`). Optionally allocate it to an open production cycle so it counts toward that cycle's profitability.\n\n**WHEN TO USE IT**\n\"Add expense\" (labour, utilities, ...).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One expense row in the money ledger. No stock effect.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/expenses`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `expense`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_labour_id}}` — captured by \"List income and expense categories\"\n- `{{cycle_id}}` — captured by \"Start a livestock batch\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.\n- The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.\n- Optional `source {type: operational_record|health_record|purchase, id}` links the expense to the real event: ONE live transaction per source (`409 finance_already_recorded`, `details.transaction_id`).\n- Never send `farm_id`, `currency`, `created_by`, `entry_type`, `reference` (rejected).\n- Requires `finance.create` (Owner, Manager, Finance). Tasks never create transactions.\n\n**SUCCESS**\n`201 Created` — message: \"Expense recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`.\n\n**TRANSACTIONS PAGE ADDITIONS**\n- Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.\n- Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.\n- Livestock, egg, milk and crop sales categories are refused here with 422 (\"Record this through Sales so your stock stays correct.\"). `GET /finance/categories` returns `manual_entry` so the form can hide them.\n- A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.\n- Every row carries `source {type, id, label, ...}` (\"Entered manually\" when manual) and `can_reverse_directly`."
+          },
+          "response": [
+            {
+              "name": "201 Created — amount computed (105000.00)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/expenses",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "expenses"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_labour_id}}\",\n  \"quantity\": \"12.5\",\n  \"unit_price\": \"8400.00\",\n  \"payment_method\": \"bank_transfer\",\n  \"description\": \"12.5 bags of layer mash\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a164f1-aabf-72ba-94f6-d1818289e6cd\",\n    \"reference\": \"FIN-2026-00001\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a164f0-88d6-737b-a530-4ffe216603b7\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\"\n    },\n    \"amount\": \"105000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-14\",\n    \"recorded_at\": \"2026-10-14T12:00:00.000000Z\",\n    \"contact_id\": \"01a164f1-a9e9-7191-acb6-e439ec0b19d2\",\n    \"contact_name\": \"Green Valley Feeds\",\n    \"production_cycle_id\": null,\n    \"description\": \"12.5 bags of layer mash\",\n    \"payment_method\": \"bank_transfer\",\n    \"quantity\": \"12.5\",\n    \"unit_price\": \"8400.00\",\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a164f1-a71f-7332-bf6f-d05915768db8\",\n    \"created_at\": \"2026-10-14T12:00:00.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Expense recorded.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Record income (services, paid by mobile money)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/income",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "income"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"finance_category_id\": \"{{cat_services_id}}\",\n  \"amount\": \"25000.00\",\n  \"payment_method\": \"mobile_money\",\n  \"occurred_on\": \"{{today}}\",\n  \"description\": \"Hatching service for a neighbour\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nBooks miscellaneous income (`direction` is pinned to `income`). Income from sales is booked by PAYMENTS, not here: recording a sale or invoice books no income.\n\n**WHEN TO USE IT**\n\"Add other income\" (not sales income).\n\n**IMPORTANT INPUTS**\n- Required body fields: `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One income row in the money ledger.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/income`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, optional. Values: `income`\n- `finance_category_id` — string (uuid), optional, nullable\n- `amount` — string, **required**\n- `occurred_on` — string (date), **required**\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `farm_id` — string, optional\n- `created_by` — string, optional\n- `currency` — string, optional\n- `entry_type` — string, optional\n- `reference` — string, optional\n\n**VARIABLES USED**\n- `{{cat_other_income_id}}` — captured by \"List income and expense categories\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n- Same validation as expenses.\n\n**SUCCESS**\n`201 Created` — message: \"Income recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`.\n\n**TRANSACTIONS PAGE ADDITIONS**\n- Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.\n- Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.\n- Livestock, egg, milk and crop sales categories are refused here with 422 (\"Record this through Sales so your stock stays correct.\"). `GET /finance/categories` returns `manual_entry` so the form can hide them.\n- A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.\n- Every row carries `source {type, id, label, ...}` (\"Entered manually\" when manual) and `can_reverse_directly`."
+          },
+          "response": [
+            {
+              "name": "201 Created — Income recorded.",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/income",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "income"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"finance_category_id\": \"{{cat_services_id}}\",\n  \"amount\": \"25000.00\",\n  \"payment_method\": \"mobile_money\",\n  \"description\": \"Hatching service for a neighbour\",\n  \"occurred_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a164f1-ab6b-7218-ad09-52787c8a2564\",\n    \"reference\": \"FIN-2026-00002\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"income\",\n    \"category\": {\n      \"id\": \"01a164f0-8a3d-7308-b1bf-40778f6e7168\",\n      \"code\": \"services\",\n      \"name\": \"Services\"\n    },\n    \"amount\": \"25000.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-14\",\n    \"recorded_at\": \"2026-10-14T12:00:00.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Hatching service for a neighbour\",\n    \"payment_method\": \"mobile_money\",\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a164f1-a71f-7332-bf6f-d05915768db8\",\n    \"created_at\": \"2026-10-14T12:00:00.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Income recorded.\"\n}"
             }
           ]
         },
@@ -31894,7 +32393,7 @@
                 }
               }
             },
-            "description": "**WHAT IT DOES**\nThe generic form of the two endpoints above: `direction` (`income`|`expense`) is part of the body.\n\n**WHEN TO USE IT**\nA generic income/expense entry form.\n\n**IMPORTANT INPUTS**\n- Required body fields: `direction`, `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One ledger row.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/finance/transactions`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, **required**. income or expense.. Values: `income`, `expense`\n- `finance_category_id` — string (uuid), optional, nullable. An active platform or farm category of the same direction (GET /finance/categories). Optional only when the source is a purchase.\n- `amount` — string, **required**. Positive amount in the farm currency, at most two decimals, sent as a string (\"1500.50\").\n- `occurred_on` — string (date), **required**. Farm-local business day, not in the future.\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds). When it was entered/happened (explicit offset); defaults to now. Kept separate from created_at.\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable. Allocates the money to an open production cycle (cost/revenue of that cycle). A linked source's own cycle is used when omitted.\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional. \"Record as expense/income\" for an existing event. One live transaction per source; a second attempt is 409 finance_already_recorded.\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable. Replace a reversed transaction once (same direction and source). Needs finance.reverse.\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n\n**VARIABLES USED**\n- `{{cat_utilities_id}}` — captured by \"List income and expense categories\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n\n**SUCCESS**\n`201 Created` — message: \"Transaction recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+            "description": "**WHAT IT DOES**\nThe generic form of the two endpoints above: `direction` (`income`|`expense`) is part of the body.\n\n**WHEN TO USE IT**\nA generic income/expense entry form.\n\n**IMPORTANT INPUTS**\n- Required body fields: `direction`, `amount`, `occurred_on`, `idempotency_key`.\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).\n- One ledger row.\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/finance/transactions`\n\n**REQUEST BODY** (`application/json`)\n- `direction` — enum, **required**. income or expense.. Values: `income`, `expense`\n- `finance_category_id` — string (uuid), optional, nullable. An active platform or farm category of the same direction (GET /finance/categories). Optional only when the source is a purchase.\n- `amount` — string, **required**. Positive amount in the farm currency, at most two decimals, sent as a string (\"1500.50\").\n- `occurred_on` — string (date), **required**. Farm-local business day, not in the future.\n- `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds). When it was entered/happened (explicit offset); defaults to now. Kept separate from created_at.\n- `contact_id` — string (uuid), optional, nullable\n- `production_cycle_id` — string (uuid), optional, nullable. Allocates the money to an open production cycle (cost/revenue of that cycle). A linked source's own cycle is used when omitted.\n- `description` — string, optional, max 500 chars, nullable\n- `source` — object, optional. \"Record as expense/income\" for an existing event. One live transaction per source; a second attempt is 409 finance_already_recorded.\n- `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`\n- `source.id` — string (uuid), **required**\n- `corrects_transaction_id` — string (uuid), optional, nullable. Replace a reversed transaction once (same direction and source). Needs finance.reverse.\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n\n**VARIABLES USED**\n- `{{cat_utilities_id}}` — captured by \"List income and expense categories\"\n\n**BUSINESS RULES**\n- Money is an exact decimal STRING with at most two decimals (`\"1500.50\"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.\n\n**SUCCESS**\n`201 Created` — message: \"Transaction recorded.\"\n\n`data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`.\n\n**TRANSACTIONS PAGE ADDITIONS**\n- Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.\n- Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.\n- Livestock, egg, milk and crop sales categories are refused here with 422 (\"Record this through Sales so your stock stays correct.\"). `GET /finance/categories` returns `manual_entry` so the form can hide them.\n- A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.\n- Every row carries `source {type, id, label, ...}` (\"Entered manually\" when manual) and `can_reverse_directly`."
           },
           "response": [
             {
@@ -31947,7 +32446,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"reference\": \"FIN-2026-00007\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"source\": null,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Transaction recorded.\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"reference\": \"FIN-2026-00007\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Transaction recorded.\"\n}"
             }
           ]
         },
@@ -32064,7 +32563,7 @@
                 }
               ]
             },
-            "description": "**WHAT IT DOES**\nThe money ledger, reversal rows included. Filters: `direction`, `entry_type` (`entry`|`reversal`), `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type` (`operational_record`, `health_record`, `purchase`, `payment`), `source_id`, `from`, `to` (inclusive farm-local days), `page`, `per_page`.\n\n**WHEN TO USE IT**\nThe money ledger screen.\n\n**IMPORTANT INPUTS**\n- Query filters: `direction`, `entry_type`, `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type`, `source_id`, `from`, ....\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.view` (taken from the current farm context; never sent by the client).\n\n**FRONTEND NOTES**\n- Needs the signed-in session cookie (send requests with credentials).\n- Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).\n\n**ACCESS**\nRequired backend farm permission: **`finance.view`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\n\n**URL**\n`GET {{base_url}}/finance/transactions`\n\n**QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)\n- `direction` — enum. Values: `income`, `expense`\n- `entry_type` — enum. Values: `entry`, `reversal`\n- `finance_category_id` — string (uuid)\n- `contact_id` — string (uuid)\n- `production_cycle_id` — string (uuid)\n- `source_type` — enum. Values: `operational_record`, `health_record`, `purchase`, `payment`\n- `source_id` — string (uuid)\n- `from` — string (date)\n- `to` — string (date)\n- `page` — integer, min 1\n- `per_page` — integer, min 1, max 100\n\n**SUCCESS**\n`200 OK`\n\n`data` is an array of objects with fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n`meta`: `current_page`, `per_page`, `last_page`, `total`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors)."
+            "description": "**WHAT IT DOES**\nThe money ledger, reversal rows included. Filters: `direction`, `entry_type` (`entry`|`reversal`), `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type` (`operational_record`, `health_record`, `purchase`, `payment`), `source_id`, `from`, `to` (inclusive farm-local days), `page`, `per_page`.\n\n**WHEN TO USE IT**\nThe money ledger screen.\n\n**IMPORTANT INPUTS**\n- Query filters: `direction`, `entry_type`, `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type`, `source_id`, `from`, ....\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `finance.view` (taken from the current farm context; never sent by the client).\n\n**FRONTEND NOTES**\n- Needs the signed-in session cookie (send requests with credentials).\n- Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).\n\n**ACCESS**\nRequired backend farm permission: **`finance.view`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)\n\n**URL**\n`GET {{base_url}}/finance/transactions`\n\n**QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)\n- `direction` — enum. Values: `income`, `expense`\n- `entry_type` — enum. Values: `entry`, `reversal`\n- `finance_category_id` — string (uuid)\n- `contact_id` — string (uuid)\n- `production_cycle_id` — string (uuid)\n- `source_type` — enum. Values: `operational_record`, `health_record`, `purchase`, `payment`\n- `source_id` — string (uuid)\n- `from` — string (date)\n- `to` — string (date)\n- `page` — integer, min 1\n- `per_page` — integer, min 1, max 100\n\n**SUCCESS**\n`200 OK`\n\n`data` is an array of objects with fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.\n\n`meta`: `current_page`, `per_page`, `last_page`, `total`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `finance.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n\nFilter `payment_method` (cash, bank_transfer, pos, mobile_money, cheque, other) is available. Each row has `source {type, id, label}` and `can_reverse_directly`."
           },
           "response": [
             {
@@ -32170,7 +32669,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n      \"reference\": \"FIN-2026-00007\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n        \"code\": \"utilities\",\n        \"name\": \"Utilities\"\n      },\n      \"amount\": \"4200.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": null,\n      \"contact_name\": null,\n      \"production_cycle_id\": null,\n      \"description\": \"Borehole pump fuel\",\n      \"source\": null,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    },\n    {\n      \"id\": \"01a1045e-9314-729e-8c00-6bed65ae539a\",\n      \"reference\": \"FIN-2026-00005\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-de95-70d5-829d-135e5894286c\",\n        \"code\": \"other_expense\",\n        \"name\": \"Other expense\"\n      },\n      \"amount\": \"3500.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n      \"contact_name\": \"Mama Nkechi Feeds\",\n      \"production_cycle_id\": null,\n      \"description\": null,\n      \"source\": {\n        \"type\": \"purchase\",\n        \"id\": \"01a1045e-9049-7244-a5a4-efcf066b91de\"\n      },\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 6\n  },\n  \"message\": null\n}"
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n      \"reference\": \"FIN-2026-00007\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n        \"code\": \"utilities\",\n        \"name\": \"Utilities\"\n      },\n      \"amount\": \"4200.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": null,\n      \"contact_name\": null,\n      \"production_cycle_id\": null,\n      \"description\": \"Borehole pump fuel\",\n      \"payment_method\": null,\n      \"quantity\": null,\n      \"unit_price\": null,\n      \"source\": {\n        \"type\": null,\n        \"id\": null,\n        \"label\": \"Entered manually\"\n      },\n      \"can_reverse_directly\": true,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    },\n    {\n      \"id\": \"01a1045e-9314-729e-8c00-6bed65ae539a\",\n      \"reference\": \"FIN-2026-00005\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-de95-70d5-829d-135e5894286c\",\n        \"code\": \"other_expense\",\n        \"name\": \"Other expense\"\n      },\n      \"amount\": \"3500.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n      \"contact_name\": \"Mama Nkechi Feeds\",\n      \"production_cycle_id\": null,\n      \"description\": null,\n      \"payment_method\": null,\n      \"quantity\": null,\n      \"unit_price\": null,\n      \"source\": {\n        \"type\": \"purchase\",\n        \"id\": \"01a1045e-9049-7244-a5a4-efcf066b91de\",\n        \"label\": \"Purchase\"\n      },\n      \"can_reverse_directly\": false,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 6\n  },\n  \"message\": null\n}"
             }
           ]
         },
@@ -32263,7 +32762,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"reference\": \"FIN-2026-00007\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"source\": null,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": null\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"reference\": \"FIN-2026-00007\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": true,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": null\n}"
             }
           ]
         },
@@ -32389,7 +32888,7 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-946e-72c5-ad5a-f9aacf4e48fe\",\n    \"reference\": \"FIN-2026-00008\",\n    \"entry_type\": \"reversal\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"source\": null,\n    \"reverses_transaction_id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": \"Receipt belonged to another farm\",\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Reversal recorded.\"\n}"
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-946e-72c5-ad5a-f9aacf4e48fe\",\n    \"reference\": \"FIN-2026-00008\",\n    \"entry_type\": \"reversal\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-ddb5-72e0-a017-c6787a53b98b\",\n      \"code\": \"utilities\",\n      \"name\": \"Utilities\"\n    },\n    \"amount\": \"4200.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": null,\n    \"contact_name\": null,\n    \"production_cycle_id\": null,\n    \"description\": \"Borehole pump fuel\",\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": null,\n      \"id\": null,\n      \"label\": \"Entered manually\"\n    },\n    \"can_reverse_directly\": false,\n    \"reverses_transaction_id\": \"01a1045e-93c9-7280-bcf4-d4546718cc8b\",\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": \"Receipt belonged to another farm\",\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Reversal recorded.\"\n}"
             },
             {
               "name": "Already reversed (409)",
@@ -64547,7 +65046,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045d-dcf8-73ce-a004-9375d14e7a4e\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\",\n      \"direction\": \"expense\",\n      \"is_system\": true\n    },\n    {\n      \"id\": \"01a1045d-dd1c-7299-96f9-413f50b4df25\",\n      \"code\": \"medicine_veterinary\",\n      \"name\": \"Medicine & veterinary\",\n      \"direction\": \"expense\",\n      \"is_system\": true\n    }\n  ],\n  \"meta\": {},\n  \"message\": null\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045d-dcf8-73ce-a004-9375d14e7a4e\",\n      \"code\": \"feed\",\n      \"name\": \"Feed\",\n      \"direction\": \"expense\",\n      \"is_system\": true,\n      \"manual_entry\": true\n    },\n    {\n      \"id\": \"01a1045d-dd1c-7299-96f9-413f50b4df25\",\n      \"code\": \"medicine_veterinary\",\n      \"name\": \"Medicine & veterinary\",\n      \"direction\": \"expense\",\n      \"is_system\": true,\n      \"manual_entry\": true\n    }\n  ],\n  \"meta\": {},\n  \"message\": null\n}"
                 }
               ]
             },
@@ -65223,7 +65722,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-8f0f-7051-a260-eb03b324fe69\",\n      \"reference\": \"FIN-2026-00001\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-de2c-7014-825f-7e6f055272dd\",\n        \"code\": \"general_supplies\",\n        \"name\": \"General supplies\"\n      },\n      \"amount\": \"10250.45\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-03\",\n      \"recorded_at\": \"2026-10-03T22:44:06.000000Z\",\n      \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n      \"contact_name\": \"Mama Nkechi Feeds\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Purchase PUR-2026-00001\",\n      \"source\": {\n        \"type\": \"purchase\",\n        \"id\": \"01a1045e-8e99-70da-b099-7f36342ce82d\"\n      },\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-8f0f-7051-a260-eb03b324fe69\",\n      \"reference\": \"FIN-2026-00001\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"expense\",\n      \"category\": {\n        \"id\": \"01a1045d-de2c-7014-825f-7e6f055272dd\",\n        \"code\": \"general_supplies\",\n        \"name\": \"General supplies\"\n      },\n      \"amount\": \"10250.45\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-03\",\n      \"recorded_at\": \"2026-10-03T22:44:06.000000Z\",\n      \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n      \"contact_name\": \"Mama Nkechi Feeds\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Purchase PUR-2026-00001\",\n      \"payment_method\": null,\n      \"quantity\": null,\n      \"unit_price\": null,\n      \"source\": {\n        \"type\": \"purchase\",\n        \"id\": \"01a1045e-8e99-70da-b099-7f36342ce82d\",\n        \"label\": \"Purchase #1\"\n      },\n      \"can_reverse_directly\": false,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
                 }
               ]
             },
@@ -65465,7 +65964,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-9314-729e-8c00-6bed65ae539a\",\n    \"reference\": \"FIN-2026-00005\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-de95-70d5-829d-135e5894286c\",\n      \"code\": \"other_expense\",\n      \"name\": \"Other expense\"\n    },\n    \"amount\": \"3500.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n    \"contact_name\": \"Mama Nkechi Feeds\",\n    \"production_cycle_id\": null,\n    \"description\": null,\n    \"source\": {\n      \"type\": \"purchase\",\n      \"id\": \"01a1045e-9049-7244-a5a4-efcf066b91de\"\n    },\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Expense recorded.\"\n}"
+                  "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-9314-729e-8c00-6bed65ae539a\",\n    \"reference\": \"FIN-2026-00005\",\n    \"entry_type\": \"entry\",\n    \"direction\": \"expense\",\n    \"category\": {\n      \"id\": \"01a1045d-de95-70d5-829d-135e5894286c\",\n      \"code\": \"other_expense\",\n      \"name\": \"Other expense\"\n    },\n    \"amount\": \"3500.00\",\n    \"currency\": \"NGN\",\n    \"occurred_on\": \"2026-10-04\",\n    \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n    \"contact_id\": \"01a1045e-8d01-706b-a44d-b60c4bc28406\",\n    \"contact_name\": \"Mama Nkechi Feeds\",\n    \"production_cycle_id\": null,\n    \"description\": null,\n    \"payment_method\": null,\n    \"quantity\": null,\n    \"unit_price\": null,\n    \"source\": {\n      \"type\": \"purchase\",\n      \"id\": \"01a1045e-9049-7244-a5a4-efcf066b91de\",\n      \"label\": \"Purchase\"\n    },\n    \"can_reverse_directly\": false,\n    \"reverses_transaction_id\": null,\n    \"corrects_transaction_id\": null,\n    \"reversed_by_transaction_id\": null,\n    \"is_reversed\": false,\n    \"reason\": null,\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": \"Expense recorded.\"\n}"
                 }
               ]
             },
@@ -66806,7 +67305,7 @@
                     }
                   ],
                   "cookie": [],
-                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-a402-71d4-88f9-f8a39f6c6704\",\n      \"reference\": \"FIN-2026-00010\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"income\",\n      \"category\": {\n        \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"amount\": \"57000.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d77-7352-865c-f90431a3d690\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Payment PAY-2026-00002 for INV-2026-00001\",\n      \"source\": {\n        \"type\": \"payment\",\n        \"id\": \"01a1045e-a3fa-7294-a01c-b1730836a80e\"\n      },\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    },\n    {\n      \"id\": \"01a1045e-a2fb-720d-b125-42600cca5bf3\",\n      \"reference\": \"FIN-2026-00009\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"income\",\n      \"category\": {\n        \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"amount\": \"30000.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d77-7352-865c-f90431a3d690\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Payment PAY-2026-00001 for INV-2026-00001\",\n      \"source\": {\n        \"type\": \"payment\",\n        \"id\": \"01a1045e-a2f2-7048-b761-a61c80ba8653\"\n      },\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
+                  "body": "{\n  \"data\": [\n    {\n      \"id\": \"01a1045e-a402-71d4-88f9-f8a39f6c6704\",\n      \"reference\": \"FIN-2026-00010\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"income\",\n      \"category\": {\n        \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"amount\": \"57000.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d77-7352-865c-f90431a3d690\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Payment PAY-2026-00002 for INV-2026-00001\",\n      \"payment_method\": null,\n      \"quantity\": null,\n      \"unit_price\": null,\n      \"source\": {\n        \"type\": \"payment\",\n        \"id\": \"01a1045e-a3fa-7294-a01c-b1730836a80e\",\n        \"label\": \"Customer payment\"\n      },\n      \"can_reverse_directly\": false,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    },\n    {\n      \"id\": \"01a1045e-a2fb-720d-b125-42600cca5bf3\",\n      \"reference\": \"FIN-2026-00009\",\n      \"entry_type\": \"entry\",\n      \"direction\": \"income\",\n      \"category\": {\n        \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"amount\": \"30000.00\",\n      \"currency\": \"NGN\",\n      \"occurred_on\": \"2026-10-04\",\n      \"recorded_at\": \"2026-10-04T00:45:08.000000Z\",\n      \"contact_id\": \"01a1045e-8d77-7352-865c-f90431a3d690\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n      \"description\": \"Payment PAY-2026-00001 for INV-2026-00001\",\n      \"payment_method\": null,\n      \"quantity\": null,\n      \"unit_price\": null,\n      \"source\": {\n        \"type\": \"payment\",\n        \"id\": \"01a1045e-a2f2-7048-b761-a61c80ba8653\",\n        \"label\": \"Customer payment\"\n      },\n      \"can_reverse_directly\": false,\n      \"reverses_transaction_id\": null,\n      \"corrects_transaction_id\": null,\n      \"reversed_by_transaction_id\": null,\n      \"is_reversed\": false,\n      \"reason\": null,\n      \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
                 }
               ]
             },

@@ -11,13 +11,13 @@ Figures below were measured on the final collection after the frontend-handoff c
 | Laravel API routes (`/api/v1`, `php artisan route:list --path=api/v1`) | **343** (GET 177, POST 121, PUT 10, PATCH 30, DELETE 5; `HEAD` aliases of `GET` not counted) - re-measured in Phase 29 |
 | OpenAPI (`docs/api/openapi.json`) | **284 paths, 343 operations** |
 | Routes intentionally excluded | 0 of the `/api/v1` routes (see §2 for the 7 non-API framework routes) |
-| Postman requests in the reference folders (00-28, 90) | **406** |
+| Postman requests in the reference folders (00-28, 90) | **408** |
 | Postman requests inside workflows (99) | **457** (copies of reference requests plus flow-only steps) |
-| Total Postman requests | **863** |
+| Total Postman requests | **865** |
 | Endpoint coverage (distinct method+route in the reference folders, matched against `route:list`) | **343 / 343 = 100.0 %**; 0 requests point at an unknown route (one flow step, `POST /platform-admin/marketplace/deals/{deal}`, deliberately asserts `405`) |
-| Requests with a saved success example | 517 (of 863); folders 27-28 and Flows 15-19 carry executable assertions instead |
-| Requests with at least one saved error example | 103 |
-| Saved example responses | 690 |
+| Requests with a saved success example | 519 (of 865); folders 27-28 and Flows 15-19 carry executable assertions instead |
+| Requests with at least one saved error example | 104 |
+| Saved example responses | 697 |
 | Workflows | **20** (Flows 1-19 plus Flow S) = 457 requests |
 | Environment variables | **151** |
 | Undocumented endpoints | **none** |
@@ -57,7 +57,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 13 — Tasks, Templates & Calendar | 20 | 20 | 20 | 5 |
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
 | 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
-| 16 — Finance | 8 | 8 | 8 | 2 |
+| 16 — Finance | 10 | 8 | 10 | 3 |
 | 17 — Sales, Invoices & Payments | 18 | 14 | 18 | 8 |
 | 18 — Dashboard & Insights | 3 | 3 | 3 | 0 |
 | 19 — Reports & Exports | 11 | 11 | 11 | 3 |
@@ -322,3 +322,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 **Newman (2026-10-09, live `php artisan serve`, throwaway MySQL 8 database `farm_management_newman`, queue worker running; Flow 1, a platform admin and Flow S run first, 22 requests / 44 assertions / 0 failures).** Folders 05 + 08 in collection order: 37 requests, 84 assertions, 0 failures (38 requests while capturing, with a temporary Close-again probe for the 409 example). Dependent workflows Flows 3-12 and 14, then Flow 13 (including a temporary probe for the 403 example), on a fresh database: 136 requests, 284 assertions, 0 failures. Probe requests exist only in the temporary run collection.
 
 **Remaining gaps.** Platform-admin reference-value maintenance (`/platform-admin/master/reference-values`, `breed_field_label` on species) is documented in the API doc but has no livestock-specific Postman example; Honeybee/Snail examples are not included. Reference folders use stable names for some records (the Chicken batch `October Broilers`, the crop project and the custom crop variety), so running folders 05/08 a second time against the same database returns the backend's `409` duplicate-name answers there; run them on a fresh database or Flow S/Flow 3 state, as documented. The backend's misleading "at most two decimal places" message for a negative `acquisition_price_per_animal` is unchanged (backend not in scope). Flow 11 (export) and Flow 12 (notifications) depend on a running queue worker polling quickly.
+
+## Addendum - Transactions page backend (Finance)
+
+* Folder **16 — Finance** gains two requests (`Record an expense by quantity and unit price`, `Record income (services, paid by mobile money)`) and five saved examples (amount/quantity 422s, `possible_duplicate` 409 and its confirmed 201, product-sales category 422). The categories request now also captures `cat_egg_sales_id` and `cat_services_id`.
+* Every saved finance-transaction example in the package (11) was refreshed to the new row shape (`payment_method`, `quantity`, `unit_price`, `source` object, `can_reverse_directly`); category examples carry `manual_entry`.
+* New totals: reference folders 406 → **408**, all requests 863 → **865**, with a success example 517 → **519**, with an error example 103 → **104**, saved examples 690 → **697**. No route was added (343/343 unchanged), so endpoint coverage is unchanged. The new examples are real responses captured from the implemented code; Newman was not re-run.
+* Frontend contract: `docs/api/FRONTEND-TRANSACTIONS-FLOW.md`.

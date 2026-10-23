@@ -22,6 +22,7 @@ class FinanceCategorySeeder extends Seeder
     public const INCOME = [
         'livestock_sales' => 'Livestock sales', 'egg_sales' => 'Egg sales', 'milk_sales' => 'Milk sales', 'crop_sales' => 'Crop & produce sales',
         'other_income' => 'Other income',
+        'services' => 'Services', 'grants_loans_support' => 'Grants, loans & support',
     ];
 
     public function run(): void

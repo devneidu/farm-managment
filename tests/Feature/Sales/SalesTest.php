@@ -926,4 +926,24 @@ class SalesTest extends TeamTestCase
         }
         $this->assertSame($sale['total_amount'], (string) Sale::sole()->total_amount);
     }
+
+    public function test_payment_income_copies_the_method_links_back_to_the_sale_and_keeps_its_sales_category(): void
+    {
+        [$sale, $invoice] = $this->invoicedEggSale('1000.00');
+        $paid = $this->pay($invoice['id'], '400.00', ['method' => 'mobile_money'])->assertCreated()->json('data');
+        $row = $this->getJson('/api/v1/finance/transactions/'.$paid['finance_transaction_id'])->assertOk()->json('data');
+
+        $this->assertSame('mobile_money', $row['payment_method']);
+        $this->assertSame('crop_sales', $row['category']['code']); // product-sales categories stay valid for payment-booked rows
+        $this->assertSame(['type' => 'payment', 'id' => $paid['id'], 'reference' => $paid['reference'], 'invoice_id' => $invoice['id'], 'sale_id' => $sale['id']],
+            array_diff_key($row['source'], ['label' => 1]));
+        $this->assertMatchesRegularExpression('/^Payment for Sale #\d+$/', $row['source']['label']);
+        $this->assertFalse($row['can_reverse_directly']);
+        $this->postJson('/api/v1/finance/transactions/'.$row['id'].'/reverse', ['reason' => 'x', 'idempotency_key' => $this->key()])->assertStatus(409)->assertJsonPath('code', 'reverse_via_payment');
+
+        // The reversal row offsets with the same method; filtering by method finds both rows.
+        $this->postJson('/api/v1/payments/'.$paid['id'].'/reverse', ['reason' => 'Bounced', 'idempotency_key' => $this->key()])->assertSuccessful();
+        $this->assertCount(2, $this->getJson('/api/v1/finance/transactions?payment_method=mobile_money')->json('data'));
+        $this->assertCount(0, $this->getJson('/api/v1/finance/transactions?payment_method=cash')->json('data'));
+    }
 }

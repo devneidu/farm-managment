@@ -18,8 +18,8 @@ class FinanceQueries
     public function transactions(FarmContext $ctx, array $f): LengthAwarePaginator
     {
         $ctx->authorize(Permission::FinanceView);
-        $q = FinanceTransaction::where('farm_id', $ctx->farm->id)->with(['category', 'contact', 'reversal']);
-        foreach (['direction', 'entry_type', 'finance_category_id', 'contact_id', 'production_cycle_id', 'source_type', 'source_id'] as $column) {
+        $q = FinanceTransaction::where('farm_id', $ctx->farm->id)->with(['category', 'contact', 'reversal', 'sourcePayment.invoice.sale', 'sourcePurchase']);
+        foreach (['direction', 'entry_type', 'finance_category_id', 'contact_id', 'payment_method', 'production_cycle_id', 'source_type', 'source_id'] as $column) {
             if (isset($f[$column])) {
                 $q->where($column, $f[$column]);
             }

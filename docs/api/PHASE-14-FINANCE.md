@@ -68,7 +68,7 @@ purchase ──► purchase_items
 
 ## Finance
 
-`GET /finance/categories[?direction=income|expense]` — platform categories (`is_system: true`). Expense: `feed`, `medicine_veterinary`, `seed_planting_material`, `fertilizer_agrochemical`, `livestock_purchase`, `labour`, `transport`, `utilities`, `equipment_repairs`, `general_supplies`, `other_expense`. Income: `livestock_sales`, `egg_sales`, `milk_sales`, `crop_sales`, `other_income`. Custom farm categories are not built; the table already supports `farm_id`.
+`GET /finance/categories[?direction=income|expense]` — platform categories (`is_system: true`). Expense: `feed`, `medicine_veterinary`, `seed_planting_material`, `fertilizer_agrochemical`, `livestock_purchase`, `labour`, `transport`, `utilities`, `equipment_repairs`, `general_supplies`, `other_expense`. Income: `livestock_sales`, `egg_sales`, `milk_sales`, `crop_sales`, `other_income`. Income also has `services` and `grants_loans_support`. Custom farm categories are not built; the table already supports `farm_id`.
 
 `POST /finance/transactions`, `POST /expenses` (direction pinned to expense) and `POST /income` (income):
 
@@ -93,9 +93,20 @@ purchase ──► purchase_items
 
 `POST /finance/transactions/{id}/reverse {reason, occurred_on?, idempotency_key}` (`finance.reverse`) appends a reversal row (same direction, category, amount, contact, cycle and source; `entry_type: "reversal"`, `reverses_transaction_id`). Totals subtract it; the original stays (`is_reversed: true`, `reversed_by_transaction_id`). A reversal cannot be reversed and nothing is reversed twice (`409 transaction_already_reversed`); allocated money in a closed cycle needs the cycle reopened (`409 cycle_closed`). To replace it, `POST` a new transaction with `corrects_transaction_id` (same direction and source, once; needs `finance.reverse`; `409 invalid_correction`). After a reversal the source is free to be booked again. There is no PATCH/DELETE: the ledger is append-only.
 
+### Transactions page additions
+
+* **`payment_method`** (optional, `cash` · `bank_transfer` · `pos` · `mobile_money` · `cheque` · `other` — the same codes as `payments.method`). Saved on manual rows; returned on every row (`null` when not recorded); a customer-payment income row copies the payment's method (new rows only, nothing backfilled) and a reversal row copies the original's. Filter: `GET /finance/transactions?payment_method=cash`.
+* **`quantity` + `unit_price`** (optional, both or neither). When both are sent `amount` may be omitted and is `quantity × unit_price` rounded half up to 2 decimals; if `amount` is also sent it must equal that (`422` on `amount`). Only one of the pair → `422` on the missing field. `quantity` is positive with at most 6 decimals, `unit_price` is money. Both are returned (`quantity` as a plain decimal string, `unit_price` with 2 decimals, `null` when not used).
+* **Product sales are not manual income.** `livestock_sales`, `egg_sales`, `milk_sales` and `crop_sales` are refused on `POST /finance/transactions`, `/income` and `/expenses` with `422` on `finance_category_id`: "Record this through Sales so your stock stays correct." Payment-booked income keeps using them. `GET /finance/categories` returns `manual_entry` (`false` for those four) so the form can hide them. Existing rows are untouched.
+* **New platform income categories** `services` ("Services") and `grants_loans_support` ("Grants, loans & support"), added by migration for existing databases and by the seeder for fresh ones.
+* **`source` is always an object**: `{type, id, label}` plus ids to open it. Manual: `{type: null, id: null, label: "Entered manually"}`. Payment: `label` "Payment for Sale #24", plus `reference`, `invoice_id`, `sale_id`. Purchase: `label` "Purchase #8", plus `reference`. Health record: "Health record". Operational record: "Farm record". (It was `null` for manual rows before.)
+* **`can_reverse_directly`**: `false` for payment- and purchase-sourced rows (reverse the payment / cancel the purchase instead), for reversal rows and for rows already reversed; `true` otherwise.
+* **Duplicate warning (manual expenses only).** If a live (not cancelled) purchase has the same total, the same farm-local day as `occurred_on` and — when `contact_id` is sent — the same contact, the request is refused with `409 possible_duplicate` and `details: {purchase_id, label, reference}`. Resend with `confirm_duplicate: true` to record it anyway (the flag is not part of the stored event, so a confirmed retry with the same `idempotency_key` replays the original). Expenses linked to a purchase through `source` are not warned. Income is never warned.
+* **Receipts:** not built. `record_attachments` is keyed to `operational_records` only, so attaching to a ledger row would need a new table.
+
 ### Listing and profitability
 
-`GET /finance/transactions` — filters `direction`, `entry_type`, `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type`, `source_id`, `from`, `to` (inclusive farm-local `occurred_on` days), `page`, `per_page`. Reversal rows are included.
+`GET /finance/transactions` — filters `direction`, `entry_type`, `finance_category_id`, `contact_id`, `payment_method`, `production_cycle_id`, `source_type`, `source_id`, `from`, `to` (inclusive farm-local `occurred_on` days), `page`, `per_page`. Reversal rows are included.
 
 `GET /finance/summary[?from=&to=&production_cycle_id=]` returns signed totals (reversals offset entries):
 
@@ -127,7 +138,7 @@ Roles: **Owner** all; **Manager** and **Finance** all of the above (the matrix c
 
 ## Errors
 
-`401` unauthenticated · `403 forbidden` · `404` foreign/unknown ids · `409` `contact_exists`, `contact_in_use`, `contact_inactive`, `category_inactive`, `cycle_closed`, `lot_expired`, `item_inactive`, `insufficient_stock`, `finance_already_recorded`, `source_reversed`, `transaction_already_reversed`, `purchase_already_cancelled`, `reverse_via_purchase`, `invalid_correction`, `idempotency_conflict` · `422` validation (field-keyed, e.g. `items.0.components`, `amount`, `finance_category_id`). Error body: `{message, code, request_id, errors?, details?}`.
+`401` unauthenticated · `403 forbidden` · `404` foreign/unknown ids · `409` `contact_exists`, `contact_in_use`, `contact_inactive`, `category_inactive`, `cycle_closed`, `lot_expired`, `item_inactive`, `insufficient_stock`, `finance_already_recorded`, `source_reversed`, `transaction_already_reversed`, `purchase_already_cancelled`, `reverse_via_purchase`, `reverse_via_payment`, `invalid_correction`, `possible_duplicate`, `idempotency_conflict` · `422` validation (field-keyed, e.g. `items.0.components`, `amount`, `finance_category_id`). Error body: `{message, code, request_id, errors?, details?}`.
 
 ## Events
 

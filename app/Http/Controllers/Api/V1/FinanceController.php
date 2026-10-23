@@ -22,12 +22,12 @@ use Illuminate\Http\Request;
 
 class FinanceController extends Controller
 {
-    private const CONFLICTS = 'array{message:string, code:"finance_already_recorded"|"source_reversed"|"cycle_closed"|"contact_inactive"|"category_inactive"|"idempotency_conflict"|"invalid_correction", request_id:string}';
+    private const CONFLICTS = 'array{message:string, code:"finance_already_recorded"|"source_reversed"|"cycle_closed"|"contact_inactive"|"category_inactive"|"idempotency_conflict"|"invalid_correction"|"possible_duplicate", request_id:string, details?: array{purchase_id?: string, label?: string, reference?: string}}';
 
     /**
      * List income and expense categories
      *
-     * Requires finance.view. Platform categories (is_system) plus this farm's own, active only.
+     * Requires finance.view. Platform categories (is_system) plus this farm's own, active only. manual_entry is false for livestock/egg/milk/crop sales: hide those on the manual form (POST /finance/transactions refuses them with 422; record the sale through Sales).
      *
      * @response array{data: FinanceCategoryResource[], meta: object, message: null}
      */
@@ -40,7 +40,7 @@ class FinanceController extends Controller
      * List finance transactions
      *
      * Requires finance.view. Current farm only; newest occurred_on first. Reversal rows are included (entry_type=reversal);
-     * filter with entry_type=entry to hide them. from/to are inclusive farm-local days on occurred_on.
+     * filter with entry_type=entry to hide them. payment_method filters by how the money moved. Every row has a source object (label, ids to open it) and can_reverse_directly. from/to are inclusive farm-local days on occurred_on.
      *
      * @response array{data: FinanceTransactionResource[], meta: array{current_page:int,per_page:int,last_page:int,total:int}, message:null}
      */
@@ -58,7 +58,9 @@ class FinanceController extends Controller
      * ({type: operational_record|health_record|purchase, id}) is "record as expense/income" for an existing event: there is ONE
      * live transaction per source (409 finance_already_recorded, with the existing transaction_id), and the cycle is taken
      * from the source. A purchase books its own expense, so a manual expense for a purchase is only possible when it was recorded
-     * with record_expense=false, for exactly its total. Money is never an inventory change. The required idempotency_key is
+     * with record_expense=false, for exactly its total. Optional payment_method; optional quantity + unit_price (both or neither, 422 otherwise)
+     * from which amount is computed when omitted (422 if a sent amount differs). Product-sales categories are refused with 422. A manual expense that
+     * matches a live purchase (same amount, day and contact) returns 409 possible_duplicate; resend with confirm_duplicate=true to record it anyway. Money is never an inventory change. The required idempotency_key is
      * farm-wide: an identical retry returns the original, a changed payload is 409.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\FinanceTransactionResource, meta: object, message:string}')]
@@ -83,7 +85,7 @@ class FinanceController extends Controller
     /**
      * Record income
      *
-     * Same as POST /finance/transactions with direction=income. Requires finance.create. Sales income arrives with the sales module.
+     * Same as POST /finance/transactions with direction=income. Requires finance.create. Product sales (livestock, eggs, milk, crops) are recorded through Sales, not here.
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\FinanceTransactionResource, meta: object, message:string}')]
     #[Response(status: 409, type: self::CONFLICTS)]

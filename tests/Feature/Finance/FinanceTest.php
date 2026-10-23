@@ -98,7 +98,7 @@ class FinanceTest extends TeamTestCase
 
     private function income(array $extra = [])
     {
-        return $this->postJson('/api/v1/income', array_replace(['finance_category_id' => $this->category('egg_sales', 'income'), 'amount' => '9000', 'occurred_on' => now('Africa/Lagos')->toDateString(),
+        return $this->postJson('/api/v1/income', array_replace(['finance_category_id' => $this->category('other_income', 'income'), 'amount' => '9000', 'occurred_on' => now('Africa/Lagos')->toDateString(),
             'idempotency_key' => $this->key()], $extra));
     }
 
@@ -208,7 +208,7 @@ class FinanceTest extends TeamTestCase
         $tx = $this->getJson('/api/v1/finance/transactions/'.$p['finance_transaction_id'])->assertOk()->json('data');
         $this->assertSame('expense', $tx['direction']);
         $this->assertSame('1250.75', $tx['amount']);
-        $this->assertSame(['type' => 'purchase', 'id' => $p['id']], $tx['source']);
+        $this->assertSame(['type' => 'purchase', 'id' => $p['id']], array_intersect_key($tx['source'], ['type' => 1, 'id' => 1]));
         $this->assertSame('general_supplies', $tx['category']['code']);
         $this->assertSame($supplier, $tx['contact_id']);
         $this->assertSame($p['id'], $this->getJson('/api/v1/purchases/'.$p['id'])->json('data.id'));
@@ -458,7 +458,7 @@ class FinanceTest extends TeamTestCase
         $this->assertSame('2500.00', $expense['amount']);
         $this->assertMatchesRegularExpression('/^FIN-\d{4}-00001$/', $expense['reference']);
         $this->assertSame('Buyer & Seller', $expense['contact_name']);
-        $this->assertNull($expense['source']);
+        $this->assertSame(['type' => null, 'id' => null, 'label' => 'Entered manually'], $expense['source']);
         $income = $this->income()->assertCreated()->json('data');
         $this->assertSame('income', $income['direction']);
 
@@ -495,7 +495,7 @@ class FinanceTest extends TeamTestCase
         $source = ['type' => 'operational_record', 'id' => $record];
 
         $tx = $this->expense(['source' => $source, 'description' => 'Vet call-out', 'amount' => '3500'])->assertCreated()->json('data');
-        $this->assertSame($source, $tx['source']);
+        $this->assertSame($source, array_intersect_key($tx['source'], $source));
         $this->assertSame($cycle, $tx['production_cycle_id']); // allocation comes from the record's cycle
         $dup = $this->expense(['source' => $source])->assertStatus(409);
         $dup->assertJsonPath('code', 'finance_already_recorded')->assertJsonPath('details.transaction_id', $tx['id']);
@@ -565,7 +565,7 @@ class FinanceTest extends TeamTestCase
         $this->assertSame('reversal', $res['entry_type']);
         $this->assertSame('3500.00', $res['amount']);
         $this->assertSame($tx['id'], $res['reverses_transaction_id']);
-        $this->assertSame($source, $res['source']);
+        $this->assertSame($source, array_intersect_key($res['source'], $source));
         $this->assertTrue($this->getJson('/api/v1/finance/transactions/'.$tx['id'])->json('data.is_reversed'));
         $this->assertSame('0.00', $this->summary()['totals']['expense']);
 
@@ -690,7 +690,7 @@ class FinanceTest extends TeamTestCase
         $contact = $this->supplier('Visible Vendor');
 
         $this->category('transport');
-        $this->category('egg_sales', 'income');
+        $this->category('other_income', 'income');
         foreach ([FarmRole::FarmWorker, FarmRole::Vet] as $role) {
             $this->signInAs($this->member($role, name: $role->label()));
             foreach (['/api/v1/contacts', '/api/v1/contacts/'.$contact, '/api/v1/purchases', '/api/v1/purchases/'.$p['id'], '/api/v1/finance/categories', '/api/v1/finance/summary',

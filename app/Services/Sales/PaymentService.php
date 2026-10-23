@@ -106,7 +106,7 @@ class PaymentService
             // One real payment -> exactly one income row: the ledger entry is booked first (its source key is unique per payment), then the payment row links to it.
             $id = (string) Str::uuid7();
             $reference = $this->reference($ctx);
-            $transaction = $this->finance->bookPayment($ctx, $id, $amount, $data['received_on'], $recordedAt, $category, $invoice->contact_id, $cycleId, 'Payment '.$reference.' for '.$invoice->reference);
+            $transaction = $this->finance->bookPayment($ctx, $id, $amount, $data['received_on'], $recordedAt, $category, $invoice->contact_id, $cycleId, 'Payment '.$reference.' for '.$invoice->reference, $data['method']);
             $payment = (new Payment)->forceFill([
                 'id' => $id, 'farm_id' => $ctx->farm->id, 'invoice_id' => $invoice->id, 'reference' => $reference,
                 'entry_type' => Payment::PAYMENT, 'amount' => $amount, 'currency' => $ctx->farm->currency, 'method' => $data['method'],

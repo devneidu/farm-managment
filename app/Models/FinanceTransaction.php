@@ -40,6 +40,17 @@ class FinanceTransaction extends Model
         return $this->belongsTo(Contact::class);
     }
 
+    /** Only meaningful when source_type is payment / purchase; eager-loaded to label and link the source without extra queries. */
+    public function sourcePayment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'source_id');
+    }
+
+    public function sourcePurchase(): BelongsTo
+    {
+        return $this->belongsTo(Purchase::class, 'source_id');
+    }
+
     public function reversal(): HasOne
     {
         return $this->hasOne(self::class, 'reverses_transaction_id');

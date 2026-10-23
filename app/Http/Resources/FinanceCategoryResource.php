@@ -15,6 +15,8 @@ class FinanceCategoryResource extends JsonResource
             'direction' => $this->direction,
             /** True for platform categories shared by every farm. */
             'is_system' => $this->farm_id === null,
+            /** False for livestock/egg/milk/crop sales: record those through Sales so stock stays correct. Hide them on the manual form. */
+            'manual_entry' => $this->isManualEntry(),
         ];
     }
 }

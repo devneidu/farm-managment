@@ -19,6 +19,7 @@ use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
+use App\Support\Measurement\Decimal;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,10 @@ class FinanceService
     /** Sources the ledger can be filtered by: the client-bookable ones plus the entries other modules book themselves. */
     public const FILTER_SOURCES = [...self::SOURCES, 'payment'];
 
-    private const RELATIONS = ['category', 'contact', 'reversal'];
+    private const RELATIONS = ['category', 'contact', 'reversal', 'sourcePayment.invoice.sale', 'sourcePurchase'];
+
+    /** Source types whose reversal happens at the source (reverse the payment, cancel the purchase), never on the ledger row. */
+    public const REVERSED_AT_SOURCE = ['purchase', 'payment'];
 
     public function categories(FarmContext $ctx, array $filters = [])
     {
@@ -70,6 +74,8 @@ class FinanceService
             $input['direction'] = $input['direction'] ?? $forced;
         }
         $data = Validator::make($input, (new StoreTransactionRequest)->rules())->validate();
+        $confirmDuplicate = (bool) ($data['confirm_duplicate'] ?? false);
+        unset($data['confirm_duplicate']); // an acknowledgement, not part of the event: a confirmed retry must replay the original
         if ($forced !== null && $data['direction'] !== $forced) {
             $this->invalid('direction', 'This endpoint only records '.$forced.' transactions.');
         }
@@ -77,7 +83,7 @@ class FinanceService
             $ctx->authorize(Permission::FinanceReverse);
         }
 
-        return DB::transaction(function () use ($ctx, $data) {
+        return DB::transaction(function () use ($ctx, $data, $confirmDuplicate) {
             $this->lockFarm($ctx);
             $hash = RequestHash::of(['operation' => 'record'] + $data);
             if ($replay = $this->replay($ctx, $data['idempotency_key'], $hash)) {
@@ -86,11 +92,14 @@ class FinanceService
             $source = isset($data['source']) ? $this->source($ctx, $data['source'], $data['direction']) : null;
             $cycleId = $this->resolveCycle($ctx, $data['production_cycle_id'] ?? null, $source['cycle_id'] ?? null);
             $contactId = $this->contact($ctx, $data['contact_id'] ?? $source['contact_id'] ?? null);
-            $amount = Money::parse($data['amount']);
+            $amount = $this->amount($data);
             if ($source !== null && $source['amount'] !== null && Money::cmp($source['amount'], $amount) !== 0) {
                 $this->invalid('amount', 'A purchase is booked for exactly its total ('.$source['amount'].').');
             }
             $category = $this->category($ctx, $data['finance_category_id'] ?? $source['category_id'] ?? null, $data['direction']);
+            if (! $category->isManualEntry()) {
+                $this->invalid('finance_category_id', 'Record this through Sales so your stock stays correct.');
+            }
             $today = CarbonImmutable::now($ctx->farm->timezone)->toDateString();
             if ($data['occurred_on'] > $today) {
                 $this->invalid('occurred_on', 'A transaction cannot be dated in the future.');
@@ -100,10 +109,15 @@ class FinanceService
                 $this->invalid('recorded_at', 'The event cannot be in the future.');
             }
             $correction = isset($data['corrects_transaction_id']) ? $this->correctedEntry($ctx, $data) : null;
+            if ($data['direction'] === 'expense' && ! $confirmDuplicate && ($data['source']['type'] ?? null) !== 'purchase') {
+                $this->warnPossibleDuplicate($ctx, $amount, $data['occurred_on'], $contactId);
+            }
 
             return $this->insert($ctx, [
                 'entry_type' => FinanceTransaction::ENTRY, 'direction' => $data['direction'], 'finance_category_id' => $category->id, 'amount' => $amount,
                 'occurred_on' => $data['occurred_on'], 'recorded_at' => $recordedAt, 'contact_id' => $contactId, 'production_cycle_id' => $cycleId,
+                'payment_method' => $data['payment_method'] ?? null, 'quantity' => isset($data['quantity']) ? Decimal::parse($data['quantity']) : null,
+                'unit_price' => isset($data['unit_price']) ? Money::parse($data['unit_price']) : null,
                 'description' => $data['description'] ?? null, 'corrects_transaction_id' => $correction?->id,
                 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
             ] + $this->sourceColumns($ctx, $data['source'] ?? null));
@@ -169,12 +183,12 @@ class FinanceService
      * The income ONE customer payment books, in the payment's own transaction (farm and cycle already locked). Cash basis: a sale or an
      * invoice books nothing; only money actually received does. The unique source key makes a second booking for the same payment impossible.
      */
-    public function bookPayment(FarmContext $ctx, string $paymentId, string $amount, string $receivedOn, CarbonImmutable $recordedAt, FinanceCategory $category, ?string $contactId, ?string $cycleId, string $description): FinanceTransaction
+    public function bookPayment(FarmContext $ctx, string $paymentId, string $amount, string $receivedOn, CarbonImmutable $recordedAt, FinanceCategory $category, ?string $contactId, ?string $cycleId, string $description, ?string $paymentMethod = null): FinanceTransaction
     {
         return $this->insert($ctx, [
             'entry_type' => FinanceTransaction::ENTRY, 'direction' => 'income', 'finance_category_id' => $category->id, 'amount' => $amount,
             'occurred_on' => $receivedOn, 'recorded_at' => $recordedAt, 'contact_id' => $contactId, 'production_cycle_id' => $cycleId,
-            'description' => $description, 'source_type' => 'payment', 'source_id' => $paymentId, 'source_key' => 'payment:'.$paymentId,
+            'payment_method' => $paymentMethod, 'description' => $description, 'source_type' => 'payment', 'source_id' => $paymentId, 'source_key' => 'payment:'.$paymentId,
         ]);
     }
 
@@ -268,6 +282,7 @@ class FinanceService
             'entry_type' => FinanceTransaction::REVERSAL, 'direction' => $original->direction, 'finance_category_id' => $original->finance_category_id,
             'amount' => $original->amount, 'occurred_on' => $occurredOn, 'recorded_at' => CarbonImmutable::now()->utc(),
             'contact_id' => $original->contact_id, 'production_cycle_id' => $original->production_cycle_id, 'description' => $original->description,
+            'payment_method' => $original->payment_method, 'quantity' => $original->quantity, 'unit_price' => $original->unit_price,
             'source_type' => $original->source_type, 'source_id' => $original->source_id, 'reverses_transaction_id' => $original->id, 'reason' => $reason,
             'idempotency_key' => $key, 'request_hash' => $hash,
         ]);
@@ -343,6 +358,50 @@ class FinanceService
         $first = ! FinanceTransaction::where('farm_id', $ctx->farm->id)->where('source_type', $source['type'])->where('source_id', $source['id'])->exists();
 
         return ['source_type' => $source['type'], 'source_id' => $source['id'], 'source_key' => $first ? $source['type'].':'.$source['id'] : null];
+    }
+
+    /**
+     * The amount: as sent, or quantity x unit price (rounded half up to 2 decimals) when both are sent. A pair must be complete,
+     * and an amount sent together with a pair must equal the product.
+     */
+    private function amount(array $data): string
+    {
+        $hasQuantity = isset($data['quantity']);
+        $hasPrice = isset($data['unit_price']);
+        if ($hasQuantity !== $hasPrice) {
+            $this->invalid($hasQuantity ? 'unit_price' : 'quantity', 'Send quantity and unit_price together, or neither.');
+        }
+        $sent = isset($data['amount']) ? Money::parse($data['amount']) : null;
+        if (! $hasQuantity) {
+            return $sent ?? $this->invalid('amount', 'The amount is required.');
+        }
+        $quantity = Decimal::parse($data['quantity']);
+        if ($quantity === null || Decimal::cmp($quantity, '0') <= 0) {
+            $this->invalid('quantity', 'The quantity must be greater than zero, with at most six decimal places.');
+        }
+        $computed = Money::parse(Decimal::round(Decimal::mul($quantity, Money::parse($data['unit_price'])), 2));
+        if (Money::isZero($computed)) {
+            $this->invalid('amount', 'Quantity x unit price must be at least 0.01.');
+        }
+        if ($sent !== null && Money::cmp($sent, $computed) !== 0) {
+            $this->invalid('amount', 'The amount must equal quantity x unit price ('.$computed.'), or be left out.');
+        }
+
+        return $computed;
+    }
+
+    /** Warns (409 possible_duplicate) when a live purchase has the same total, farm-local day and - when given - contact. */
+    private function warnPossibleDuplicate(FarmContext $ctx, string $amount, string $occurredOn, ?string $contactId): void
+    {
+        $day = CarbonImmutable::parse($occurredOn, $ctx->farm->timezone)->startOfDay();
+        $purchase = Purchase::where('farm_id', $ctx->farm->id)->where('status', Purchase::ACTIVE)->where('total_amount', $amount)
+            ->where('recorded_at', '>=', $day->utc())->where('recorded_at', '<', $day->addDay()->utc())
+            ->when($contactId, fn ($q) => $q->where('contact_id', $contactId))->orderByDesc('recorded_at')->first();
+        if ($purchase) {
+            throw new ApiHttpException(409, 'possible_duplicate', 'A purchase with the same amount and date already exists. Send confirm_duplicate: true to record this expense anyway.', details: [
+                'purchase_id' => $purchase->id, 'label' => FinanceSource::purchaseLabel($purchase), 'reference' => $purchase->reference,
+            ]);
+        }
     }
 
     private function correctedEntry(FarmContext $ctx, array $data): FinanceTransaction

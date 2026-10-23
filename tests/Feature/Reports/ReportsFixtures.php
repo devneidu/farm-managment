@@ -132,7 +132,7 @@ trait ReportsFixtures
 
     protected function income(string $amount, ?string $on = null, ?string $cycle = null): array
     {
-        return $this->postJson('/api/v1/income', array_filter(['finance_category_id' => $this->category('egg_sales', 'income'), 'amount' => $amount, 'occurred_on' => $on ?? $this->today(), 'production_cycle_id' => $cycle, 'idempotency_key' => $this->key()]))->assertCreated()->json('data');
+        return $this->postJson('/api/v1/income', array_filter(['finance_category_id' => $this->category('other_income', 'income'), 'amount' => $amount, 'occurred_on' => $on ?? $this->today(), 'production_cycle_id' => $cycle, 'idempotency_key' => $this->key()]))->assertCreated()->json('data');
     }
 
     protected function expense(string $amount, ?string $on = null, ?string $cycle = null): array

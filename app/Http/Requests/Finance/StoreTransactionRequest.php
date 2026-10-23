@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Finance;
 
+use App\Models\Payment;
 use App\Rules\MoneyAmount;
 use App\Services\Finance\FinanceService;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,8 +22,16 @@ class StoreTransactionRequest extends FormRequest
             'direction' => ['required', Rule::in(['income', 'expense'])],
             /** An active platform or farm category of the same direction (GET /finance/categories). Optional only when the source is a purchase. */
             'finance_category_id' => ['sometimes', 'nullable', 'uuid'],
-            /** Positive amount in the farm currency, at most two decimals, sent as a string ("1500.50"). */
-            'amount' => ['required', new MoneyAmount],
+            /** Positive amount in the farm currency, at most two decimals, sent as a string ("1500.50"). May be left out when quantity and unit_price are both sent; if sent too it must equal quantity x unit_price (422). */
+            'amount' => ['sometimes', 'nullable', new MoneyAmount],
+            /** Optional, with unit_price (both or neither, else 422): positive, at most six decimals. */
+            'quantity' => ['sometimes', 'nullable', 'regex:/^\d{1,12}(\.\d{1,6})?$/'],
+            /** Optional, with quantity: price per unit, positive, at most two decimals. */
+            'unit_price' => ['sometimes', 'nullable', new MoneyAmount],
+            /** How the money moved: cash, bank_transfer, pos, mobile_money, cheque or other. */
+            'payment_method' => ['sometimes', 'nullable', Rule::in(Payment::METHODS)],
+            /** Send true to record an expense anyway after a 409 possible_duplicate warning (a live purchase with the same amount, day and contact). */
+            'confirm_duplicate' => ['sometimes', 'boolean'],
             /** Farm-local business day, not in the future. */
             'occurred_on' => ['required', 'date_format:Y-m-d'],
             /** When it was entered/happened (explicit offset); defaults to now. Kept separate from created_at. */

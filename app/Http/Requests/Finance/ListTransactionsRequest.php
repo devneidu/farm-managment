@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Finance;
 
+use App\Models\Payment;
 use App\Services\Finance\FinanceService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -20,6 +21,8 @@ class ListTransactionsRequest extends FormRequest
             'entry_type' => ['sometimes', Rule::in(['entry', 'reversal'])],
             'finance_category_id' => ['sometimes', 'uuid'],
             'contact_id' => ['sometimes', 'uuid'],
+            /** How the money moved: cash, bank_transfer, pos, mobile_money, cheque or other. */
+            'payment_method' => ['sometimes', Rule::in(Payment::METHODS)],
             'production_cycle_id' => ['sometimes', 'uuid'],
             'source_type' => ['sometimes', Rule::in(FinanceService::FILTER_SOURCES)],
             'source_id' => ['sometimes', 'uuid'],
