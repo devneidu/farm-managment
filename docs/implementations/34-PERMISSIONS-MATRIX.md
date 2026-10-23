@@ -64,13 +64,20 @@ Permissions are granular; roles are presets.
   Finance                    Full   Configurable           Full                No        No unless
                                                                                            granted
 
-  Sales/invoices             Full   Configurable           Full        No/default               No
-                                                                          limited 
+  Sales/invoices             Full   Configurable           Full     View + create               No
+                                                                    sales only
 
   Reports                    Full    Operational      Financial    Assigned/basic           Health
 
   Settings                   Full        Limited             No                No               No
   ------------------------------------------------------------------------------------------------
+
+Farm Worker sales access is exactly `sale.view` and `sale.create`: a worker can
+record a sale, including the optional paid-now `payment` block and the quick
+`buyer`, and read sales. A worker cannot cancel a sale (`sale.cancel`), issue or
+void invoices (`invoice.*`), view, collect or reverse payments (`payment.*`),
+manage contacts, or use Finance (`finance.*`). The payment inside `POST /sales`
+is authorized by `sale.create` alone.
 
 Every permission remains backend enforced and can be refined without
 changing role names.
