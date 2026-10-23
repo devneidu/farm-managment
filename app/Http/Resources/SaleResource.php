@@ -30,6 +30,9 @@ class SaleResource extends JsonResource
             'amount_paid' => $invoice?->amountPaid(),
             'outstanding' => $invoice?->outstanding(),
             'invoice' => $invoice ? ['id' => $invoice->id, 'reference' => $invoice->reference, 'status' => $invoice->status] : null,
+            'invoice_id' => $invoice?->id,
+            /** Live payments received against the sale's invoice (reversed ones are left out). */
+            'payments' => $invoice ? $invoice->payments->where('entry_type', 'payment')->filter(fn ($p) => $p->reversal === null)->map(fn ($p) => ['id' => $p->id, 'reference' => $p->reference, 'amount' => (string) $p->amount, 'method' => $p->method, 'received_on' => $p->received_on->toDateString()])->values()->all() : [],
             'notes' => $this->notes, 'corrects_sale_id' => $this->corrects_sale_id,
             'cancelled_at' => $this->cancelled_at?->toISOString(), 'cancel_reason' => $this->cancel_reason,
             /** @var array<int, array{id: string, line_no: int, kind: 'stock'|'livestock'|'other', description: string, inventory_item_id: string|null, storage_location_id: string|null, inventory_lot_id: string|null, lot: array{code: string, expires_on: string|null}|null, production_cycle_id: string|null, head_count: int|null, quantity: array{quantity: string, unit: string, normalized: array{quantity: string, unit: string}}|null, measurement: object|null, amount: string, inventory_movement_id: string|null, inventory_reversal_movement_id: string|null, operational_record_id: string|null, reversal_record_id: string|null}> */

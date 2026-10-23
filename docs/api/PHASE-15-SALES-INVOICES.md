@@ -63,7 +63,20 @@ Amounts are **strings with at most two decimals** (`"1500.50"`; integers and JSO
 
 `GET /sales` filters: `status`, `contact_id`, `payment_status`, `search` (reference/customer), `from`, `to` (inclusive farm-local days), `page`, `per_page`. `GET /sales/{sale}`.
 
+### Quick sell additions (one request: sale + buyer + price + payment)
+
+Everything below is optional and additive; requests without these fields behave exactly as before. The step-by-step UI contract with real payloads is in [FRONTEND-SALES-FLOW.md](FRONTEND-SALES-FLOW.md).
+
+* **`GET /sales/sellables`** (`sale.create`) — the "what did you sell?" list: `animals` (open livestock cycles with `head_count` > 0: `production_cycle_id`, `label`, `head_count`, `unit: "head"`) and `in_store` (produce and feed items with stock on hand: `inventory_item_id`, `output` = `eggs`/`milk` for the farm's automatic stock or `null`, `label`, `available {quantity, unit}`, and `locations[]` with `storage_location_id`, `lot_id`, `available`). Read from the same ledgers a sale deducts from; zero stock, closed cycles and non-sellable categories are left out.
+* **`payment`** (paid now): `{ "amount": "4500.00", "method": "cash", "received_on": "2026-10-14" }` (`received_on` defaults to the sale's farm-local day). The sale, its invoice (issued automatically unless an `invoice` block was sent, in which case that block's dates are used) and the payment are created in ONE transaction by the same writers as the separate calls: one stock-out per stock line, one invoice, one payment, one income row. `amount` must be > 0 and ≤ the sale total (`422` on `payment.amount`); `received_on` cannot be in the future or before the sale (`422` on `payment.received_on`). A partial amount leaves the balance on the invoice (`payment_status: "partially_paid"`). **No `payment.create` is needed** — `sale.create` authorizes the whole request. No `payment` block = not paid yet, exactly as before. The response is the usual sale plus `invoice_id`, `payment_status`, `amount_paid`, `outstanding` and `payments[]` (`id`, `reference`, `amount`, `method`, `received_on`).
+* **One idempotency key covers the request.** A retry with the same key and payload returns the original sale (201) — same `invoice_id`, same single payment, no second stock-out. The payment's own key is derived internally from the sale key. Same key with a different body (including a different `payment`) is `409 idempotency_conflict`.
+* **`buyer`**: `{ "name": "Mama Ngozi", "phone": "08031234567" }` (`phone` optional) as an alternative to `contact_id` / `customer_name`; sending more than one of the three is `422` on `buyer`. An active contact of this farm with the same normalized name (case, spacing) is reused and gains the `customer` role if it lacked it (a missing phone is filled in); otherwise a `customer` contact is created. An inactive contact with that name is `409 contact_inactive`. **No `contact.manage` is needed.**
+* **`quantity` + `unit_price`** instead of a line `amount`: `amount = round(quantity × unit_price, 2)` (half up). Stock lines: `quantity` is in the item's own stock unit (it replaces `components`; sending both is `422`) — or keep `components` and add `unit_price` (price per stock unit). Livestock lines: `quantity` is the `head_count` (send one or make them equal) and the price is per head. Other lines: both are required together. If `amount` is also sent it must equal the computed amount, otherwise `422` on `items.N.amount`. Lines with only `amount` work as before.
+* **Income category** for new payments: all livestock → `livestock_sales`; all farm eggs → `egg_sales`; all farm milk → `milk_sales`; any other produce → `crop_sales`; mixed lines (and feed, other lines) keep the previous behaviour. An explicit `finance_category_id` still wins.
+
 ### Cancel a sale — `POST /sales/{sale}/cancel` (`sale.cancel`)
+
+**One step:** add `"reverse_payments": true` (needs `payment.reverse` as well as `sale.cancel`) and every live payment is reversed (offsetting payment row + offsetting income row each), the stock and animals come back and the invoice is voided — all in ONE transaction; any failure undoes everything. Without the flag nothing changes: `409 sale_has_payments`.
 
 Body: `reason`, `recorded_at` (when the goods/animals came back; between the sale and now), `idempotency_key`. In one transaction: one compensating stock movement per stock line (`reversal`, linked to the sale), one compensating population record per livestock line, the unpaid invoice is voided, and the sale becomes `cancelled`. Nothing is deleted or edited.
 
@@ -107,11 +120,12 @@ Policy:
 
 | Permission | Granted to |
 |---|---|
-| `sale.view`, `sale.create`, `sale.cancel` | Owner, Manager, Finance |
+| `sale.view`, `sale.create` | Owner, Manager, Finance, **Farm Worker** |
+| `sale.cancel` | Owner, Manager, Finance |
 | `invoice.view`, `invoice.create`, `invoice.void` | Owner, Manager, Finance |
 | `payment.view`, `payment.create`, `payment.reverse` | Owner, Manager, Finance |
 
-Farm Worker and Vet have none of them (403). A correction (`corrects_sale_id`) also needs `sale.cancel`; the `invoice` block on `POST /sales` also needs `invoice.create`. Writes share the `finance-write` rate limit (240/hour per user).
+Farm Worker has only `sale.view` and `sale.create` (a worker can sell, including a paid-now payment block and a quick buyer, but cannot cancel, issue or void invoices, see or reverse payments, or open finance); Vet has none of them (403). A correction (`corrects_sale_id`) also needs `sale.cancel`; the `invoice` block on `POST /sales` also needs `invoice.create`. Writes share the `finance-write` rate limit (240/hour per user).
 
 ## Errors
 

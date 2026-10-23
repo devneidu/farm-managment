@@ -103,6 +103,46 @@ class ContactService
         }, 3);
     }
 
+    /**
+     * The buyer of a quick sale: an active contact with the same normalized name is reused (gaining the customer role if it lacked it),
+     * otherwise a customer contact is created. Needs no contact.manage - the sale's own permission authorizes it. The caller holds the
+     * farm lock, which is what makes the lookup-then-create race-free.
+     *
+     * @param  array{name: string, phone?: string|null}  $buyer
+     */
+    public function customerForSale(FarmContext $ctx, array $buyer): Contact
+    {
+        $name = $this->clean($buyer['name']);
+        $phone = isset($buyer['phone']) ? trim((string) $buyer['phone']) : '';
+        $contact = Contact::ofFarm($ctx->farm)->where('normalized_name', Contact::normalizeName($name))->lockForUpdate()->first();
+        if ($contact === null) {
+            $contact = new Contact([
+                'farm_id' => $ctx->farm->id, 'name' => $name, 'kind' => 'person', 'is_supplier' => false, 'is_customer' => true,
+                'phone' => $phone !== '' ? $phone : null, 'is_active' => true, 'created_by' => $ctx->membership->user_id,
+            ]);
+            $this->save($contact);
+
+            return $contact->refresh();
+        }
+        if (! $contact->is_active) {
+            throw new ApiHttpException(409, 'contact_inactive', 'This contact is inactive.');
+        }
+        $dirty = false;
+        if (! $contact->is_customer) {
+            $contact->is_customer = true;
+            $dirty = true;
+        }
+        if ($phone !== '' && $contact->phone === null) {
+            $contact->phone = $phone;
+            $dirty = true;
+        }
+        if ($dirty) {
+            $this->save($contact);
+        }
+
+        return $contact;
+    }
+
     private function assertNameFree(FarmContext $ctx, string $name, ?string $ignore = null): void
     {
         $q = Contact::ofFarm($ctx->farm)->where('normalized_name', Contact::normalizeName($name));

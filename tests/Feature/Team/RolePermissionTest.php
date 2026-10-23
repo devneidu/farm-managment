@@ -41,9 +41,9 @@ class RolePermissionTest extends TestCase
         $this->assertTrue(FarmRole::Manager->can(Permission::FinanceCreate));
     }
 
-    public function test_farm_worker_can_only_view_the_farm_master_data_and_measurements(): void
+    public function test_farm_worker_gets_field_work_permissions_and_may_sell(): void
     {
-        $this->assertSame(['breeding.create', 'breeding.view', 'farm.view', 'health.create', 'health.view', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view', 'report.view', 'task.complete', 'task.view'], $this->values(FarmRole::FarmWorker));
+        $this->assertSame(['breeding.create', 'breeding.view', 'farm.view', 'health.create', 'health.view', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view', 'report.view', 'sale.create', 'sale.view', 'task.complete', 'task.view'], $this->values(FarmRole::FarmWorker));
     }
 
     public function test_finance_permissions(): void

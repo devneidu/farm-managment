@@ -77,48 +77,57 @@ class PaymentService
             if ($replay = $this->replay($ctx, $data['idempotency_key'], $hash)) {
                 return $replay;
             }
-            $invoice = Invoice::where('farm_id', $ctx->farm->id)->with(['sale.items', 'sale.category'])->findOrFail($invoiceId);
-            $cycleId = $this->cycleOf($ctx, $invoice);
-            $invoice = Invoice::where('farm_id', $ctx->farm->id)->lockForUpdate()->with(['payments', 'sale.items', 'sale.category'])->findOrFail($invoiceId);
-            if ($invoice->isVoid()) {
-                throw new ApiHttpException(409, 'invoice_void', 'A void invoice cannot receive payments.');
-            }
-            $amount = Money::parse($data['amount']);
-            $outstanding = $invoice->outstanding();
-            if (Money::cmp($amount, $outstanding) > 0) {
-                throw new ApiHttpException(409, 'payment_exceeds_balance', 'The payment is more than the amount still owed on this invoice.', details: ['outstanding' => $outstanding, 'amount' => $amount]);
-            }
-            $today = CarbonImmutable::now($ctx->farm->timezone)->toDateString();
-            if ($data['received_on'] > $today) {
-                $this->invalid('received_on', 'A payment cannot be dated in the future.');
-            }
-            if ($data['received_on'] < $invoice->sale->recorded_at->setTimezone($ctx->farm->timezone)->toDateString()) {
-                $this->invalid('received_on', 'A payment cannot be dated before the sale.');
-            }
-            $recordedAt = isset($data['recorded_at']) ? CarbonImmutable::parse($data['recorded_at'])->utc() : CarbonImmutable::now()->utc();
-            if ($recordedAt->isFuture()) {
-                $this->invalid('recorded_at', 'The event cannot be in the future.');
-            }
-            $category = isset($data['finance_category_id'])
-                ? $this->finance->category($ctx, $data['finance_category_id'], 'income')
-                : ($invoice->sale->category ?? $this->finance->platformCategory('other_income', 'income'));
-
-            // One real payment -> exactly one income row: the ledger entry is booked first (its source key is unique per payment), then the payment row links to it.
-            $id = (string) Str::uuid7();
-            $reference = $this->reference($ctx);
-            $transaction = $this->finance->bookPayment($ctx, $id, $amount, $data['received_on'], $recordedAt, $category, $invoice->contact_id, $cycleId, 'Payment '.$reference.' for '.$invoice->reference, $data['method']);
-            $payment = (new Payment)->forceFill([
-                'id' => $id, 'farm_id' => $ctx->farm->id, 'invoice_id' => $invoice->id, 'reference' => $reference,
-                'entry_type' => Payment::PAYMENT, 'amount' => $amount, 'currency' => $ctx->farm->currency, 'method' => $data['method'],
-                'payment_reference' => $data['payment_reference'] ?? null, 'received_on' => $data['received_on'], 'recorded_at' => $recordedAt,
-                'notes' => $data['notes'] ?? null, 'finance_transaction_id' => $transaction->id, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
-                'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
-            ]);
-            $payment->save();
-            PaymentRecorded::dispatch($payment);
-
-            return $payment->load(self::RELATIONS);
+            return $this->recordLocked($ctx, $invoiceId, $data, $hash);
         }, 3);
+    }
+
+    /**
+     * Records the payment inside the caller's transaction: the farm row is already locked and idempotency is the caller's concern. Used by
+     * record() and by POST /sales with a payment block, which supplies its own derived idempotency key in $data.
+     */
+    public function recordLocked(FarmContext $ctx, string $invoiceId, array $data, string $hash): Payment
+    {
+        $invoice = Invoice::where('farm_id', $ctx->farm->id)->with(['sale.items', 'sale.category'])->findOrFail($invoiceId);
+        $cycleId = $this->cycleOf($ctx, $invoice);
+        $invoice = Invoice::where('farm_id', $ctx->farm->id)->lockForUpdate()->with(['payments', 'sale.items', 'sale.category'])->findOrFail($invoiceId);
+        if ($invoice->isVoid()) {
+            throw new ApiHttpException(409, 'invoice_void', 'A void invoice cannot receive payments.');
+        }
+        $amount = Money::parse($data['amount']);
+        $outstanding = $invoice->outstanding();
+        if (Money::cmp($amount, $outstanding) > 0) {
+            throw new ApiHttpException(409, 'payment_exceeds_balance', 'The payment is more than the amount still owed on this invoice.', details: ['outstanding' => $outstanding, 'amount' => $amount]);
+        }
+        $today = CarbonImmutable::now($ctx->farm->timezone)->toDateString();
+        if ($data['received_on'] > $today) {
+            $this->invalid('received_on', 'A payment cannot be dated in the future.');
+        }
+        if ($data['received_on'] < $invoice->sale->recorded_at->setTimezone($ctx->farm->timezone)->toDateString()) {
+            $this->invalid('received_on', 'A payment cannot be dated before the sale.');
+        }
+        $recordedAt = isset($data['recorded_at']) ? CarbonImmutable::parse($data['recorded_at'])->utc() : CarbonImmutable::now()->utc();
+        if ($recordedAt->isFuture()) {
+            $this->invalid('recorded_at', 'The event cannot be in the future.');
+        }
+        $category = isset($data['finance_category_id'])
+            ? $this->finance->category($ctx, $data['finance_category_id'], 'income')
+            : ($invoice->sale->category ?? $this->finance->platformCategory('other_income', 'income'));
+
+        // One real payment -> exactly one income row: the ledger entry is booked first (its source key is unique per payment), then the payment row links to it.
+        $id = (string) Str::uuid7();
+        $reference = $this->reference($ctx);
+        $transaction = $this->finance->bookPayment($ctx, $id, $amount, $data['received_on'], $recordedAt, $category, $invoice->contact_id, $cycleId, 'Payment '.$reference.' for '.$invoice->reference, $data['method']);
+        $payment = (new Payment)->forceFill([
+            'id' => $id, 'farm_id' => $ctx->farm->id, 'invoice_id' => $invoice->id, 'reference' => $reference,
+            'entry_type' => Payment::PAYMENT, 'amount' => $amount, 'currency' => $ctx->farm->currency, 'method' => $data['method'],
+            'payment_reference' => $data['payment_reference'] ?? null, 'received_on' => $data['received_on'], 'recorded_at' => $recordedAt,
+            'notes' => $data['notes'] ?? null, 'finance_transaction_id' => $transaction->id, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
+            'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
+        ]);
+        $payment->save();
+        PaymentRecorded::dispatch($payment);
+
+        return $payment->load(self::RELATIONS);
     }
 
     /** Appends an offsetting payment row and an offsetting income row. The invoice balance goes back up; nothing is edited or deleted. */
@@ -133,33 +142,39 @@ class PaymentService
             if ($replay = $this->replay($ctx, $data['idempotency_key'], $hash)) {
                 return $replay;
             }
-            $original = Payment::where('farm_id', $ctx->farm->id)->lockForUpdate()->findOrFail($id);
-            if ($original->entry_type !== Payment::PAYMENT || $original->reversal()->exists()) {
-                throw new ApiHttpException(409, 'payment_already_reversed', 'This payment is a reversal or has already been reversed.');
-            }
-            $when = isset($data['recorded_at']) ? CarbonImmutable::parse($data['recorded_at'])->utc() : CarbonImmutable::now()->utc();
-            if ($when->isFuture() || $when->lessThan($original->recorded_at)) {
-                $this->invalid('recorded_at', 'A reversal is dated between the payment and now.');
-            }
-            $transaction = $original->transaction;
-            if ($transaction?->production_cycle_id !== null) {
-                $this->finance->resolveCycle($ctx, $transaction->production_cycle_id);
-            }
-            $ledger = $transaction !== null ? $this->finance->reversePayment($ctx, $transaction->id, $when, $data['reason']) : null;
-            $reversal = (new Payment)->forceFill([
-                'id' => (string) Str::uuid7(), 'farm_id' => $ctx->farm->id, 'invoice_id' => $original->invoice_id, 'reference' => $this->reference($ctx),
-                'entry_type' => Payment::REVERSAL, 'amount' => $original->amount, 'currency' => $original->currency, 'method' => $original->method,
-                'payment_reference' => $original->payment_reference, 'received_on' => CarbonImmutable::now($ctx->farm->timezone)->toDateString(), 'recorded_at' => $when,
-                'reverses_payment_id' => $original->id, 'reason' => $data['reason'], 'finance_transaction_id' => $ledger?->id,
-                'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
-                'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
-            ]);
-            $reversal->save();
-            $fresh = $reversal;
-            PaymentRecorded::dispatch($fresh, 'reversed');
-
-            return $fresh->load(self::RELATIONS);
+            return $this->reverseLocked($ctx, $id, $data, $hash);
         }, 3);
+    }
+
+    /** Reverses one payment inside the caller's transaction (farm row locked, idempotency handled by the caller). Also used by the one-step sale cancel. */
+    public function reverseLocked(FarmContext $ctx, string $id, array $data, string $hash): Payment
+    {
+        $original = Payment::where('farm_id', $ctx->farm->id)->lockForUpdate()->findOrFail($id);
+        if ($original->entry_type !== Payment::PAYMENT || $original->reversal()->exists()) {
+            throw new ApiHttpException(409, 'payment_already_reversed', 'This payment is a reversal or has already been reversed.');
+        }
+        $when = isset($data['recorded_at']) ? CarbonImmutable::parse($data['recorded_at'])->utc() : CarbonImmutable::now()->utc();
+        if ($when->isFuture() || $when->lessThan($original->recorded_at)) {
+            $this->invalid('recorded_at', 'A reversal is dated between the payment and now.');
+        }
+        $transaction = $original->transaction;
+        if ($transaction?->production_cycle_id !== null) {
+            $this->finance->resolveCycle($ctx, $transaction->production_cycle_id);
+        }
+        $ledger = $transaction !== null ? $this->finance->reversePayment($ctx, $transaction->id, $when, $data['reason']) : null;
+        $reversal = (new Payment)->forceFill([
+            'id' => (string) Str::uuid7(), 'farm_id' => $ctx->farm->id, 'invoice_id' => $original->invoice_id, 'reference' => $this->reference($ctx),
+            'entry_type' => Payment::REVERSAL, 'amount' => $original->amount, 'currency' => $original->currency, 'method' => $original->method,
+            'payment_reference' => $original->payment_reference, 'received_on' => CarbonImmutable::now($ctx->farm->timezone)->toDateString(), 'recorded_at' => $when,
+            'reverses_payment_id' => $original->id, 'reason' => $data['reason'], 'finance_transaction_id' => $ledger?->id,
+            'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
+            'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
+        ]);
+        $reversal->save();
+        $fresh = $reversal;
+        PaymentRecorded::dispatch($fresh, 'reversed');
+
+        return $fresh->load(self::RELATIONS);
     }
 
     // -------------------------------------------------------------- helpers

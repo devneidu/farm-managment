@@ -126,7 +126,7 @@ POST /api/v1/income
 
 ### "Sold something from your farm?" (Income)
 
-On the Income form show a prominent option **"Sold something from your farm?"** (eggs, milk, crops, livestock, other produce). For now it **opens the existing Sales create flow** (`POST /sales`, then the invoice and payment flow in [PHASE-15-SALES-INVOICES.md](PHASE-15-SALES-INVOICES.md)); stock and income are then booked correctly when the customer pays. A combined single-form flow is coming in the Sales feature — keep this as a simple link/redirect until then. Never offer the four sales categories in the manual form (the server refuses them).
+On the Income form show a prominent option **"Sold something from your farm?"** (eggs, milk, crops, livestock, other produce). It **opens the Sell form** described in [FRONTEND-SALES-FLOW.md](FRONTEND-SALES-FLOW.md): one form, one `POST /sales` that records what left the farm, the buyer and (optionally) the money received; stock and income are booked correctly when the money is received. Never offer the four sales categories in the manual form (the server refuses them).
 
 ## 3. Correcting entries
 

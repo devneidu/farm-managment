@@ -58,7 +58,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
 | 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
 | 16 — Finance | 10 | 8 | 10 | 3 |
-| 17 — Sales, Invoices & Payments | 18 | 14 | 18 | 8 |
+| 17 — Sales, Invoices & Payments | 23 | 19 | 23 | 12 |
 | 18 — Dashboard & Insights | 3 | 3 | 3 | 0 |
 | 19 — Reports & Exports | 11 | 11 | 11 | 3 |
 | 20 — Notifications | 7 | 7 | 7 | 0 |
@@ -329,3 +329,9 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * Every saved finance-transaction example in the package (11) was refreshed to the new row shape (`payment_method`, `quantity`, `unit_price`, `source` object, `can_reverse_directly`); category examples carry `manual_entry`.
 * New totals: reference folders 406 → **408**, all requests 863 → **865**, with a success example 517 → **519**, with an error example 103 → **104**, saved examples 690 → **697**. No route was added (343/343 unchanged), so endpoint coverage is unchanged. The new examples are real responses captured from the implemented code; Newman was not re-run.
 * Frontend contract: `docs/api/FRONTEND-TRANSACTIONS-FLOW.md`.
+
+## Addendum - quick sell flow
+
+* New route `GET /sales/sellables` (now 344 `/api/v1` routes; `docs/api/openapi.json` was intentionally not regenerated in this change and still lists 343 operations).
+* Folder **17 — Sales, Invoices & Payments** gains five requests: `What can I sell? (sellables)`, `Sell: paid in full, quick buyer, quantity x price`, `Sell: part payment (animals + stock)`, `Sell: not paid yet (no payment block)` and `Cancel a sale and reverse its payments (one step)`, with 10 saved examples captured from the running code (200/201 successes, an idempotent retry, `422` payment above total / amount mismatch / buyer conflict, `409 insufficient_stock`, `409 sale_has_payments`, worker `403`). The old example "Farm worker has no sale access (403)" is now "Vet has no sale access (403)" because Farm Worker holds `sale.view` and `sale.create`.
+* Frontend contract: `docs/api/FRONTEND-SALES-FLOW.md`. The per-folder counts in the table above (row 17) were updated by hand; the other totals in §1 were not recomputed.

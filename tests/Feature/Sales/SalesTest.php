@@ -822,11 +822,11 @@ class SalesTest extends TeamTestCase
         $this->assertSame('900', $this->stock($eggs));
     }
 
-    public function test_finance_and_manager_can_sell_but_workers_and_vets_cannot(): void
+    public function test_finance_and_manager_can_sell_but_vets_cannot(): void
     {
         [$sale, $invoice] = $this->invoicedEggSale();
         $payment = $this->pay($invoice['id'], '100')->assertCreated()->json('data');
-        foreach ([FarmRole::FarmWorker, FarmRole::Vet] as $role) {
+        foreach ([FarmRole::Vet] as $role) {
             $this->signInAs($this->member($role, name: $role->label()));
             foreach (['/sales', '/sales/'.$sale['id'], '/invoices', '/invoices/'.$invoice['id'], '/invoices/'.$invoice['id'].'/pdf', '/payments', '/payments/'.$payment['id']] as $url) {
                 $this->get('/api/v1'.$url, ['Accept' => 'application/json'])->assertForbidden();

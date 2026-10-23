@@ -12,11 +12,15 @@ use App\Models\Contact;
 use App\Models\Farm;
 use App\Models\FinanceCategory;
 use App\Models\InventoryItem;
+use App\Models\Payment;
 use App\Models\ProductionCycle;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\Finance\ContactService;
 use App\Services\Finance\FinanceService;
 use App\Services\Inventory\InventoryService;
+use App\Services\Inventory\StockLedger;
+use App\Services\Inventory\StockReasonCatalogue;
 use App\Services\Records\RecordService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -45,7 +49,10 @@ class SaleService
 {
     private const RELATIONS = ['contact', 'category', 'items.item.stockUnit', 'items.lot', 'items.movement.reversal', 'items.record.reversal', 'invoice.payments.reversal'];
 
-    public function __construct(private InventoryService $inventory, private RecordService $records, private FinanceService $finance, private InvoiceService $invoices) {}
+    public function __construct(
+        private InventoryService $inventory, private RecordService $records, private FinanceService $finance, private InvoiceService $invoices,
+        private PaymentService $payments, private ContactService $contacts, private StockLedger $ledger,
+    ) {}
 
     public function find(FarmContext $ctx, string $id): Sale
     {
@@ -111,12 +118,17 @@ class SaleService
             if (isset($data['contact_id']) && ! empty($data['customer_name'])) {
                 $this->invalid('customer_name', 'Name the buyer with contact_id or customer_name, not both.');
             }
-            $contactId = $this->finance->contact($ctx, $data['contact_id'] ?? null, customer: true);
+            $quickBuyer = ! empty($data['buyer']);
+            if ($quickBuyer && (isset($data['contact_id']) || ! empty($data['customer_name']))) {
+                $this->invalid('buyer', 'Name the buyer with exactly one of buyer, contact_id or customer_name.');
+            }
+            $contactId = $quickBuyer ? $this->contacts->customerForSale($ctx, $data['buyer'])->id : $this->finance->contact($ctx, $data['contact_id'] ?? null, customer: true);
             $customerName = $contactId !== null ? Contact::whereKey($contactId)->value('name') : (isset($data['customer_name']) ? trim(preg_replace('/\s+/u', ' ', $data['customer_name'])) : null);
             $this->assertCorrection($ctx, $data);
             $lines = $this->lines($ctx, $data['items']);
             $cycles = $this->lockCycles($ctx, $lines, $when);
             $total = Money::sum(array_map(fn ($line) => $line['amount'], $lines));
+            $payment = isset($data['payment']) ? $this->assertPayment($ctx, $data['payment'], $total, $when) : null;
             $category = isset($data['finance_category_id']) ? $this->finance->category($ctx, $data['finance_category_id'], 'income') : $this->derivedCategory($lines);
 
             $number = Sale::where('farm_id', $ctx->farm->id)->count() + 1;
@@ -137,8 +149,13 @@ class SaleService
             foreach ($order as $index) {
                 $this->applyEffect($ctx, $sale, $rows[$index], $lines[$index], $cycles, $when, 'items.'.$index);
             }
-            if (isset($data['invoice'])) {
-                $this->invoices->issueFor($ctx, $sale, $data['invoice'], null, null);
+            $invoice = isset($data['invoice']) ? $this->invoices->issueFor($ctx, $sale, $data['invoice'], null, null) : null;
+            if ($payment !== null) {
+                // Paid now: the invoice is issued automatically when none was asked for, and the payment goes through the one payment writer.
+                // Its key is derived from the sale's own, so a retry (which replays the sale above) can never record a second payment.
+                $invoice ??= $this->invoices->issueFor($ctx, $sale, [], null, null);
+                $payment['idempotency_key'] = 'pay:'.substr(hash('sha256', $data['idempotency_key']), 0, 40);
+                $this->payments->recordLocked($ctx, $invoice->id, $payment, RequestHash::of(['sale_payment' => $sale->id] + $payment));
             }
             SaleRecorded::dispatch($sale);
 
@@ -151,8 +168,12 @@ class SaleService
     {
         $ctx->authorize(Permission::SaleCancel);
         $data = Validator::make($input, (new CancelSaleRequest)->rules())->validate();
+        $reversePayments = (bool) ($data['reverse_payments'] ?? false);
+        if ($reversePayments) {
+            $ctx->authorize(Permission::PaymentReverse);
+        }
 
-        return DB::transaction(function () use ($ctx, $id, $data) {
+        return DB::transaction(function () use ($ctx, $id, $data, $reversePayments) {
             Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
             $hash = RequestHash::of(['cancel' => $id] + $data);
             $existing = Sale::where('farm_id', $ctx->farm->id)->where('cancel_idempotency_key', $data['idempotency_key'])->first();
@@ -173,7 +194,7 @@ class SaleService
             }
             // Money first: a sale with payments still on it cannot be cancelled - reverse the payments explicitly.
             $invoice = $sale->invoice()->with('payments')->lockForUpdate()->first();
-            if ($invoice !== null && ! Money::isZero($invoice->amountPaid())) {
+            if ($invoice !== null && ! $reversePayments && ! Money::isZero($invoice->amountPaid())) {
                 throw new ApiHttpException(409, 'sale_has_payments', 'Reverse the payments received on this sale before cancelling it.', details: ['amount_paid' => $invoice->amountPaid()]);
             }
             $cycleIds = $sale->items->where('kind', 'livestock')->pluck('production_cycle_id')->unique()->sort()->values();
@@ -181,6 +202,17 @@ class SaleService
             foreach ($cycleIds as $cycleId) {
                 $this->finance->resolveCycle($ctx, $cycleId);
                 $cycles[$cycleId] = ProductionCycle::findOrFail($cycleId);
+            }
+            if ($invoice !== null && $reversePayments) {
+                // One step: every live payment is reversed (its own offsetting payment and income row) before the sale is undone, all in this transaction.
+                foreach ($invoice->payments->where('entry_type', Payment::PAYMENT)->sortBy('recorded_at') as $payment) {
+                    if ($payment->reversal()->exists()) {
+                        continue;
+                    }
+                    $reversal = ['reason' => $data['reason'], 'recorded_at' => $when->format('c'), 'idempotency_key' => 'cr:'.substr(hash('sha256', $data['idempotency_key'].$payment->id), 0, 40)];
+                    $this->payments->reverseLocked($ctx, $payment->id, $reversal, RequestHash::of(['sale_cancel_reverse' => $payment->id] + $reversal));
+                }
+                $invoice->load('payments');
             }
             $lines = $sale->items->sortBy(fn ($line) => [$line->inventory_item_id ?? '', $line->line_no])->values();
             foreach ($lines as $line) {
@@ -208,7 +240,46 @@ class SaleService
     // -------------------------------------------------------------- helpers
 
     /**
-     * Kind-specific line rules and money normalisation.
+     * Validates the paid-now block against the sale before anything is written: more than the total, a future date or a date before
+     * the sale are refused as 422 on payment.*. received_on defaults to the sale's farm-local date.
+     *
+     * @return array{amount: string, method: string, received_on: string}
+     */
+    private function assertPayment(FarmContext $ctx, array $payment, string $total, CarbonImmutable $when): array
+    {
+        $amount = Money::parse($payment['amount']);
+        if (Money::cmp($amount, $total) > 0) {
+            $this->invalid('payment.amount', 'The payment cannot be more than the sale total ('.$total.').');
+        }
+        $saleDay = $when->setTimezone($ctx->farm->timezone)->toDateString();
+        $receivedOn = $payment['received_on'] ?? $saleDay;
+        if ($receivedOn > CarbonImmutable::now($ctx->farm->timezone)->toDateString()) {
+            $this->invalid('payment.received_on', 'A payment cannot be dated in the future.');
+        }
+        if ($receivedOn < $saleDay) {
+            $this->invalid('payment.received_on', 'A payment cannot be dated before the sale.');
+        }
+
+        return ['amount' => $amount, 'method' => $payment['method'], 'received_on' => $receivedOn];
+    }
+
+    /** quantity x unit_price, rounded half-up to 2 decimals, as exact decimal strings. */
+    private function priced(string $quantity, string $unitPrice, string $prefix): string
+    {
+        $amount = Money::parse(Decimal::round(Decimal::mul($quantity, $unitPrice), 2));
+        if ($amount === null) {
+            $this->invalid($prefix.'.unit_price', 'The line amount is too large.');
+        }
+        if (Money::isZero($amount)) {
+            $this->invalid($prefix.'.unit_price', 'The line amount must be greater than zero.');
+        }
+
+        return $amount;
+    }
+
+    /**
+     * Kind-specific line rules and money normalisation. A line's amount is either given or computed as quantity x unit_price
+     * (stock: quantity in the item's stock unit, or the entered components; livestock: head count; other: quantity); both must agree.
      *
      * @return list<array<string, mixed>>
      */
@@ -219,12 +290,23 @@ class SaleService
             $prefix = 'items.'.$index;
             $stockFields = ['inventory_item_id', 'output', 'storage_location_id', 'lot_id', 'components'];
             $kind = $line['kind'];
+            $quantity = isset($line['quantity']) ? Decimal::parse($line['quantity']) : null;
+            $price = isset($line['unit_price']) ? Money::parse($line['unit_price']) : null;
+            $given = isset($line['amount']) ? Money::parse($line['amount']) : null;
+            unset($line['quantity'], $line['unit_price']);
+            if ($given === null && $price === null) {
+                $this->invalid($prefix.'.amount', 'Send the line amount, or unit_price with the quantity.');
+            }
+            $computed = null;
             if ($kind === 'stock') {
                 $hasOutput = ! empty($line['output']);
                 if ($hasOutput === ! empty($line['inventory_item_id'])) {
                     $this->invalid($prefix.($hasOutput ? '.output' : '.inventory_item_id'), 'Name the stock with exactly one of inventory_item_id or output.');
                 }
-                foreach ($hasOutput ? ['components'] : ['inventory_item_id', 'storage_location_id', 'components'] as $required) {
+                if ($quantity !== null && ! empty($line['components'])) {
+                    $this->invalid($prefix.'.quantity', 'Send either quantity or components, not both.');
+                }
+                foreach (array_merge($hasOutput ? [] : ['inventory_item_id', 'storage_location_id'], $quantity === null ? ['components'] : []) as $required) {
                     if (empty($line[$required])) {
                         $this->invalid($prefix.'.'.$required, 'This is required for a stock line.');
                     }
@@ -238,6 +320,18 @@ class SaleService
                 if (array_key_exists('head_count', $line)) {
                     $this->invalid($prefix.'.head_count', 'Head count applies to livestock lines only.');
                 }
+                if ($quantity !== null || $price !== null) {
+                    // Read-only here (the row is locked later, in id order): only the stock unit and the measured quantity are needed.
+                    $item = InventoryItem::ofFarm($ctx->farm)->with('stockUnit')->findOrFail($line['inventory_item_id']);
+                    if ($quantity !== null) {
+                        $line['components'] = [['quantity' => $quantity, 'unit' => $item->stockUnit->code]];
+                    }
+                    if ($price !== null) {
+                        $result = $this->inventory->measureForItem($ctx, $item, $line['components'], $prefix.'.components');
+                        $inStockUnit = $this->ledger->display($item, Decimal::trim($result->normalized->value))['quantity'];
+                        $computed = $this->priced($inStockUnit, $price, $prefix);
+                    }
+                }
             } else {
                 foreach ($stockFields as $forbidden) {
                     if (array_key_exists($forbidden, $line) && $line[$forbidden] !== null) {
@@ -245,11 +339,21 @@ class SaleService
                     }
                 }
                 if ($kind === 'livestock') {
+                    if ($quantity !== null) {
+                        if (! Decimal::isInteger($quantity)) {
+                            $this->invalid($prefix.'.quantity', 'Animals are sold as whole head.');
+                        }
+                        if (isset($line['head_count']) && (int) $line['head_count'] !== (int) $quantity) {
+                            $this->invalid($prefix.'.quantity', 'For livestock the quantity is the head_count; send one of them or make them equal.');
+                        }
+                        $line['head_count'] = (int) $quantity;
+                    }
                     foreach (['production_cycle_id', 'head_count'] as $required) {
                         if (empty($line[$required])) {
                             $this->invalid($prefix.'.'.$required, 'This is required for a livestock line.');
                         }
                     }
+                    $computed = $price !== null ? $this->priced((string) (int) $line['head_count'], $price, $prefix) : null;
                 } else {
                     if (array_key_exists('head_count', $line)) {
                         $this->invalid($prefix.'.head_count', 'Head count applies to livestock lines only.');
@@ -257,15 +361,23 @@ class SaleService
                     if (trim((string) ($line['description'] ?? '')) === '') {
                         $this->invalid($prefix.'.description', 'Describe what was sold.');
                     }
+                    if ($price !== null || $quantity !== null) {
+                        if ($price === null || $quantity === null) {
+                            $this->invalid($prefix.($price === null ? '.unit_price' : '.quantity'), 'Send quantity and unit_price together, or only the amount.');
+                        }
+                        $computed = $this->priced($quantity, $price, $prefix);
+                    }
                 }
             }
-            $line['amount'] = Money::parse($line['amount']);
+            if ($computed !== null && $given !== null && Money::cmp($given, $computed) !== 0) {
+                $this->invalid($prefix.'.amount', 'The amount ('.$given.') does not match quantity x unit_price ('.$computed.').');
+            }
+            $line['amount'] = $computed ?? $given;
             $lines[] = $line;
         }
 
         return $lines;
     }
-
     /**
      * Locks every cycle a line names (id order) and checks it is open; livestock lines need a livestock cycle and a date inside it.
      *
@@ -341,10 +453,22 @@ class SaleService
         $kinds = collect($lines)->pluck('kind')->unique();
         $onlyProduce = $kinds->first() !== 'stock' || ! InventoryItem::whereIn('id', collect($lines)->where('kind', 'stock')->pluck('inventory_item_id')->all())->where('category', '!=', InventoryCategory::Produce->value)->exists();
         $code = $kinds->count() === 1 ? match ($kinds->first()) {
-            'livestock' => 'livestock_sales', 'stock' => $onlyProduce ? 'crop_sales' : 'other_income', default => 'other_income',
+            'livestock' => 'livestock_sales', 'stock' => $onlyProduce ? $this->produceCategory($lines) : 'other_income', default => 'other_income',
         } : 'other_income';
 
         return $this->finance->platformCategory($code, 'income');
+    }
+
+    /** Produce lines that are all the farm's eggs -> egg_sales, all its milk -> milk_sales, any other produce (or a mix) -> crop_sales. */
+    private function produceCategory(array $lines): string
+    {
+        $keys = InventoryItem::whereIn('id', collect($lines)->pluck('inventory_item_id')->all())->pluck('system_key')->unique()->values();
+
+        return match (true) {
+            $keys->count() === 1 && $keys->first() === StockReasonCatalogue::OUTPUT_KEYS[StockReasonCatalogue::KIND_EGGS] => 'egg_sales',
+            $keys->count() === 1 && $keys->first() === StockReasonCatalogue::OUTPUT_KEYS[StockReasonCatalogue::KIND_MILK] => 'milk_sales',
+            default => 'crop_sales',
+        };
     }
 
     private function assertCorrection(FarmContext $ctx, array $data): void

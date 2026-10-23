@@ -483,6 +483,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         $c = SaleController::class;
         Route::get('/', [$c, 'index'])->middleware('farm.permission:sale.view')->name('api.v1.sales.index');
         Route::post('/', [$c, 'store'])->middleware(['farm.permission:sale.create', 'throttle:finance-write'])->name('api.v1.sales.store');
+        Route::get('/sellables', [$c, 'sellables'])->middleware('farm.permission:sale.create')->name('api.v1.sales.sellables');
         Route::get('/{sale}', [$c, 'show'])->middleware('farm.permission:sale.view')->name('api.v1.sales.show');
         Route::post('/{sale}/cancel', [$c, 'cancel'])->middleware(['farm.permission:sale.cancel', 'throttle:finance-write'])->name('api.v1.sales.cancel');
         Route::post('/{sale}/invoice', [$c, 'invoice'])->middleware(['farm.permission:invoice.create', 'throttle:finance-write'])->name('api.v1.sales.invoice');
