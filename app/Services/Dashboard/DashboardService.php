@@ -65,7 +65,7 @@ class DashboardService
             'sections' => [
                 'production' => $can(Permission::ProductionCycleView), 'work' => $can(Permission::TaskView), 'calendar' => $can(Permission::TaskView),
                 'inventory' => $can(Permission::InventoryView), 'health' => $can(Permission::HealthView), 'breeding' => $can(Permission::BreedingView),
-                'finance' => $can(Permission::FinanceView), 'sales' => $can(Permission::SaleView) || $can(Permission::InvoiceView),
+                'finance' => $can(Permission::FinanceView), 'sales' => ($can(Permission::SaleView) && $can(Permission::FinanceView)) || $can(Permission::InvoiceView),
             ],
             'priority' => array_map(fn ($i) => ['id' => $i['id'], 'code' => $i['code'], 'severity' => $i['severity'], 'title' => $i['title'], 'message' => $i['message']],
                 array_slice(array_values(array_filter($insights, fn ($i) => $i['severity'] !== 'info')), 0, 3)),
@@ -158,7 +158,7 @@ class DashboardService
             $add('expense_month', 'Expenses this month', 'finance', $totals['expense'], $ctx->farm->currency, [], $detail);
             $add('net_month', 'Net this month', 'finance', $totals['net'], $ctx->farm->currency, [], $detail);
         }
-        if ($ctx->can(Permission::SaleView) && Sale::where('farm_id', $ctx->farm->id)->exists()) {
+        if ($ctx->can(Permission::SaleView) && $ctx->can(Permission::FinanceView) && Sale::where('farm_id', $ctx->farm->id)->exists()) {
             $s = $f->salesMonth();
             $add('sales_month', 'Sales this month', 'sales', $s['total'], $ctx->farm->currency, [], ['sales' => $s['count'], 'from' => $f->clock->monthStart(), 'to' => $f->clock->today]);
         }

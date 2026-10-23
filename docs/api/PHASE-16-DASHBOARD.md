@@ -63,7 +63,7 @@ Every card is `{code, label, section, value, unit, breakdown, detail}`. `value` 
 | `active_withdrawals` | `health.view` | at least one running withdrawal | medicine lines still in withdrawal (event not reversed) |
 | `active_breeding_projects` | `breeding.view` | at least one active project | count |
 | `income_month`, `expense_month`, `net_month` | `finance.view` | the farm has finance transactions | farm-local month to date, from the same query as `GET /finance/summary` |
-| `sales_month` | `sale.view` | the farm has sales | total of non-cancelled sales recorded this farm-local month; `detail.sales` is the count |
+| `sales_month` | `sale.view` + `finance.view` (a Farm Worker has `sale.view` only, so never gets it) | the farm has sales | total of non-cancelled sales recorded this farm-local month; `detail.sales` is the count |
 | `receivables` | `invoice.view` | the farm has an issued invoice | amount still owed on issued invoices (reversed payments do not count as received); `detail` has `invoices`, `overdue_invoices`, `overdue_outstanding` |
 
 ### Work (`work`, needs `task.view`)

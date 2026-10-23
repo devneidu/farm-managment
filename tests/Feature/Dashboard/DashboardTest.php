@@ -572,7 +572,9 @@ class DashboardTest extends TeamTestCase
             $this->assertSame($hasMoney, (bool) array_intersect($money, $codes), "$role money cards");
             $this->assertSame($hasQuickRecord, $d['quick_record'] !== [], "$role quick record");
             $kinds = array_unique(array_column($d['recent_activity'], 'kind'));
-            $this->assertSame($hasMoneyActivity, (bool) array_intersect($moneyKinds, $kinds), "$role money activity");
+            // a worker has sale.view, so sales still appear in the activity feed; payments, purchases and finance rows never do
+            $kindsToCheck = $role === 'farm_worker' ? array_diff($moneyKinds, ['sale']) : $moneyKinds;
+            $this->assertSame($hasMoneyActivity, (bool) array_intersect($kindsToCheck, $kinds), "$role money activity");
             $this->assertNotNull($d['work'], "$role sees work (task.view)");
             $this->assertArrayHasKey('livestock_population', array_column($d['kpis'], null, 'code'), "$role sees production");
 
@@ -593,7 +595,8 @@ class DashboardTest extends TeamTestCase
         $add = array_column($this->dash()['quick_add'], 'code');
         $this->assertContains('health_record', $add);
         $this->assertContains('breeding_project', $add);
-        foreach (['sale', 'purchase', 'expense', 'income', 'stock_in', 'task', 'production_cycle', 'contact'] as $code) {
+        $this->assertContains('sale', $add, 'a Farm Worker can sell (sale.create)');
+        foreach (['purchase', 'expense', 'income', 'stock_in', 'task', 'production_cycle', 'contact'] as $code) {
             $this->assertNotContains($code, $add, "a Farm Worker cannot $code");
         }
         $this->assertContains('mortality', array_column($this->dash()['quick_record'], 'type'));
@@ -623,6 +626,21 @@ class DashboardTest extends TeamTestCase
         $this->assertSame($this->today(), $k['income_month']['detail']['to']);
         $summary = $this->getJson('/api/v1/finance/summary?from=2026-10-01&to='.$this->today())->json('data.totals');
         $this->assertSame([$summary['income'], $summary['expense'], $summary['net']], [$k['income_month']['value'], $k['expense_month']['value'], $k['net_month']['value']], 'the same figures as the finance summary that owns them');
+    }
+
+    public function test_the_sales_total_is_a_finance_figure_a_worker_does_not_get(): void
+    {
+        $this->invoicedSale('3000.00');
+
+        $this->signInAs($this->member(FarmRole::FarmWorker, null, 'Worker'));
+        $worker = $this->dash();
+        $this->assertArrayNotHasKey('sales_month', $this->kpis($worker), 'a worker has sale.view but not finance.view');
+        $this->assertFalse($worker['sections']['sales']);
+
+        $this->signInAs($this->member(FarmRole::Manager, null, 'Manager'));
+        $manager = $this->dash();
+        $this->assertSame('3000.00', $this->kpis($manager)['sales_month']['value']);
+        $this->assertTrue($manager['sections']['sales']);
     }
 
     public function test_sales_and_receivables_are_exact_exclude_cancelled_and_reversed_and_respect_the_month(): void
