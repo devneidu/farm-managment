@@ -21,6 +21,12 @@ class StoreBreedingOutcomeRequest extends FormRequest
             'loss_count' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999'],
             /** Where the offspring go. `mother_batch` adds them to the project's own batch; `new_batch` starts a new batch (same species, started on the outcome date, named like the project title) holding them. Default: new_batch for incubation, mother_batch for pregnancy. new_batch needs live_count of at least 1. */
             'destination' => ['sometimes', 'in:mother_batch,new_batch'],
+            /** Only with destination `new_batch`: details of the batch to start. Both parts are optional; send nothing for the defaults. */
+            'new_batch' => ['sometimes', 'nullable', 'array'],
+            /** Name of the new batch (1–100 characters, unique on the farm). Blank or omitted: "{Species} hatch – {date}" (incubation) or "{Species} offspring – {date}" (pregnancy). */
+            'new_batch.title' => ['sometimes', 'nullable', 'string', 'max:100'],
+            /** Production purpose code of the new batch, from the species' batch-reference response (same list as batch creation). Blank or omitted: the mother batch's purpose. */
+            'new_batch.purpose' => ['sometimes', 'nullable', 'string', 'max:64'],
             /** Reversed outcome this one replaces (needs breeding.reverse). */
             'corrects_outcome_id' => ['sometimes', 'nullable', 'uuid'],
             'recorded_at' => InventoryRules::event()['recorded_at'],

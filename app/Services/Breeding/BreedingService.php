@@ -31,6 +31,7 @@ use App\Services\Production\CycleService;
 use App\Services\Records\RecordService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
+use App\Support\Entitlements\EntitlementException;
 use App\Support\Idempotency\RequestHash;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -261,18 +262,22 @@ class BreedingService
             $live = (int) $data['live_count'];
             $loss = (int) ($data['loss_count'] ?? 0);
             $destination = $data['destination'] ?? ($project->workflow === BreedingWorkflow::Incubation ? self::NEW_BATCH : self::MOTHER_BATCH);
+            $wanted = array_filter($data['new_batch'] ?? [], fn ($v) => $v !== null && $v !== '');
             if ($destination === self::NEW_BATCH && $live === 0) {
-                if (isset($data['destination'])) {
+                if (isset($data['destination']) || $wanted !== []) {
                     $this->invalid('destination', 'A new batch needs at least one live offspring.');
                 }
                 $destination = self::MOTHER_BATCH; // nothing was born or hatched: no batch, no population change
+            }
+            if ($wanted !== [] && $destination !== self::NEW_BATCH) {
+                $this->invalid('new_batch', 'new_batch applies only when destination is new_batch.');
             }
             if ($project->workflow === BreedingWorkflow::Incubation && $live + $loss > $project->eggs_set) {
                 $this->invalid('live_count', 'Hatched plus lost cannot exceed the eggs set.');
             }
             $when = $this->when($ctx, $project, $data['recorded_at']);
             $this->assertCorrection($ctx, $project, $data['corrects_outcome_id'] ?? null);
-            $target = $destination === self::NEW_BATCH ? $this->startBatch($ctx, $cycle, $project, $live, $when) : $cycle;
+            $target = $destination === self::NEW_BATCH ? $this->startBatch($ctx, $cycle, $project, $live, $when, $wanted) : $cycle;
             $outcome = BreedingOutcome::create([
                 'farm_id' => $ctx->farm->id, 'breeding_project_id' => $project->id, 'production_cycle_id' => $target->id, 'destination' => $destination, 'kind' => BreedingOutcome::OUTCOME,
                 'live_count' => $live, 'loss_count' => $data['loss_count'] ?? null, 'outcome_date' => $when->setTimezone($ctx->farm->timezone)->toDateString(),
@@ -525,18 +530,29 @@ class BreedingService
      * live offspring as its starting head count (so no separate "birth" record is added - that would count them twice). Created through the
      * ordinary batch creation, so plan limits and name rules apply; breeding.create is enough, production_cycle.create is not also required.
      */
-    private function startBatch(FarmContext $ctx, ProductionCycle $mother, BreedingProject $project, int $live, CarbonImmutable $when): ProductionCycle
+    private function startBatch(FarmContext $ctx, ProductionCycle $mother, BreedingProject $project, int $live, CarbonImmutable $when, array $wanted = []): ProductionCycle
     {
         $mother->loadMissing('livestock.productionPurpose', 'livestock.breed');
         $date = $when->setTimezone($ctx->farm->timezone)->toDateString();
         $word = $project->workflow === BreedingWorkflow::Incubation ? 'hatch' : 'offspring';
 
-        return $this->cycles->createUnchecked($ctx, User::findOrFail($ctx->membership->user_id), array_filter([
-            'kind' => CycleKind::Livestock->value, 'name' => $this->freeBatchName($ctx, $mother->livestock->species->name.' '.$word.' – '.$date),
-            'operation_type_id' => $mother->operation_type_id, 'species_id' => $mother->livestock->species_id, 'breed_id' => $mother->livestock->breed_id,
-            'production_purpose' => $mother->livestock->productionPurpose->code, 'start_date' => $date, 'initial_population' => $live,
-            'notes' => 'From breeding project '.$project->reference.'.',
-        ], fn ($v) => $v !== null));
+        try {
+            return $this->cycles->createUnchecked($ctx, User::findOrFail($ctx->membership->user_id), array_filter([
+                'kind' => CycleKind::Livestock->value, 'name' => $wanted['title'] ?? $this->freeBatchName($ctx, $mother->livestock->species->name.' '.$word.' – '.$date),
+                'operation_type_id' => $mother->operation_type_id, 'species_id' => $mother->livestock->species_id, 'breed_id' => $mother->livestock->breed_id,
+                'production_purpose' => $wanted['purpose'] ?? $mother->livestock->productionPurpose->code, 'start_date' => $date, 'initial_population' => $live,
+                'notes' => 'From breeding project '.$project->reference.'.',
+            ], fn ($v) => $v !== null));
+        } catch (ValidationException $e) {
+            // Batch creation names its own fields; the caller sent them under new_batch.
+            $map = ['name' => 'new_batch.title', 'production_purpose' => 'new_batch.purpose'];
+            throw ValidationException::withMessages(collect($e->errors())->mapWithKeys(fn ($m, $k) => [$map[$k] ?? $k => $m])->all());
+        } catch (EntitlementException $e) {
+            if ($e->errorCode !== 'plan_limit_reached') {
+                throw $e;
+            }
+            throw new EntitlementException($e->getStatusCode(), $e->errorCode, $e->getMessage().' The young can be added to the mother batch instead: send destination "mother_batch".', details: $e->details + ['alternative_destination' => self::MOTHER_BATCH]);
+        }
     }
 
     /** Anything recorded against the batch besides the undo itself (records, health, tasks, money, stock, other projects). */

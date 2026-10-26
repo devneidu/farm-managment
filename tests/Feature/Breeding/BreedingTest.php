@@ -7,9 +7,11 @@ use App\Events\Breeding\BreedingOutcomeRecorded;
 use App\Models\BreedingOutcome;
 use App\Models\BreedingProject;
 use App\Models\CropType;
+use App\Models\Entitlement;
 use App\Models\MasterCapability;
 use App\Models\OperationalRecord;
 use App\Models\OperationType;
+use App\Models\PlanEntitlement;
 use App\Models\PopulationMovement;
 use App\Models\ProductionCycle;
 use App\Models\Species;
@@ -668,6 +670,46 @@ class BreedingTest extends TeamTestCase
         $second = $this->outcomeRaw($other['id'], ['recorded_at' => $this->at(10)])->assertCreated()->json('data');
         $this->postJson('/api/v1/records', ['production_cycle_id' => $second['production_cycle_id'], 'type' => 'general_note', 'recorded_at' => $this->at(5), 'idempotency_key' => (string) Str::uuid(), 'details' => ['text' => 'Moved to brooder']])->assertCreated();
         $this->reverse($other['id'], $second['id'])->assertCreated()->assertJsonPath('data.destination_batch.current_population', 0)->assertJsonPath('data.destination_batch.status', 'active');
+    }
+
+    public function test_the_new_batch_takes_an_optional_title_and_purpose_and_validates_them_like_batch_creation(): void
+    {
+        $cycle = $this->cycle(); // purpose: breeding
+        $project = $this->start($cycle)->json('data');
+        $day = now('Africa/Lagos')->subHour()->toDateString();
+
+        $this->outcomeRaw($project['id'], ['new_batch' => ['purpose' => 'not_a_purpose']])->assertStatus(422)->assertJsonValidationErrors('new_batch.purpose');
+        $this->outcomeRaw($project['id'], ['new_batch' => ['title' => str_repeat('x', 101)]])->assertStatus(422)->assertJsonValidationErrors('new_batch.title');
+        $this->outcomeRaw($project['id'], ['destination' => 'mother_batch', 'new_batch' => ['title' => 'Ignored']])->assertStatus(422)->assertJsonValidationErrors('new_batch');
+        $this->assertSame(0, BreedingOutcome::count());
+
+        $outcome = $this->outcomeRaw($project['id'], ['new_batch' => ['title' => '  October   brooder ', 'purpose' => 'eggs']])->assertCreated()->json('data');
+        $this->assertSame('October brooder', $outcome['destination_batch']['name']);
+        $batch = $this->batch($outcome['production_cycle_id']);
+        $this->assertSame('eggs', $batch['livestock']['production_purpose']['code']);
+
+        // A name that is taken is refused like on batch creation; undo, then omit both for the defaults.
+        $this->reverse($project['id'], $outcome['id'])->assertCreated();
+        $this->outcomeRaw($project['id'], ['corrects_outcome_id' => $outcome['id'], 'new_batch' => ['title' => 'October brooder']])->assertConflict()->assertJsonPath('code', 'duplicate_cycle_name');
+        $plain = $this->outcomeRaw($project['id'], ['corrects_outcome_id' => $outcome['id'], 'new_batch' => ['title' => null, 'purpose' => null]])->assertCreated()->json('data');
+        $this->assertSame('Chicken hatch – '.$day, $plain['destination_batch']['name']);
+        $this->assertSame('breeding', $this->batch($plain['production_cycle_id'])['livestock']['production_purpose']['code']);
+    }
+
+    public function test_a_full_plan_refuses_the_new_batch_and_points_to_the_mother_batch(): void
+    {
+        $cycle = $this->cycle();
+        $project = $this->start($cycle)->json('data');
+        PlanEntitlement::where('plan_id', $this->farm->subscription->plan_id)->where('entitlement_id', Entitlement::where('key', 'active_cycles')->value('id'))->firstOrFail()->update(['is_unlimited' => false, 'limit_value' => 1]);
+
+        $response = $this->outcomeRaw($project['id'])->assertStatus(409)->assertJsonPath('code', 'plan_limit_reached')->assertJsonPath('details.alternative_destination', 'mother_batch');
+        $this->assertStringContainsString('mother batch instead', $response->json('message'));
+        $this->assertStringContainsString('"mother_batch"', $response->json('message'));
+        $this->assertSame(0, BreedingOutcome::count());
+        $this->assertSame('active', $this->getJson('/api/v1/breeding-projects/'.$project['id'])->json('data.status'));
+
+        // The suggested way out works.
+        $this->outcomeRaw($project['id'], ['destination' => 'mother_batch'])->assertCreated()->assertJsonPath('data.destination_batch.current_population', 137);
     }
 
     public function test_a_worker_can_record_a_hatch_into_a_new_batch_without_batch_creation_rights(): void

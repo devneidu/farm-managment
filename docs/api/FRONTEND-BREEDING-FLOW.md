@@ -411,7 +411,9 @@ Response `200`:
 | `new_batch` | A new batch of the same species is started on that day, named "Chicken hatch – 2026-10-22" ("Cattle offspring – ..." for pregnancy), and `live_count` is its starting head count. The mother batch does not change. | incubation |
 | `mother_batch` | The animals are added to the mother batch's head count. | pregnancy |
 
-Offer the choice with the default preselected (`default_destination` on the project says which). Incubation: `live_count + loss_count` cannot exceed `eggs_set`. `live_count: 0` records a failed attempt, adds nothing and creates no batch. Creating a new batch counts toward the plan's active-batch limit, and a worker may do it (`breeding.create` is enough).
+Offer the choice with the default preselected (`default_destination` on the project says which). Incubation: `live_count + loss_count` cannot exceed `eggs_set`. `live_count: 0` records a failed attempt, adds nothing and creates no batch. Creating a new batch counts toward the plan's active-batch limit (see 4.3), and a worker may do it (`breeding.create` is enough).
+
+With `new_batch` the farmer may also name the batch and pick its purpose: send `"new_batch": {"title": "...", "purpose": "..."}` (both optional; see 4.2). Left out, the name is generated and the purpose is the mother batch's.
 
 The answer names the batch that received the animals in `destination_batch`; use its `id` to open it.
 
@@ -499,7 +501,107 @@ Response `200`:
 ```
 
 
-### 4.2 Birth into the mother batch (the pregnancy default)
+### 4.2 Name and purpose of the new batch
+
+`new_batch` is only read when the animals go to a new batch (`destination: new_batch`, which is also the incubation default); sending it with `mother_batch`, or with `live_count: 0`, is `422`.
+
+| Field | Rule | Default |
+|---|---|---|
+| `new_batch.title` | 1–100 characters, unique on the farm (closed batches count) | "Chicken hatch – {date}" / "Cattle offspring – {date}" |
+| `new_batch.purpose` | a production-purpose code of the species, from the same list the batch form uses (`GET /master/species/{id}/batch-reference`) | the mother batch's purpose |
+
+Show both as optional inputs on the hatch form: prefill the title with the generated name and the purpose with the mother's, and send only what the farmer changed. A title that is already in use is `409 duplicate_cycle_name`; an unknown purpose is `422` on `new_batch.purpose`.
+
+`POST /breeding-projects/01a177f2-eddf-7225-8c83-30e6e1e7808b/outcomes`
+
+Request:
+
+```json
+{
+    "live_count": 37,
+    "loss_count": 13,
+    "destination": "new_batch",
+    "new_batch": {
+        "title": "October brooder A",
+        "purpose": "eggs"
+    },
+    "recorded_at": "2026-10-26T10:22:50Z",
+    "idempotency_key": "ecc5bef4-d384-4861-9464-5572f926f23e"
+}
+```
+
+Response `201` (the batch carries the chosen name; its purpose is `eggs`):
+
+```json
+{
+    "data": {
+        "id": "01a177f2-efd2-7147-b20b-33c0ed934ce9",
+        "breeding_project_id": "01a177f2-eddf-7225-8c83-30e6e1e7808b",
+        "production_cycle_id": "01a177f2-ef1e-724e-837a-6af72789490c",
+        "destination": "new_batch",
+        "destination_batch": {
+            "id": "01a177f2-ef1e-724e-837a-6af72789490c",
+            "name": "October brooder A",
+            "reference": "BAT-2026-00002",
+            "status": "active",
+            "current_population": 37
+        },
+        "kind": "outcome",
+        "live_count": 37,
+        "loss_count": 13,
+        "outcome_date": "2026-10-26",
+        "operational_record_id": null,
+        "reverses_outcome_id": null,
+        "corrects_outcome_id": null,
+        "reversed_by_outcome_id": null,
+        "reason": null,
+        "recorded_at": "2026-10-26T10:22:50.000000Z",
+        "notes": null,
+        "created_by": "01a177f2-e9aa-720e-ab0c-8eb0d4c8b23f",
+        "created_at": "2026-10-26T11:22:52.000000Z"
+    },
+    "meta": [],
+    "message": "Outcome recorded."
+}
+```
+
+Unknown purpose, `422`:
+
+```json
+{
+    "message": "Choose an active code from the selected reference catalogue.",
+    "code": "validation_failed",
+    "request_id": "01a177f2-f22e-723d-97ba-35efd16453ba",
+    "errors": {
+        "new_batch.purpose": [
+            "Choose an active code from the selected reference catalogue."
+        ]
+    }
+}
+```
+
+### 4.3 The farm's plan has no room for another batch
+
+A new batch counts toward the plan's active-batch limit. When it is full the outcome is **not** recorded (the project stays active) and the answer is `409 plan_limit_reached`. Its `message` tells the user the young can be added to the mother batch instead, and `details.alternative_destination` is `"mother_batch"`. Offer that as a button: resend the same form with `destination: "mother_batch"` (use a fresh `idempotency_key`; the refused attempt saved nothing).
+
+`409` on `POST /breeding-projects/01a177f2-f1fb-72a3-898e-4b66a7c6d5d9/outcomes` (no `destination`, so the incubation default `new_batch`):
+
+```json
+{
+    "message": "Your farm's plan allows 1 active production cycles and the limit has been reached. The young can be added to the mother batch instead: send destination \"mother_batch\".",
+    "code": "plan_limit_reached",
+    "request_id": "01a177f2-f351-736a-a7af-b623614ea6ea",
+    "details": {
+        "entitlement_key": "active_cycles",
+        "limit": 1,
+        "usage": 3,
+        "remaining": 0,
+        "alternative_destination": "mother_batch"
+    }
+}
+```
+
+### 4.4 Birth into the mother batch (the pregnancy default)
 
 `POST /breeding-projects/01a16a3d-5d96-702b-b820-3a8cfe96ef9d/outcomes`
 
@@ -687,8 +789,10 @@ Response `201`:
 | More females than the batch holds | `422` "validation_failed" - The females bred (20) is more than the 14 head the batch holds now. |
 | Parent count above its batch | `422` "validation_failed" - The parent head count (5) is more than the 2 head the batch holds now. |
 | Dam is not the mother batch | `422` "validation_failed" - The dam is the mother batch (production_cycle_id); send the same batch or leave the dam out. |
+| Unknown `new_batch.purpose` | `422` "validation_failed" - Choose an active code from the selected reference catalogue. (field `new_batch.purpose`) |
+| Plan has no room for a new batch | `409` "plan_limit_reached" - the message says to add the young to the mother batch instead (`destination: "mother_batch"`); `details.alternative_destination` = `mother_batch` |
 | New batch with 0 live | `422` "validation_failed" - A new batch needs at least one live offspring. |
 | Undo after the animals left the batch | `409` "insufficient_population" - This event would produce a negative population, including in the dated ledger history. (`409`: show "Some of these animals have already been sold, died or moved") |
 | Worker tries to undo | `403` `forbidden` |
 
-Other errors you may meet: `409 project_not_active` (outcome recorded or project cancelled), `409 cycle_closed`, `409 idempotency_conflict`, `409 insufficient_stock` (eggs taken from stock), `409` plan limit when a new batch would exceed the active-batch limit, `404` for another farm's ids. After any save refetch the batch (`current_population`) and the dashboard.
+Other errors you may meet: `409 project_not_active` (outcome recorded or project cancelled), `409 cycle_closed`, `409 idempotency_conflict`, `409 insufficient_stock` (eggs taken from stock), `404` for another farm's ids. After any save refetch the batch (`current_population`) and the dashboard.

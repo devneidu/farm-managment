@@ -348,3 +348,8 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * Folder **12 — Breeding** gains two requests (`Start a pregnancy project (optional sire, title)`, `Record the outcome into the mother batch (pregnancy default)`), now 13 requests; `Start a breeding project (incubation)` gets `title`, `Record the actual outcome` sends `destination: new_batch` with a new 201 example and a 422 example, and `Reverse a breeding outcome` gains the new-batch undo (201) and insufficient-population (409) examples. 10 new saved examples, captured from real responses. Environment: +3 variables (`breeding_project_preg_id`, `outcome_preg_id`, `bull_cycle_id`). The per-folder row in the table above was updated by hand for the request count only; the other totals in §1 were not recomputed.
 * Behaviour changes that affect existing requests: an incubation outcome without `destination` now starts a new batch (default `new_batch`; pregnancy stays `mother_batch`); a `dam` in `parents` must be the project's own batch; `females_bred` and parent `head_count` are capped by the batch's current head count; production-cycle responses carry `livestock.breeding_workflow`.
 * Frontend contract: `docs/api/FRONTEND-BREEDING-FLOW.md`.
+
+## Addendum - new batch name/purpose and plan-limit message
+
+* No new route. `Record the actual outcome` (folder 12) documents `new_batch: {title, purpose}` and gains three saved examples captured from real responses: 201 with a chosen name and purpose, 422 on `new_batch.purpose`, and 409 `plan_limit_reached` whose message points to `destination: mother_batch`. Folder 12 stays at 13 requests. `docs/api/openapi.json` was not regenerated.
+* Frontend contract: `docs/api/FRONTEND-BREEDING-FLOW.md` §4.2 and §4.3.

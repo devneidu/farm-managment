@@ -26849,7 +26849,7 @@
                 }
               }
             },
-            "description": "**WHAT IT DOES**\nRecords what really happened. A positive `live_count` appends one operational record of type `breeding_outcome` and a POSITIVE population movement on the project's own cycle, in one transaction: 50 eggs set, 40 expected, 37 hatched -> population +37, once.\n\n**WHEN TO USE IT**\n\"Record hatch/birth result\".\n\n**IMPORTANT INPUTS**\n- Path ids (UUIDv7): `{{breeding_project_id}}`.\n- Required body fields: `live_count`, `recorded_at`, `idempotency_key`.\n- `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.\n\n**IMPORTANT BEHAVIOR**\n- `destination` says where the live offspring go: `new_batch` starts a new batch (same species, started on the outcome day, named \"{Species} hatch – {date}\") whose starting head count is `live_count` and leaves the mother batch alone; `mother_batch` adds them to the project's batch. Omitted: `new_batch` for incubation, `mother_batch` for pregnancy (`default_destination` on the project). `new_batch` needs `live_count` ≥ 1 and counts toward the plan's active-batch limit; `breeding.create` is enough. The response names the batch in `destination_batch`.\n- Requires the farm permission `breeding.create` (taken from the current farm context; never sent by the client).\n- Creates the outcome and completes the project. `mother_batch`: also a `breeding_outcome` record and a population movement of +live_count. `new_batch`: a new batch holding `live_count` (no second record; `operational_record_id` is null). No inventory, finance or task effect.\n- A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.\n- The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.\n- Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).\n\n**WHAT TO DO NEXT**\nRefetch the batch for the new population.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`breeding.create`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `breeding-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes`\n\n**PATH PARAMETERS**\n- `{{breeding_project_id}}` — UUID. Captured by \"Start a breeding project (incubation)\" (12 — Breeding) or from the list endpoint of this resource.\n\n**REQUEST BODY** (`application/json`)\n- `live_count` — integer, **required**, min 0, max 999999999. Actual live births / hatched chicks. 0 records an unsuccessful attempt and adds nothing; a positive count joins the project's cycle population through the Phase 8 ledger automatically.\n- `loss_count` — integer, optional, min 0, max 999999999, nullable. Stillborn / dead-in-shell / infertile; informational. For incubation live + loss cannot exceed eggs_set.\n- `destination` — `mother_batch` | `new_batch`, optional. Default new_batch for incubation, mother_batch for pregnancy.\n- `corrects_outcome_id` — string (uuid), optional, nullable. Reversed outcome this one replaces (needs breeding.reverse).\n- `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `notes` — string, optional, max 5000 chars, nullable\n\n**VARIABLES USED**\n- `{{breeding_project_id}}` — captured by \"Start a breeding project (incubation)\"\n\n**BUSINESS RULES**\n- A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.\n- The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.\n- Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).\n- `live_count: 0` records an unsuccessful attempt and adds nothing. For incubation `live_count + loss_count <= eggs_set`.\n- A project holds one effective outcome: a second is `409 project_not_active`. Same `idempotency_key` + payload returns the original; a changed payload is `409 idempotency_conflict`.\n- A replacement for a reversed outcome sends `corrects_outcome_id` and also needs `breeding.reverse`.\n\n**SUCCESS**\n`201 Created` — message: \"Outcome recorded.\"\n\n`data` fields: `id`, `breeding_project_id`, `production_cycle_id`, `kind`, `live_count`, `loss_count`, `outcome_date`, `operational_record_id`, `reverses_outcome_id`, `corrects_outcome_id`, `reversed_by_outcome_id`, `reason`, `recorded_at`, `notes`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `breeding.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).\n- `409` — `cycle_closed`, `project_not_active`, `idempotency_conflict`, `invalid_correction`, `insufficient_population`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
+            "description": "**WHAT IT DOES**\nRecords what really happened. A positive `live_count` appends one operational record of type `breeding_outcome` and a POSITIVE population movement on the project's own cycle, in one transaction: 50 eggs set, 40 expected, 37 hatched -> population +37, once.\n\n**WHEN TO USE IT**\n\"Record hatch/birth result\".\n\n**IMPORTANT INPUTS**\n- Path ids (UUIDv7): `{{breeding_project_id}}`.\n- Required body fields: `live_count`, `recorded_at`, `idempotency_key`.\n- `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.\n\n**IMPORTANT BEHAVIOR**\n- `destination` says where the live offspring go: `new_batch` starts a new batch (same species, started on the outcome day, named \"{Species} hatch – {date}\") whose starting head count is `live_count` and leaves the mother batch alone; `mother_batch` adds them to the project's batch. Omitted: `new_batch` for incubation, `mother_batch` for pregnancy (`default_destination` on the project). `new_batch` needs `live_count` ≥ 1 and counts toward the plan's active-batch limit (when the plan is full: `409 plan_limit_reached` whose message says the young can be added to the mother batch instead - resend with `destination: mother_batch`; `details.alternative_destination` = `mother_batch`); `breeding.create` is enough. The response names the batch in `destination_batch`.\n- Requires the farm permission `breeding.create` (taken from the current farm context; never sent by the client).\n- Creates the outcome and completes the project. `mother_batch`: also a `breeding_outcome` record and a population movement of +live_count. `new_batch`: a new batch holding `live_count` (no second record; `operational_record_id` is null). No inventory, finance or task effect.\n- A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.\n- The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.\n- Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).\n\n**WHAT TO DO NEXT**\nRefetch the batch for the new population.\n\n**FRONTEND NOTES**\n- Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).\n- Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n- Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**ACCESS**\nRequired backend farm permission: **`breeding.create`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)\nRate limited by limiter `breeding-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).\n\n**URL**\n`POST {{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes`\n\n**PATH PARAMETERS**\n- `{{breeding_project_id}}` — UUID. Captured by \"Start a breeding project (incubation)\" (12 — Breeding) or from the list endpoint of this resource.\n\n**REQUEST BODY** (`application/json`)\n- `live_count` — integer, **required**, min 0, max 999999999. Actual live births / hatched chicks. 0 records an unsuccessful attempt and adds nothing; a positive count joins the project's cycle population through the Phase 8 ledger automatically.\n- `loss_count` — integer, optional, min 0, max 999999999, nullable. Stillborn / dead-in-shell / infertile; informational. For incubation live + loss cannot exceed eggs_set.\n- `destination` — `mother_batch` | `new_batch`, optional. Default new_batch for incubation, mother_batch for pregnancy.\n- `new_batch` — object, optional. Only with `destination: new_batch` (422 otherwise). `new_batch.title` — string, optional, max 100, unique on the farm (`409 duplicate_cycle_name` if taken); blank = \"{Species} hatch – {date}\" / \"{Species} offspring – {date}\". `new_batch.purpose` — string, optional: a production-purpose code of the species (same list as batch creation; 422 on `new_batch.purpose` if unknown or inactive); blank = the mother batch's purpose.\n- `corrects_outcome_id` — string (uuid), optional, nullable. Reversed outcome this one replaces (needs breeding.reverse).\n- `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)\n- `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`\n- `notes` — string, optional, max 5000 chars, nullable\n\n**VARIABLES USED**\n- `{{breeding_project_id}}` — captured by \"Start a breeding project (incubation)\"\n\n**BUSINESS RULES**\n- A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.\n- The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.\n- Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).\n- `live_count: 0` records an unsuccessful attempt and adds nothing. For incubation `live_count + loss_count <= eggs_set`.\n- A project holds one effective outcome: a second is `409 project_not_active`. Same `idempotency_key` + payload returns the original; a changed payload is `409 idempotency_conflict`.\n- A replacement for a reversed outcome sends `corrects_outcome_id` and also needs `breeding.reverse`.\n\n**SUCCESS**\n`201 Created` — message: \"Outcome recorded.\"\n\n`data` fields: `id`, `breeding_project_id`, `production_cycle_id`, `kind`, `live_count`, `loss_count`, `outcome_date`, `operational_record_id`, `reverses_outcome_id`, `corrects_outcome_id`, `reversed_by_outcome_id`, `reason`, `recorded_at`, `notes`, `created_by`, `created_at`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `breeding.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.\n- `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).\n- `409` — `cycle_closed`, `project_not_active`, `idempotency_conflict`, `invalid_correction`, `insufficient_population`.\n- `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).\n- `419 session_expired` — missing/expired CSRF token: call \"Initialise CSRF cookie\" and retry once.\n- `429 too_many_requests` — honour `Retry-After`."
           },
           "response": [
             {
@@ -26957,6 +26957,165 @@
               ],
               "cookie": [],
               "body": "{\n  \"message\": \"A new batch needs at least one live offspring.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a16a3d-68da-73b3-8561-df6918ab0aa2\",\n  \"errors\": {\n    \"destination\": [\n      \"A new batch needs at least one live offspring.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "201 Created — hatch into a new batch with a chosen name and purpose",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "breeding-projects",
+                    "{{breeding_project_id}}",
+                    "outcomes"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"live_count\": 37,\n  \"loss_count\": 13,\n  \"destination\": \"new_batch\",\n  \"new_batch\": {\n    \"title\": \"October brooder A\",\n    \"purpose\": \"eggs\"\n  },\n  \"recorded_at\": \"2026-10-26T10:22:50Z\",\n  \"idempotency_key\": \"ecc5bef4-d384-4861-9464-5572f926f23e\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a177f2-efd2-7147-b20b-33c0ed934ce9\",\n    \"breeding_project_id\": \"01a177f2-eddf-7225-8c83-30e6e1e7808b\",\n    \"production_cycle_id\": \"01a177f2-ef1e-724e-837a-6af72789490c\",\n    \"destination\": \"new_batch\",\n    \"destination_batch\": {\n      \"id\": \"01a177f2-ef1e-724e-837a-6af72789490c\",\n      \"name\": \"October brooder A\",\n      \"reference\": \"BAT-2026-00002\",\n      \"status\": \"active\",\n      \"current_population\": 37\n    },\n    \"kind\": \"outcome\",\n    \"live_count\": 37,\n    \"loss_count\": 13,\n    \"outcome_date\": \"2026-10-26\",\n    \"operational_record_id\": null,\n    \"reverses_outcome_id\": null,\n    \"corrects_outcome_id\": null,\n    \"reversed_by_outcome_id\": null,\n    \"reason\": null,\n    \"recorded_at\": \"2026-10-26T10:22:50.000000Z\",\n    \"notes\": null,\n    \"created_by\": \"01a177f2-e9aa-720e-ab0c-8eb0d4c8b23f\",\n    \"created_at\": \"2026-10-26T11:22:52.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Outcome recorded.\"\n}"
+            },
+            {
+              "name": "422 — unknown purpose for the new batch",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "breeding-projects",
+                    "{{breeding_project_id}}",
+                    "outcomes"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"live_count\": 10,\n  \"destination\": \"new_batch\",\n  \"new_batch\": {\n    \"purpose\": \"not_a_purpose\"\n  },\n  \"recorded_at\": \"2026-10-26T10:22:50Z\",\n  \"idempotency_key\": \"155769f6-bbfd-4651-8102-8b52b0707505\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Choose an active code from the selected reference catalogue.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a177f2-f22e-723d-97ba-35efd16453ba\",\n  \"errors\": {\n    \"new_batch.purpose\": [\n      \"Choose an active code from the selected reference catalogue.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "409 — plan has no room for a new batch (add to the mother batch instead)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "breeding-projects",
+                    "{{breeding_project_id}}",
+                    "outcomes"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"live_count\": 37,\n  \"loss_count\": 13,\n  \"recorded_at\": \"2026-10-26T10:22:50Z\",\n  \"idempotency_key\": \"449a791d-7bea-40ea-91b1-927d358c86f1\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Your farm's plan allows 1 active production cycles and the limit has been reached. The young can be added to the mother batch instead: send destination \\\"mother_batch\\\".\",\n  \"code\": \"plan_limit_reached\",\n  \"request_id\": \"01a177f2-f351-736a-a7af-b623614ea6ea\",\n  \"details\": {\n    \"entitlement_key\": \"active_cycles\",\n    \"limit\": 1,\n    \"usage\": 3,\n    \"remaining\": 0,\n    \"alternative_destination\": \"mother_batch\"\n  }\n}"
             }
           ]
         },
