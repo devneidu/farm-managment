@@ -1,0 +1,72 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records an observed disease issue. Types without medicines never touch inventory.
+
+  **WHEN TO USE IT**
+  "Record disease issue" (no medicine).
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.create` (taken from the current farm context; never sent by the client).
+  - Creates the health record only.
+  - A health record is something that HAPPENED (a vaccination given, a vet visit). It is immutable: no PATCH/DELETE - correct with Reverse and an optional replacement (`corrects_record_id`).
+  - `recorded_at` is the event time (UTC with seconds and `Z`/offset, between cycle start and now); `created_at` is when the system stored it.
+  - `idempotency_key` is required (<=80 chars of `A-Za-z0-9._:-`): identical retry returns the original (201) and never deducts stock twice; same key with different content is `409 idempotency_conflict`.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Record a medication (second medicine record)**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  Full reference (errors, all fields): folder **11 — Health** -> "Record a disease issue (no medicines)".
+url: "{{base_url}}/health-records"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "type": "disease_issue",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "details": {
+        "problem_type": "breathing",
+        "condition": "Respiratory distress",
+        "severity": "moderate",
+        "symptoms": "Sneezing and watery eyes in Pen 1"
+      },
+      "animals_affected": 12
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/8. Record a disease issue (no medicines).resources/examples
+order: 8000

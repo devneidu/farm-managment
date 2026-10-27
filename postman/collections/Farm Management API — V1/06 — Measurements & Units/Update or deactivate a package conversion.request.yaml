@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Change the quantity/target unit or `is_active`. The package and context never change. `version` increases when the meaning changes; old records are unaffected because they hold a snapshot.
+
+  **WHEN TO USE IT**
+  Editing or deactivating a package conversion.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{conversion_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `measurement.manage` (taken from the current farm context; never sent by the client).
+  - Only `quantity_per_package`, `target_unit` and `is_active` can change; the package unit and context never change. `version` increases when the meaning changes; past records keep their snapshot.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`measurement.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `measurement-write`: 60 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PATCH {{base_url}}/settings/package-conversions/{{conversion_id}}`
+
+  **PATH PARAMETERS**
+  - `{{conversion_id}}` — UUID. Captured by "Create a package conversion" (06 — Measurements & Units) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `quantity_per_package` — string, optional
+  - `target_unit` — string, optional, max 32 chars
+  - `is_active` — boolean, optional
+
+  Server-owned fields — NOT accepted, sending any of them is a `422`: `farm_id`, `package_unit`, `context_type`, `context_id`, `context_label`, `crop_type_id`.
+
+  **VARIABLES USED**
+  - `{{conversion_id}}` — captured by "Create a package conversion"
+
+  **BUSINESS RULES**
+  - Only `quantity_per_package`, `target_unit` and `is_active` can change; the package unit and context never change. `version` increases when the meaning changes; past records keep their snapshot.
+  - Requires `measurement.manage`.
+
+  **SUCCESS**
+  `200 OK` — message: "Package conversion updated."
+
+  `data` fields: `id`, `context`, `package_unit`, `target_unit`, `quantity_per_package`, `version`, `is_active`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `measurement.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/settings/package-conversions/{{conversion_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "quantity_per_package": "30"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update or deactivate a package conversion.resources/examples
+order: 10000

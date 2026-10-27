@@ -1,0 +1,23 @@
+$kind: http-example
+name: 200 OK — A new verification code has been sent.
+request:
+  url: "{{base_url}}/auth/email/resend"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "cooldown_seconds": 60
+        },
+        "meta": {},
+        "message": "A new verification code has been sent."
+      }
+order: 1000

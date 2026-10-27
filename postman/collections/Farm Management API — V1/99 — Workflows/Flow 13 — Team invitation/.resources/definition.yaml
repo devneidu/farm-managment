@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Invite a member, accept the invitation as the invitee, list and change the member, and see the removed-member state.
+
+  **Prerequisites:** Flow 1 and a farm plan that allows more than 3 team members (Flow S).
+
+  Steps: 13. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 14000

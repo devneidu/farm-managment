@@ -1,0 +1,49 @@
+$kind: http-example
+name: 200 OK — Email verified.
+request:
+  url: "{{base_url}}/auth/email/verify"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": "{{otp_code}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": false,
+          "has_active_farm": false,
+          "next_action": "complete_farm_setup",
+          "user": {
+            "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "email": "ada.okafor@example.com",
+            "name": null,
+            "email_verified_at": "2026-10-04T00:45:08+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": null,
+          "farms": [],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {},
+        "message": "Email verified."
+      }
+order: 1000

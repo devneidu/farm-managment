@@ -1,0 +1,91 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/notifications?unread=1"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: unread
+      value: "1"
+    - key: type
+      value: ""
+      disabled: true
+      description: string — max 40 chars
+    - key: severity
+      value: ""
+      disabled: true
+      description: "enum: critical | warning | info"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-b4a5-737a-88b3-8a325ff9b4ce",
+            "type": "medicine_withdrawal",
+            "severity": "info",
+            "title": "Medicine withdrawal in effect",
+            "message": "1 medicine line is still inside the withdrawal period; check before selling eggs, milk or meat.",
+            "source": null,
+            "data": {
+              "why": {
+                "rule": "medicine_withdrawal",
+                "lines": 1,
+                "cycles": 1,
+                "latest_ends_at": "2026-10-10T22:44:06.000000Z"
+              },
+              "period": "2026-W40",
+              "insight_id": "medicine_withdrawal:farm"
+            },
+            "is_read": false,
+            "read_at": null,
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-b289-73a9-8f91-9994364a350d",
+            "type": "export_ready",
+            "severity": "info",
+            "title": "Your export is ready",
+            "message": "Income and expenses (csv) is ready to download.",
+            "source": {
+              "type": "report_export",
+              "id": "01a1045e-b0d7-72cd-abb6-f16f2d4ca21d",
+              "reference": "income_expense"
+            },
+            "data": {
+              "format": "csv",
+              "report": "income_expense"
+            },
+            "is_read": false,
+            "read_at": null,
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 25,
+          "last_page": 1,
+          "total": 2,
+          "unread_count": 2
+        },
+        "message": null
+      }
+order: 1000

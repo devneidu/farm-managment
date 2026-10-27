@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Livestock batches (including fish) and crop projects: the cycles every record, health event, breeding project, task and sale line points at. Livestock population is DERIVED from the population ledger; crop planting units, land area and material quantity are three separate measurements.
+
+  Typical screens: "My batches / My crops", start batch/project, batch detail header, close/reopen.
+order: 10000

@@ -1,0 +1,46 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/planting-reference"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "material_types": [
+            {
+              "code": "seed",
+              "name": "Seed"
+            },
+            {
+              "code": "seedling",
+              "name": "Seedling"
+            }
+          ],
+          "unit_types": [
+            {
+              "code": "heap",
+              "name": "Heap"
+            },
+            {
+              "code": "hole",
+              "name": "Hole"
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,69 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/farm-operations"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: operation
+      value: ""
+      disabled: true
+      description: string — max 64 chars
+    - key: category
+      value: ""
+      disabled: true
+      description: "enum: livestock | aquaculture | crop"
+    - key: group
+      value: ""
+      disabled: true
+      description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+    - key: available
+      value: ""
+      disabled: true
+      description: boolean
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+            "code": "poultry",
+            "name": "Poultry",
+            "category": "livestock",
+            "tracking_model": "population",
+            "is_active": true,
+            "selected": false,
+            "available": true
+          },
+          {
+            "id": "01a1045c-d7b8-7237-a7ae-b5227be035cb",
+            "code": "cattle",
+            "name": "Cattle",
+            "category": "livestock",
+            "tracking_model": "population",
+            "is_active": true,
+            "selected": false,
+            "available": true
+          }
+        ],
+        "meta": {
+          "farm_operations_configured": false
+        },
+        "message": null
+      }
+order: 1000

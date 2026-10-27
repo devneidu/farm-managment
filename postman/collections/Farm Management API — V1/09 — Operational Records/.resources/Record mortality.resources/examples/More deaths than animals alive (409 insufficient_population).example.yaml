@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "mortality",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at_3h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "quantity": 100000,
+          "cause": "Test"
+        }
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This event would produce a negative population, including in the dated ledger history.",
+        "code": "insufficient_population",
+        "request_id": "01a1045e-6326-72a2-b9b7-5679c800a33f"
+      }
+order: 2000

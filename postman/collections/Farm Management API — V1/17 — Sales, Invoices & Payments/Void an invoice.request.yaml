@@ -1,0 +1,100 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Voids the invoice document (state `void`); the sale stays and can be invoiced again.
+
+  **WHEN TO USE IT**
+  "Void invoice".
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{invoice_b_id}}`.
+  - Required body fields: `reason`, `idempotency_key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `invoice.void` (taken from the current farm context; never sent by the client).
+  - Invoice state change only.
+  - `409 invoice_has_payments` while payments are live: reverse them first. `409 invoice_already_void`.
+  - This is a correction, not an edit: history is kept and a new opposite row is appended.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`invoice.void`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/invoices/{{invoice_b_id}}/void`
+
+  **PATH PARAMETERS**
+  - `{{invoice_b_id}}` — UUID. Captured by "Record a sale and issue its invoice in one step" (17 — Sales, Invoices & Payments) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `reason` — string, **required**, max 2000 chars
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+
+  **VARIABLES USED**
+  - `{{invoice_b_id}}` — captured by "Record a sale and issue its invoice in one step"
+
+  **BUSINESS RULES**
+  - `409 invoice_has_payments` while payments are live: reverse them first. `409 invoice_already_void`.
+  - Requires `invoice.void` (Owner, Manager, Finance).
+
+  **SUCCESS**
+  `200 OK` — message: "Invoice voided."
+
+  `data` fields: `id`, `reference`, `sale_id`, `sale_reference`, `status`, `payment_status`, `issue_date`, `due_date`, `is_overdue`, `total_amount`, `amount_paid`, `outstanding`, `currency`, `customer`, `seller_name`, `notes`, `voided_at`, `void_reason`, `items`, `payments`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `invoice.void`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `invoice_already_void`, `invoice_has_payments`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/invoices/{{invoice_b_id}}/void"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Customer collected goods under a different invoice",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Void an invoice.resources/examples
+order: 16000

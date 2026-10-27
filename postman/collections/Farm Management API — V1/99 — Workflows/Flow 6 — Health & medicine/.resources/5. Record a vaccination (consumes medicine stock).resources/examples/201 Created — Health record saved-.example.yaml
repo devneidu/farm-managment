@@ -1,0 +1,214 @@
+$kind: http-example
+name: 201 Created — Health record saved.
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "type": "vaccination",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{vacc_key}}",
+        "details": {
+          "problem_type": "routine_prevention",
+          "target_disease": "Newcastle disease"
+        },
+        "animals_affected": 490,
+        "follow_up_on": "{{date_in_14d}}",
+        "notes": "Whole flock, Pen 1",
+        "medicines": [
+          {
+            "inventory_item_id": "{{item_med_id}}",
+            "storage_location_id": "{{store_id}}",
+            "lot_id": "{{lot_med_id}}",
+            "components": [
+              {
+                "quantity": "250",
+                "unit": "ml"
+              }
+            ],
+            "dose_per_animal": [
+              {
+                "quantity": "0.3",
+                "unit": "ml"
+              }
+            ],
+            "dosage_instructions": "One drop per bird",
+            "withdrawal_days": 7
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-71c7-7136-836e-110a2edba3cd",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "vaccination",
+          "details": {
+            "problem_type": "routine_prevention",
+            "target_disease": "Newcastle disease"
+          },
+          "problem_type": "routine_prevention",
+          "problem_type_label": "Routine care or prevention (check-ups, vitamins, general vaccination)",
+          "animals_affected": 490,
+          "follow_up_on": "2026-10-18",
+          "mortality_record_id": null,
+          "recorded_at": "2026-10-03T22:44:06.000000Z",
+          "notes": "Whole flock, Pen 1",
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "medicines": [
+            {
+              "id": "01a1045e-720e-7157-9919-136fb840f4d4",
+              "line_no": 1,
+              "inventory_item_id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+              "item_name": "Newcastle Vaccine (Lasota)",
+              "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "inventory_lot_id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+              "lot": {
+                "code": "NCD-2026-01",
+                "expires_on": "2027-01-02"
+              },
+              "quantity_used": {
+                "quantity": "250",
+                "unit": "ml",
+                "normalized": {
+                  "quantity": "250",
+                  "unit": "ml"
+                }
+              },
+              "measurement": {
+                "total": {
+                  "unit": "ml",
+                  "quantity": "250"
+                },
+                "entered": [
+                  {
+                    "unit": "ml",
+                    "quantity": "250"
+                  }
+                ],
+                "snapshot": {
+                  "total": {
+                    "unit": "ml",
+                    "quantity": "250"
+                  },
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "unit": {
+                        "code": "ml",
+                        "factor": "1",
+                        "family": "volume",
+                        "strategy": "linear",
+                        "dimension": "volume",
+                        "integer_only": false
+                      },
+                      "quantity": "250"
+                    }
+                  ],
+                  "packages": [],
+                  "normalized": {
+                    "unit": "ml",
+                    "quantity": "250"
+                  },
+                  "result_unit": {
+                    "code": "ml",
+                    "factor": "1",
+                    "family": "volume",
+                    "strategy": "linear",
+                    "dimension": "volume",
+                    "integer_only": false
+                  }
+                },
+                "normalized": {
+                  "unit": "ml",
+                  "quantity": "250"
+                }
+              },
+              "dose_per_animal": {
+                "total": {
+                  "unit": "ml",
+                  "quantity": "0.3"
+                },
+                "entered": [
+                  {
+                    "unit": "ml",
+                    "quantity": "0.3"
+                  }
+                ],
+                "snapshot": {
+                  "total": {
+                    "unit": "ml",
+                    "quantity": "0.3"
+                  },
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "unit": {
+                        "code": "ml",
+                        "factor": "1",
+                        "family": "volume",
+                        "strategy": "linear",
+                        "dimension": "volume",
+                        "integer_only": false
+                      },
+                      "quantity": "0.3"
+                    }
+                  ],
+                  "packages": [],
+                  "normalized": {
+                    "unit": "ml",
+                    "quantity": "0.3"
+                  },
+                  "result_unit": {
+                    "code": "ml",
+                    "factor": "1",
+                    "family": "volume",
+                    "strategy": "linear",
+                    "dimension": "volume",
+                    "integer_only": false
+                  }
+                },
+                "normalized": {
+                  "unit": "ml",
+                  "quantity": "0.3"
+                }
+              },
+              "dosage_instructions": "One drop per bird",
+              "withdrawal": {
+                "days": 7,
+                "source": "explicit",
+                "started_at": "2026-10-03T22:44:06.000000Z",
+                "ends_at": "2026-10-10T22:44:06.000000Z",
+                "is_active": true
+              },
+              "inventory_movement_id": "01a1045e-721e-712b-b7d8-e8b2019ae6a2"
+            }
+          ],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Health record saved."
+      }
+order: 1000

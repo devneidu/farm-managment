@@ -1,0 +1,32 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  A seller needs only a verified account: no farm, no onboarding.
+
+  Creates the seller account.
+url: "{{base_url}}/auth/register"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{seller_email}}",
+      "password": "{{password}}",
+      "password_confirmation": "{{password}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+    language: text/javascript
+order: 2000

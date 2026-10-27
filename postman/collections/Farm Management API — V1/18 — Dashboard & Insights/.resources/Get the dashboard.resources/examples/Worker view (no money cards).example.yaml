@@ -1,0 +1,310 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/dashboard"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "currency": "NGN",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-04",
+            "generated_at": "2026-10-04T00:45:08.153034Z"
+          },
+          "viewer": {
+            "user_id": "01a1045e-3df6-7186-8536-5b14645d5b85",
+            "role": "farm_worker",
+            "role_label": "Farm Worker"
+          },
+          "operations": {
+            "configured": true,
+            "selected": [
+              {
+                "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+                "code": "poultry",
+                "name": "Poultry",
+                "category": "livestock"
+              },
+              {
+                "id": "01a1045c-d7e3-7099-82fd-dd5ca31d018d",
+                "code": "crops",
+                "name": "Crops",
+                "category": "crop"
+              }
+            ],
+            "relevant": {
+              "livestock": true,
+              "crop": true
+            }
+          },
+          "sections": {
+            "production": true,
+            "work": true,
+            "calendar": true,
+            "inventory": true,
+            "health": true,
+            "breeding": true,
+            "finance": false,
+            "sales": false
+          },
+          "priority": [],
+          "kpis": [
+            {
+              "code": "livestock_population",
+              "label": "Livestock",
+              "section": "livestock",
+              "value": "568",
+              "unit": "head",
+              "breakdown": [],
+              "detail": {
+                "active_batches": 2
+              }
+            },
+            {
+              "code": "mortality_7d",
+              "label": "Deaths, last 7 days",
+              "section": "livestock",
+              "value": "5",
+              "unit": "head",
+              "breakdown": [],
+              "detail": {
+                "window_days": 7,
+                "from": "2026-09-28",
+                "to": "2026-10-04"
+              }
+            }
+          ],
+          "work": {
+            "counts": {
+              "overdue": 0,
+              "due_today": 0,
+              "upcoming": 0,
+              "upcoming_7d": 0,
+              "completed_today": 0
+            },
+            "today_and_overdue": [],
+            "upcoming": [],
+            "recently_completed": []
+          },
+          "calendar": {
+            "from": "2026-10-04",
+            "to": "2026-10-10",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-04",
+            "days": [
+              {
+                "date": "2026-10-04",
+                "is_today": true,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-05",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              }
+            ]
+          },
+          "quick_record": [
+            {
+              "type": "feed_use",
+              "label": "Feed Use",
+              "kind": "livestock",
+              "applies_to_cycles": 2
+            },
+            {
+              "type": "egg_collection",
+              "label": "Egg Collection",
+              "kind": "livestock",
+              "applies_to_cycles": 2
+            }
+          ],
+          "production": {
+            "total_active": 3,
+            "items": [
+              {
+                "id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+                "reference": "BAT-2026-00001",
+                "name": "October Broilers",
+                "kind": "livestock",
+                "operation": {
+                  "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+                  "code": "poultry",
+                  "name": "Poultry"
+                },
+                "production_area": {
+                  "id": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+                  "name": "Pen One"
+                },
+                "start_date": "2026-09-04",
+                "expected_end_date": "2026-12-03",
+                "age_days": 30,
+                "livestock": {
+                  "species": {
+                    "id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+                    "code": "chicken",
+                    "name": "Chicken"
+                  },
+                  "initial_population": 500,
+                  "current_population": 518,
+                  "population_unit": "head",
+                  "deaths_7d": 5
+                },
+                "crop": null
+              },
+              {
+                "id": "01a1045e-505b-72ef-b497-d1ec4ef86059",
+                "reference": "CRP-2026-00002",
+                "name": "2026 Yam",
+                "kind": "crop",
+                "operation": {
+                  "id": "01a1045c-d7e3-7099-82fd-dd5ca31d018d",
+                  "code": "crops",
+                  "name": "Crops"
+                },
+                "production_area": null,
+                "start_date": "2026-09-04",
+                "expected_end_date": null,
+                "age_days": 30,
+                "livestock": null,
+                "crop": {
+                  "crop_type": {
+                    "id": "01a1045c-d836-73a8-8e28-0ccc276424e2",
+                    "code": "yam",
+                    "name": "Yam"
+                  },
+                  "initial_planting_units": 800,
+                  "harvest_30d": [
+                    {
+                      "unit": "g",
+                      "quantity": "300000"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "insights": {
+            "total": 1,
+            "by_severity": {
+              "critical": 0,
+              "warning": 0,
+              "info": 1
+            },
+            "items": [
+              {
+                "id": "medicine_withdrawal:farm",
+                "code": "medicine_withdrawal",
+                "severity": "info",
+                "title": "Medicine withdrawal in effect",
+                "message": "1 medicine line is still inside the withdrawal period; check before selling eggs, milk or meat.",
+                "why": {
+                  "rule": "medicine_withdrawal",
+                  "lines": 1,
+                  "cycles": 1,
+                  "latest_ends_at": "2026-10-10T22:44:06.000000Z"
+                },
+                "subject": null,
+                "data": {
+                  "latest_ends_at": "2026-10-10T22:44:06.000000Z"
+                }
+              }
+            ]
+          },
+          "recent_activity": [
+            {
+              "kind": "production_cycle",
+              "id": "production_cycle:01a1045e-5410-70a3-a964-088cd1b1d2f7",
+              "title": "Production cycle reopened",
+              "summary": "Late sale discovered",
+              "occurred_at": "2026-10-04T00:45:08.000000Z",
+              "production_cycle_id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+              "subject": {
+                "type": "production_cycle",
+                "id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+                "name": "Layer pilot flock",
+                "reference": "BAT-2026-00003"
+              }
+            },
+            {
+              "kind": "production_cycle",
+              "id": "production_cycle:01a1045e-537b-7198-b59f-cb228bcfdfb5",
+              "title": "Production cycle closed",
+              "summary": "Batch sold out and house cleaned",
+              "occurred_at": "2026-10-04T00:45:08.000000Z",
+              "production_cycle_id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+              "subject": {
+                "type": "production_cycle",
+                "id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a1045e-5135-72d5-9075-1ad1c00738aa",
+                "name": "Layer pilot flock",
+                "reference": "BAT-2026-00003"
+              }
+            }
+          ],
+          "quick_add": [
+            {
+              "code": "health_record",
+              "label": "Record a health event",
+              "permission": "health.create",
+              "method": "POST",
+              "endpoint": "/api/v1/health-records"
+            },
+            {
+              "code": "breeding_project",
+              "label": "Start a breeding project",
+              "permission": "breeding.create",
+              "method": "POST",
+              "endpoint": "/api/v1/breeding-projects"
+            }
+          ],
+          "empty_state": null
+        },
+        "meta": {},
+        "message": null
+      }
+order: 2000

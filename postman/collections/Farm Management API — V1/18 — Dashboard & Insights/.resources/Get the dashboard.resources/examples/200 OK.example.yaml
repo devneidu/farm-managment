@@ -1,0 +1,1096 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/dashboard"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "farm": {
+            "id": "01a11126-a58b-71b1-9ca7-6607802a5952",
+            "name": "Okafor Integrated Farms",
+            "currency": "NGN",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-06",
+            "generated_at": "2026-10-06T12:19:07.785373Z"
+          },
+          "viewer": {
+            "user_id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+            "role": "owner",
+            "role_label": "Owner"
+          },
+          "operations": {
+            "configured": false,
+            "selected": [],
+            "relevant": {
+              "livestock": true,
+              "crop": true
+            }
+          },
+          "sections": {
+            "production": true,
+            "work": true,
+            "calendar": true,
+            "inventory": true,
+            "health": true,
+            "breeding": true,
+            "finance": true,
+            "sales": true
+          },
+          "priority": [
+            {
+              "id": "overdue_tasks:farm",
+              "code": "overdue_tasks",
+              "severity": "warning",
+              "title": "Overdue work",
+              "message": "2 tasks are past due."
+            }
+          ],
+          "kpis": [
+            {
+              "code": "livestock_population",
+              "label": "Livestock",
+              "section": "livestock",
+              "value": "518",
+              "unit": "head",
+              "breakdown": [],
+              "detail": {
+                "active_batches": 1
+              }
+            },
+            {
+              "code": "mortality_7d",
+              "label": "Deaths, last 7 days",
+              "section": "livestock",
+              "value": "5",
+              "unit": "head",
+              "breakdown": [],
+              "detail": {
+                "window_days": 7,
+                "from": "2026-09-30",
+                "to": "2026-10-06"
+              }
+            },
+            {
+              "code": "eggs_today",
+              "label": "Eggs today",
+              "section": "livestock",
+              "value": "104",
+              "unit": "piece",
+              "breakdown": [
+                {
+                  "unit": "piece",
+                  "quantity": "104"
+                }
+              ],
+              "detail": {
+                "date": "2026-10-06"
+              }
+            },
+            {
+              "code": "active_crop_projects",
+              "label": "Crop projects",
+              "section": "crops",
+              "value": "1",
+              "unit": "project",
+              "breakdown": [],
+              "detail": {}
+            },
+            {
+              "code": "harvest_30d",
+              "label": "Harvest, last 30 days",
+              "section": "crops",
+              "value": null,
+              "unit": null,
+              "breakdown": [
+                {
+                  "unit": "g",
+                  "quantity": "300000"
+                }
+              ],
+              "detail": {
+                "window_days": 30
+              }
+            },
+            {
+              "code": "low_stock_items",
+              "label": "Low stock",
+              "section": "inventory",
+              "value": "0",
+              "unit": "item",
+              "breakdown": [],
+              "detail": {}
+            },
+            {
+              "code": "active_withdrawals",
+              "label": "In withdrawal",
+              "section": "health",
+              "value": "1",
+              "unit": "medicine line",
+              "breakdown": [],
+              "detail": {}
+            },
+            {
+              "code": "active_breeding_projects",
+              "label": "Breeding projects",
+              "section": "breeding",
+              "value": "1",
+              "unit": "project",
+              "breakdown": [],
+              "detail": {}
+            },
+            {
+              "code": "income_month",
+              "label": "Income this month",
+              "section": "finance",
+              "value": "87000.00",
+              "unit": "NGN",
+              "breakdown": [],
+              "detail": {
+                "from": "2026-10-01",
+                "to": "2026-10-06",
+                "currency": "NGN"
+              }
+            },
+            {
+              "code": "expense_month",
+              "label": "Expenses this month",
+              "section": "finance",
+              "value": "18250.45",
+              "unit": "NGN",
+              "breakdown": [],
+              "detail": {
+                "from": "2026-10-01",
+                "to": "2026-10-06",
+                "currency": "NGN"
+              }
+            },
+            {
+              "code": "net_month",
+              "label": "Net this month",
+              "section": "finance",
+              "value": "68749.55",
+              "unit": "NGN",
+              "breakdown": [],
+              "detail": {
+                "from": "2026-10-01",
+                "to": "2026-10-06",
+                "currency": "NGN"
+              }
+            },
+            {
+              "code": "sales_month",
+              "label": "Sales this month",
+              "section": "sales",
+              "value": "118100.00",
+              "unit": "NGN",
+              "breakdown": [],
+              "detail": {
+                "sales": 4,
+                "from": "2026-10-01",
+                "to": "2026-10-06"
+              }
+            },
+            {
+              "code": "receivables",
+              "label": "Owed to you",
+              "section": "sales",
+              "value": "0.00",
+              "unit": "NGN",
+              "breakdown": [],
+              "detail": {
+                "invoices": 0,
+                "overdue_invoices": 0,
+                "overdue_outstanding": "0.00"
+              }
+            }
+          ],
+          "work": {
+            "counts": {
+              "overdue": 2,
+              "due_today": 0,
+              "upcoming": 73,
+              "upcoming_7d": 17,
+              "completed_today": 1
+            },
+            "today_and_overdue": [
+              {
+                "id": "01a11126-e6fe-735d-9949-df286b12ad93",
+                "reference": "TSK-2026-00001",
+                "status": "open",
+                "due_state": "overdue",
+                "title": "Feeding",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-06",
+                "due_time": "06:00",
+                "due_at": "2026-10-06T05:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e6f6-7229-b871-224c1603c143",
+                "occurrence_date": "2026-10-06",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "feed_use",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              },
+              {
+                "id": "01a11126-e751-726a-9a79-e7ed76063e84",
+                "reference": "TSK-2026-00032",
+                "status": "open",
+                "due_state": "overdue",
+                "title": "Water and house check",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-06",
+                "due_time": "10:00",
+                "due_at": "2026-10-06T09:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e74b-71db-a823-50ef17c620ea",
+                "occurrence_date": "2026-10-06",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "water",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              }
+            ],
+            "upcoming": [
+              {
+                "id": "01a11126-e701-70b2-abb7-6f5134adb547",
+                "reference": "TSK-2026-00002",
+                "status": "open",
+                "due_state": "upcoming",
+                "title": "Feeding",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-07",
+                "due_time": "06:00",
+                "due_at": "2026-10-07T05:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e6f6-7229-b871-224c1603c143",
+                "occurrence_date": "2026-10-07",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "feed_use",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              },
+              {
+                "id": "01a11126-e754-714d-829d-5fdb7b2bc2a6",
+                "reference": "TSK-2026-00033",
+                "status": "open",
+                "due_state": "upcoming",
+                "title": "Water and house check",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-07",
+                "due_time": "10:00",
+                "due_at": "2026-10-07T09:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e74b-71db-a823-50ef17c620ea",
+                "occurrence_date": "2026-10-07",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "water",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              },
+              {
+                "id": "01a11126-e704-7344-9e95-1bab8b8cfa35",
+                "reference": "TSK-2026-00003",
+                "status": "open",
+                "due_state": "upcoming",
+                "title": "Feeding",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-08",
+                "due_time": "06:00",
+                "due_at": "2026-10-08T05:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e6f6-7229-b871-224c1603c143",
+                "occurrence_date": "2026-10-08",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "feed_use",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              },
+              {
+                "id": "01a11126-e756-7045-b597-5a4290906b5c",
+                "reference": "TSK-2026-00034",
+                "status": "open",
+                "due_state": "upcoming",
+                "title": "Water and house check",
+                "category": "feeding_watering",
+                "instructions": null,
+                "due_date": "2026-10-08",
+                "due_time": "10:00",
+                "due_at": "2026-10-08T09:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-e74b-71db-a823-50ef17c620ea",
+                "occurrence_date": "2026-10-08",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "water",
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:44.000000Z"
+              },
+              {
+                "id": "01a11126-eb09-731f-bf71-061e20a5eff3",
+                "reference": "TSK-2026-00068",
+                "status": "open",
+                "due_state": "upcoming",
+                "title": "Clean drinkers",
+                "category": "cleaning_sanitation",
+                "instructions": null,
+                "due_date": "2026-10-08",
+                "due_time": null,
+                "due_at": "2026-10-08T23:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": "01a11126-eb02-7340-9eeb-c2e3b2a13a35",
+                "occurrence_date": "2026-10-08",
+                "assigned_user_id": null,
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": null,
+                "requires_evidence": false,
+                "completion": null,
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:45.000000Z"
+              }
+            ],
+            "recently_completed": [
+              {
+                "id": "01a11126-e8c7-7222-8a76-73ef5e637c18",
+                "reference": "TSK-2026-00067",
+                "status": "completed",
+                "due_state": "completed",
+                "title": "Weigh a sample of 20 birds",
+                "category": "growth_monitoring",
+                "instructions": "Weigh 20 random birds from Pen 1 and record the total",
+                "due_date": "2026-10-13",
+                "due_time": "08:00",
+                "due_at": "2026-10-13T07:00:00.000000Z",
+                "timezone": "Africa/Lagos",
+                "reminder_offsets": null,
+                "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "breeding_project_id": null,
+                "schedule_id": null,
+                "occurrence_date": null,
+                "assigned_user_id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "assigned_user_name": null,
+                "assigned_role": null,
+                "linked_record_type": "weight",
+                "requires_evidence": true,
+                "completion": {
+                  "completed_at": "2026-10-06T12:18:45.000000Z",
+                  "completed_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                  "note": "Sample weighed this morning",
+                  "evidence": {
+                    "type": "operational_record",
+                    "id": "01a11126-e9f6-7347-ad90-8f02d3675ae6"
+                  }
+                },
+                "cancellation": null,
+                "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "created_at": "2026-10-06T12:18:45.000000Z"
+              }
+            ]
+          },
+          "calendar": {
+            "from": "2026-10-06",
+            "to": "2026-10-12",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-06",
+            "days": [
+              {
+                "date": "2026-10-06",
+                "is_today": true,
+                "tasks": {
+                  "open": 2,
+                  "overdue": 2,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-07",
+                "is_today": false,
+                "tasks": {
+                  "open": 2,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 2,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-08",
+                "is_today": false,
+                "tasks": {
+                  "open": 3,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 3,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-09",
+                "is_today": false,
+                "tasks": {
+                  "open": 2,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 2,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-10",
+                "is_today": false,
+                "tasks": {
+                  "open": 2,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 2,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-11",
+                "is_today": false,
+                "tasks": {
+                  "open": 3,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 3,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-12",
+                "is_today": false,
+                "tasks": {
+                  "open": 3,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 3,
+                  "completed": 0
+                },
+                "milestones": []
+              }
+            ]
+          },
+          "quick_record": [
+            {
+              "type": "feed_use",
+              "label": "Feed Use",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            },
+            {
+              "type": "egg_collection",
+              "label": "Egg Collection",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            },
+            {
+              "type": "mortality",
+              "label": "Mortality",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            },
+            {
+              "type": "weight",
+              "label": "Weight",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            },
+            {
+              "type": "temperature",
+              "label": "Temperature",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            },
+            {
+              "type": "water",
+              "label": "Water",
+              "kind": "livestock",
+              "applies_to_cycles": 1
+            }
+          ],
+          "production": {
+            "total_active": 2,
+            "items": [
+              {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "reference": "BAT-2026-00001",
+                "name": "October Broilers",
+                "kind": "livestock",
+                "operation": {
+                  "id": "01a11126-64ba-709c-b501-10c504debb95",
+                  "code": "poultry",
+                  "name": "Poultry"
+                },
+                "production_area": {
+                  "id": "01a11126-b5a5-7026-9b39-91089b872be7",
+                  "name": "Pen 1"
+                },
+                "start_date": "2026-09-06",
+                "expected_end_date": "2026-11-05",
+                "age_days": 30,
+                "livestock": {
+                  "species": {
+                    "id": "01a11126-64c6-729d-9820-ec68c9027299",
+                    "code": "chicken",
+                    "name": "Chicken"
+                  },
+                  "initial_population": 500,
+                  "current_population": 518,
+                  "population_unit": "head",
+                  "deaths_7d": 5
+                },
+                "crop": null
+              },
+              {
+                "id": "01a11126-c759-7366-b7d6-498849ec6305",
+                "reference": "CRP-2026-00002",
+                "name": "2026 Yam",
+                "kind": "crop",
+                "operation": {
+                  "id": "01a11126-64c4-7236-adea-d50ba8dfb6c4",
+                  "code": "crops",
+                  "name": "Crops"
+                },
+                "production_area": null,
+                "start_date": "2026-09-06",
+                "expected_end_date": null,
+                "age_days": 30,
+                "livestock": null,
+                "crop": {
+                  "crop_type": {
+                    "id": "01a11126-64d4-7146-a31d-9feb3de7966a",
+                    "code": "yam",
+                    "name": "Yam"
+                  },
+                  "initial_planting_units": 800,
+                  "harvest_30d": [
+                    {
+                      "unit": "g",
+                      "quantity": "300000"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "insights": {
+            "total": 2,
+            "by_severity": {
+              "critical": 0,
+              "warning": 1,
+              "info": 1
+            },
+            "items": [
+              {
+                "id": "overdue_tasks:farm",
+                "code": "overdue_tasks",
+                "severity": "warning",
+                "title": "Overdue work",
+                "message": "2 tasks are past due.",
+                "why": {
+                  "rule": "overdue_tasks",
+                  "overdue": 2,
+                  "due_today": 0,
+                  "critical_at": 5
+                },
+                "subject": null,
+                "data": {
+                  "overdue": 2
+                }
+              },
+              {
+                "id": "medicine_withdrawal:farm",
+                "code": "medicine_withdrawal",
+                "severity": "info",
+                "title": "Medicine withdrawal in effect",
+                "message": "1 medicine line is still inside the withdrawal period; check before selling eggs, milk or meat.",
+                "why": {
+                  "rule": "medicine_withdrawal",
+                  "lines": 1,
+                  "cycles": 1,
+                  "latest_ends_at": "2026-10-13T10:18:40.000000Z"
+                },
+                "subject": null,
+                "data": {
+                  "latest_ends_at": "2026-10-13T10:18:40.000000Z"
+                }
+              }
+            ]
+          },
+          "recent_activity": [
+            {
+              "kind": "payment",
+              "id": "payment:01a11126-fb87-72dc-81d1-702c45eb5cfe",
+              "title": "Payment PAY-2026-00002",
+              "summary": "57,000.00 NGN",
+              "occurred_at": "2026-10-06T12:18:49.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "payment",
+                "id": "01a11126-fb87-72dc-81d1-702c45eb5cfe",
+                "reference": "PAY-2026-00002"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "payment",
+              "id": "payment:01a11126-fb18-7093-b137-f8cba19847b8",
+              "title": "Payment PAY-2026-00001",
+              "summary": "30,000.00 NGN",
+              "occurred_at": "2026-10-06T12:18:49.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "payment",
+                "id": "01a11126-fb18-7093-b137-f8cba19847b8",
+                "reference": "PAY-2026-00001"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "task",
+              "id": "task:01a11126-e8c7-7222-8a76-73ef5e637c18",
+              "title": "Task completed",
+              "summary": "Weigh a sample of 20 birds",
+              "occurred_at": "2026-10-06T12:18:45.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "task",
+                "id": "01a11126-e8c7-7222-8a76-73ef5e637c18",
+                "reference": "TSK-2026-00067"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "sale",
+              "id": "sale:01a11127-1d3a-735a-888f-9907b3a2029c",
+              "title": "Sale SAL-2026-00004",
+              "summary": "25,000.00 NGN - Agro Distributors",
+              "occurred_at": "2026-10-06T11:18:58.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "sale",
+                "id": "01a11127-1d3a-735a-888f-9907b3a2029c",
+                "reference": "SAL-2026-00004"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "sale",
+              "id": "sale:01a11127-1a91-7377-8ce4-23fc2f92163c",
+              "title": "Sale SAL-2026-00003",
+              "summary": "2,500.00 NGN - Fresh Dairy Co",
+              "occurred_at": "2026-10-06T11:18:57.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "sale",
+                "id": "01a11127-1a91-7377-8ce4-23fc2f92163c",
+                "reference": "SAL-2026-00003"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "sale",
+              "id": "sale:01a11127-14ad-7322-a39c-d4d6f0f98575",
+              "title": "Sale SAL-2026-00002",
+              "summary": "3,600.00 NGN - Mama Put Kitchen",
+              "occurred_at": "2026-10-06T11:18:56.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "sale",
+                "id": "01a11127-14ad-7322-a39c-d4d6f0f98575",
+                "reference": "SAL-2026-00002"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "purchase",
+              "id": "purchase:01a11127-1608-7238-b534-4e3b767a82e2",
+              "title": "Purchase PUR-2026-00003",
+              "summary": "4,500.00 NGN",
+              "occurred_at": "2026-10-06T11:18:56.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "purchase",
+                "id": "01a11127-1608-7238-b534-4e3b767a82e2",
+                "reference": "PUR-2026-00003"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "operational_record",
+              "id": "operational_record:01a11126-e9f6-7347-ad90-8f02d3675ae6",
+              "title": "Weight",
+              "summary": "39200 g",
+              "occurred_at": "2026-10-06T11:18:45.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "operational_record",
+                "id": "01a11126-e9f6-7347-ad90-8f02d3675ae6",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "operational_record",
+              "id": "operational_record:01a11126-c0c6-7177-b81f-54b35f13caa2",
+              "title": "Population adjustment",
+              "summary": "2 head",
+              "occurred_at": "2026-10-06T11:18:34.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "operational_record",
+                "id": "01a11126-c0c6-7177-b81f-54b35f13caa2",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "sale",
+              "id": "sale:01a11126-f825-708e-8bc6-af07b3745a29",
+              "title": "Sale SAL-2026-00001",
+              "summary": "87,000.00 NGN - Mama Put Restaurant",
+              "occurred_at": "2026-10-06T10:18:48.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "sale",
+                "id": "01a11126-f825-708e-8bc6-af07b3745a29",
+                "reference": "SAL-2026-00001"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "purchase",
+              "id": "purchase:01a11126-f25d-7098-8984-8b2d90404734",
+              "title": "Purchase PUR-2026-00002",
+              "summary": "3,500.00 NGN",
+              "occurred_at": "2026-10-06T10:18:47.000000Z",
+              "production_cycle_id": null,
+              "subject": {
+                "type": "purchase",
+                "id": "01a11126-f25d-7098-8984-8b2d90404734",
+                "reference": "PUR-2026-00002"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": null
+            },
+            {
+              "kind": "purchase",
+              "id": "purchase:01a11126-f0a1-71a9-9a75-b3751f5b2082",
+              "title": "Purchase PUR-2026-00001",
+              "summary": "10,250.45 NGN",
+              "occurred_at": "2026-10-06T10:18:46.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "purchase",
+                "id": "01a11126-f0a1-71a9-9a75-b3751f5b2082",
+                "reference": "PUR-2026-00001"
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "health_record",
+              "id": "health_record:01a11126-d997-722c-be9a-4d059aaeeb38",
+              "title": "Health: Disease issue",
+              "summary": null,
+              "occurred_at": "2026-10-06T10:18:41.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "health_record",
+                "id": "01a11126-d997-722c-be9a-4d059aaeeb38",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "health_record",
+              "id": "health_record:01a11126-d82b-73c4-8578-81e6b2586573",
+              "title": "Health: Vaccination",
+              "summary": null,
+              "occurred_at": "2026-10-06T10:18:40.000000Z",
+              "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+              "subject": {
+                "type": "health_record",
+                "id": "01a11126-d82b-73c4-8578-81e6b2586573",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+                "name": "October Broilers",
+                "reference": "BAT-2026-00001"
+              }
+            },
+            {
+              "kind": "operational_record",
+              "id": "operational_record:01a11126-c9f0-71ab-9cd4-81a6fca3127a",
+              "title": "Crop harvest",
+              "summary": "300000 g",
+              "occurred_at": "2026-10-06T10:18:37.000000Z",
+              "production_cycle_id": "01a11126-c759-7366-b7d6-498849ec6305",
+              "subject": {
+                "type": "operational_record",
+                "id": "01a11126-c9f0-71ab-9cd4-81a6fca3127a",
+                "reference": null
+              },
+              "actor": {
+                "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+                "name": null
+              },
+              "production_cycle": {
+                "id": "01a11126-c759-7366-b7d6-498849ec6305",
+                "name": "2026 Yam",
+                "reference": "CRP-2026-00002"
+              }
+            }
+          ],
+          "quick_add": [
+            {
+              "code": "production_cycle",
+              "label": "Start a batch or crop project",
+              "permission": "production_cycle.create",
+              "method": "POST",
+              "endpoint": "/api/v1/production-cycles",
+              "url": "/api/v1/production-cycles",
+              "path": "/production-cycles"
+            },
+            {
+              "code": "task",
+              "label": "Add a task",
+              "permission": "task.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/tasks",
+              "url": "/api/v1/tasks",
+              "path": "/tasks"
+            },
+            {
+              "code": "sale",
+              "label": "Record a sale",
+              "permission": "sale.create",
+              "method": "POST",
+              "endpoint": "/api/v1/sales",
+              "url": "/api/v1/sales",
+              "path": "/sales"
+            },
+            {
+              "code": "purchase",
+              "label": "Record a purchase",
+              "permission": "purchase.create",
+              "method": "POST",
+              "endpoint": "/api/v1/purchases",
+              "url": "/api/v1/purchases",
+              "path": "/purchases"
+            },
+            {
+              "code": "expense",
+              "label": "Record an expense",
+              "permission": "finance.create",
+              "method": "POST",
+              "endpoint": "/api/v1/expenses",
+              "url": "/api/v1/expenses",
+              "path": "/expenses"
+            },
+            {
+              "code": "income",
+              "label": "Record income",
+              "permission": "finance.create",
+              "method": "POST",
+              "endpoint": "/api/v1/income",
+              "url": "/api/v1/income",
+              "path": "/income"
+            },
+            {
+              "code": "stock_in",
+              "label": "Receive stock",
+              "permission": "inventory.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/inventory/stock-in",
+              "url": "/api/v1/inventory/stock-in",
+              "path": "/inventory/stock-in"
+            },
+            {
+              "code": "health_record",
+              "label": "Record a health event",
+              "permission": "health.create",
+              "method": "POST",
+              "endpoint": "/api/v1/health-records",
+              "url": "/api/v1/health-records",
+              "path": "/health-records"
+            },
+            {
+              "code": "breeding_project",
+              "label": "Start a breeding project",
+              "permission": "breeding.create",
+              "method": "POST",
+              "endpoint": "/api/v1/breeding-projects",
+              "url": "/api/v1/breeding-projects",
+              "path": "/breeding-projects"
+            },
+            {
+              "code": "contact",
+              "label": "Add a customer or supplier",
+              "permission": "contact.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/contacts",
+              "url": "/api/v1/contacts",
+              "path": "/contacts"
+            }
+          ],
+          "empty_state": null
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

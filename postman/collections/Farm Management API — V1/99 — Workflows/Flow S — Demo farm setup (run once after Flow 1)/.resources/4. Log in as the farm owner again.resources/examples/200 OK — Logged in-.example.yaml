@@ -1,0 +1,64 @@
+$kind: http-example
+name: 200 OK — Logged in.
+request:
+  url: "{{base_url}}/auth/login"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{email}}",
+        "password": "{{password}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": true,
+          "has_active_farm": true,
+          "next_action": "none",
+          "user": {
+            "id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+            "email": "ada.okafor@example.com",
+            "name": null,
+            "email_verified_at": "2026-10-06T12:18:27+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": {
+            "id": "01a11126-a58b-71b1-9ca7-6607802a5952",
+            "name": "Okafor Integrated Farms",
+            "country_code": "NG",
+            "currency": "NGN",
+            "timezone": "Africa/Lagos",
+            "locale": "en",
+            "role": "owner"
+          },
+          "farms": [
+            {
+              "id": "01a11126-a58b-71b1-9ca7-6607802a5952",
+              "name": "Okafor Integrated Farms",
+              "role": "owner"
+            }
+          ],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {},
+        "message": "Logged in."
+      }
+order: 1000

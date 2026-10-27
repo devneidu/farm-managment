@@ -1,0 +1,24 @@
+$kind: http-request
+description: "**Public.** Non-binding total for `quantity`; `422` when below the minimum order, above the declared quantity or breaking the unit's decimal rules."
+url: "{{base_url}}/public/marketplace/listings/{{listing_slug}}/price-preview?quantity=10"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  quantity: "10"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/27. Public price estimate.resources/examples
+order: 27000

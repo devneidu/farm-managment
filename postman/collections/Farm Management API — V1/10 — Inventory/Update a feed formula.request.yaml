@@ -1,0 +1,101 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Edit name/description/species/active flag, or replace `items` (percentages must still total 100).
+
+  **WHEN TO USE IT**
+  Editing a feed recipe.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{formula_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - Replacing `items` replaces the whole ingredient list and the percentages must still total 100; `version` tracks recipe changes.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PATCH {{base_url}}/feed-formulas/{{formula_id}}`
+
+  **PATH PARAMETERS**
+  - `{{formula_id}}` — UUID. Captured by "Create a feed formula" (10 — Inventory) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, optional, max 150 chars
+  - `species_id` — string (uuid), optional, nullable
+  - `description` — string, optional, max 2000 chars, nullable
+  - `is_active` — boolean, optional
+  - `items` — array, optional, min 1 items, max 50 items. Replaces the whole ingredient list and increments `version`.
+  - `items[].ingredient_name` — string, **required**, max 150 chars
+  - `items[].inclusion_percent` — string, **required**
+  - `items[].inventory_item_id` — string (uuid), **required**, nullable
+
+  **VARIABLES USED**
+  - `{{formula_id}}` — captured by "Create a feed formula"
+
+  **BUSINESS RULES**
+  - Replacing `items` replaces the whole ingredient list and the percentages must still total 100; `version` tracks recipe changes.
+  - Requires `inventory.manage`.
+
+  **SUCCESS**
+  `200 OK` — message: "Feed formula updated."
+
+  `data` fields: `id`, `name`, `species_id`, `description`, `version`, `is_active`, `items`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — conflict with current state.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/feed-formulas/{{formula_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "description": "Home-mixed starter ration (revised)"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update a feed formula.resources/examples
+order: 32000

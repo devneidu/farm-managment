@@ -1,0 +1,62 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Confirms the caller holds a platform role and returns it. Platform access is granted only by an operator via `php artisan platform:grant-admin` - never through this API and never by being a farm Owner.
+
+  **WHEN TO USE IT**
+  Deciding whether to show the Platform Admin area.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - `403 platform_admin_required` for everyone without a grant.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/me`
+
+  **BUSINESS RULES**
+  - `403 platform_admin_required` for everyone without a grant.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `user`, `role`, `can_write`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+url: "{{base_url}}/platform-admin/me"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Platform admin identity.resources/examples
+order: 1000

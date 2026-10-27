@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/users/{{user_chidi_id}}/suspend"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Repeated abuse reports (handoff demo)"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-4251-709f-a2f4-bfa626691fbc",
+          "name": null,
+          "email": "chidi.worker@example.com",
+          "email_verified": true,
+          "onboarded": true,
+          "status": "suspended",
+          "suspended_at": "2026-10-04T00:45:08+00:00",
+          "platform_role": null,
+          "active_farms_count": null,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "providers": [],
+          "farms": [
+            {
+              "farm_id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+              "farm_name": "Okafor Integrated Farms Ltd",
+              "role": "finance",
+              "status": "removed"
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

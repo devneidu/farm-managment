@@ -1,0 +1,96 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/breeding-projects"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "workflow": "incubation",
+        "start_date": "{{date_today}}",
+        "eggs_set": 40,
+        "consume_egg_stock": true,
+        "egg_storage_location_id": "{{store_id}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-ac03-7050-9a47-0d3652f5309e",
+          "reference": "BRD-2026-00001",
+          "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+          "workflow": "incubation",
+          "status": "active",
+          "start_date": "2026-10-14",
+          "eggs_set": 40,
+          "females_bred": null,
+          "expected_offspring": null,
+          "expectation": {
+            "type": "exact",
+            "source": "reference",
+            "date": "2026-11-04",
+            "from": null,
+            "to": null,
+            "no_expectation_reason": null
+          },
+          "biological_reference": {
+            "workflow": "incubation",
+            "capability": "supports_incubation",
+            "species_id": "01a1107d-5eb1-709e-ad65-c59bb545bd3b",
+            "species_code": "chicken",
+            "kind": "exact",
+            "days": 21,
+            "days_min": null,
+            "days_max": null,
+            "approximate": false,
+            "note": null,
+            "automatic_expectation": true,
+            "no_automatic_reason": null,
+            "captured_at": "2026-10-14T12:00:00.000000Z"
+          },
+          "egg_stock": {
+            "consumed": 40,
+            "returned": 0,
+            "net_out": 40,
+            "movements": [
+              {
+                "id": "01a1107d-ac17-72e0-9a04-c04723245366",
+                "type": "stock_out",
+                "reason": "incubation",
+                "quantity": "40",
+                "recorded_at": "2026-10-14T12:00:00.000000Z"
+              }
+            ]
+          },
+          "parents": [],
+          "checks": [],
+          "outcomes": [],
+          "result": null,
+          "notes": null,
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z",
+          "updated_at": "2026-10-14T12:00:00.000000Z"
+        },
+        "meta": [],
+        "message": "Breeding project started."
+      }
+order: 1000

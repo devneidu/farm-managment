@@ -1,0 +1,62 @@
+$kind: http-example
+name: 200 OK — the automatic Eggs item (kind eggs, is_system_managed true)
+request:
+  url: "{{base_url}}/inventory/items/{{egg_item_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-0d22-7361-a379-a02b7d78beed",
+          "name": "Eggs",
+          "category": "produce",
+          "description": null,
+          "kind": "eggs",
+          "is_system_managed": true,
+          "stock_unit": "piece",
+          "dimension": "count",
+          "tracks_lots": false,
+          "tracks_expiry": false,
+          "is_active": true,
+          "stock": {
+            "quantity": "104",
+            "unit": "piece",
+            "normalized": {
+              "quantity": "104",
+              "unit": "piece"
+            }
+          },
+          "low_stock_threshold": null,
+          "is_low_stock": false,
+          "created_at": "2026-10-06T12:18:54.000000Z",
+          "updated_at": "2026-10-06T12:18:54.000000Z",
+          "balances": [
+            {
+              "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+              "inventory_lot_id": null,
+              "quantity": "104",
+              "unit": "piece",
+              "normalized": {
+                "quantity": "104",
+                "unit": "piece"
+              }
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

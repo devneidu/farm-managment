@@ -1,0 +1,46 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/subscription/entitlements"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "plan": {
+            "id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+            "slug": "free",
+            "name": "Free"
+          },
+          "subscription_inactive": false,
+          "features": {
+            "advanced_reports": false,
+            "data_export": false
+          },
+          "limits": {
+            "team_members": {
+              "limit": 3,
+              "unlimited": false
+            },
+            "active_cycles": {
+              "limit": 3,
+              "unlimited": false
+            }
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

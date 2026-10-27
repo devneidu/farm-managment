@@ -1,0 +1,76 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Per-day task and milestone summary (`tasks {open, overdue, due_today, upcoming, completed}` and `milestones`) for a window starting at `from` (default today) of `days` (1-31, default 7) days.
+
+  **WHEN TO USE IT**
+  The calendar strip of the home screen.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `from`, `days`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.view` (taken from the current farm context; never sent by the client).
+  - `days` outside 1-31 or a malformed `from` is `422`.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`task.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/dashboard/calendar`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `from` — string (date). First farm-local day of the strip (default: today in the farm's timezone).
+  - `days` — integer, min 1, max 31. Number of days, 1-31 (default 7).
+
+  **BUSINESS RULES**
+  - Requires `task.view`. Cancelled tasks are not counted; a window milestone appears on every day it covers.
+  - `days` outside 1-31 or a malformed `from` is `422`.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `from`, `to`, `timezone`, `today`, `days`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/dashboard/calendar?from={{today}}&days=14"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  from: "{{today}}"
+  days: "14"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Dashboard calendar strip.resources/examples
+order: 2000

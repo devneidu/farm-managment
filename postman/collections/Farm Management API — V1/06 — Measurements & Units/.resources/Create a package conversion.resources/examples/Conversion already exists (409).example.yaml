@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/settings/package-conversions"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "context_type": "custom",
+        "context_id": "{{context_id}}",
+        "package_unit": "crate",
+        "target_unit": "piece",
+        "quantity_per_package": "30"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A conversion for this package in this context already exists; update it instead.",
+        "code": "conversion_exists",
+        "request_id": "01a1045e-4905-70cf-869e-b988e2775d4a",
+        "details": {
+          "existing_id": "01a1045e-48c4-73f1-b658-4f566ab82388",
+          "is_active": true
+        }
+      }
+order: 2000

@@ -1,0 +1,41 @@
+$kind: http-request
+name: "Seller: cancel a deal"
+description: |-
+  **WHAT IT DOES**
+  Needs `deal.respond`. Same rules as the buyer's cancel.
+
+  **INPUTS**
+  - `reason`, `note`
+
+  **ERRORS**
+  `409` deal_not_open; `403` staff
+
+  **BOUNDARY**
+  A deal is a summary of agreed terms. Farmvest takes no payment, holds no funds, reserves no stock, delivers nothing and creates no sale. Contact appears only on the audited contact endpoints.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/deals/{{deal_id}}/cancel"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reason": "seller_unavailable"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+    language: text/javascript
+order: 15000

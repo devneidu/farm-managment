@@ -1,0 +1,91 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Paginated feed formulas (recipes). A formula is a reference document: listing or using it never changes stock.
+
+  **WHEN TO USE IT**
+  The feed formulas list.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `search`, `include_inactive`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.view` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/feed-formulas`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `search` — string, max 150 chars
+  - `include_inactive` — boolean
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Requires `inventory.view`. Filters: `search`, `include_inactive`.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `name`, `species_id`, `description`, `version`, `is_active`, `items`, `created_at`, `updated_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/feed-formulas"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: search
+    value: ""
+    disabled: true
+    description: string — max 150 chars
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List feed formulas.resources/examples
+order: 30000

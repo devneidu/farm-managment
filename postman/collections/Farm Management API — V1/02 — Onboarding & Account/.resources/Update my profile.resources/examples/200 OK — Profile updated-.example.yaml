@@ -1,0 +1,36 @@
+$kind: http-example
+name: 200 OK — Profile updated.
+request:
+  url: "{{base_url}}/account"
+  method: PATCH
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Ada Okafor"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "name": "Ada Okafor",
+          "email": "ada.okafor@example.com",
+          "email_verified_at": "2026-10-04T00:45:08+00:00",
+          "has_password": true,
+          "providers": [],
+          "locale": null
+        },
+        "meta": {},
+        "message": "Profile updated."
+      }
+order: 1000

@@ -1,0 +1,140 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "title": "Healthy point-of-lay chickens",
+        "product_kind": "livestock",
+        "species_id": "{{species_chicken_id}}",
+        "unit": "head",
+        "unit_price": "8000",
+        "available_quantity": "120",
+        "min_order_quantity": "5",
+        "negotiable": true,
+        "description": "Vaccinated, 16 weeks old.",
+        "fulfilment": "both",
+        "pickup_area": "Bodija market",
+        "delivery_coverage": [
+          "Oyo",
+          "Lagos"
+        ],
+        "dispatch_estimate": "1_2_days",
+        "delivery_charge": "agreed_separately"
+      }
+response:
+  statusCode: 201
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a118eb-e4e0-71ff-b6e9-fc20bf9e0886",
+          "reference": "LST-2026-00001",
+          "slug": "healthy-point-of-lay-chickens-odyt1l",
+          "shop_id": "01a118eb-e021-7194-a3e5-600cd6fd1d47",
+          "version": 1,
+          "status": "draft",
+          "is_public": false,
+          "hidden_because": null,
+          "title": "Healthy point-of-lay chickens",
+          "description": "Vaccinated, 16 weeks old.",
+          "product": {
+            "kind": "livestock",
+            "kind_label": "Livestock",
+            "species": {
+              "id": "01a118eb-9b84-737c-a4ec-5d5d716a8c72",
+              "code": "chicken",
+              "name": "Chicken"
+            },
+            "crop_type": null,
+            "custom_name": null,
+            "name": "Chicken"
+          },
+          "price": {
+            "amount": "8000.00",
+            "amount_minor": 800000,
+            "currency": "NGN",
+            "per": {
+              "code": "head",
+              "name": "Head",
+              "symbol": "head",
+              "integer_only": true,
+              "decimal_places": 0
+            }
+          },
+          "quantity": {
+            "available": "120",
+            "min_order": "5",
+            "unit": "head",
+            "basis": "seller_declared",
+            "updated_at": "2026-10-08T00:31:15+00:00"
+          },
+          "negotiable": true,
+          "package": null,
+          "fulfilment": {
+            "mode": "both",
+            "label": "Pickup or seller-arranged delivery",
+            "pickup_area": "Bodija market",
+            "delivery_coverage": [
+              "Oyo",
+              "Lagos"
+            ],
+            "dispatch_estimate": {
+              "value": "1_2_days",
+              "label": "1-2 days"
+            },
+            "delivery_charge": {
+              "value": "agreed_separately",
+              "label": "Delivery charge agreed separately"
+            },
+            "arranged_by": "seller"
+          },
+          "location": {
+            "state": "Oyo",
+            "city": "Ibadan",
+            "area": "Bodija"
+          },
+          "image": {
+            "source": "placeholder",
+            "kind": null,
+            "illustrative": true,
+            "has_image": false,
+            "url": null,
+            "alt_text": "Healthy point-of-lay chickens",
+            "placeholder_kind": "livestock"
+          },
+          "catalog_image_id": null,
+          "images": [],
+          "inventory_linked": false,
+          "restriction": null,
+          "abilities": {
+            "edit": true,
+            "publish": true
+          },
+          "published_at": null,
+          "paused_at": null,
+          "archived_at": null,
+          "created_at": "2026-10-08T00:31:15+00:00",
+          "updated_at": "2026-10-08T00:31:15+00:00"
+        },
+        "meta": {},
+        "message": "Listing created."
+      }
+order: 1000

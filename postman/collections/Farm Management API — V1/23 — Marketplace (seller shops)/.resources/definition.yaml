@@ -1,0 +1,3 @@
+$kind: collection
+description: "**Phase 22.** Seller shop onboarding and management plus anonymous discovery. These routes need sign-in + a verified email only (NO farm, NO onboarding), except the two `public/...` requests which need nothing. A new shop is a private draft until a platform admin approves it (folder 90 -> Marketplace Shops). A seller with no farm is routed by the auth state: `next_action` is `marketplace` once they belong to a shop (`complete_farm_setup` before the first shop); see `GET /auth/me`."
+order: 25000

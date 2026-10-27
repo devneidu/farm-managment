@@ -1,0 +1,55 @@
+$kind: http-example
+name: 201 Created — Outcome recorded.
+request:
+  url: "{{base_url}}/breeding-projects/{{breeding_project_id}}/outcomes"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "live_count": 37,
+        "loss_count": 13,
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Hatch completed on day 21"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-7a98-7220-8c0c-2892e55aede0",
+          "breeding_project_id": "01a1045e-77ab-7307-80ca-a3ad0d2c8073",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "kind": "outcome",
+          "live_count": 37,
+          "loss_count": 13,
+          "outcome_date": "2026-10-04",
+          "operational_record_id": "01a1045e-7ab4-7294-b4e6-165c77fd6c83",
+          "reverses_outcome_id": null,
+          "corrects_outcome_id": null,
+          "reversed_by_outcome_id": null,
+          "reason": null,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": "Hatch completed on day 21",
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Outcome recorded."
+      }
+order: 1000

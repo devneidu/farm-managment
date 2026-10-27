@@ -1,0 +1,55 @@
+$kind: http-example
+name: 200 OK — Payment reversed.
+request:
+  url: "{{base_url}}/payments/{{payment_b_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Mobile money transfer bounced",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-a6d2-721b-b623-398644ea57f7",
+          "reference": "PAY-2026-00004",
+          "entry_type": "reversal",
+          "invoice_id": "01a1045e-a5d4-73b3-8c22-069ff9f7e376",
+          "invoice_reference": "INV-2026-00002",
+          "amount": "5000.05",
+          "currency": "NGN",
+          "method": "mobile_money",
+          "payment_reference": "MM-77120",
+          "received_on": "2026-10-04",
+          "recorded_at": "2026-10-04T00:45:08.000000Z",
+          "notes": null,
+          "finance_transaction_id": "01a1045e-a6c2-70b5-9e17-e0de1f58b85a",
+          "reverses_payment_id": "01a1045e-a653-726a-9795-5ff9fea9bf23",
+          "reversed_by_payment_id": null,
+          "is_reversed": false,
+          "reason": "Mobile money transfer bounced",
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Payment reversed."
+      }
+order: 1000

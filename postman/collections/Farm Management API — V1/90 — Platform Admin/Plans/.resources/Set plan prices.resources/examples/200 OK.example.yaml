@@ -1,0 +1,89 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/plans/{{plan_new_id}}/prices"
+  method: PUT
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "prices": [
+          {
+            "interval": "monthly",
+            "amount_minor": 150000
+          },
+          {
+            "interval": "annual",
+            "amount_minor": 1500000
+          }
+        ]
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-cb63-70de-9dfd-75de6567370d",
+          "slug": "farm-starter-plus",
+          "name": "Farm Starter Plus (2026)",
+          "description": "A small paid step above Free",
+          "currency": "NGN",
+          "is_active": true,
+          "is_public": true,
+          "is_default": false,
+          "sort_order": 16,
+          "subscribers_count": 0,
+          "prices": [
+            {
+              "interval": "monthly",
+              "amount_minor": 150000,
+              "currency": "NGN",
+              "is_active": true
+            },
+            {
+              "interval": "annual",
+              "amount_minor": 1500000,
+              "currency": "NGN",
+              "is_active": true
+            }
+          ],
+          "features": [
+            {
+              "key": "advanced_reports",
+              "label": "Advanced reports",
+              "enabled": false
+            },
+            {
+              "key": "data_export",
+              "label": "Data export",
+              "enabled": false
+            }
+          ],
+          "limits": [
+            {
+              "key": "team_members",
+              "label": "Team members",
+              "limit": 0,
+              "unlimited": false
+            },
+            {
+              "key": "active_cycles",
+              "label": "Active production cycles",
+              "limit": 0,
+              "unlimited": false
+            }
+          ],
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

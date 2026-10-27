@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Start here. `GET /health` proves the API is reachable. Then select the **Farm Management — Local** environment, make sure `base_url` and `frontend_origin` match your server, and run **01 — Authentication → Initialise CSRF cookie**.
+
+  Typical screens: startup/connectivity check.
+order: 2000

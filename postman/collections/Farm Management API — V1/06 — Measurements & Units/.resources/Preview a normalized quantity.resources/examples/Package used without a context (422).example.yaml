@@ -1,0 +1,48 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/measurements/normalize"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "components": [
+          {
+            "quantity": "3",
+            "unit": "crate"
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A context is required to convert crate.",
+        "code": "conversion_context_required",
+        "request_id": "01a1045e-4a37-72e1-b06a-e3764f22ff7e",
+        "details": {
+          "unit": "crate",
+          "candidates": [
+            {
+              "type": "custom",
+              "id": "01a1045e-4812-722e-a358-827f49841712",
+              "label": "Table eggs"
+            }
+          ]
+        }
+      }
+order: 2000

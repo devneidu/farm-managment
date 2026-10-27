@@ -1,0 +1,17 @@
+# Use this workspace to collaborate
+workspace:
+  id: d4efdd89-cf20-426a-83ad-b6fd32a1d6b3
+
+localResources:
+  collections:
+    - ../docs/postman/Farm-Management-API.postman_collection.json
+  environments:
+    - ../docs/postman/Farm-Management-Local.postman_environment.json
+  specs:
+    - ../docs/api/openapi.json
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Farm Management API — V1: 7813b674-ceb1-4cd4-86c0-ad5cee5cc8f2

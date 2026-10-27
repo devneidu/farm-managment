@@ -1,0 +1,67 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/plans/{{plan_free_id}}/make-default"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+          "slug": "free",
+          "name": "Free",
+          "description": "Get started managing one farm.",
+          "currency": "NGN",
+          "is_active": true,
+          "is_public": true,
+          "is_default": true,
+          "sort_order": 10,
+          "subscribers_count": 1,
+          "prices": [
+            {
+              "interval": "monthly",
+              "amount_minor": 0,
+              "currency": "NGN",
+              "is_active": true
+            }
+          ],
+          "features": [
+            {
+              "key": "advanced_reports",
+              "label": "Advanced reports",
+              "enabled": false
+            },
+            {
+              "key": "data_export",
+              "label": "Data export",
+              "enabled": false
+            }
+          ],
+          "limits": [
+            {
+              "key": "team_members",
+              "label": "Team members",
+              "limit": 3,
+              "unlimited": false
+            },
+            {
+              "key": "active_cycles",
+              "label": "Active production cycles",
+              "limit": 3,
+              "unlimited": false
+            }
+          ],
+          "created_at": "2026-10-04T00:42:32+00:00",
+          "updated_at": "2026-10-04T00:42:32+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

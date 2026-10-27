@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: a fresh or existing environment; a platform admin account (`admin_email` / `admin_password`) exists. This flow needs NO farm.
+
+  Sets the XSRF-TOKEN cookie.
+url: "{{base_url}}/auth/csrf-cookie"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 204", function () { pm.expect(pm.response.code).to.be.oneOf([204]); });
+      if (pm.cookies.get("XSRF-TOKEN")) { pm.environment.set("xsrf_token", decodeURIComponent(pm.cookies.get("XSRF-TOKEN"))); }
+    language: text/javascript
+order: 1000

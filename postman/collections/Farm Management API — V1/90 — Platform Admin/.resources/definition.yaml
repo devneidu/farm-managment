@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Platform administration is NOT farm administration.** Access comes only from a `platform_admins` grant created by an operator (`php artisan platform:grant-admin <email> --role=admin|support`); being a farm Owner confers nothing here and a platform admin has no farm powers unless they also hold a farm membership. Roles: `admin` (read + write) and `support` (read only).
+
+  These routes have no farm context, no `X-Farm-Id` and no farm permissions. Log in as the platform admin account first (**01 — Authentication → Log in as the platform admin**); your cookie jar then holds the admin session.
+
+  Typical screens: the separate platform administration console (not part of the farm UI).
+order: 30000

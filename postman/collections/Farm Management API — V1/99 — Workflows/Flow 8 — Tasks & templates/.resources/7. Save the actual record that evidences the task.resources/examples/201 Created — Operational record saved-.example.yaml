@@ -1,0 +1,118 @@
+$kind: http-example
+name: 201 Created — Operational record saved.
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "weight",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "sample_size": 20,
+          "components": [
+            {
+              "quantity": "39.2",
+              "unit": "kg"
+            }
+          ]
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-87e7-72be-a221-26df947643fd",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "weight",
+          "details": {
+            "sample_size": 20,
+            "components": [
+              {
+                "quantity": "39.2",
+                "unit": "kg"
+              }
+            ]
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "39.2",
+                "unit": "kg"
+              }
+            ],
+            "normalized": {
+              "quantity": "39200",
+              "unit": "g"
+            },
+            "total": {
+              "quantity": "39.2",
+              "unit": "kg"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "39.2",
+                  "unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "39200",
+                "unit": "g"
+              },
+              "total": {
+                "quantity": "39.2",
+                "unit": "kg"
+              }
+            }
+          },
+          "population_delta": 0,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "attachments": []
+        },
+        "meta": {},
+        "message": "Operational record saved."
+      }
+order: 1000

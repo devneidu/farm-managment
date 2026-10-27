@@ -1,0 +1,68 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/master/species?q=chick"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: q
+      value: chick
+    - key: is_active
+      value: ""
+      disabled: true
+      description: boolean
+    - key: parent_id
+      value: ""
+      disabled: true
+      description: Filter by the parent record (operation type / species / crop type id). — string (uuid)
+    - key: category
+      value: ""
+      disabled: true
+      description: "Operation types only. — enum: livestock | aquaculture | crop"
+    - key: list
+      value: ""
+      disabled: true
+      description: "Reference values only. — enum: planting_material_type | planting_unit_type"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "code": "chicken",
+            "name": "Chicken",
+            "livestock_group": "poultry",
+            "operation_type": {
+              "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+              "code": "poultry",
+              "name": "Poultry"
+            },
+            "sort_order": 10,
+            "is_active": true,
+            "created_at": "2026-10-04T00:42:35+00:00",
+            "updated_at": "2026-10-04T00:43:13+00:00"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,31 @@
+$kind: http-request
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/listings/{{listing_slug}}/offers"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "10",
+      "unit_price": "5000"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 422", function () { pm.expect(pm.response.code).to.eql(422); });
+      const json = pm.response.json();
+      pm.test("Error code validation_failed", function () { pm.expect(json.code).to.eql("validation_failed"); });
+      pm.test("unit_price error", function () { pm.expect(JSON.stringify(json.errors)).to.include("unit_price"); });
+    language: text/javascript
+order: 34000

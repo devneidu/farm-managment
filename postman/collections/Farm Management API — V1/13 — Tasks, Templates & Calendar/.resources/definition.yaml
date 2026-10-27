@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  A TASK is work that SHOULD happen; an operational record is what DID happen. Tasks, recurring schedules, reusable templates and the calendar read model. Completing a task never creates a record: it can only link one that was already saved.
+
+  Typical screens: Today/Overdue/Upcoming tasks, task detail, templates library, recurring schedules, calendar.
+order: 15000

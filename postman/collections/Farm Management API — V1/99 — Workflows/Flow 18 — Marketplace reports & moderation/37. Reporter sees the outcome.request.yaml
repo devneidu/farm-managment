@@ -1,0 +1,21 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  The reason given when closing is reporter-visible.
+url: "{{base_url}}/marketplace/my/reports/content/{{report_c_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Closed with outcome", () => { pm.expect(json.data.status).to.eql("resolved"); pm.expect(json.data.outcome_reason).to.be.a("string"); });
+    language: text/javascript
+order: 37000

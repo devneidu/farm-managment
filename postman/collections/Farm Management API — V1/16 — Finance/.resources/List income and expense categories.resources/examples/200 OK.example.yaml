@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/finance/categories"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: direction
+      value: ""
+      disabled: true
+      description: "enum: income | expense"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045d-dcf8-73ce-a004-9375d14e7a4e",
+            "code": "feed",
+            "name": "Feed",
+            "direction": "expense",
+            "is_system": true,
+            "manual_entry": true
+          },
+          {
+            "id": "01a1045d-dd1c-7299-96f9-413f50b4df25",
+            "code": "medicine_veterinary",
+            "name": "Medicine & veterinary",
+            "direction": "expense",
+            "is_system": true,
+            "manual_entry": true
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

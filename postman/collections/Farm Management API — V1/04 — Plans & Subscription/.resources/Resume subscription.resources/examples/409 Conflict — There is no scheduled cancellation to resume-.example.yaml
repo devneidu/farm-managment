@@ -1,0 +1,26 @@
+$kind: http-example
+name: 409 Conflict — There is no scheduled cancellation to resume.
+request:
+  url: "{{base_url}}/subscription/resume"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "There is no scheduled cancellation to resume.",
+        "code": "subscription_not_cancelled",
+        "request_id": "01a1045e-4020-72b5-9ab0-67b30cc3113f"
+      }
+order: 1000

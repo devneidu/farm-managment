@@ -1,0 +1,60 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Needs `invitation_token`. Captures `user_chidi_id`.
+
+  **WHAT IT DOES**
+  A signed-in, verified user joins the farm using the emailed token. The response is the auth state (`next_action: "none"`) plus `meta.accepted_farm_id`; a brand-new user skips farm setup entirely.
+
+  **WHEN TO USE IT**
+  The invitation landing page, after the invitee is signed in and verified.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Creates the membership, marks the invitation accepted and marks a never-onboarded verified user as onboarded.
+  - The signed-in account's verified email must equal the invited email (`403 invitation_email_mismatch`).
+  - Errors: `404 invitation_not_found`, `409 already_member`, `410 invitation_used | invitation_revoked | invitation_expired`. Rate limited.
+  - A user who already has a farm keeps it as the default; send `X-Farm-Id` to work on the new one.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Get auth state as the invited member**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  Full reference (errors, all fields): folder **03 — Farms, Team & Access** -> "Accept a farm invitation".
+url: "{{base_url}}/invitations/accept"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "token": "{{invitation_token}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.user.id"); if (v !== undefined && v !== null) pm.environment.set("user_chidi_id", String(v)); else console.warn("Could not capture user_chidi_id from data.user.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/6. Accept a farm invitation.resources/examples
+order: 6000

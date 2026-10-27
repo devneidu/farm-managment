@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Create a supplier, record a purchase and verify both the stock-in and the expense it created.
+
+  **Prerequisites:** Flows 3 and 5 (`item_feed_id`, `cycle_id`, `store_id`).
+
+  Steps: 9. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 10000

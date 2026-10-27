@@ -1,0 +1,78 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  A task is work that SHOULD happen. Captures `task_id`.
+
+  **WHAT IT DOES**
+  Creates a one-off task (work that SHOULD happen), optionally tied to a cycle or breeding project, an assignee and a record type that will evidence it.
+
+  **WHEN TO USE IT**
+  "Add task" on the work screen or from a batch.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.manage` (taken from the current farm context; never sent by the client).
+  - Creates the task only.
+  - A TASK is work that SHOULD happen. An operational record is what DID happen. A task never creates a record, a stock movement or a finance entry - not on creation, not when it becomes due, not on completion.
+  - `due_date` and `due_time` are farm-local (default `Africa/Lagos`); a task without a time is due by the end of its day. `due_state` is derived, never stored: `upcoming`, `due_today`, `overdue`, `completed`, `cancelled`.
+  - Writes are rate limited (240/hour/user).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List tasks**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  Full reference (errors, all fields): folder **13 — Tasks, Templates & Calendar** -> "Create a task".
+url: "{{base_url}}/tasks"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "title": "Weigh a sample of 20 birds",
+      "category": "growth_monitoring",
+      "due_date": "{{date_in_7d}}",
+      "due_time": "08:00",
+      "production_cycle_id": "{{cycle_id}}",
+      "linked_record_type": "weight",
+      "requires_evidence": true,
+      "assigned_user_id": "{{user_id}}",
+      "instructions": "Weigh 20 random birds from Pen 1 and record the total",
+      "idempotency_key": "{{task_key}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("task_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("task_id", String(v)); else console.warn("Could not capture task_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/4. Create a task.resources/examples
+order: 4000

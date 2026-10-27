@@ -1,0 +1,102 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/work-templates/recommended?production_cycle_id={{cycle_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: production_cycle_id
+      value: "{{cycle_id}}"
+    - key: source
+      value: ""
+      disabled: true
+      description: "enum: platform | farm"
+    - key: applies_to
+      value: ""
+      disabled: true
+      description: "enum: production_cycle | breeding_project"
+    - key: is_active
+      value: ""
+      disabled: true
+      description: boolean
+    - key: breeding_project_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045d-a3d4-7066-b381-17a0865fa820",
+            "source": "platform",
+            "code": "chicken-starter",
+            "name": "Chicken starter routine",
+            "description": "Placement check, early-care checks, daily feeding and water checks and weekly weighing for a chicken batch.",
+            "applies_to": "production_cycle",
+            "cycle_kind": "livestock",
+            "operation_type_id": null,
+            "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "crop_type_id": null,
+            "breeding_workflow": null,
+            "version": 1,
+            "is_active": true,
+            "cloned_from_id": null,
+            "application_id": null,
+            "items": [
+              {
+                "id": "01a1045d-a3e7-70a3-b9da-01276a6bb41a",
+                "position": 1,
+                "title": "Placement and setup check",
+                "category": "record_keeping",
+                "instructions": "Confirm housing, heat, water and feed are ready for the batch.",
+                "anchor": "cycle_start",
+                "offset_days": 0,
+                "recurrence": "none",
+                "interval_value": 1,
+                "weekdays": null,
+                "until_offset_days": null,
+                "occurrence_limit": null,
+                "due_time": null,
+                "reminder_offsets": null,
+                "assigned_role": null,
+                "linked_record_type": null,
+                "requires_evidence": false
+              },
+              {
+                "id": "01a1045d-a3ee-7352-84c7-445772c13930",
+                "position": 2,
+                "title": "Early-care check",
+                "category": "growth_monitoring",
+                "instructions": null,
+                "anchor": "cycle_start",
+                "offset_days": 1,
+                "recurrence": "daily",
+                "interval_value": 1,
+                "weekdays": null,
+                "until_offset_days": 3,
+                "occurrence_limit": null,
+                "due_time": null,
+                "reminder_offsets": null,
+                "assigned_role": null,
+                "linked_record_type": null,
+                "requires_evidence": false
+              }
+            ]
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

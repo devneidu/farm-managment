@@ -1,0 +1,126 @@
+$kind: http-example
+name: 201 Created — Operational record saved.
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "feed_use",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at_3h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "feed_name": "Layer Grower Mash",
+          "components": [
+            {
+              "quantity": "25",
+              "unit": "kg"
+            }
+          ],
+          "inventory": {
+            "item_id": "{{item_feed_id}}",
+            "storage_location_id": "{{store_id}}"
+          }
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-6146-730e-8633-cbcc8b8658bf",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "feed_use",
+          "details": {
+            "feed_name": "Layer Grower Mash",
+            "components": [
+              {
+                "quantity": "25",
+                "unit": "kg"
+              }
+            ],
+            "inventory": {
+              "item_id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+              "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2"
+            }
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "25",
+                "unit": "kg"
+              }
+            ],
+            "normalized": {
+              "quantity": "25000",
+              "unit": "g"
+            },
+            "total": {
+              "quantity": "25",
+              "unit": "kg"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "25",
+                  "unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "25000",
+                "unit": "g"
+              },
+              "total": {
+                "quantity": "25",
+                "unit": "kg"
+              }
+            }
+          },
+          "population_delta": 0,
+          "recorded_at": "2026-10-03T21:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": "01a1045e-6154-73e4-96ff-16867a806194",
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "attachments": []
+        },
+        "meta": {},
+        "message": "Operational record saved."
+      }
+order: 1000

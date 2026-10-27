@@ -1,0 +1,141 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates a reusable farm template: a list of items, each anchored to a cycle/breeding date with an offset in days and an optional recurrence. Farm templates are versioned: every edit is `version + 1`.
+
+  **WHEN TO USE IT**
+  "New template" in the templates library.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`, `applies_to`, `items`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.manage` (taken from the current farm context; never sent by the client).
+  - `anchor`: `cycle_start`, `cycle_expected_end` (cycle templates); `breeding_start`, `breeding_expected`, `breeding_expected_to` (breeding templates).
+  - Item fields: `title`, `category`, `anchor`, `offset_days`, optional `recurrence` (`none`|`daily`|`weekly`), `interval_value`, `weekdays` (1=Mon ... 7=Sun), `until_offset_days`, `occurrence_limit`, `due_time` (`HH:MM`), `reminder_offsets` (stored only), `assigned_role`, `linked_record_type`, `requires_evidence`, `instructions`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`task.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `work-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/work-templates`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 150 chars
+  - `description` — string, optional, max 2000 chars, nullable
+  - `applies_to` — enum, **required**. Values: `production_cycle`, `breeding_project`
+  - `cycle_kind` — any, optional
+  - `operation_type_id` — string (uuid), optional, nullable
+  - `species_id` — string (uuid), optional, nullable
+  - `crop_type_id` — string (uuid), optional, nullable
+  - `breeding_workflow` — any, optional
+  - `is_active` — boolean, optional
+  - `items` — array, **required**, min 1 items, max 50 items
+  - `items[].anchor` — enum, **required**. The date a template item's offset_days counts from. | | |---| | `cycle_start` <br/>  | | `cycle_expected_end` <br/>  | | `breeding_start` <br/>  | | `breeding_expected` <br/> Exact expected date, or the start of the expected window. | | `breeding_expected_to` <br/> End of the expected window (falls back to the exact date). |. Values: `cycle_start`, `cycle_expected_end`, `breeding_start`, `breeding_expected`, `breeding_expected_to`
+  - `items[].offset_days` — integer, optional, min 0, max 3650. Days after the anchor date of the first task.
+  - `items[].until_offset_days` — integer, optional, min 0, max 3650, nullable. Recurring items: last day, as days after the anchor.
+  - `items[].title` — string, **required**, max 200 chars
+  - `items[].category` — enum, **required**. Closed task vocabulary served by GET /master/task-categories. . Values: `feeding_watering`, `egg_collection`, `vaccination_medication`, `breeding_reproduction`, `growth_monitoring`, `record_keeping`, `maintenance_repair`, `cleaning_sanitation`, `movement_rotation`, `procurement_orders`, `irrigation`, `crop_care`, `harvest`, `payment`, `other`
+  - `items[].instructions` — string, optional, max 5000 chars, nullable
+  - `items[].due_time` — string, optional, nullable
+  - `items[].reminder_offsets` — array, optional, max 5 items, nullable
+  - `items[].linked_record_type` — enum, optional, nullable. Values: `feed_use`, `egg_collection`, `milk`, `mortality`, `weight`, `temperature`, `water`, `irrigation`, `weeding`, `fertilizer_application`, `pesticide_application`, `land_preparation`, `planting`, `establishment_check`, `growth_stage`, `crop_loss`, `crop_harvest`, `pest_observation`, `general_note`, `population_adjustment`, `health`, `breeding_check`, `breeding_outcome`, `null`
+  - `items[].requires_evidence` — boolean, optional
+  - `items[].assigned_role` — any, optional
+  - `items[].recurrence` — enum, optional. none = a single task; daily = every N days; weekly = every N weeks on the chosen ISO weekdays. . Values: `none`, `daily`, `weekly`
+  - `items[].interval_value` — integer, optional, min 1, max 52
+  - `items[].weekdays` — array, optional, min 1 items, max 7 items, nullable
+  - `items[].occurrence_limit` — integer, optional, min 1, max 3650, nullable
+
+  **VARIABLES USED**
+  - `{{species_chicken_id}}` — captured by "List species"
+
+  **BUSINESS RULES**
+  - `anchor`: `cycle_start`, `cycle_expected_end` (cycle templates); `breeding_start`, `breeding_expected`, `breeding_expected_to` (breeding templates).
+  - Item fields: `title`, `category`, `anchor`, `offset_days`, optional `recurrence` (`none`|`daily`|`weekly`), `interval_value`, `weekdays` (1=Mon ... 7=Sun), `until_offset_days`, `occurrence_limit`, `due_time` (`HH:MM`), `reminder_offsets` (stored only), `assigned_role`, `linked_record_type`, `requires_evidence`, `instructions`.
+  - Requires `task.manage`.
+
+  **SUCCESS**
+  `201 Created` — message: "Template created."
+
+  `data` fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `items`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/work-templates"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Broiler weekly routine",
+      "description": "Weekly weighing and drinker cleaning",
+      "applies_to": "production_cycle",
+      "cycle_kind": "livestock",
+      "species_id": "{{species_chicken_id}}",
+      "items": [
+        {
+          "title": "Weigh a sample of 20 birds",
+          "category": "growth_monitoring",
+          "anchor": "cycle_start",
+          "offset_days": 7,
+          "linked_record_type": "weight"
+        },
+        {
+          "title": "Clean drinkers",
+          "category": "cleaning_sanitation",
+          "anchor": "cycle_start",
+          "offset_days": 1,
+          "recurrence": "weekly",
+          "weekdays": [
+            1,
+            4
+          ],
+          "until_offset_days": 35
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("template_farm_id", String(v)); else console.warn("Could not capture template_farm_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create a farm template.resources/examples
+order: 5000

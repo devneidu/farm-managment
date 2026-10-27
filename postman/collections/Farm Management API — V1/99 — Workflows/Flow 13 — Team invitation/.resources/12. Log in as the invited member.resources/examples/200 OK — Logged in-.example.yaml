@@ -1,0 +1,50 @@
+$kind: http-example
+name: 200 OK — Logged in.
+request:
+  url: "{{base_url}}/auth/login"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "password": "{{password}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": true,
+          "has_active_farm": false,
+          "next_action": "no_active_farm",
+          "user": {
+            "id": "01a11127-4ee7-7266-8fce-3b5b640eeb36",
+            "email": "chidi.worker@example.com",
+            "name": null,
+            "email_verified_at": "2026-10-06T12:19:12+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": null,
+          "farms": [],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {},
+        "message": "Logged in."
+      }
+order: 1000

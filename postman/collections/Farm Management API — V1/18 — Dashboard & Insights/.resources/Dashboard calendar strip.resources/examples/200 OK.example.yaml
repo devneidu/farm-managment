@@ -1,0 +1,59 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/dashboard/calendar?from={{today}}&days=14"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    from: "{{today}}"
+    days: "14"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "from": "2026-10-04",
+          "to": "2026-10-17",
+          "timezone": "Africa/Lagos",
+          "today": "2026-10-04",
+          "days": [
+            {
+              "date": "2026-10-04",
+              "is_today": true,
+              "tasks": {
+                "open": 2,
+                "overdue": 0,
+                "due_today": 2,
+                "upcoming": 0,
+                "completed": 0
+              },
+              "milestones": []
+            },
+            {
+              "date": "2026-10-05",
+              "is_today": false,
+              "tasks": {
+                "open": 3,
+                "overdue": 0,
+                "due_today": 0,
+                "upcoming": 3,
+                "completed": 0
+              },
+              "milestones": []
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,3 @@
+$kind: collection
+description: System reference data (operations, species, crops, breeds, varieties, reference values) and species capabilities.
+order: 6000

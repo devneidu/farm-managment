@@ -1,0 +1,38 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/tasks/{{task_id}}/complete"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "note": "Done"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This task requires a saved record as evidence.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-8819-7218-b642-b51408a4ea41",
+        "errors": {
+          "evidence": [
+            "This task requires a saved record as evidence."
+          ]
+        }
+      }
+order: 2000

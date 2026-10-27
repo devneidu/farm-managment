@@ -1,0 +1,36 @@
+$kind: http-request
+description: Needs `shop.manage_contact`. Partial; `null` clears a field. A preferred phone/whatsapp/email channel must be configured. Audited by field name only.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/contact"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "contact_phone": "+2348031234567",
+      "contact_whatsapp": "+2348099998888",
+      "contact_email": "ada.private@example.com",
+      "address_line": "12 Market Road, Bodija",
+      "preferred_contact_method": "whatsapp"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 7000

@@ -1,0 +1,47 @@
+$kind: http-example
+name: 201 Created — Template applied.
+request:
+  url: "{{base_url}}/work-templates/{{template_platform_id}}/apply"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-7da1-7207-a3f1-6bde057caf2c",
+          "work_template_id": "01a1045d-a3d4-7066-b381-17a0865fa820",
+          "template_version": 1,
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "breeding_project_id": null,
+          "schedules_created": 5,
+          "tasks_created": 66,
+          "skipped_past": 68,
+          "skipped_no_anchor": 0,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Template applied."
+      }
+order: 1000

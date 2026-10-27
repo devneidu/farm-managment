@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Items, lots, the stock ledger, feed formulas. Stock is DERIVED from movements: there is no balance to edit. Receive with stock-in, use with stock-out, reconcile with adjustments, move with transfers, correct with reversals. Every mutation requires an `idempotency_key` and `recorded_at`.
+
+  Typical screens: inventory list, item detail, receive/use stock, stock count, transfers, movement history, feed formulas.
+order: 12000

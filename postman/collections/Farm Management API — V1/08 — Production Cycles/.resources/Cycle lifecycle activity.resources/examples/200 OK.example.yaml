@@ -1,0 +1,170 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/{{cycle_id}}/activity"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-5268-7299-93bb-dd7433732781",
+            "action": "updated",
+            "actor_id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "changes": {
+              "notes": {
+                "new": "Moved to Pen 1 after brooding",
+                "old": "First flock of the season"
+              },
+              "expected_end_date": {
+                "new": "2026-12-03",
+                "old": "2026-11-03"
+              }
+            },
+            "reason": null,
+            "recorded_at": "2026-10-04T00:45:08.000000Z",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-4f14-7390-a952-16849160dd1d",
+            "action": "created",
+            "actor_id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "changes": {
+              "crop": {
+                "new": null,
+                "old": null
+              },
+              "kind": {
+                "new": "livestock",
+                "old": null
+              },
+              "name": {
+                "new": "October Broilers",
+                "old": null
+              },
+              "notes": {
+                "new": "First flock of the season",
+                "old": null
+              },
+              "status": {
+                "new": "active",
+                "old": null
+              },
+              "end_date": {
+                "new": null,
+                "old": null
+              },
+              "livestock": {
+                "new": {
+                  "breed_id": "01a1045e-44ec-70a5-a6c6-dc586c45bbdd",
+                  "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+                  "initial_population": 500,
+                  "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+                  "baseline_measurement": {
+                    "total": {
+                      "unit": "head",
+                      "quantity": "500"
+                    },
+                    "entered": [
+                      {
+                        "unit": "head",
+                        "quantity": "500"
+                      }
+                    ],
+                    "snapshot": {
+                      "total": {
+                        "unit": "head",
+                        "quantity": "500"
+                      },
+                      "schema": 1,
+                      "entered": [
+                        {
+                          "unit": {
+                            "code": "head",
+                            "factor": "1",
+                            "family": "head",
+                            "strategy": "linear",
+                            "dimension": "count",
+                            "integer_only": true
+                          },
+                          "quantity": "500"
+                        }
+                      ],
+                      "packages": [],
+                      "normalized": {
+                        "unit": "head",
+                        "quantity": "500"
+                      },
+                      "result_unit": {
+                        "code": "head",
+                        "factor": "1",
+                        "family": "head",
+                        "strategy": "linear",
+                        "dimension": "count",
+                        "integer_only": true
+                      }
+                    },
+                    "normalized": {
+                      "unit": "head",
+                      "quantity": "500"
+                    }
+                  }
+                },
+                "old": null
+              },
+              "reference": {
+                "new": "BAT-2026-00001",
+                "old": null
+              },
+              "start_date": {
+                "new": "2026-09-04",
+                "old": null
+              },
+              "expected_end_date": {
+                "new": "2026-11-03",
+                "old": null
+              },
+              "operation_type_id": {
+                "new": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+                "old": null
+              },
+              "production_area_id": {
+                "new": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+                "old": null
+              }
+            },
+            "reason": null,
+            "recorded_at": "2026-09-03T23:00:00.000000Z",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 2
+        },
+        "message": null
+      }
+order: 1000

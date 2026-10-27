@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/exports"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "report": "income_expense",
+        "format": "xlsx",
+        "filters": {
+          "from": "{{month_start}}",
+          "to": "{{today}}"
+        },
+        "idempotency_key": "{{export_key}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This idempotency key was already used for a different export.",
+        "code": "idempotency_conflict",
+        "request_id": "01a1045e-b2fc-7174-803e-23aca298627e"
+      }
+order: 3000

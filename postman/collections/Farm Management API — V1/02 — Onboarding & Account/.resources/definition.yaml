@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Creating the first farm (farm name only) and managing the signed-in user's own account. These endpoints are user-level: they need a verified email but no farm.
+
+  Typical screens: farm-name onboarding, profile and password settings.
+order: 4000

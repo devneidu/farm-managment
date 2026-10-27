@@ -1,0 +1,82 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health/medicines"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 100 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: "enum: 0 | 1"
+    - key: low_stock
+      value: ""
+      disabled: true
+      description: "enum: 0 | 1"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+            "name": "Newcastle Vaccine (Lasota)",
+            "category": "medicine",
+            "description": null,
+            "stock_unit": "ml",
+            "dimension": "volume",
+            "tracks_lots": true,
+            "tracks_expiry": true,
+            "is_active": true,
+            "stock": {
+              "quantity": "500",
+              "unit": "ml",
+              "normalized": {
+                "quantity": "500",
+                "unit": "ml"
+              }
+            },
+            "low_stock_threshold": {
+              "quantity": "100",
+              "unit": "ml"
+            },
+            "is_low_stock": false,
+            "created_at": "2026-10-04T00:45:08.000000Z",
+            "updated_at": "2026-10-04T00:45:08.000000Z",
+            "profile": {
+              "default_withdrawal_days": 7,
+              "notes": "Lasota - hold eggs and meat for 7 days"
+            }
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

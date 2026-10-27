@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/me"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 401
+  statusText: Unauthorized
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Unauthenticated.",
+        "code": "unauthenticated",
+        "request_id": "01a1045e-bbdc-720b-8a11-33ef35e3c9af"
+      }
+order: 2000

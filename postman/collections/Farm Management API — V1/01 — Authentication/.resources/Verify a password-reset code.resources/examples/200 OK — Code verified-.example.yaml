@@ -1,0 +1,32 @@
+$kind: http-example
+name: 200 OK — Code verified.
+request:
+  url: "{{base_url}}/auth/password/verify-otp"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "code": "{{reset_otp_code}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "reset_token": "<single-use reset token>",
+          "expires_in": 900
+        },
+        "meta": {},
+        "message": "Code verified."
+      }
+order: 1000

@@ -1,0 +1,53 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/audit-logs?from={{date_7d_ago}}&to={{today}}"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: from
+      value: "{{date_7d_ago}}"
+    - key: to
+      value: "{{today}}"
+    - key: actor_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: action
+      value: ""
+      disabled: true
+      description: Exact action code, for example `platform.plan_updated`. — string — max 60 chars
+    - key: resource_type
+      value: ""
+      disabled: true
+      description: string — max 40 chars
+    - key: resource_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: request_id
+      value: ""
+      disabled: true
+      description: string — max 100 chars
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This area is restricted to platform administrators.",
+        "code": "platform_admin_required",
+        "request_id": "01a1045e-d38d-710d-a20d-82c2d2713926"
+      }
+order: 3000

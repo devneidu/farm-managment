@@ -1,0 +1,147 @@
+$kind: http-example
+name: 201 Created — purchase, stock-in and expense booked (output eggs)
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "supplier_reference": "MKT-2210",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Eggs bought at the market",
+        "items": [
+          {
+            "kind": "stock",
+            "output": "eggs",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "30",
+                "unit": "piece"
+              }
+            ],
+            "amount": "4500.00"
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-1608-7238-b534-4e3b767a82e2",
+          "reference": "PUR-2026-00003",
+          "status": "active",
+          "contact_id": null,
+          "contact_name": null,
+          "production_cycle_id": null,
+          "supplier_reference": "MKT-2210",
+          "recorded_at": "2026-10-06T11:18:56.000000Z",
+          "total_amount": "4500.00",
+          "currency": "NGN",
+          "finance_category": {
+            "id": "01a11126-874f-7282-b936-b7ff0305f767",
+            "code": "general_supplies",
+            "name": "General supplies"
+          },
+          "records_expense": true,
+          "finance_transaction_id": "01a11127-1623-70c2-a328-6ecc3ae50322",
+          "finance_reversal_transaction_id": null,
+          "notes": "Eggs bought at the market",
+          "corrects_purchase_id": null,
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "items": [
+            {
+              "id": "01a11127-1614-722d-96e2-6044172de3c9",
+              "line_no": 1,
+              "kind": "stock",
+              "description": "Eggs",
+              "inventory_item_id": "01a11127-0d22-7361-a379-a02b7d78beed",
+              "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+              "inventory_lot_id": null,
+              "lot": null,
+              "quantity": {
+                "quantity": "30",
+                "unit": "piece",
+                "normalized": {
+                  "quantity": "30",
+                  "unit": "piece"
+                }
+              },
+              "measurement": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "30"
+                },
+                "entered": [
+                  {
+                    "unit": "piece",
+                    "quantity": "30"
+                  }
+                ],
+                "snapshot": {
+                  "total": {
+                    "unit": "piece",
+                    "quantity": "30"
+                  },
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "unit": {
+                        "code": "piece",
+                        "factor": "1",
+                        "family": "piece",
+                        "strategy": "linear",
+                        "dimension": "count",
+                        "integer_only": true
+                      },
+                      "quantity": "30"
+                    }
+                  ],
+                  "packages": [],
+                  "normalized": {
+                    "unit": "piece",
+                    "quantity": "30"
+                  },
+                  "result_unit": {
+                    "code": "piece",
+                    "factor": "1",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "dimension": "count",
+                    "integer_only": true
+                  }
+                },
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "30"
+                }
+              },
+              "amount": "4500.00",
+              "inventory_movement_id": "01a11127-1619-7170-b882-c40ca99e9865"
+            }
+          ],
+          "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+          "created_at": "2026-10-06T12:18:56.000000Z"
+        },
+        "meta": {},
+        "message": "Purchase recorded."
+      }
+order: 1000

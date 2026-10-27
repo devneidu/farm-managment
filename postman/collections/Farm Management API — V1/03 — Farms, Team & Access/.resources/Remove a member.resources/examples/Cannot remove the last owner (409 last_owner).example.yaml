@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm/members/{{membership_owner_id}}"
+  method: DELETE
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A farm must keep at least one owner. Ownership transfer is not supported yet.",
+        "code": "last_owner",
+        "request_id": "01a1045e-bac0-73e1-8cf6-e306ea46434c"
+      }
+order: 2000

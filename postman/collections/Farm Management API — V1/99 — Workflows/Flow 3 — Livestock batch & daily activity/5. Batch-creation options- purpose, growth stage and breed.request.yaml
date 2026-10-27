@@ -1,0 +1,67 @@
+$kind: http-request
+name: "5. Batch-creation options: purpose, growth stage and breed"
+description: |-
+  **IN THIS FLOW**
+  Steps 2-4 of the "Start livestock batch" form: **Production purpose** (required), **Growth stage** (optional) and **Breed / Strain** (optional). Captures `batch_purpose_code` (`meat`) and `batch_growth_stage_code` (`chick`) for step 6.
+
+  **WHAT IT DOES**
+  Returns everything the form may offer for the chosen species in one call: `purposes[]` and `growth_stages[]` (`code`, `name`), `breeds[]` (system breeds plus this farm's custom breeds, each with `id`) and the `breed_field_label` to show ("Breed / Strain" for Chicken). The lists differ per species, so call it again whenever the species changes.
+
+  **HOW EACH FIELD IS SENT IN STEP 6**
+  - `production_purpose` <- `purposes[].code` (required for livestock).
+  - `growth_stage` <- `growth_stages[].code` (optional).
+  - `breed_id` <- `breeds[].id` (optional; here the custom breed from Flow S). A value from a different species is a `422`.
+
+  **PRODUCTION PURPOSE: WHAT EACH CODE MEANS** (show the `name`, and this hint under it, in the form)
+  - `meat` - Meat: raised to be sold or eaten as meat.
+  - `eggs` - Eggs: raised for egg production (layers).
+  - `dual_purpose` - Dual purpose (eggs and meat; for cattle: milk and meat): one animal kept for both uses.
+  - `dairy` - Dairy: raised for milk (cattle).
+  - `hide` - Hide: raised for hides/skins (cattle).
+  - `draught` - Draught: work animals used for pulling or carrying (cattle).
+  - `breeding` - Breeding: kept as breeding stock to produce young.
+  - `other` - Other: any purpose not listed.
+  Which codes exist depends on the species (for example Chicken has no `dairy`); always read them from the batch-reference response.
+
+  **GROWTH STAGE (optional)**: `hatchling` (newly hatched), `chick`/`keet`/`duckling`/`calf` (young animal), `weaner` (just weaned), `grower` (growing, not yet adult), `adult`, `unknown`.
+
+  **WHAT TO DO NEXT**
+  Next: **Start a livestock batch**.
+
+  ---
+  Requires `master_data.view` (every farm role) and the current farm session.
+
+  **Path:** `{{species_chicken_id}}` - UUID from "List species". Unknown species is `404 not_found`; an invalid query value is `422 validation_failed` (`include_inactive` must be boolean).
+
+  **Response `data`:** `species` (id, code, name, is_active, livestock_group, operation, capability_codes), `breed_field_label` ("Breed / Strain" for Chicken; Fish, Snail, Honeybee, Grasscutter, Camel, Quail and Ostrich use "Species / Type"), `breeds[]` (active system breeds plus this farm's custom breeds; `id`, `species_id`, `code`, `name`, `source`, `is_active`, `is_editable`, `created_at`), `purposes[]` and `growth_stages[]` (`code`, `name`, `is_active`). No pagination.
+
+  **Use:** send a `breeds[].id` as `breed_id`, a `purposes[].code` as `production_purpose` and a `growth_stages[].code` as `growth_stage` to `POST /production-cycles`. Never reuse another animal's codes; re-fetch when the species changes. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+
+  Cattle and Fish equivalents follow in this folder.
+url: "{{base_url}}/master/species/{{species_chicken_id}}/batch-reference"
+method: GET
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+queryParams:
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean (true/false/1/0). Include inactive (historical) choices; default is active choices only.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code === 200) {
+        const d = pm.response.json().data;
+        const purpose = d.purposes.find(function (p) { return p.code === "meat" && p.is_active; }) || d.purposes.find(function (p) { return p.is_active; });
+        const stage = d.growth_stages.find(function (g) { return g.code === "chick" && g.is_active; }) || d.growth_stages.find(function (g) { return g.is_active; });
+        pm.test("Species-specific options: purposes, growth stages and breeds", function () { pm.expect(d.species.code).to.eql("chicken"); pm.expect(purpose).to.be.an("object"); pm.expect(stage).to.be.an("object"); pm.expect(d.breeds).to.be.an("array").that.is.not.empty; });
+        pm.test("The breed from Flow S (breed_id) is offered for this species", function () { pm.expect(d.breeds.map(function (b) { return b.id; })).to.include(pm.environment.get("breed_id")); });
+        if (purpose) { pm.environment.set("batch_purpose_code", purpose.code); }
+        if (stage) { pm.environment.set("batch_growth_stage_code", stage.code); }
+      }
+    language: text/javascript
+examples: ./.resources/5. Batch-creation options- purpose, growth stage and breed.resources/examples
+order: 5000

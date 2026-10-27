@@ -1,0 +1,79 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/record-types/egg_collection/schema"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "type": "egg_collection",
+          "cycle_kind": "livestock",
+          "capability": "produces_eggs",
+          "fields": {
+            "inventory": [
+              "sometimes",
+              "array:storage_location_id"
+            ]
+          },
+          "measurement": {
+            "dimension": "count",
+            "display_unit": "piece",
+            "normalized_unit": "piece",
+            "required": true,
+            "components_max": 10
+          },
+          "area_fields": [],
+          "population_effect": "none",
+          "permission": "record.create",
+          "permissions_required": {
+            "always": [
+              "record.create",
+              "inventory.use"
+            ],
+            "when_inventory_linked": [],
+            "when_correcting": [
+              "record.reverse"
+            ]
+          },
+          "inventory_effect_enabled": true,
+          "inventory_category": "produce",
+          "inventory_direction": "in",
+          "inventory_required": false,
+          "inventory_dimensions": [
+            "count"
+          ],
+          "inventory_automatic": true,
+          "inventory_output": "eggs",
+          "inventory": {
+            "mode": "automatic_output",
+            "direction": "in",
+            "output": "eggs",
+            "item_category": "produce",
+            "dimensions": [
+              "count"
+            ],
+            "optional": false,
+            "creates_item": true,
+            "object": "details.inventory",
+            "fields": {
+              "storage_location_id": "optional"
+            }
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

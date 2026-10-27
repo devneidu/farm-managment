@@ -1,0 +1,99 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  90 eggs + 12 spent layers = 87,000.00. Stock-out and population exit happen NOW; no invoice and no income.
+
+  **WHAT IT DOES**
+  Records what LEFT the farm, to whom and for how much. A sale is the commercial event only: it is NOT an invoice and NOT a payment, so it books no income.
+
+  **WHEN TO USE IT**
+  "Record sale" (produce and/or animals).
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `sale.create` (taken from the current farm context; never sent by the client).
+  - Sale + lines; one `stock_out` per stock line; one population exit (operational record `livestock_sale`, `population_delta = -12`) per livestock line. NO invoice, NO income.
+  - `stock` lines sell PRODUCE items: one stock-out (`reason: sale`) per line, quantities in the components format, never below zero (`409 insufficient_stock`, `details.available/requested`). `livestock` lines remove `head_count` animals from a livestock cycle through the population ledger (`409 insufficient_population`; cycle must be open). `other` lines (description required) have no physical effect.
+  - Customer: `contact_id` must be an active contact with the `customer` role, or send `customer_name` for a walk-in (not both).
+  - `finance_category_id` (an income category) is optional; otherwise derived (livestock-only -> `livestock_sales`, produce-only -> `crop_sales`, else `other_income`) and used when payments are booked.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Show a sale with its lines**.
+
+  **OUTPUT-NAMED STOCK LINES (GAP-08)**
+  A stock line names its stock with EXACTLY ONE of `inventory_item_id` (a specific item, always supported) or `output` (`eggs` | `milk`, the farm's automatic output item; no item id needed). A SALE takes the existing output item only: a farm that never stocked it gets `409 insufficient_stock` and nothing is created. `storage_location_id` is optional with `output` (the only active store is used; several active stores need a choice, `422 items.N.storage_location_id`). Both or neither -> `422`; `output` on a non-stock line -> `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Refetch the cycle (`current_population`) and inventory stock after saving. Show `payment_status` from the sale: `uninvoiced`, `unpaid`, `partially_paid`, `paid`.
+
+  Full reference (errors, all fields): folder **17 — Sales, Invoices & Payments** -> "Record a sale (stock + livestock lines)".
+url: "{{base_url}}/sales"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "contact_id": "{{customer_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{sale_key}}",
+      "notes": "Weekly delivery to the restaurant",
+      "items": [
+        {
+          "kind": "stock",
+          "inventory_item_id": "{{item_eggs_id}}",
+          "storage_location_id": "{{store_id}}",
+          "components": [
+            {
+              "quantity": "90",
+              "unit": "piece"
+            }
+          ],
+          "amount": "27000.00"
+        },
+        {
+          "kind": "livestock",
+          "production_cycle_id": "{{cycle_id}}",
+          "head_count": 12,
+          "description": "Spent layers",
+          "amount": "60000.00"
+        }
+      ]
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("sale_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("sale_id", String(v)); else console.warn("Could not capture sale_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/2. Record a sale (stock + livestock lines).resources/examples
+order: 2000

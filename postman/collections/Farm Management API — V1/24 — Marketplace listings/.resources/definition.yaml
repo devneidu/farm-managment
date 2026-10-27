@@ -1,0 +1,3 @@
+$kind: collection
+description: "**Phase 23.** Seller product listings, pricing, units, images and the anonymous feed. Sign-in + verified email only (NO farm), always inside a shop the caller belongs to (shop folder 23). A listing is public only while `published` AND its shop is `active`; publishing is immediate for an active shop (no per-listing approval) and never touches inventory. Money and quantities are decimal strings (NGN). Contract: `docs/api/PHASE-23-MARKETPLACE-LISTINGS.md`. The executable path is **99 -> Flow 15**."
+order: 26000

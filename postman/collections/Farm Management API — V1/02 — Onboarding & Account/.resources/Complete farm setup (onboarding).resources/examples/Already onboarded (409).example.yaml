@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/onboarding/farm"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Okafor Integrated Farms"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Farm setup has already been completed.",
+        "code": "already_onboarded",
+        "request_id": "01a1045e-3d82-7232-b136-5c885b5a7794"
+      }
+order: 2000

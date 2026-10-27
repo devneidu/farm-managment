@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Suppliers/customers (one contact can have both roles) and purchases. A stocked purchase is the ONE path that writes stock AND money together, atomically.
+
+  Typical screens: suppliers/customers list, record purchase, purchase history.
+order: 17000

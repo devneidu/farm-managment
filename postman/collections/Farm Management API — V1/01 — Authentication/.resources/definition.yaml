@@ -1,0 +1,10 @@
+$kind: collection
+description: |-
+  Sanctum **first-party SPA cookie authentication**: the browser holds an HttpOnly session cookie, there are NO bearer tokens. Every state-changing request needs the `X-XSRF-TOKEN` header (CSRF is automatic in this collection: the pre-request script copies the `XSRF-TOKEN` cookie into `{{xsrf_token}}` and every write request sends it as `X-XSRF-TOKEN`) and an `Origin` header from a stateful frontend domain.
+
+  Every auth endpoint (register, login, Google, verify, onboarding, `GET /auth/me`) returns the same **auth state**; route the UI on `data.next_action`: `verify_email` -> `complete_farm_setup` -> `no_active_farm` -> `none`.
+
+  OTP/invitation emails are written to `storage/logs/laravel.log` when `MAIL_MAILER=log` (the local default): copy the 6-digit code into the `otp_code` / `reset_otp_code` environment variables.
+
+  Typical screens: login, register, OTP verification, forgot/reset password, "continue with Google".
+order: 3000

@@ -1,0 +1,51 @@
+$kind: http-example
+name: 201 Created — Account created. Enter the verification code sent to your email.
+request:
+  url: "{{base_url}}/auth/register"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "password": "{{password}}",
+        "password_confirmation": "{{password}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": false,
+          "onboarded": false,
+          "has_active_farm": false,
+          "next_action": "verify_email",
+          "user": {
+            "id": "01a11127-4ee7-7266-8fce-3b5b640eeb36",
+            "email": "chidi.worker@example.com",
+            "name": null,
+            "email_verified_at": null,
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": null,
+          "farms": [],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {},
+        "message": "Account created. Enter the verification code sent to your email."
+      }
+order: 1000

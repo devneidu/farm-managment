@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/tasks/{{task_id}}/record-prefill"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "task_id": "01a11126-e8c7-7222-8a76-73ef5e637c18",
+          "evidence_type": "operational_record",
+          "method": "POST",
+          "endpoint": "/api/v1/records",
+          "url": "/api/v1/records",
+          "path": "/records",
+          "prefill": {
+            "production_cycle_id": "01a11126-bf17-711c-9112-ac40664ccf6b",
+            "type": "weight",
+            "recorded_at": "2026-10-06T12:19:06.950788Z",
+            "date": "2026-10-06"
+          },
+          "instructions": "Nothing has been saved. Submit the actual record to the endpoint, then complete this task with {evidence: {type, id}} using the saved record."
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

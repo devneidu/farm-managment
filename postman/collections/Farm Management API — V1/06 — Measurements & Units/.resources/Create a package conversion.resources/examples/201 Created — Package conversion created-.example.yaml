@@ -1,0 +1,61 @@
+$kind: http-example
+name: 201 Created — Package conversion created.
+request:
+  url: "{{base_url}}/settings/package-conversions"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "context_type": "custom",
+        "context_id": "{{context_id}}",
+        "package_unit": "crate",
+        "target_unit": "piece",
+        "quantity_per_package": "30"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-48c4-73f1-b658-4f566ab82388",
+          "context": {
+            "type": "custom",
+            "id": "01a1045e-4812-722e-a358-827f49841712",
+            "label": "Table eggs"
+          },
+          "package_unit": {
+            "code": "crate",
+            "name": "Crate",
+            "symbol": "crate"
+          },
+          "target_unit": {
+            "code": "piece",
+            "name": "Piece",
+            "symbol": "pc",
+            "dimension": "count"
+          },
+          "quantity_per_package": "30",
+          "version": 1,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Package conversion created."
+      }
+order: 1000

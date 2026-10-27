@@ -1,0 +1,48 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/locales"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "default": "en",
+          "fallback": "en",
+          "locales": [
+            {
+              "code": "en",
+              "name": "English",
+              "native_name": "English",
+              "direction": "ltr",
+              "available": true,
+              "status": "launched",
+              "is_default": true
+            },
+            {
+              "code": "ha",
+              "name": "Hausa",
+              "native_name": "Hausa",
+              "direction": "ltr",
+              "available": false,
+              "status": "pending_terminology_review",
+              "is_default": false
+            }
+          ],
+          "number_input": {
+            "decimal_separator": ".",
+            "thousands_separator": null,
+            "input_mode": "decimal"
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

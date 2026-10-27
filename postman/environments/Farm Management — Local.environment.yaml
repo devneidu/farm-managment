@@ -1,0 +1,328 @@
+name: Farm Management — Local
+values:
+  - key: report_id
+    value: ''
+  - key: report_type
+    value: content
+  - key: base_url
+    value: 'http://localhost:8000/api/v1'
+  - key: frontend_origin
+    value: 'http://localhost:3000'
+  - key: email
+    value: ada.okafor@example.com
+  - key: password
+    value: Example-Passw0rd
+  - key: new_password
+    value: Example-NewPassw0rd
+  - key: invitee_email
+    value: chidi.worker@example.com
+  - key: admin_email
+    value: platform.admin@example.com
+  - key: admin_password
+    value: ''
+  - key: otp_code
+    value: ''
+  - key: reset_otp_code
+    value: ''
+  - key: invitation_token
+    value: ''
+  - key: reset_token
+    value: ''
+  - key: xsrf_token
+    value: ''
+  - key: area_id
+    value: ''
+  - key: attachment_id
+    value: ''
+  - key: breed_id
+    value: ''
+  - key: breed_cattle_id
+    value: ''
+  - key: breed_chicken_system_id
+    value: ''
+  - key: breed_fish_id
+    value: ''
+  - key: breeding_project_b_id
+    value: ''
+  - key: breeding_project_c_id
+    value: ''
+  - key: breeding_project_id
+    value: ''
+  - key: capability_code
+    value: ''
+  - key: cat_labour_id
+    value: ''
+  - key: cat_other_income_id
+    value: ''
+  - key: cat_utilities_id
+    value: ''
+  - key: context_id
+    value: ''
+  - key: conversion_feed_id
+    value: ''
+  - key: conversion_id
+    value: ''
+  - key: crop_cycle_id
+    value: ''
+  - key: crop_yam_id
+    value: ''
+  - key: customer_id
+    value: ''
+  - key: cycle_id
+    value: ''
+  - key: cycle_cattle_id
+    value: ''
+  - key: cycle_fish_id
+    value: ''
+  - key: cycle_pilot_id
+    value: ''
+  - key: cycle_reference
+    value: ''
+  - key: expense_id
+    value: ''
+  - key: farm_id
+    value: ''
+  - key: formula_id
+    value: ''
+  - key: health_med2_id
+    value: ''
+  - key: health_record_id
+    value: ''
+  - key: invitation_b_id
+    value: ''
+  - key: invitation_id
+    value: ''
+  - key: invoice_b_id
+    value: ''
+  - key: invoice_c_id
+    value: ''
+  - key: invoice_id
+    value: ''
+  - key: invoice_reference
+    value: ''
+  - key: item_eggs_id
+    value: ''
+  - key: item_feed_id
+    value: ''
+  - key: item_fert_id
+    value: ''
+  - key: item_med_id
+    value: ''
+  - key: item_seed_id
+    value: ''
+  - key: item_yam_id
+    value: ''
+  - key: location_id
+    value: ''
+  - key: lot_med_id
+    value: ''
+  - key: master_breed_id
+    value: ''
+  - key: membership_chidi_id
+    value: ''
+  - key: membership_owner_id
+    value: ''
+  - key: movement_adjust_id
+    value: ''
+  - key: movement_feed_in_id
+    value: ''
+  - key: movement_med_in_id
+    value: ''
+  - key: movement_out_id
+    value: ''
+  - key: notification_id
+    value: ''
+  - key: op_crops_id
+    value: ''
+  - key: op_poultry_id
+    value: ''
+  - key: op_cattle_id
+    value: ''
+  - key: op_fishery_id
+    value: ''
+  - key: outcome_b_id
+    value: ''
+  - key: outcome_id
+    value: ''
+  - key: payment_b_id
+    value: ''
+  - key: payment_id
+    value: ''
+  - key: plan_business_id
+    value: ''
+  - key: plan_free_id
+    value: ''
+  - key: plan_new_id
+    value: ''
+  - key: plan_pro_id
+    value: ''
+  - key: platform_template_id
+    value: ''
+  - key: purchase_b_id
+    value: ''
+  - key: purchase_c_id
+    value: ''
+  - key: purchase_id
+    value: ''
+  - key: record_adjust_id
+    value: ''
+  - key: record_eggs_id
+    value: ''
+  - key: record_evidence_id
+    value: ''
+  - key: record_feed_id
+    value: ''
+  - key: record_harvest_id
+    value: ''
+  - key: record_mortality_id
+    value: ''
+  - key: record_planting_id
+    value: ''
+  - key: record_water_id
+    value: ''
+  - key: report_code
+    value: ''
+  - key: report_export_id
+    value: ''
+  - key: sale_b_id
+    value: ''
+  - key: sale_c_id
+    value: ''
+  - key: sale_id
+    value: ''
+  - key: schedule_id
+    value: ''
+  - key: species_chicken_id
+    value: ''
+  - key: species_cattle_id
+    value: ''
+  - key: species_fish_id
+    value: ''
+  - key: store2_id
+    value: ''
+  - key: store_id
+    value: ''
+  - key: supplier_id
+    value: ''
+  - key: task_b_id
+    value: ''
+  - key: task_id
+    value: ''
+  - key: template_farm_id
+    value: ''
+  - key: template_platform_id
+    value: ''
+  - key: transaction_id
+    value: ''
+  - key: user_chidi_id
+    value: ''
+  - key: user_id
+    value: ''
+  - key: variety_id
+    value: ''
+  - key: egg_item_id
+    value: ''
+  - key: milk_item_id
+    value: ''
+  - key: movement_egg_in_id
+    value: ''
+  - key: movement_egg_out_id
+    value: ''
+  - key: breeding_project_egg_id
+    value: ''
+  - key: sale_feed_id
+    value: ''
+  - key: record_milk_id
+    value: ''
+  - key: record_eggs_movement_id
+    value: ''
+  - key: dairy_cycle_id
+    value: ''
+  - key: purchase_egg_id
+    value: ''
+  - key: sale_egg_id
+    value: ''
+  - key: sale_milk_id
+    value: ''
+  - key: shop_id
+    value: ''
+  - key: shop_slug
+    value: ''
+  - key: shop_member_id
+    value: ''
+  - key: seller_email
+    value: seller.listings@example.com
+  - key: listing_id
+    value: ''
+  - key: listing_slug
+    value: ''
+  - key: listing_version
+    value: ''
+  - key: listing_b_id
+    value: ''
+  - key: listing_b_slug
+    value: ''
+  - key: listing_image_id
+    value: ''
+  - key: catalog_image_id
+    value: ''
+  - key: offer_id
+    value: ''
+  - key: intent_id
+    value: ''
+  - key: neg_seller_email
+    value: negotiation.seller@example.com
+  - key: buyer_email
+    value: negotiation.buyer@example.com
+  - key: staff_email
+    value: negotiation.staff@example.com
+  - key: manager_email
+    value: negotiation.manager@example.com
+  - key: deal_seller_email
+    value: deals.seller@example.com
+  - key: deal_buyer_email
+    value: deals.buyer@example.com
+  - key: deal_buyer2_email
+    value: deals.buyer2@example.com
+  - key: deal_staff_email
+    value: deals.staff@example.com
+  - key: deal_manager_email
+    value: deals.manager@example.com
+  - key: deal_id
+    value: ''
+  - key: deal_b_id
+    value: ''
+  - key: confirmation_id
+    value: ''
+  - key: deal_offer_id
+    value: ''
+  - key: deal_intent_id
+    value: ''
+  - key: seller_plan_id
+    value: ''
+  - key: promotion_package_id
+    value: ''
+  - key: payment_reference
+    value: ''
+  - key: admin_plan_id
+    value: ''
+  - key: admin_package_id
+    value: ''
+  - key: promotion_id
+    value: ''
+  - key: paystack_signature
+    value: ''
+  - key: report_a_id
+    value: ''
+  - key: report_b_id
+    value: ''
+  - key: report_c_id
+    value: ''
+  - key: report_d_id
+    value: ''
+  - key: custom_breed_name
+    value: ''
+  - key: batch_purpose_code
+    value: ''
+  - key: batch_growth_stage_code
+    value: ''

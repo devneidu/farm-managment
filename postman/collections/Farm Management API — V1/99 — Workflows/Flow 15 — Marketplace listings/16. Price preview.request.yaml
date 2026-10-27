@@ -1,0 +1,34 @@
+$kind: http-request
+description: "A non-binding estimate: `unit_price x quantity` with exact decimals rounded to kobo (`total`, `total_minor`). `422 quantity` when it breaks the unit's decimal rules, the minimum order or the declared available quantity."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/price-preview"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "7"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("Exact total", function () { pm.expect(json.data.binding).to.eql(false); pm.expect(json.data.total).to.match(/^\d+\.\d{2}$/); });
+      }
+    language: text/javascript
+examples: ./.resources/16. Price preview.resources/examples
+order: 16000

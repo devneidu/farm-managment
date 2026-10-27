@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Set a withdrawal profile, record a vaccination that consumes medicine stock, verify the stock effect and inspect the withdrawal windows.
+
+  **Prerequisites:** Flow S (`item_med_id`, `lot_med_id`, `store_id`) and Flow 3 (`cycle_id`).
+
+  Steps: 13. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 7000

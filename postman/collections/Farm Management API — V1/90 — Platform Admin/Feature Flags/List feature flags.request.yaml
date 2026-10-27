@@ -1,0 +1,62 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  All feature flags with `enabled` state. Flags are switched, never deleted.
+
+  **WHEN TO USE IT**
+  Feature flags list.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/feature-flags`
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of items (empty in the saved example).
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+url: "{{base_url}}/platform-admin/feature-flags"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List feature flags.resources/examples
+order: 1000

@@ -1,0 +1,66 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/contacts?role=supplier"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: role
+      value: supplier
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 100 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: 1 includes inactive contacts. — boolean
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-8d01-706b-a44d-b60c4bc28406",
+            "name": "Mama Nkechi Feeds",
+            "kind": "business",
+            "roles": [
+              "supplier"
+            ],
+            "phone": "08031234567",
+            "email": "orders@mamankechifeeds.example.com",
+            "address": "14 Market Road, Ibadan",
+            "notes": null,
+            "is_active": true,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z",
+            "updated_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

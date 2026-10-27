@@ -1,0 +1,123 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  A recurrence rule that GENERATES tasks: `daily` (every `interval_value` days), `weekly` (every `interval_value` weeks on `weekdays`, 1=Mon ... 7=Sun) or `none` (one task). Tasks are generated for today through the next 30 days and topped up daily by the scheduler.
+
+  **WHEN TO USE IT**
+  "Repeat" / recurring task setup.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `starts_on`, `idempotency_key`, `title`, `category`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.manage` (taken from the current farm context; never sent by the client).
+  - Creates the schedule and its first tasks.
+  - `due_date` and `due_time` are farm-local (default `Africa/Lagos`); a task without a time is due by the end of its day. `due_state` is derived, never stored: `upcoming`, `due_today`, `overdue`, `completed`, `cancelled`.
+  - Writes are rate limited (240/hour/user).
+  - Optional `ends_on` and/or `occurrence_limit`. Dates in the past are never generated. Nothing is generated while the cycle is closed or the project inactive.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`task.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `work-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/schedules`
+
+  **REQUEST BODY** (`application/json`)
+  - `recurrence` — enum, optional. none = a single task; daily = every N days; weekly = every N weeks on the chosen ISO weekdays. . Values: `none`, `daily`, `weekly`
+  - `starts_on` — string (date), **required**
+  - `ends_on` — string (date), optional, nullable
+  - `production_cycle_id` — string (uuid), optional, nullable
+  - `breeding_project_id` — string (uuid), optional, nullable
+  - `assigned_user_id` — string (uuid), optional, nullable
+  - `idempotency_key` — string, **required**, max 80 chars, min 8 chars
+  - `title` — string, **required**, max 200 chars
+  - `category` — enum, **required**. Closed task vocabulary served by GET /master/task-categories. . Values: `feeding_watering`, `egg_collection`, `vaccination_medication`, `breeding_reproduction`, `growth_monitoring`, `record_keeping`, `maintenance_repair`, `cleaning_sanitation`, `movement_rotation`, `procurement_orders`, `irrigation`, `crop_care`, `harvest`, `payment`, `other`
+  - `instructions` — string, optional, max 5000 chars, nullable
+  - `due_time` — string, optional, nullable. Farm-local time of day (HH:MM). Without it the task is due by the end of its day.
+  - `reminder_offsets` — array, optional, max 5 items, nullable. Minutes before due to remind (stored for the notification phase; nothing is sent yet).
+  - `linked_record_type` — enum, optional, nullable. The kind of actual record that evidences this task: an operational record type code, health, breeding_check or breeding_outcome.. Values: `feed_use`, `egg_collection`, `milk`, `mortality`, `weight`, `temperature`, `water`, `irrigation`, `weeding`, `fertilizer_application`, `pesticide_application`, `land_preparation`, `planting`, `establishment_check`, `growth_stage`, `crop_loss`, `crop_harvest`, `pest_observation`, `general_note`, `population_adjustment`, `health`, `breeding_check`, `breeding_outcome`, `null`
+  - `requires_evidence` — boolean, optional
+  - `assigned_role` — any, optional
+  - `interval_value` — integer, optional, min 1, max 52. Every N days (daily) or N weeks (weekly).
+  - `weekdays` — array, optional, min 1 items, max 7 items, nullable. Weekly only: ISO weekdays 1 (Monday) to 7 (Sunday). Defaults to the weekday of the start.
+  - `occurrence_limit` — integer, optional, min 1, max 3650, nullable
+
+  **VARIABLES USED**
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - `due_date` and `due_time` are farm-local (default `Africa/Lagos`); a task without a time is due by the end of its day. `due_state` is derived, never stored: `upcoming`, `due_today`, `overdue`, `completed`, `cancelled`.
+  - Writes are rate limited (240/hour/user).
+  - Optional `ends_on` and/or `occurrence_limit`. Dates in the past are never generated. Nothing is generated while the cycle is closed or the project inactive.
+  - `(schedule, date)` is unique, so retries and reruns never duplicate tasks. Monthly/yearly rules are not supported.
+  - Requires `task.manage`.
+
+  **SUCCESS**
+  `201 Created` — message: "Schedule created."
+
+  `data` fields: `id`, `status`, `title`, `category`, `instructions`, `recurrence`, `interval_value`, `weekdays`, `starts_on`, `ends_on`, `occurrence_limit`, `due_time`, `reminder_offsets`, `production_cycle_id`, `breeding_project_id`, `template_application_id`, `assigned_user_id`, `assigned_role`, `linked_record_type`, `requires_evidence`, `tasks_count`, `open_tasks_count`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `cycle_closed`, `project_not_active`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/schedules"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "title": "Clean drinkers",
+      "category": "cleaning_sanitation",
+      "recurrence": "weekly",
+      "weekdays": [
+        1,
+        4
+      ],
+      "starts_on": "{{today}}",
+      "production_cycle_id": "{{cycle_id}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("schedule_id", String(v)); else console.warn("Could not capture schedule_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create a recurring schedule.resources/examples
+order: 16000

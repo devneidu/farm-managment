@@ -1,0 +1,108 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Adds eggs that were NOT produced by this farm's livestock (gift, purchase, received, opening balance, other) to the farm's own Eggs stock. No egg_collection / production record is created.
+
+  **WHEN TO USE IT**
+  "Eggs In" with source Gift / Donation, Purchased, Received or Other. For "Produced on farm" use `POST /records` (`egg_collection`).
+
+  **IMPORTANT INPUTS**
+  - `output: "eggs"` replaces `inventory_item_id`. The same body works with `output: "milk"` and `l`.
+  - `storage_location_id` optional: the only active store, a "Main Store" created on first use, or 422 when several stores exist.
+  - `reason`: `donation`, `purchase`, `received`, `aid`, `opening_balance`, `other`. `production` is refused for eggs/milk (422).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `inventory.manage`.
+  - One `stock_in` movement; the item is created automatically on first use.
+
+  **WHAT TO DO NEXT**
+  Refetch `GET /inventory/output-balances`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`inventory.manage`**.
+
+  **URL**
+  `POST {{base_url}}/inventory/stock-in`
+
+  **REQUEST BODY** (`application/json`)
+  - `output` — `eggs` | `milk` (instead of `inventory_item_id`)
+  - `storage_location_id` — uuid, optional with `output`
+  - `reason` — enum, **required**
+  - `components[]` — **required** (`quantity`, `unit`)
+  - `recorded_at`, `idempotency_key` — **required**
+  - `notes` — optional
+
+  **BUSINESS RULES**
+  - Donation / purchase / received never create a production record.
+  - Idempotent by `idempotency_key`.
+
+  **SUCCESS**
+  `201 Created` — the movement (see `reason_label`, `source`).
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 idempotency_conflict`.
+  - `422 validation_failed` — `reason: production` for eggs/milk, or several stores and none chosen.
+url: "{{base_url}}/inventory/stock-in"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "output": "eggs",
+      "storage_location_id": "{{store_id}}",
+      "reason": "donation",
+      "components": [
+        {
+          "quantity": "20",
+          "unit": "piece"
+        }
+      ],
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "notes": "Gift from a neighbour farm"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_egg_in_id", String(v)); else console.warn("Could not capture movement_egg_in_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Receive donated eggs (stock-in, no item setup).resources/examples
+order: 16000

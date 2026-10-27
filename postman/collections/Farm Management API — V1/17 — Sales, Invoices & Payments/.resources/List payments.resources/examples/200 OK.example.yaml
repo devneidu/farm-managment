@@ -1,0 +1,104 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/payments?invoice_id={{invoice_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: invoice_id
+      value: "{{invoice_id}}"
+    - key: contact_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: method
+      value: ""
+      disabled: true
+      description: "enum: cash | bank_transfer | pos | mobile_money | cheque | other"
+    - key: entry_type
+      value: ""
+      disabled: true
+      description: "enum: payment | reversal"
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-a3fa-7294-a01c-b1730836a80e",
+            "reference": "PAY-2026-00002",
+            "entry_type": "payment",
+            "invoice_id": "01a1045e-9933-71de-b5f4-5b15db2730ef",
+            "invoice_reference": "INV-2026-00001",
+            "amount": "57000.00",
+            "currency": "NGN",
+            "method": "cash",
+            "payment_reference": null,
+            "received_on": "2026-10-04",
+            "recorded_at": "2026-10-04T00:45:08.000000Z",
+            "notes": null,
+            "finance_transaction_id": "01a1045e-a402-71d4-88f9-f8a39f6c6704",
+            "reverses_payment_id": null,
+            "reversed_by_payment_id": null,
+            "is_reversed": false,
+            "reason": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-a2f2-7048-b761-a61c80ba8653",
+            "reference": "PAY-2026-00001",
+            "entry_type": "payment",
+            "invoice_id": "01a1045e-9933-71de-b5f4-5b15db2730ef",
+            "invoice_reference": "INV-2026-00001",
+            "amount": "30000.00",
+            "currency": "NGN",
+            "method": "bank_transfer",
+            "payment_reference": "TRF-88121",
+            "received_on": "2026-10-04",
+            "recorded_at": "2026-10-04T00:45:08.000000Z",
+            "notes": "First instalment",
+            "finance_transaction_id": "01a1045e-a2fb-720d-b125-42600cca5bf3",
+            "reverses_payment_id": null,
+            "reversed_by_payment_id": null,
+            "is_reversed": false,
+            "reason": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 2
+        },
+        "message": null
+      }
+order: 1000

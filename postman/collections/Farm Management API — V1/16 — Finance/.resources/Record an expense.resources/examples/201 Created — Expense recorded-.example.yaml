@@ -1,0 +1,73 @@
+$kind: http-example
+name: 201 Created — Expense recorded.
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_labour_id}}",
+        "amount": "15000.00",
+        "occurred_on": "{{today}}",
+        "description": "Casual labour - house clean-out",
+        "production_cycle_id": "{{cycle_id}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-92a5-73a6-85ae-3d273c3b6afd",
+          "reference": "FIN-2026-00004",
+          "entry_type": "entry",
+          "direction": "expense",
+          "category": {
+            "id": "01a1045d-dda2-707a-9ab7-a7d82476be21",
+            "code": "labour",
+            "name": "Labour"
+          },
+          "amount": "15000.00",
+          "currency": "NGN",
+          "occurred_on": "2026-10-04",
+          "recorded_at": "2026-10-04T00:45:08.000000Z",
+          "contact_id": null,
+          "contact_name": null,
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "description": "Casual labour - house clean-out",
+          "payment_method": null,
+          "quantity": null,
+          "unit_price": null,
+          "source": {
+            "type": null,
+            "id": null,
+            "label": "Entered manually"
+          },
+          "can_reverse_directly": true,
+          "reverses_transaction_id": null,
+          "corrects_transaction_id": null,
+          "reversed_by_transaction_id": null,
+          "is_reversed": false,
+          "reason": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Expense recorded."
+      }
+order: 1000

@@ -1,0 +1,31 @@
+$kind: http-request
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/listings/{{listing_b_slug}}/offers"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "10",
+      "unit_price": "7000"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 409", function () { pm.expect(pm.response.code).to.eql(409); });
+      const json = pm.response.json();
+      pm.test("Error code listing_not_negotiable", function () { pm.expect(json.code).to.eql("listing_not_negotiable"); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street"].forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 33000

@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/me/preferences"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "locale": null,
+          "effective_locale": "en",
+          "default_locale": "en",
+          "fallback_locale": "en",
+          "farm_locale": "en",
+          "available_locales": [
+            "en"
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

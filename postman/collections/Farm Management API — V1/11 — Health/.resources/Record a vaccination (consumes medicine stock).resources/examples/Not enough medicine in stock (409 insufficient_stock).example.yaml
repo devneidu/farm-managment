@@ -1,0 +1,63 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "type": "vaccination",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "problem_type": "routine_prevention",
+          "target_disease": "Gumboro"
+        },
+        "medicines": [
+          {
+            "inventory_item_id": "{{item_med_id}}",
+            "storage_location_id": "{{store_id}}",
+            "lot_id": "{{lot_med_id}}",
+            "components": [
+              {
+                "quantity": "9999",
+                "unit": "ml"
+              }
+            ]
+          }
+        ]
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "There is not enough stock in this location and lot.",
+        "code": "insufficient_stock",
+        "request_id": "01a1045e-72cb-703b-9ca7-2f19d13c3c37",
+        "details": {
+          "available": {
+            "quantity": "250",
+            "unit": "ml"
+          },
+          "requested": {
+            "quantity": "9999",
+            "unit": "ml"
+          }
+        }
+      }
+order: 3000

@@ -1,0 +1,41 @@
+$kind: http-request
+name: "Platform admin: update a promotion package"
+description: |-
+  **WHAT IT DOES**
+  Role `admin`. Future purchases only. Switch off with `is_active:false`; never deleted. Audited.
+
+  **ERRORS**
+  `404`; `422`
+
+  **BOUNDARY**
+  Farmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.
+url: "{{base_url}}/platform-admin/marketplace/promotion-packages/{{admin_package_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "amount": "3500.00"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 16000

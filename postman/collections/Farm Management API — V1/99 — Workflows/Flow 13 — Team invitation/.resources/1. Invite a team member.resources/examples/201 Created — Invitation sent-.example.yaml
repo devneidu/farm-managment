@@ -1,0 +1,49 @@
+$kind: http-example
+name: 201 Created — Invitation sent.
+request:
+  url: "{{base_url}}/farm/invitations"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "role": "farm_worker"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3edf-701e-91cc-16c7476ac5f1",
+          "email": "chidi.worker@example.com",
+          "role": "farm_worker",
+          "role_label": "Farm Worker",
+          "status": "pending",
+          "expires_at": "2026-10-11T00:45:08+00:00",
+          "last_sent_at": "2026-10-04T00:45:08+00:00",
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "invited_by": {
+            "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "name": null,
+            "email": "ada.okafor@example.com"
+          }
+        },
+        "meta": {},
+        "message": "Invitation sent."
+      }
+order: 1000

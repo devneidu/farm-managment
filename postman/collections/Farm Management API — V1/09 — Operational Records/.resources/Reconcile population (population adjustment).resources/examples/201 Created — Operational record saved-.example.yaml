@@ -1,0 +1,111 @@
+$kind: http-example
+name: 201 Created — Operational record saved.
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "population_adjustment",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "expected_population": 495,
+          "actual_population": 493,
+          "reason": "Physical recount after house clean-out"
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-66b9-738b-8379-b5fef5d4d712",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "population_adjustment",
+          "details": {
+            "expected_population": 495,
+            "actual_population": 493,
+            "reason": "Physical recount after house clean-out",
+            "difference": -2
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "493",
+                "unit": "head"
+              }
+            ],
+            "normalized": {
+              "quantity": "493",
+              "unit": "head"
+            },
+            "total": {
+              "quantity": "493",
+              "unit": "head"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "493",
+                  "unit": {
+                    "code": "head",
+                    "dimension": "count",
+                    "family": "head",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "head",
+                "dimension": "count",
+                "family": "head",
+                "strategy": "linear",
+                "factor": "1",
+                "integer_only": true
+              },
+              "normalized": {
+                "quantity": "493",
+                "unit": "head"
+              },
+              "total": {
+                "quantity": "493",
+                "unit": "head"
+              }
+            }
+          },
+          "population_delta": -2,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "attachments": []
+        },
+        "meta": {},
+        "message": "Operational record saved."
+      }
+order: 1000

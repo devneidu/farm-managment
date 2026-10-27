@@ -1,0 +1,74 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/finance/summary?from={{month_start}}&to={{today}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: from
+      value: "{{month_start}}"
+    - key: to
+      value: "{{today}}"
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: "Cycle profitability: only money allocated to this cycle. — string (uuid)"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "currency": "NGN",
+          "from": "2026-10-01",
+          "to": "2026-10-04",
+          "production_cycle_id": null,
+          "totals": {
+            "income": "5000.00",
+            "expense": "28750.45",
+            "net": "-23750.45"
+          },
+          "by_category": [
+            {
+              "finance_category_id": "01a1045d-de2c-7014-825f-7e6f055272dd",
+              "code": "general_supplies",
+              "name": "General supplies",
+              "direction": "expense",
+              "amount": "10250.45"
+            },
+            {
+              "finance_category_id": "01a1045d-dda2-707a-9ab7-a7d82476be21",
+              "code": "labour",
+              "name": "Labour",
+              "direction": "expense",
+              "amount": "15000.00"
+            }
+          ],
+          "by_cycle": [
+            {
+              "production_cycle_id": null,
+              "income": "5000.00",
+              "expense": "3500.00",
+              "net": "1500.00"
+            },
+            {
+              "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+              "income": "0.00",
+              "expense": "25250.45",
+              "net": "-25250.45"
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

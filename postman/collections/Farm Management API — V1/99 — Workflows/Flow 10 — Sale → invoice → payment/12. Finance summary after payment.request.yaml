@@ -1,0 +1,69 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Income includes the payments.
+
+  **WHAT IT DOES**
+  Income now includes the payments received.
+
+  **WHEN TO USE IT**
+  Re-reading the finance summary after payments.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.view` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`finance.view`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/finance/summary`
+
+  Full reference (all fields, errors, rules): folder **16 — Finance** -> "Finance summary after payment".
+
+  Full reference (errors, all fields): folder **16 — Finance** -> "Finance summary after payment".
+url: "{{base_url}}/finance/summary"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: from
+    value: ""
+    disabled: true
+    description: Inclusive farm-local days on occurred_on. — string (date)
+  - key: to
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: production_cycle_id
+    value: ""
+    disabled: true
+    description: "Cycle profitability: only money allocated to this cycle. — string (uuid)"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/12. Finance summary after payment.resources/examples
+order: 12000

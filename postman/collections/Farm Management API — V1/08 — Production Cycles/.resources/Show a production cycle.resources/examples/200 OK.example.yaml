@@ -1,0 +1,201 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/{{cycle_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a12035-2e74-737e-b1f1-a65b9bbb4e2d",
+          "kind": "livestock",
+          "name": "October Broilers",
+          "reference": "BAT-2026-00001",
+          "status": "active",
+          "operation": {
+            "id": "01a12034-bd64-70bc-bff6-a485c3c2f7f2",
+            "code": "poultry",
+            "name": "Poultry",
+            "tracking_model": "population"
+          },
+          "production_area": {
+            "id": "01a12035-2167-7373-9ceb-cdcc07c0f29e",
+            "kind": "production_area",
+            "name": "Pen 1",
+            "type": "pen",
+            "type_label": "Pen",
+            "parent_id": "01a12035-20db-7254-b0e7-51c51a3fd1b6",
+            "path": [
+              {
+                "id": "01a12035-20db-7254-b0e7-51c51a3fd1b6",
+                "kind": "location",
+                "name": "Poultry House 1"
+              },
+              {
+                "id": "01a12035-2167-7373-9ceb-cdcc07c0f29e",
+                "kind": "production_area",
+                "name": "Pen 1"
+              }
+            ],
+            "path_label": "Poultry House 1 / Pen 1",
+            "depth": 1,
+            "is_active": true,
+            "created_at": "2026-10-09T10:28:35+00:00",
+            "updated_at": "2026-10-09T10:28:35+00:00"
+          },
+          "start_date": "2026-09-09",
+          "planting_date": null,
+          "expected_end_date": "2026-11-08",
+          "end_date": null,
+          "notes": "First flock of the season",
+          "baseline_locked": true,
+          "livestock": {
+            "species": {
+              "id": "01a12034-bd70-713e-92ed-10af44b0c296",
+              "code": "chicken",
+              "name": "Chicken"
+            },
+            "breed": {
+              "id": "01a12035-2052-71e5-afa0-2931cac8e0af",
+              "name": "Isa Brown (Ibadan strain)",
+              "is_active": true
+            },
+            "production_purpose": {
+              "code": "meat",
+              "name": "Meat",
+              "is_active": true
+            },
+            "growth_stage": {
+              "code": "chick",
+              "name": "Chick",
+              "is_active": true
+            },
+            "acquisition_price_per_animal": null,
+            "acquisition_currency": null,
+            "supplier_contact": null,
+            "initial_population": 500,
+            "current_population": 493,
+            "population_unit": "head",
+            "population_basis": "population_movements"
+          },
+          "crop": null,
+          "created_at": "2026-10-09T10:28:38.000000Z",
+          "updated_at": "2026-10-09T10:28:38.000000Z",
+          "available_record_types": [
+            {
+              "type": "feed_use",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [
+                  "inventory.use"
+                ],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "egg_collection",
+              "permissions_required": {
+                "always": [
+                  "record.create",
+                  "inventory.use"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "mortality",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "weight",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "temperature",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "water",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "general_note",
+              "permissions_required": {
+                "always": [
+                  "record.create"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            },
+            {
+              "type": "population_adjustment",
+              "permissions_required": {
+                "always": [
+                  "record.adjust"
+                ],
+                "when_inventory_linked": [],
+                "when_correcting": [
+                  "record.reverse"
+                ]
+              }
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

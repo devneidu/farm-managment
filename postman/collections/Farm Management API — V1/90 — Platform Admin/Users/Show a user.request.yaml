@@ -1,0 +1,72 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Support detail of one user: status (`active`|`suspended`), `suspended_at`, verification and onboarding state, `platform_role`, linked providers and their farm memberships. Never returns password hashes, tokens, one-time codes or provider ids.
+
+  **WHEN TO USE IT**
+  Support user detail.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{user_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+  - User ids are UUIDs.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/users/{{user_id}}`
+
+  **PATH PARAMETERS**
+  - `{{user_id}}` — UUID. Captured by "Complete farm setup (onboarding)" (02 — Onboarding & Account) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{user_id}}` — captured by "Complete farm setup (onboarding)"
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+  - User ids are UUIDs.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `name`, `email`, `email_verified`, `onboarded`, `status`, `suspended_at`, `platform_role`, `active_farms_count`, `created_at`, `providers`, `farms`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+url: "{{base_url}}/platform-admin/users/{{user_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Show a user.resources/examples
+order: 4000

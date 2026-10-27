@@ -1,0 +1,54 @@
+$kind: http-example
+name: 201 Created — Place created.
+request:
+  url: "{{base_url}}/storage-locations"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Main Store",
+        "type": "store"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+          "kind": "storage_location",
+          "name": "Main Store",
+          "type": "store",
+          "type_label": "Store",
+          "parent_id": null,
+          "path": [
+            {
+              "id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "kind": "storage_location",
+              "name": "Main Store"
+            }
+          ],
+          "path_label": "Main Store",
+          "depth": 0,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Place created."
+      }
+order: 1000

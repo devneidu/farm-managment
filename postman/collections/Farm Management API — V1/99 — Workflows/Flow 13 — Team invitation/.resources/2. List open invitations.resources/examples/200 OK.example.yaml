@@ -1,0 +1,56 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm/invitations"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-41b1-7019-ad63-a4a7b7517b94",
+            "email": "amaka.finance@example.com",
+            "role": "finance",
+            "role_label": "Finance",
+            "status": "pending",
+            "expires_at": "2026-10-11T00:45:08+00:00",
+            "last_sent_at": "2026-10-04T00:45:08+00:00",
+            "created_at": "2026-10-04T00:45:08+00:00",
+            "invited_by": {
+              "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "name": null,
+              "email": "ada.okafor@example.com"
+            }
+          },
+          {
+            "id": "01a1045e-3edf-701e-91cc-16c7476ac5f1",
+            "email": "chidi.worker@example.com",
+            "role": "farm_worker",
+            "role_label": "Farm Worker",
+            "status": "pending",
+            "expires_at": "2026-10-11T00:45:08+00:00",
+            "last_sent_at": "2026-10-04T00:45:08+00:00",
+            "created_at": "2026-10-04T00:45:08+00:00",
+            "invited_by": {
+              "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "name": null,
+              "email": "ada.okafor@example.com"
+            }
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

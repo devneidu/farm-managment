@@ -1,0 +1,28 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/login"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "password": "{{new_password}}"
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This account is suspended.",
+        "code": "account_suspended",
+        "request_id": "01a1045e-ca9b-7392-b3db-c852831736fe"
+      }
+order: 3000

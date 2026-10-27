@@ -1,0 +1,58 @@
+$kind: http-example
+name: 200 OK — Preferences updated.
+request:
+  url: "{{base_url}}/notification-preferences"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "channels": {
+          "email": false
+        },
+        "types": {
+          "low_stock": true
+        }
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "channels": {
+            "in_app": true,
+            "email": false
+          },
+          "types": [
+            {
+              "code": "mortality_threshold",
+              "label": "High mortality",
+              "description": "Deaths in a livestock cycle crossed the mortality threshold.",
+              "enabled": true
+            },
+            {
+              "code": "low_stock",
+              "label": "Low or empty stock",
+              "description": "An inventory item is at or below its low-stock threshold.",
+              "enabled": true
+            }
+          ]
+        },
+        "meta": {},
+        "message": "Preferences updated."
+      }
+order: 1000

@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The detail contract of ONE record type (`feed_use` shown): `fields` with validation tokens, `measurement` (dimension, display unit, normalized unit, component limit), `population_effect`, `permission`, and the `inventory_*` flags.
+
+  **WHEN TO USE IT**
+  Building the form for one record type.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.view` (taken from the current farm context; never sent by the client).
+  - Unknown type is `404`.
+
+  **PERMISSIONS (GAP-01) AND STOCK INTEGRATION (GAP-04)**
+  `permissions_required` is the authoritative list: `{always: [...], when_inventory_linked: [...], when_correcting: ["record.reverse"]}` (egg/milk always need `inventory.use`; feed/crop stock types need it only when `details.inventory` is sent). The legacy `permission` field is unchanged. `inventory` describes the stock integration (`mode` automatic_output | optional_link, `direction`, `output`, `item_category`, `dimensions`, `fields` = accepted `details.inventory` keys and whether each is required once it is sent); `area_fields` names the area sub-objects (`treated_area`, `affected_area`) that are never the stock quantity. `components` / `context` shapes are documented in `docs/api/FRONTEND-WORKFLOWS.md` §0.4.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`record.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/record-types/feed_use/schema`
+
+  **BUSINESS RULES**
+  - Unknown type is `404`.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `type`, `cycle_kind`, `capability`, `fields`, `measurement`, `population_effect`, `permission`, `inventory_effect_enabled`, `inventory_category`, `inventory_direction`, `inventory_required`, `inventory_dimensions`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `record.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+url: "{{base_url}}/record-types/feed_use/schema"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("every schema states permissions_required and inventory metadata", function () { const rows = Array.isArray(json.data) ? json.data : [json.data]; rows.forEach(function (t) { pm.expect(t.permissions_required.always).to.be.an("array"); pm.expect(t).to.have.property("inventory"); pm.expect(t).to.have.property("area_fields"); }); });
+      }
+    language: text/javascript
+examples: ./.resources/Get one record type schema.resources/examples
+order: 4000

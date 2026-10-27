@@ -1,0 +1,78 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/submit"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a118eb-e021-7194-a3e5-600cd6fd1d47",
+          "reference": "SHP-2026-00001",
+          "slug": "ada-poultry-hub",
+          "name": "Ada Poultry Hub",
+          "tagline": "Fresh eggs daily",
+          "description": "Layers, broilers and fresh crates of eggs delivered across Ibadan.",
+          "seller_type": "business",
+          "categories": [
+            "livestock",
+            "eggs_dairy"
+          ],
+          "location": {
+            "country_code": "NG",
+            "state": "Oyo",
+            "city": "Ibadan",
+            "area": "Bodija"
+          },
+          "farm_backed": false,
+          "contact_methods": [
+            "in_app",
+            "phone",
+            "email"
+          ],
+          "preferred_contact_method": "phone",
+          "status": "pending_review",
+          "status_reason": null,
+          "is_public": false,
+          "submitted_at": "2026-10-08T00:31:14+00:00",
+          "approved_at": null,
+          "verification": {
+            "status": "unverified",
+            "reason": null,
+            "requested_at": null,
+            "verified_at": null
+          },
+          "viewer": {
+            "role": "owner",
+            "permissions": [
+              "shop.view",
+              "shop.update",
+              "shop.manage_contact",
+              "shop.manage_lifecycle",
+              "shop.manage_members",
+              "listing.view",
+              "listing.manage",
+              "listing.publish"
+            ]
+          },
+          "created_at": "2026-10-08T00:31:13+00:00",
+          "updated_at": "2026-10-08T00:31:14+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

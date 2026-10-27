@@ -1,0 +1,53 @@
+$kind: http-example
+name: 200 OK — Place updated.
+request:
+  url: "{{base_url}}/storage-locations/{{store_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Main Feed Store"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+          "kind": "storage_location",
+          "name": "Main Feed Store",
+          "type": "store",
+          "type_label": "Store",
+          "parent_id": null,
+          "path": [
+            {
+              "id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "kind": "storage_location",
+              "name": "Main Feed Store"
+            }
+          ],
+          "path_label": "Main Feed Store",
+          "depth": 0,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Place updated."
+      }
+order: 1000

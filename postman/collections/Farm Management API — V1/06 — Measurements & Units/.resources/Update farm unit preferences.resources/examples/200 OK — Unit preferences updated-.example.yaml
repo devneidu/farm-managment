@@ -1,0 +1,82 @@
+$kind: http-example
+name: 200 OK — Unit preferences updated.
+request:
+  url: "{{base_url}}/settings/units"
+  method: PUT
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "preferences": {
+          "weight": "kg",
+          "volume": "l",
+          "area": "hectare",
+          "temperature": "celsius"
+        }
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "preferences": [
+            {
+              "dimension": {
+                "code": "weight",
+                "name": "Weight"
+              },
+              "unit": {
+                "id": "01a1045c-e599-73b3-bb5d-a7dac600842f",
+                "code": "kg",
+                "name": "Kilogram",
+                "symbol": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "is_canonical": false,
+                "integer_only": false,
+                "decimal_places": 3,
+                "is_active": true,
+                "source": "system"
+              },
+              "is_default": false
+            },
+            {
+              "dimension": {
+                "code": "volume",
+                "name": "Volume"
+              },
+              "unit": {
+                "id": "01a1045c-e5c4-72b0-a5ca-95890daab667",
+                "code": "l",
+                "name": "Litre",
+                "symbol": "L",
+                "dimension": "volume",
+                "family": "volume",
+                "is_canonical": false,
+                "integer_only": false,
+                "decimal_places": 2,
+                "is_active": true,
+                "source": "system"
+              },
+              "is_default": false
+            }
+          ]
+        },
+        "meta": {},
+        "message": "Unit preferences updated."
+      }
+order: 1000

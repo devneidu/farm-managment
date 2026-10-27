@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Incubation and pregnancy projects. Expected dates are biological REFERENCES (exact date or window, never a midpoint), never guarantees. Only a recorded live outcome changes population.
+
+  Typical screens: breeding projects list/detail, candling or pregnancy checks, hatch/birth outcome.
+order: 14000

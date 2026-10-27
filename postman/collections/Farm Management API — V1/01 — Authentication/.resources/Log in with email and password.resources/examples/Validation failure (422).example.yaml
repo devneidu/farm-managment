@@ -1,0 +1,36 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/login"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "not-an-email",
+        "password": ""
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The email field must be a valid email address. (and 1 more error)",
+        "code": "validation_failed",
+        "request_id": "01a1045e-bc3b-7304-81ce-c2b78bfc764b",
+        "errors": {
+          "email": [
+            "The email field must be a valid email address."
+          ],
+          "password": [
+            "The password field is required."
+          ]
+        }
+      }
+order: 3000

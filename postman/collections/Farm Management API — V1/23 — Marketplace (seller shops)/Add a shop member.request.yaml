@@ -1,0 +1,34 @@
+$kind: http-request
+description: Owner only. Adds an existing, verified account as `manager` or `staff`. Unknown / unverified / suspended accounts all answer the same `422` (existence is not revealed). `409 already_member`.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/members"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{invitee_email}}",
+      "role": "manager"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        if (json.data && json.data.id) { pm.environment.set("shop_member_id", json.data && json.data.id); }
+      }
+    language: text/javascript
+order: 13000

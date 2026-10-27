@@ -1,0 +1,20 @@
+$kind: http-request
+name: "74. Buyer 2: the seller's contact (pickup deal: the address is disclosed)"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/deals/{{deal_b_id}}/contact"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Address for pickup", function () { const c = json.data.contact; pm.expect(c.pickup.address_line).to.eql("12 Secret Street, Bodija"); pm.expect(c.pickup.area).to.eql("Bodija market"); pm.expect(c.delivery).to.eql(undefined); pm.expect(c.channels.phone).to.eql("+2348031234567"); });
+    language: text/javascript
+order: 74000

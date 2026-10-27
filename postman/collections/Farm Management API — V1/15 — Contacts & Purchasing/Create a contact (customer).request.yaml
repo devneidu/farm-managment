@@ -1,0 +1,105 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  A customer contact, used on sales and invoices (there is no separate customer system).
+
+  **WHEN TO USE IT**
+  "Add customer".
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`, `roles`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `contact.manage` (taken from the current farm context; never sent by the client).
+  - Same rules as the supplier example: names are unique per farm (`409 contact_exists`), roles are `supplier` and/or `customer`.
+  - A sale requires a CUSTOMER (or a free-text walk-in `customer_name`).
+
+  **WHAT TO DO NEXT**
+  Record a sale for them.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`contact.manage`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/contacts`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 150 chars
+  - `kind` — enum, optional. Values: `person`, `business`
+  - `roles` — array, **required**, min 1 items, max 2 items. One or both of supplier / customer. A contact that is both stays ONE record.. Values: `supplier`, `customer`
+  - `phone` — string, optional, max 40 chars, nullable
+  - `email` — string (email), optional, max 190 chars, nullable
+  - `address` — string, optional, max 500 chars, nullable
+  - `notes` — string, optional, max 5000 chars, nullable
+
+  **BUSINESS RULES**
+  - Same rules as the supplier example: names are unique per farm (`409 contact_exists`), roles are `supplier` and/or `customer`.
+  - A sale requires a CUSTOMER (or a free-text walk-in `customer_name`).
+
+  **SUCCESS**
+  `201 Created` — message: "Contact saved."
+
+  `data` fields: `id`, `name`, `kind`, `roles`, `phone`, `email`, `address`, `notes`, `is_active`, `created_by`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `contact.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — conflict with current state.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/contacts"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Mama Put Restaurant",
+      "kind": "business",
+      "roles": [
+        "customer"
+      ],
+      "phone": "08030000000",
+      "address": "12 Market Road, Ibadan"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("customer_id", String(v)); else console.warn("Could not capture customer_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create a contact (customer).resources/examples
+order: 2000

@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/settings/support_email"
+  method: PUT
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "value": "support@farmapp.example.com"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "key": "support_email",
+          "description": "Address shown to farmers who need help.",
+          "value": "support@farmapp.example.com",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

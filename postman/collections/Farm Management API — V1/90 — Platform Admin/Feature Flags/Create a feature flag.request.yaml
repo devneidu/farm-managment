@@ -1,0 +1,83 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates a flag (disabled by default). `key` is lowercase snake case, unique.
+
+  **WHEN TO USE IT**
+  "New flag".
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Audit entry.
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Platform role **`admin`** only (`support` is read-only: `403 platform_write_forbidden`; no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+  Rate limited by limiter `platform-admin-write`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/platform-admin/feature-flags`
+
+  **REQUEST BODY** (`application/json`)
+  - `key` — string, **required**, max 64 chars, pattern `^[a-z][a-z0-9_]*$`
+  - `description` — string, optional, max 255 chars, nullable
+
+  **BUSINESS RULES**
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+
+  **SUCCESS**
+  `201 Created`
+
+  `data` fields: `key`, `description`, `enabled`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/platform-admin/feature-flags"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "key": "new_dashboard_layout",
+      "description": "Experimental dashboard layout"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Create a feature flag.resources/examples
+order: 2000

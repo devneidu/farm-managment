@@ -1,0 +1,66 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Ends the CURRENT browser session only (other devices stay signed in). Requires the CSRF header.
+
+  **WHEN TO USE IT**
+  The "Sign out" action.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Invalidates the session.
+  - Other devices/sessions of the same user stay signed in. After logout `GET /auth/me` is `401`.
+
+  **WHAT TO DO NEXT**
+  Clear client stores and show the login screen.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in user (a restricted, unverified user is accepted). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Any signed-in user.
+
+  **URL**
+  `POST {{base_url}}/auth/logout`
+
+  **BUSINESS RULES**
+  - Other devices/sessions of the same user stay signed in. After logout `GET /auth/me` is `401`.
+
+  **SUCCESS**
+  `200 OK` — message: "Logged out."
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`.
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/auth/logout"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Log out.resources/examples
+order: 6000

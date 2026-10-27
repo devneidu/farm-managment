@@ -1,0 +1,27 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Every shop the caller belongs to (any shop role), newest first, with `viewer.role` / `viewer.permissions`. Needs only sign-in + verified email: **no farm, no onboarding** (marketplace-only sellers).
+
+  **NOTES**
+  - Frontend: a seller with no farm gets `next_action = "marketplace"` from `GET /auth/me` as soon as they belong to a shop (`complete_farm_setup` before the first shop); load this list to render the seller dashboard.
+url: "{{base_url}}/marketplace/my/shops"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        if (json.data && json.data[0] && json.data[0].id) { pm.environment.set("shop_id", json.data && json.data[0] && json.data[0].id); }
+      }
+    language: text/javascript
+order: 1000

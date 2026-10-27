@@ -1,0 +1,46 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "kind": "livestock",
+        "name": "Wrong Stage {{$timestamp}}",
+        "operation_type_id": "{{op_fishery_id}}",
+        "species_id": "{{species_fish_id}}",
+        "breed_id": "{{breed_fish_id}}",
+        "production_purpose": "table_fish",
+        "growth_stage": "chick",
+        "initial_population": 2000,
+        "start_date": "{{date_30d_ago}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Choose an active code from the selected reference catalogue.",
+        "code": "validation_failed",
+        "request_id": "01a12033-ff7e-7101-91ea-4249041fad60",
+        "errors": {
+          "growth_stage": [
+            "Choose an active code from the selected reference catalogue."
+          ]
+        }
+      }
+order: 1000

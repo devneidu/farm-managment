@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/settings/measurement-contexts"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Egg crates (Flow 14)"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-0be2-7258-9883-fbf3af8f7cbb",
+          "name": "Egg crates (Flow 14)",
+          "is_active": true,
+          "created_at": "2026-10-06T12:18:54+00:00",
+          "updated_at": "2026-10-06T12:18:54+00:00"
+        },
+        "meta": {},
+        "message": "Measurement context created."
+      }
+order: 1000

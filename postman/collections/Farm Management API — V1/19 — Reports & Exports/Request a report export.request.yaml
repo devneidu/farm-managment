@@ -1,0 +1,115 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Queues a CSV, XLSX or PDF export of a report. The work runs on the database queue, so the response is `202` with `status: "queued"`; poll the export (or watch for the `export_ready` / `export_failed` notification) and download when `completed`.
+
+  **WHEN TO USE IT**
+  "Export" button on a report.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `report`, `format`, `idempotency_key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `report.export` (taken from the current farm context; never sent by the client).
+  - Creates an export row and queues a job that writes a private file (retained 7 days).
+  - Omitted dates are defaulted when the request is made and the RESOLVED filters are stored and echoed back, so the file always matches the request.
+  - `idempotency_key` (8-80 chars) is required and unique per user and farm: the same key + same content returns the SAME export (`200`, "Export already requested."); the same key with a different report, format or filters is `409 idempotency_conflict`.
+
+  **WHAT TO DO NEXT**
+  Poll the export status.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Do not poll tightly: back off (e.g. 2s, 5s, 10s) or use the notification.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`report.export`** — granted to: `owner`, `manager`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `report-export`: 20 per hour per user (configurable) (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/reports/exports`
+
+  **REQUEST BODY** (`application/json`)
+  - `report` — string, **required**, max 40 chars. A report code from GET /reports.
+  - `format` — enum, **required**. Values: `csv`, `xlsx`, `pdf`
+  - `filters` — object, optional. The same filters the report accepts. Omitted dates are defaulted when the export is requested, and the resolved filters are stored on the export.
+  - `filters.from` — string (date), optional
+  - `filters.to` — string (date), optional
+  - `filters.as_of` — string (date), optional
+  - `filters.production_cycle_id` — string (uuid), optional
+  - `filters.kind` — enum, optional. Values: `livestock`, `crop`
+  - `filters.status` — enum, optional. Values: `active`, `closed`, `completed`, `cancelled`
+  - `idempotency_key` — string, **required**, max 80 chars, min 8 chars. Required. Retrying the same request returns the same export; reusing the key with different content is a 409.
+
+  **BUSINESS RULES**
+  - Requires `report.export` + the report's data permissions + the plan feature `data_export` (`403 feature_not_available` otherwise).
+  - Omitted dates are defaulted when the request is made and the RESOLVED filters are stored and echoed back, so the file always matches the request.
+  - `idempotency_key` (8-80 chars) is required and unique per user and farm: the same key + same content returns the SAME export (`200`, "Export already requested."); the same key with a different report, format or filters is `409 idempotency_conflict`.
+  - Rate limited (20 per hour by default).
+  - Formats: `csv` (UTF-8 with BOM; spreadsheet-executable prefixes are neutralised), `xlsx`, `pdf` (landscape A4).
+
+  **SUCCESS**
+  `202 Accepted` — message: "Export queued."
+
+  `data` fields: `id`, `report`, `format`, `filters`, `status`, `row_count`, `file_name`, `file_size`, `download_path`, `error_code`, `error_message`, `requested_at`, `started_at`, `completed_at`, `failed_at`, `expires_at`, `download_count`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `report.export`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — conflict with current state.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/reports/exports"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "report": "income_expense",
+      "format": "csv",
+      "filters": {
+        "from": "{{month_start}}",
+        "to": "{{today}}"
+      },
+      "idempotency_key": "{{export_key}}"
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("export_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200 or 202", function () { pm.expect(pm.response.code).to.be.oneOf([200, 202]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("report_export_id", String(v)); else console.warn("Could not capture report_export_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Request a report export.resources/examples
+order: 8000

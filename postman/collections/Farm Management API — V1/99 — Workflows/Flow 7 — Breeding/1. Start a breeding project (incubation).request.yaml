@@ -1,0 +1,82 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow 3 (`cycle_id`).
+
+  The expectation is derived from the chicken reference (21 days). Captures `breeding_project_id`.
+
+  **WHAT IT DOES**
+  Starts an incubation (eggs) or pregnancy (females bred) attempt. The response carries a readable `reference` (`BRD-2026-00001`), the frozen `biological_reference`, and an `expectation` that is an exact date OR a window - never a midpoint.
+
+  **WHEN TO USE IT**
+  "Start breeding project" (incubation or pregnancy) on a livestock batch.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `breeding.create` (taken from the current farm context; never sent by the client).
+  - Creates the project. No population, record or task is created (the API only recommends templates).
+  - A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.
+  - The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.
+  - Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Show a breeding project**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  Full reference (errors, all fields): folder **12 — Breeding** -> "Start a breeding project (incubation)".
+url: "{{base_url}}/breeding-projects"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "workflow": "incubation",
+      "start_date": "{{date_10d_ago}}",
+      "eggs_set": 50,
+      "expected_offspring": 40,
+      "parents": [
+        {
+          "role": "dam",
+          "production_cycle_id": "{{cycle_id}}",
+          "head_count": 20
+        }
+      ],
+      "notes": "Set in the hatchery",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("breeding_project_id", String(v)); else console.warn("Could not capture breeding_project_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/1. Start a breeding project (incubation).resources/examples
+order: 1000

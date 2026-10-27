@@ -1,0 +1,1275 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/inventory-options"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "categories": [
+            {
+              "code": "feed",
+              "label": "Feed"
+            },
+            {
+              "code": "medicine",
+              "label": "Medicine"
+            },
+            {
+              "code": "seed_planting_material",
+              "label": "Seed / planting material"
+            },
+            {
+              "code": "fertilizer_agrochemical",
+              "label": "Fertilizer / agrochemical"
+            },
+            {
+              "code": "general_supply",
+              "label": "General supply"
+            },
+            {
+              "code": "produce",
+              "label": "Produce"
+            }
+          ],
+          "sellable_categories": [
+            "produce",
+            "feed"
+          ],
+          "reasons": {
+            "in": [
+              {
+                "code": "opening_balance",
+                "label": "Opening balance",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "purchase",
+                "label": "Purchased",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "donation",
+                "label": "Gift / Donation",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "aid",
+                "label": "Aid / Support",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "received",
+                "label": "Received",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "production",
+                "label": "Produced on farm",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "returned",
+                "label": "Returned to stock",
+                "manual": false,
+                "manual_for_kinds": [],
+                "legacy": false,
+                "route": {
+                  "kind": "breeding_project",
+                  "method": "POST",
+                  "path": "/breeding-projects",
+                  "workflow": "incubation",
+                  "field": "consume_egg_stock",
+                  "note": "Starting an incubation project with consume_egg_stock takes the eggs from stock.",
+                  "url": "/api/v1/breeding-projects"
+                }
+              },
+              {
+                "code": "other",
+                "label": "Other",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              }
+            ],
+            "out": [
+              {
+                "code": "use",
+                "label": "Other use",
+                "manual": true,
+                "manual_for_kinds": [
+                  "general"
+                ],
+                "legacy": true,
+                "route": null
+              },
+              {
+                "code": "damaged",
+                "label": "Damaged / Broken",
+                "manual": true,
+                "manual_for_kinds": [
+                  "eggs",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "expired",
+                "label": "Expired",
+                "manual": true,
+                "manual_for_kinds": [
+                  "general"
+                ],
+                "legacy": true,
+                "route": null
+              },
+              {
+                "code": "wasted",
+                "label": "Wasted",
+                "manual": true,
+                "manual_for_kinds": [],
+                "legacy": true,
+                "route": null
+              },
+              {
+                "code": "other",
+                "label": "Other",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "sale",
+                "label": "Sold",
+                "manual": false,
+                "manual_for_kinds": [],
+                "legacy": false,
+                "route": {
+                  "kind": "sale",
+                  "method": "POST",
+                  "path": "/sales",
+                  "note": "Add a stock line; the sale is the only writer of a sale stock-out.",
+                  "url": "/api/v1/sales"
+                }
+              },
+              {
+                "code": "production_use",
+                "label": "Used for livestock",
+                "manual": false,
+                "manual_for_kinds": [],
+                "legacy": false,
+                "route": {
+                  "kind": "record",
+                  "method": "POST",
+                  "path": "/records",
+                  "record_type": "feed_use",
+                  "note": "Choose the cycle and details.inventory; one request writes the feed_use record and the stock-out.",
+                  "url": "/api/v1/records"
+                }
+              },
+              {
+                "code": "incubation",
+                "label": "Put into incubation",
+                "manual": false,
+                "manual_for_kinds": [],
+                "legacy": false,
+                "route": {
+                  "kind": "breeding_project",
+                  "method": "POST",
+                  "path": "/breeding-projects",
+                  "workflow": "incubation",
+                  "field": "consume_egg_stock",
+                  "note": "Starting an incubation project with consume_egg_stock takes the eggs from stock.",
+                  "url": "/api/v1/breeding-projects"
+                }
+              },
+              {
+                "code": "donation",
+                "label": "Gift / Donation",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "internal_use",
+                "label": "Personal / Internal use",
+                "manual": true,
+                "manual_for_kinds": [
+                  "eggs",
+                  "milk"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "spoiled",
+                "label": "Spoiled",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "lost",
+                "label": "Lost / Stolen",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "eggs",
+                  "milk",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              },
+              {
+                "code": "disposal",
+                "label": "Disposal / Compost",
+                "manual": true,
+                "manual_for_kinds": [
+                  "feed",
+                  "general"
+                ],
+                "legacy": false,
+                "route": null
+              }
+            ],
+            "flat_lists": {
+              "deprecated": true,
+              "authoritative": "by_item_kind"
+            },
+            "by_item_kind": {
+              "feed": {
+                "in": [
+                  {
+                    "code": "purchase",
+                    "label": "Purchased",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    },
+                    "also": [
+                      {
+                        "kind": "purchase",
+                        "method": "POST",
+                        "path": "/purchases",
+                        "note": "Books the expense together with the stock.",
+                        "url": "/api/v1/purchases"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Donation / Sharing",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "production",
+                    "label": "Produced on farm",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "aid",
+                    "label": "Aid / Support",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "received",
+                    "label": "Received",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "opening_balance",
+                    "label": "Opening balance",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "transfer_in",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ],
+                "out": [
+                  {
+                    "code": "production_use",
+                    "label": "Used for livestock",
+                    "manual": false,
+                    "creates_operational_record": true,
+                    "route": {
+                      "kind": "record",
+                      "method": "POST",
+                      "path": "/records",
+                      "record_type": "feed_use",
+                      "note": "Choose the cycle and details.inventory; one request writes the feed_use record and the stock-out.",
+                      "url": "/api/v1/records"
+                    }
+                  },
+                  {
+                    "code": "sale",
+                    "label": "Sold",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "sale",
+                      "method": "POST",
+                      "path": "/sales",
+                      "note": "Add a stock line; the sale is the only writer of a sale stock-out.",
+                      "url": "/api/v1/sales"
+                    }
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "spoiled",
+                    "label": "Spoiled / Contaminated",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "lost",
+                    "label": "Lost / Stolen",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "disposal",
+                    "label": "Disposal / Compost",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "transfer_out",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ]
+              },
+              "eggs": {
+                "in": [
+                  {
+                    "code": "production",
+                    "label": "Produced on farm",
+                    "manual": false,
+                    "creates_operational_record": true,
+                    "route": {
+                      "kind": "record",
+                      "method": "POST",
+                      "path": "/records",
+                      "record_type": "egg_collection",
+                      "url": "/api/v1/records"
+                    }
+                  },
+                  {
+                    "code": "purchase",
+                    "label": "Purchased",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    },
+                    "also": [
+                      {
+                        "kind": "purchase",
+                        "method": "POST",
+                        "path": "/purchases",
+                        "note": "Books the expense together with the stock.",
+                        "url": "/api/v1/purchases"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "received",
+                    "label": "Received",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "opening_balance",
+                    "label": "Opening balance",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "transfer_in",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ],
+                "out": [
+                  {
+                    "code": "sale",
+                    "label": "Sold",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "sale",
+                      "method": "POST",
+                      "path": "/sales",
+                      "note": "Add a stock line; the sale is the only writer of a sale stock-out.",
+                      "url": "/api/v1/sales"
+                    }
+                  },
+                  {
+                    "code": "incubation",
+                    "label": "Put into incubation",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "breeding_project",
+                      "method": "POST",
+                      "path": "/breeding-projects",
+                      "workflow": "incubation",
+                      "field": "consume_egg_stock",
+                      "note": "Starting an incubation project with consume_egg_stock takes the eggs from stock.",
+                      "url": "/api/v1/breeding-projects"
+                    }
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "internal_use",
+                    "label": "Personal / Internal use",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "damaged",
+                    "label": "Damaged / Broken",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "spoiled",
+                    "label": "Spoiled",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "lost",
+                    "label": "Lost / Stolen",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "transfer_out",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ]
+              },
+              "milk": {
+                "in": [
+                  {
+                    "code": "production",
+                    "label": "Produced on farm",
+                    "manual": false,
+                    "creates_operational_record": true,
+                    "route": {
+                      "kind": "record",
+                      "method": "POST",
+                      "path": "/records",
+                      "record_type": "milk",
+                      "url": "/api/v1/records"
+                    }
+                  },
+                  {
+                    "code": "purchase",
+                    "label": "Purchased",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    },
+                    "also": [
+                      {
+                        "kind": "purchase",
+                        "method": "POST",
+                        "path": "/purchases",
+                        "note": "Books the expense together with the stock.",
+                        "url": "/api/v1/purchases"
+                      }
+                    ]
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "received",
+                    "label": "Received",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "opening_balance",
+                    "label": "Opening balance",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "transfer_in",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ],
+                "out": [
+                  {
+                    "code": "sale",
+                    "label": "Sold",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "sale",
+                      "method": "POST",
+                      "path": "/sales",
+                      "note": "Add a stock line; the sale is the only writer of a sale stock-out.",
+                      "url": "/api/v1/sales"
+                    }
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "internal_use",
+                    "label": "Personal / Internal use",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "spoiled",
+                    "label": "Spoiled / Contaminated",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "lost",
+                    "label": "Lost",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "transfer_out",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ]
+              },
+              "general": {
+                "in": [
+                  {
+                    "code": "purchase",
+                    "label": "Purchased",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "aid",
+                    "label": "Aid / Support",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "received",
+                    "label": "Received",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "opening_balance",
+                    "label": "Opening balance",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-in",
+                      "url": "/api/v1/inventory/stock-in"
+                    }
+                  },
+                  {
+                    "code": "transfer_in",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ],
+                "out": [
+                  {
+                    "code": "use",
+                    "label": "Used",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "sale",
+                    "label": "Sold",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "sale",
+                      "method": "POST",
+                      "path": "/sales",
+                      "note": "Add a stock line; the sale is the only writer of a sale stock-out.",
+                      "url": "/api/v1/sales"
+                    }
+                  },
+                  {
+                    "code": "donation",
+                    "label": "Gift / Donation",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "damaged",
+                    "label": "Damaged",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "expired",
+                    "label": "Expired",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "spoiled",
+                    "label": "Spoiled",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "lost",
+                    "label": "Lost / Stolen",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "disposal",
+                    "label": "Disposal",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "other",
+                    "label": "Other",
+                    "manual": true,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "inventory",
+                      "method": "POST",
+                      "path": "/inventory/stock-out",
+                      "url": "/api/v1/inventory/stock-out"
+                    }
+                  },
+                  {
+                    "code": "transfer_out",
+                    "label": "Moved between stores",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "transfer",
+                      "method": "POST",
+                      "path": "/inventory/transfers",
+                      "url": "/api/v1/inventory/transfers"
+                    }
+                  },
+                  {
+                    "code": "adjustment",
+                    "label": "Stock count correction",
+                    "manual": false,
+                    "creates_operational_record": false,
+                    "route": {
+                      "kind": "adjustment",
+                      "method": "POST",
+                      "path": "/inventory/adjustments",
+                      "url": "/api/v1/inventory/adjustments"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "movement_types": [
+            "stock_in",
+            "stock_out",
+            "adjustment",
+            "transfer_out",
+            "transfer_in",
+            "reversal"
+          ],
+          "stock_in_reasons": [
+            "opening_balance",
+            "purchase",
+            "donation",
+            "aid",
+            "received",
+            "production",
+            "returned",
+            "other"
+          ],
+          "stock_out_reasons": [
+            "use",
+            "damaged",
+            "expired",
+            "wasted",
+            "other",
+            "sale",
+            "production_use",
+            "incubation",
+            "donation",
+            "internal_use",
+            "spoiled",
+            "lost",
+            "disposal"
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

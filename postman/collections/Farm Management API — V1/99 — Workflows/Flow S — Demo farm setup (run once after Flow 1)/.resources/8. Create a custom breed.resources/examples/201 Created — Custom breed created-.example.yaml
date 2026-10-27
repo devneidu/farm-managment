@@ -1,0 +1,44 @@
+$kind: http-example
+name: 201 Created — Custom breed created.
+request:
+  url: "{{base_url}}/custom-breeds"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "species_id": "{{species_chicken_id}}",
+        "name": "Isa Brown (Ibadan strain)"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-44ec-70a5-a6c6-dc586c45bbdd",
+          "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+          "code": null,
+          "name": "Isa Brown (Ibadan strain)",
+          "source": "farm",
+          "is_active": null,
+          "is_editable": true,
+          "created_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Custom breed created."
+      }
+order: 1000

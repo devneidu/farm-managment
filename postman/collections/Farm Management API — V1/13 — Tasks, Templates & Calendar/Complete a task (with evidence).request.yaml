@@ -1,0 +1,109 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Closes the task, optionally linking an operational/health/breeding record that was ALREADY saved. Completion never creates that record.
+
+  **WHEN TO USE IT**
+  "Mark done" on a task.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{task_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.complete` (taken from the current farm context; never sent by the client).
+  - Marks the task completed and links the evidence. No record, stock or finance effect.
+  - Evidence must belong to this farm, not be reversed, match the task's linked type, cycle and breeding project, and may evidence ONE task (`409 evidence_already_linked`).
+  - `requires_evidence` tasks cannot complete without it (`422` on `evidence`). Completing twice with the same evidence returns the same task; different evidence is `409 task_already_completed`.
+  - Evidence types: `operational_record`, `health_record`, `breeding_check`, `breeding_outcome`; the caller also needs the matching view permission.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`task.complete`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `work-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/tasks/{{task_id}}/complete`
+
+  **PATH PARAMETERS**
+  - `{{task_id}}` — UUID. Captured by "Create a task" (13 — Tasks, Templates & Calendar) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `note` — string, optional, max 5000 chars, nullable
+  - `completed_at` — string (date-time), optional. When the work was finished (UTC ISO-8601, not in the future). Defaults to now.
+  - `evidence` — object, optional. An ALREADY SAVED actual record to link. Completing never creates one. Required when the task requires evidence.
+  - `evidence.type` — enum, **required**. The kinds of actual record that can evidence a completed task. The task never creates one. . Values: `operational_record`, `health_record`, `breeding_check`, `breeding_outcome`
+  - `evidence.id` — string (uuid), **required**
+
+  **VARIABLES USED**
+  - `{{task_id}}` — captured by "Create a task"
+  - `{{record_evidence_id}}` — captured by "Save the actual record that evidences the task"
+
+  **BUSINESS RULES**
+  - Evidence must belong to this farm, not be reversed, match the task's linked type, cycle and breeding project, and may evidence ONE task (`409 evidence_already_linked`).
+  - `requires_evidence` tasks cannot complete without it (`422` on `evidence`). Completing twice with the same evidence returns the same task; different evidence is `409 task_already_completed`.
+  - Evidence types: `operational_record`, `health_record`, `breeding_check`, `breeding_outcome`; the caller also needs the matching view permission.
+  - Requires `task.complete` (every role).
+
+  **SUCCESS**
+  `200 OK` — message: "Task completed."
+
+  `data` fields: `id`, `reference`, `status`, `due_state`, `title`, `category`, `instructions`, `due_date`, `due_time`, `due_at`, `timezone`, `reminder_offsets`, `production_cycle_id`, `breeding_project_id`, `schedule_id`, `occurrence_date`, `assigned_user_id`, `assigned_user_name`, `assigned_role`, `linked_record_type`, `requires_evidence`, `completion`, `cancellation`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.complete`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `task_not_open`, `task_already_completed`, `cycle_closed`, `project_not_active`, `evidence_already_linked`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/tasks/{{task_id}}/complete"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "note": "Sample weighed this morning",
+      "evidence": {
+        "type": "operational_record",
+        "id": "{{record_evidence_id}}"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Complete a task (with evidence).resources/examples
+order: 14000

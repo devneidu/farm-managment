@@ -1,0 +1,26 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Everything the offer form needs: `rules` (max attempts, used, remaining, `min_offer_percent`, `minimum_unit_price`, expiry hours), `can_offer` + `blocked_reason` (`listing_not_negotiable|offer_already_accepted|offer_pending|offer_limit_reached`), the open `pending_offer` and any `purchase_intent`.
+
+  **ERRORS**
+  `404` for a listing that is not public.
+url: "{{base_url}}/marketplace/listings/{{listing_slug}}/offer-status"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 2000

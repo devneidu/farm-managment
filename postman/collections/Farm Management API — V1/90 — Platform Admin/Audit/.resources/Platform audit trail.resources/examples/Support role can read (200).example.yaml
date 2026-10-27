@@ -1,0 +1,105 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/audit-logs?from={{date_7d_ago}}&to={{today}}"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: from
+      value: "{{date_7d_ago}}"
+    - key: to
+      value: "{{today}}"
+    - key: actor_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: action
+      value: ""
+      disabled: true
+      description: Exact action code, for example `platform.plan_updated`. — string — max 60 chars
+    - key: resource_type
+      value: ""
+      disabled: true
+      description: string — max 40 chars
+    - key: resource_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: request_id
+      value: ""
+      disabled: true
+      description: string — max 100 chars
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-d1e3-728e-8731-eb8eb6c66e04",
+            "action": "platform.flag_updated",
+            "resource": {
+              "type": "feature_flag",
+              "id": "01a1045e-d1bb-73da-8d24-47e26796b16e",
+              "label": "new_dashboard_layout"
+            },
+            "actor": {
+              "id": "01a1045e-38e2-7173-b130-5452688a714c",
+              "name": "Platform admin"
+            },
+            "changes": {
+              "after": {
+                "enabled": true
+              },
+              "before": {
+                "enabled": false
+              }
+            },
+            "request_id": "01a1045e-d1cc-7018-9838-0d0804f5bff0",
+            "ip_address": "127.0.0.1",
+            "performed_at": "2026-10-04T00:45:08+00:00"
+          },
+          {
+            "id": "01a1045e-d1bf-70ca-a8dd-c26c103c3adb",
+            "action": "platform.flag_created",
+            "resource": {
+              "type": "feature_flag",
+              "id": "01a1045e-d1bb-73da-8d24-47e26796b16e",
+              "label": "new_dashboard_layout"
+            },
+            "actor": {
+              "id": "01a1045e-38e2-7173-b130-5452688a714c",
+              "name": "Platform admin"
+            },
+            "changes": {
+              "after": {
+                "enabled": false,
+                "description": "Experimental dashboard layout"
+              }
+            },
+            "request_id": "01a1045e-d1a3-72f0-881e-6f3d6e7ac0fc",
+            "ip_address": "127.0.0.1",
+            "performed_at": "2026-10-04T00:45:08+00:00"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 17
+        },
+        "message": null
+      }
+order: 2000

@@ -1,0 +1,138 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Starts a crop project. A crop project measures THREE separate things: land `area`, `initial_planting_units` (heaps/holes/stands) and later the planting-material quantity and harvest output. They are never converted into each other.
+
+  **WHEN TO USE IT**
+  The "Start crop project" form.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `kind`, `name`, `operation_type_id`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `production_cycle.create` (taken from the current farm context; never sent by the client).
+  - Creates the cycle. No stock is deducted and no records are created.
+  - `initial_planting_units` is the baseline for establishment/survival checks. 800 heaps is not 800 tubers; seed/material quantity is recorded later by planting/input records and stock movements.
+  - `planting_material_type` and `planting_unit_type` are codes from `GET /master/planting-reference`.
+  - `area` is optional `{quantity, unit}` with an AREA unit (`hectare`, `sq_m`, `acre`); it is stored entered + normalised (2 hectare = 20000 sq_m).
+
+  **WHAT TO DO NEXT**
+  Record land preparation / planting.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - The returned `crop` block holds the planting baseline; later `GET /production-cycles/{id}/crop` adds derived establishment, loss and harvest figures.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`production_cycle.create`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `production-cycle-write`: 60 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/production-cycles`
+
+  **REQUEST BODY** (`application/json`)
+  - `kind` — enum, **required**. Values: `livestock`, `crop`
+  - `name` — string, **required**, max 100 chars
+  - `operation_type_id` — string (uuid), **required**
+  - `production_area_id` — string (uuid), optional, nullable
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `expected_end_date` — string (date), optional, nullable
+  - `start_date` — string (date), optional
+  - `species_id` — string (uuid), optional
+  - `breed_id` — string (uuid), optional, nullable
+  - `initial_population` — integer, optional, min 1, max 999999999999
+  - `planting_date` — string (date), optional
+  - `crop_type_id` — string (uuid), optional
+  - `crop_variety_id` — string (uuid), optional, nullable
+  - `planting_material_type` — string, optional, max 40 chars
+  - `planting_unit_type` — string, optional, max 40 chars
+  - `initial_planting_units` — integer, optional, min 1, max 999999999999
+  - `expected_germination_date` — string (date), optional, nullable
+  - `area` — object, optional, nullable
+  - `area.quantity` — string|number, **required**
+  - `area.unit` — string, **required**, max 32 chars
+
+  **VARIABLES USED**
+  - `{{op_crops_id}}` — captured by "List farm operations (production types)"
+  - `{{crop_yam_id}}` — captured by "List crops"
+  - `{{variety_id}}` — captured by "Create a custom crop variety"
+
+  **BUSINESS RULES**
+  - `initial_planting_units` is the baseline for establishment/survival checks. 800 heaps is not 800 tubers; seed/material quantity is recorded later by planting/input records and stock movements.
+  - `planting_material_type` and `planting_unit_type` are codes from `GET /master/planting-reference`.
+  - `area` is optional `{quantity, unit}` with an AREA unit (`hectare`, `sq_m`, `acre`); it is stored entered + normalised (2 hectare = 20000 sq_m).
+  - `material_quantity` is rejected. `expected_germination_date` is crop-only.
+  - Same naming/uniqueness/permission rules as livestock batches.
+
+  **SUCCESS**
+  `201 Created` — message: "Production cycle created."
+
+  `data` fields: `id`, `kind`, `name`, `reference`, `status`, `operation`, `production_area`, `start_date`, `planting_date`, `expected_end_date`, `end_date`, `notes`, `baseline_locked`, `livestock`, `crop`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `production_cycle.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `duplicate_cycle_name`, `location_inactive`, `plan_limit_reached`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "crop",
+      "name": "2026 Yam",
+      "operation_type_id": "{{op_crops_id}}",
+      "crop_type_id": "{{crop_yam_id}}",
+      "crop_variety_id": "{{variety_id}}",
+      "planting_material_type": "tuber",
+      "planting_unit_type": "heap",
+      "initial_planting_units": 800,
+      "planting_date": "{{date_30d_ago}}",
+      "expected_germination_date": "{{date_in_7d}}",
+      "area": {
+        "quantity": "2",
+        "unit": "hectare"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("crop_cycle_id", String(v)); else console.warn("Could not capture crop_cycle_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Start a crop project.resources/examples
+order: 8000

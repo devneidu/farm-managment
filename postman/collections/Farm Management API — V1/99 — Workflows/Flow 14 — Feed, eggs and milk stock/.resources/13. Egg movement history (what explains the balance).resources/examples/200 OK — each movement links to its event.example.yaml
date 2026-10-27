@@ -1,0 +1,515 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/movements?inventory_item_id={{egg_item_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    inventory_item_id: "{{egg_item_id}}"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1107d-add4-720f-bb4b-c7613945e739",
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "stock_in",
+            "reason": "returned",
+            "reason_label": "Returned to stock",
+            "justification": null,
+            "quantity_delta": {
+              "quantity": "10",
+              "unit": "piece"
+            },
+            "quantity_delta_display": {
+              "quantity": "10",
+              "unit": "piece"
+            },
+            "measurement": {
+              "total": {
+                "unit": "piece",
+                "quantity": "10"
+              },
+              "entered": [
+                {
+                  "unit": "piece",
+                  "quantity": "10"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "10"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "quantity": "10"
+                  }
+                ],
+                "packages": [],
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "10"
+                },
+                "result_unit": {
+                  "code": "piece",
+                  "factor": "1",
+                  "family": "piece",
+                  "strategy": "linear",
+                  "dimension": "count",
+                  "integer_only": true
+                }
+              },
+              "normalized": {
+                "unit": "piece",
+                "quantity": "10"
+              }
+            },
+            "recorded_at": "2026-10-14T12:00:00.000000Z",
+            "notes": null,
+            "operational_record_id": null,
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+            "breeding_project_id": "01a1107d-ac03-7050-9a47-0d3652f5309e",
+            "source": {
+              "type": "breeding_project",
+              "id": "01a1107d-ac03-7050-9a47-0d3652f5309e"
+            },
+            "reverses_movement_id": null,
+            "reversed_by_movement_id": null,
+            "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+            "created_at": "2026-10-14T12:00:00.000000Z"
+          },
+          {
+            "id": "01a1107d-ac17-72e0-9a04-c04723245366",
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "stock_out",
+            "reason": "incubation",
+            "reason_label": "Put into incubation",
+            "justification": null,
+            "quantity_delta": {
+              "quantity": "-40",
+              "unit": "piece"
+            },
+            "quantity_delta_display": {
+              "quantity": "-40",
+              "unit": "piece"
+            },
+            "measurement": {
+              "total": {
+                "unit": "piece",
+                "quantity": "40"
+              },
+              "entered": [
+                {
+                  "unit": "piece",
+                  "quantity": "40"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "40"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "quantity": "40"
+                  }
+                ],
+                "packages": [],
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "40"
+                },
+                "result_unit": {
+                  "code": "piece",
+                  "factor": "1",
+                  "family": "piece",
+                  "strategy": "linear",
+                  "dimension": "count",
+                  "integer_only": true
+                }
+              },
+              "normalized": {
+                "unit": "piece",
+                "quantity": "40"
+              }
+            },
+            "recorded_at": "2026-10-14T12:00:00.000000Z",
+            "notes": null,
+            "operational_record_id": null,
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+            "breeding_project_id": "01a1107d-ac03-7050-9a47-0d3652f5309e",
+            "source": {
+              "type": "breeding_project",
+              "id": "01a1107d-ac03-7050-9a47-0d3652f5309e"
+            },
+            "reverses_movement_id": null,
+            "reversed_by_movement_id": null,
+            "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+            "created_at": "2026-10-14T12:00:00.000000Z"
+          },
+          {
+            "id": "01a1107d-ace1-7178-990e-b78bc9cf1f47",
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "stock_out",
+            "reason": "donation",
+            "reason_label": "Gift / Donation",
+            "justification": null,
+            "quantity_delta": {
+              "quantity": "-30",
+              "unit": "piece"
+            },
+            "quantity_delta_display": {
+              "quantity": "-30",
+              "unit": "piece"
+            },
+            "measurement": {
+              "total": {
+                "unit": "piece",
+                "quantity": "30"
+              },
+              "entered": [
+                {
+                  "unit": "piece",
+                  "quantity": "30"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "30"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "quantity": "30"
+                  }
+                ],
+                "packages": [],
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "30"
+                },
+                "result_unit": {
+                  "code": "piece",
+                  "factor": "1",
+                  "family": "piece",
+                  "strategy": "linear",
+                  "dimension": "count",
+                  "integer_only": true
+                }
+              },
+              "normalized": {
+                "unit": "piece",
+                "quantity": "30"
+              }
+            },
+            "recorded_at": "2026-10-14T10:00:00.000000Z",
+            "notes": "Gave away 1 crate",
+            "operational_record_id": null,
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "production_cycle_id": null,
+            "breeding_project_id": null,
+            "source": {
+              "type": "manual",
+              "id": null
+            },
+            "reverses_movement_id": null,
+            "reversed_by_movement_id": null,
+            "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+            "created_at": "2026-10-14T12:00:00.000000Z"
+          },
+          {
+            "id": "01a1107d-ab36-708b-a020-066aac027517",
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "stock_in",
+            "reason": "donation",
+            "reason_label": "Gift / Donation",
+            "justification": null,
+            "quantity_delta": {
+              "quantity": "20",
+              "unit": "piece"
+            },
+            "quantity_delta_display": {
+              "quantity": "20",
+              "unit": "piece"
+            },
+            "measurement": {
+              "total": {
+                "unit": "piece",
+                "quantity": "20"
+              },
+              "entered": [
+                {
+                  "unit": "piece",
+                  "quantity": "20"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "20"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "quantity": "20"
+                  }
+                ],
+                "packages": [],
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "20"
+                },
+                "result_unit": {
+                  "code": "piece",
+                  "factor": "1",
+                  "family": "piece",
+                  "strategy": "linear",
+                  "dimension": "count",
+                  "integer_only": true
+                }
+              },
+              "normalized": {
+                "unit": "piece",
+                "quantity": "20"
+              }
+            },
+            "recorded_at": "2026-10-14T03:00:00.000000Z",
+            "notes": "Gift from a neighbour farm",
+            "operational_record_id": null,
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "production_cycle_id": null,
+            "breeding_project_id": null,
+            "source": {
+              "type": "manual",
+              "id": null
+            },
+            "reverses_movement_id": null,
+            "reversed_by_movement_id": null,
+            "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+            "created_at": "2026-10-14T12:00:00.000000Z"
+          },
+          {
+            "id": "01a1107d-a9f1-71b0-9f41-7cdd1d8fff84",
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "stock_in",
+            "reason": "production",
+            "reason_label": "Produced on farm",
+            "justification": null,
+            "quantity_delta": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "quantity_delta_display": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "measurement": {
+              "total": {
+                "unit": "piece",
+                "quantity": "104"
+              },
+              "entered": [
+                {
+                  "unit": "crate",
+                  "quantity": "3"
+                },
+                {
+                  "unit": "piece",
+                  "quantity": "14"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "104"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "crate",
+                      "factor": null,
+                      "family": null,
+                      "strategy": "none",
+                      "dimension": "package",
+                      "integer_only": false
+                    },
+                    "quantity": "3"
+                  },
+                  {
+                    "unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "quantity": "14"
+                  }
+                ],
+                "packages": [
+                  {
+                    "context": {
+                      "id": "01a1107d-a89a-73ec-98d3-6eb5dc40d769",
+                      "type": "custom",
+                      "label": "Eggs"
+                    },
+                    "version": 1,
+                    "per_package": "30",
+                    "target_unit": {
+                      "code": "piece",
+                      "factor": "1",
+                      "family": "piece",
+                      "strategy": "linear",
+                      "dimension": "count",
+                      "integer_only": true
+                    },
+                    "package_unit": {
+                      "code": "crate",
+                      "factor": null,
+                      "family": null,
+                      "strategy": "none",
+                      "dimension": "package",
+                      "integer_only": false
+                    },
+                    "conversion_id": "01a1107d-a8d3-7174-b7fd-bf3fb2a09daf"
+                  }
+                ],
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "104"
+                },
+                "result_unit": {
+                  "code": "piece",
+                  "factor": "1",
+                  "family": "piece",
+                  "strategy": "linear",
+                  "dimension": "count",
+                  "integer_only": true
+                }
+              },
+              "normalized": {
+                "unit": "piece",
+                "quantity": "104"
+              }
+            },
+            "recorded_at": "2026-10-14T02:00:00.000000Z",
+            "notes": null,
+            "operational_record_id": "01a1107d-a9df-734d-8ec5-519b0a047fc8",
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+            "breeding_project_id": null,
+            "source": {
+              "type": "operational_record",
+              "id": "01a1107d-a9df-734d-8ec5-519b0a047fc8"
+            },
+            "reverses_movement_id": null,
+            "reversed_by_movement_id": null,
+            "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+            "created_at": "2026-10-14T12:00:00.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 5
+        },
+        "message": null
+      }
+order: 1000

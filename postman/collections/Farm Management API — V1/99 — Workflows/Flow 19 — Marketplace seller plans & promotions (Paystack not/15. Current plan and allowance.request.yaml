@@ -1,0 +1,27 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Needs `listing.view` (every shop role). Plan now (`free` or a running paid period), `listing_limit`, `published_count`, `remaining`, `over_limit_by`, `can_publish`, `upcoming_periods`, `features` flags. A lapsed plan reads as Free at read time; listings are never deleted or paused by it.
+
+  **ERRORS**
+  `404` (not a member)
+
+  **BOUNDARY**
+  Farmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/plan"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Free plan applies", () => pm.expect(JSON.stringify(json.data)).to.include("free"));
+    language: text/javascript
+order: 15000

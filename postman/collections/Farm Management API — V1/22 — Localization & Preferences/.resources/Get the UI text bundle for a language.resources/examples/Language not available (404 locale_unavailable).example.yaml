@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/translations/yo"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "That language is not available.",
+        "code": "locale_unavailable",
+        "request_id": "01a1045e-cb1b-7162-a87e-391e8db9f944"
+      }
+order: 2000

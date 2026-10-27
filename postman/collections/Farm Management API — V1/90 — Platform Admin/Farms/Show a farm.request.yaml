@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Support overview of one farm: owner, plan and subscription status, member list, selected operations, effective entitlements with current usage per limit, and the last subscription events. It exposes NO population, stock, finance, sales, health or breeding data.
+
+  **WHEN TO USE IT**
+  Support farm overview.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{farm_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/farms/{{farm_id}}`
+
+  **PATH PARAMETERS**
+  - `{{farm_id}}` — UUID. Captured by "Complete farm setup (onboarding)" (02 — Onboarding & Account) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{farm_id}}` — captured by "Complete farm setup (onboarding)"
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `name`, `country_code`, `currency`, `timezone`, `owner`, `members_count`, `plan`, `subscription_status`, `current_period_end`, `created_at`, `members`, `operations`, `entitlements`, `subscription_events`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+url: "{{base_url}}/platform-admin/farms/{{farm_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Show a farm.resources/examples
+order: 3000

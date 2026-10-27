@@ -1,0 +1,25 @@
+$kind: http-request
+description: "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+url: "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/lift-restriction"
+method: POST
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+  Content-Type: application/json
+  X-XSRF-TOKEN: "{{xsrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"reason\": \"Corrective action was reviewed.\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Listing is paused, seller must publish again", () => pm.expect(json.data.status).to.eql("paused"));
+    language: text/javascript
+order: 28000

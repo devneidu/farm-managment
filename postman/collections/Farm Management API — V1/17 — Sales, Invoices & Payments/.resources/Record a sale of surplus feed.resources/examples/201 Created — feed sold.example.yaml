@@ -1,0 +1,149 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/sales"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "customer_name": "Agro Distributors",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "items": [
+          {
+            "kind": "stock",
+            "inventory_item_id": "{{item_feed_id}}",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "50",
+                "unit": "kg"
+              }
+            ],
+            "amount": "25000.00"
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-af6c-7024-8e72-4eeaff9b887f",
+          "reference": "SAL-2026-00001",
+          "status": "active",
+          "contact_id": null,
+          "customer_name": "Agro Distributors",
+          "recorded_at": "2026-10-14T11:00:00.000000Z",
+          "total_amount": "25000.00",
+          "currency": "NGN",
+          "finance_category": {
+            "id": "01a1107d-9429-703d-9511-67be5524a949",
+            "code": "other_income",
+            "name": "Other income"
+          },
+          "payment_status": "uninvoiced",
+          "amount_paid": null,
+          "outstanding": null,
+          "invoice": null,
+          "notes": null,
+          "corrects_sale_id": null,
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "items": [
+            {
+              "id": "01a1107d-af89-7218-9024-2b656414e957",
+              "line_no": 1,
+              "kind": "stock",
+              "description": "Starter feed",
+              "inventory_item_id": "01a1107d-aed0-72d0-9c40-743bdce081b3",
+              "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+              "inventory_lot_id": null,
+              "lot": null,
+              "production_cycle_id": null,
+              "head_count": null,
+              "quantity": {
+                "quantity": "50",
+                "unit": "kg",
+                "normalized": {
+                  "quantity": "50000",
+                  "unit": "g"
+                }
+              },
+              "measurement": {
+                "total": {
+                  "unit": "kg",
+                  "quantity": "50"
+                },
+                "entered": [
+                  {
+                    "unit": "kg",
+                    "quantity": "50"
+                  }
+                ],
+                "snapshot": {
+                  "total": {
+                    "unit": "kg",
+                    "quantity": "50"
+                  },
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "unit": {
+                        "code": "kg",
+                        "factor": "1000",
+                        "family": "weight",
+                        "strategy": "linear",
+                        "dimension": "weight",
+                        "integer_only": false
+                      },
+                      "quantity": "50"
+                    }
+                  ],
+                  "packages": [],
+                  "normalized": {
+                    "unit": "g",
+                    "quantity": "50000"
+                  },
+                  "result_unit": {
+                    "code": "kg",
+                    "factor": "1000",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "dimension": "weight",
+                    "integer_only": false
+                  }
+                },
+                "normalized": {
+                  "unit": "g",
+                  "quantity": "50000"
+                }
+              },
+              "amount": "25000.00",
+              "inventory_movement_id": "01a1107d-af96-7131-9491-9bc569b977ec",
+              "inventory_reversal_movement_id": null,
+              "operational_record_id": null,
+              "reversal_record_id": null
+            }
+          ],
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z"
+        },
+        "meta": [],
+        "message": "Sale recorded."
+      }
+order: 1000

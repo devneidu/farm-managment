@@ -1,0 +1,57 @@
+$kind: http-example
+name: 201 Created — Payment recorded.
+request:
+  url: "{{base_url}}/invoices/{{invoice_id}}/payments"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "amount": "57000.00",
+        "method": "cash",
+        "received_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-a3fa-7294-a01c-b1730836a80e",
+          "reference": "PAY-2026-00002",
+          "entry_type": "payment",
+          "invoice_id": "01a1045e-9933-71de-b5f4-5b15db2730ef",
+          "invoice_reference": "INV-2026-00001",
+          "amount": "57000.00",
+          "currency": "NGN",
+          "method": "cash",
+          "payment_reference": null,
+          "received_on": "2026-10-04",
+          "recorded_at": "2026-10-04T00:45:08.000000Z",
+          "notes": null,
+          "finance_transaction_id": "01a1045e-a402-71d4-88f9-f8a39f6c6704",
+          "reverses_payment_id": null,
+          "reversed_by_payment_id": null,
+          "is_reversed": false,
+          "reason": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Payment recorded."
+      }
+order: 1000

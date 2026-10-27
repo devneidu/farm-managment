@@ -1,0 +1,53 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/sales"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "customer_name": "Mama Put Kitchen",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "items": [
+          {
+            "kind": "stock",
+            "output": "eggs",
+            "components": [
+              {
+                "quantity": "1",
+                "unit": "piece"
+              }
+            ],
+            "amount": "300.00"
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This farm has more than one active storage location; choose which one.",
+        "code": "validation_failed",
+        "request_id": "01a11127-1584-733c-ae79-ff77de03d734",
+        "errors": {
+          "items.0.storage_location_id": [
+            "This farm has more than one active storage location; choose which one."
+          ]
+        }
+      }
+order: 3000

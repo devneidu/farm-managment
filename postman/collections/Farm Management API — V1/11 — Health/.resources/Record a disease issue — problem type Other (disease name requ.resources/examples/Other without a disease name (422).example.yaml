@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "type": "disease_issue",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "problem_type": "other",
+          "severity": "moderate",
+          "symptoms": "Sneezing and watery eyes in Pen 1"
+        },
+        "animals_affected": 12
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Describe the problem in \"Disease name (if known)\" when the problem type is Other.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-3c10-73a7-92b5-3ead6eaa1ee7",
+        "errors": {
+          "details.condition": [
+            "Describe the problem in \"Disease name (if known)\" when the problem type is Other."
+          ]
+        }
+      }
+order: 2000

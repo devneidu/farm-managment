@@ -1,0 +1,28 @@
+$kind: http-request
+name: "Platform admin: list promotions"
+description: |-
+  **WHAT IT DOES**
+  Any platform role. Filters `state`, `shop_id`.
+
+  **BOUNDARY**
+  Farmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.
+url: "{{base_url}}/platform-admin/marketplace/promotions"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = (json.data[0] || {}).id; if (v !== undefined && v !== null) { pm.environment.set("promotion_id", v); } }
+      }
+    language: text/javascript
+order: 18000

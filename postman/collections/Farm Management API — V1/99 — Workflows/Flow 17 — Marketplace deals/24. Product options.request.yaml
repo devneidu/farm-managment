@@ -1,0 +1,19 @@
+$kind: http-request
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/product-options"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      { const v = (json.data.kinds.find(k => k.code === 'livestock').products.find(p => p.code === 'chicken') || {}).id; if (v !== undefined && v !== null) { pm.environment.set("species_chicken_id", v); } }
+    language: text/javascript
+order: 24000

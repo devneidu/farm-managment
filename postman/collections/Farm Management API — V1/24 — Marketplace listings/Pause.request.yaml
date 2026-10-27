@@ -1,0 +1,26 @@
+$kind: http-request
+description: "`listing.publish`. `published -> paused`: off the public feed. Idempotent."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/pause"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.version; if (v !== undefined && v !== null) { pm.environment.set("listing_version", v); } }
+      }
+    language: text/javascript
+examples: ./.resources/Pause.resources/examples
+order: 11000

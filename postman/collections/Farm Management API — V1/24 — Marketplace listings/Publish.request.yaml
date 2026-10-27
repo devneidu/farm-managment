@@ -1,0 +1,35 @@
+$kind: http-request
+description: "`listing.publish` (owner, manager; never staff). `draft|paused -> published`, immediately and without admin approval, but only while the shop is `active` (`409 shop_not_active`) and the listing is complete (`422 listing_incomplete`, `details.missing`). No image is required. Repeating the call is a no-op. Publishing never reserves or deducts stock."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/publish"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "version": "{{listing_version}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.version; if (v !== undefined && v !== null) { pm.environment.set("listing_version", v); } }
+        pm.test("Published and public", function () { pm.expect(json.data.status).to.eql("published"); pm.expect(json.data.is_public).to.eql(true); });
+      }
+    language: text/javascript
+examples: ./.resources/Publish.resources/examples
+order: 9000

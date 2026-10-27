@@ -1,0 +1,93 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "plan_id": "{{plan_business_id}}",
+        "interval": "monthly",
+        "reason": "Upgraded for the API handoff demo"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3d61-723c-a801-609bf2bd1583",
+          "status": "active",
+          "billing_interval": "monthly",
+          "starts_at": "2026-10-04T00:45:08+00:00",
+          "current_period_start": "2026-10-04T00:45:08+00:00",
+          "current_period_end": "2026-11-04T00:45:08+00:00",
+          "cancel_at_period_end": false,
+          "cancelled_at": null,
+          "ends_at": null,
+          "subscription_inactive": false,
+          "plan": {
+            "id": "01a1045c-caee-70d3-987f-f54e34a22ef4",
+            "slug": "farm-business",
+            "name": "Farm Business",
+            "description": "For large operations that need everything.",
+            "currency": "NGN",
+            "is_default": false,
+            "prices": [
+              {
+                "interval": "monthly",
+                "amount_minor": 750000,
+                "currency": "NGN",
+                "formatted": "₦7,500.00"
+              },
+              {
+                "interval": "annual",
+                "amount_minor": 7500000,
+                "currency": "NGN",
+                "formatted": "₦75,000.00"
+              }
+            ],
+            "features": [
+              {
+                "key": "advanced_reports",
+                "label": "Advanced reports",
+                "enabled": true
+              },
+              {
+                "key": "data_export",
+                "label": "Data export",
+                "enabled": true
+              }
+            ],
+            "limits": [
+              {
+                "key": "team_members",
+                "label": "Team members",
+                "limit": null,
+                "unlimited": true
+              },
+              {
+                "key": "active_cycles",
+                "label": "Active production cycles",
+                "limit": null,
+                "unlimited": true
+              }
+            ]
+          },
+          "effective_plan": {
+            "id": "01a1045c-caee-70d3-987f-f54e34a22ef4",
+            "slug": "farm-business",
+            "name": "Farm Business"
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

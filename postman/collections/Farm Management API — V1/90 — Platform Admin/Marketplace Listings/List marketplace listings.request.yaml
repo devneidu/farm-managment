@@ -1,0 +1,24 @@
+$kind: http-request
+description: "Reads: any platform role. Every listing in any state (soft-deleted drafts excluded), newest first. Filters: `q`, `status`, `shop_id`, `product_kind`."
+url: "{{base_url}}/platform-admin/marketplace/listings?status=published"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  status: published
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List marketplace listings.resources/examples
+order: 1000

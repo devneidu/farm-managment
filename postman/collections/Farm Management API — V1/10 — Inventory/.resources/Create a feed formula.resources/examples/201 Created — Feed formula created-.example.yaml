@@ -1,0 +1,76 @@
+$kind: http-example
+name: 201 Created — Feed formula created.
+request:
+  url: "{{base_url}}/feed-formulas"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Broiler starter 22% CP",
+        "species_id": "{{species_chicken_id}}",
+        "description": "Home-mixed starter ration",
+        "items": [
+          {
+            "ingredient_name": "Maize",
+            "inclusion_percent": "55"
+          },
+          {
+            "ingredient_name": "Soybean meal",
+            "inclusion_percent": "30"
+          },
+          {
+            "ingredient_name": "Fish meal",
+            "inclusion_percent": "10"
+          },
+          {
+            "ingredient_name": "Premix and lysine",
+            "inclusion_percent": "5",
+            "inventory_item_id": "{{item_feed_id}}"
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-5f71-70ad-976e-8b991ab70e8a",
+          "name": "Broiler starter 22% CP",
+          "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+          "description": "Home-mixed starter ration",
+          "version": 1,
+          "is_active": true,
+          "items": [
+            {
+              "ingredient_name": "Maize",
+              "inclusion_percent": "55",
+              "inventory_item_id": null
+            },
+            {
+              "ingredient_name": "Soybean meal",
+              "inclusion_percent": "30",
+              "inventory_item_id": null
+            }
+          ],
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Feed formula created."
+      }
+order: 1000

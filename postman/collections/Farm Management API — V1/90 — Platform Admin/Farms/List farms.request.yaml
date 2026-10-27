@@ -1,0 +1,104 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Support view of all farms. Filters: `q`, `plan`, `subscription_status` (`active`, `past_due`, `cancelled`, `expired`), `sort` (`name`|`created_at`), `direction`, `page`, `per_page`.
+
+  **WHEN TO USE IT**
+  Support farm search.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `q`, `plan`, `subscription_status`, `sort`, `direction`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+  - This is cross-farm: it is the platform role, not farm membership, that allows it.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/farms`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `q` — string, max 100 chars. Matches the farm name or a member name/email.
+  - `plan` — string, max 64 chars. Plan slug.
+  - `subscription_status` — enum. Values: `active`, `past_due`, `cancelled`, `expired`
+  - `sort` — enum. Values: `name`, `created_at`
+  - `direction` — enum. Values: `asc`, `desc`
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+  - This is cross-farm: it is the platform role, not farm membership, that allows it.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `name`, `country_code`, `currency`, `timezone`, `owner`, `members_count`, `plan`, `subscription_status`, `current_period_end`, `created_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/platform-admin/farms?q=Okafor"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  - key: q
+    value: Okafor
+  - key: plan
+    value: ""
+    disabled: true
+    description: Plan slug. — string — max 64 chars
+  - key: subscription_status
+    value: ""
+    disabled: true
+    description: "enum: active | past_due | cancelled | expired"
+  - key: sort
+    value: ""
+    disabled: true
+    description: "enum: name | created_at"
+  - key: direction
+    value: ""
+    disabled: true
+    description: "enum: asc | desc"
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List farms.resources/examples
+order: 2000

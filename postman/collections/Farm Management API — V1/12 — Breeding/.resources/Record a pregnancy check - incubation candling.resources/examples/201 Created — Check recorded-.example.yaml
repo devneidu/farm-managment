@@ -1,0 +1,95 @@
+$kind: http-example
+name: 201 Created — Check recorded.
+request:
+  url: "{{base_url}}/breeding-projects/{{breeding_project_id}}/checks"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "checked_on": "{{date_7d_ago}}",
+        "result": "positive",
+        "fertile_count": 44,
+        "notes": "Candling on day 3: 44 of 50 fertile"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-77ab-7307-80ca-a3ad0d2c8073",
+          "reference": "BRD-2026-00001",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "workflow": "incubation",
+          "status": "active",
+          "start_date": "2026-09-24",
+          "eggs_set": 50,
+          "females_bred": null,
+          "expected_offspring": 42,
+          "expectation": {
+            "type": "exact",
+            "source": "reference",
+            "date": "2026-10-15",
+            "from": null,
+            "to": null,
+            "no_expectation_reason": null
+          },
+          "biological_reference": {
+            "days": 21,
+            "kind": "exact",
+            "note": null,
+            "days_max": null,
+            "days_min": null,
+            "workflow": "incubation",
+            "capability": "supports_incubation",
+            "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "approximate": false,
+            "captured_at": "2026-10-04T00:45:08.153034Z",
+            "species_code": "chicken",
+            "no_automatic_reason": null,
+            "automatic_expectation": true
+          },
+          "parents": [
+            {
+              "id": "01a1045e-77b9-7345-a847-5c0f6afbe34e",
+              "role": "dam",
+              "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+              "head_count": 20
+            }
+          ],
+          "checks": [
+            {
+              "id": "01a1045e-7a36-7396-8ed5-46e87a708980",
+              "checked_on": "2026-09-27",
+              "result": "positive",
+              "fertile_count": 44,
+              "notes": "Candling on day 3: 44 of 50 fertile"
+            }
+          ],
+          "outcomes": [],
+          "result": null,
+          "notes": "Candled on day 7; eggs transferred to the hatcher on day 18",
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Check recorded."
+      }
+order: 1000

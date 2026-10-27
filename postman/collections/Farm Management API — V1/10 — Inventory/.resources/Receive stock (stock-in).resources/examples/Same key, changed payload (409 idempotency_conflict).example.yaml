@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/stock-in"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "inventory_item_id": "{{item_feed_id}}",
+        "storage_location_id": "{{store_id}}",
+        "reason": "opening_balance",
+        "components": [
+          {
+            "quantity": "99",
+            "unit": "kg"
+          }
+        ],
+        "recorded_at": "{{recorded_at_30h}}",
+        "idempotency_key": "{{stockin_key}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This idempotency key was already used for a different request.",
+        "code": "idempotency_conflict",
+        "request_id": "01a1045e-57f2-731a-b084-00258264d9e3"
+      }
+order: 3000

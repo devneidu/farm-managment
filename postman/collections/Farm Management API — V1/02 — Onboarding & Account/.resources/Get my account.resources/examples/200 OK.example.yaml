@@ -1,0 +1,28 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/account"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "name": null,
+          "email": "ada.okafor@example.com",
+          "email_verified_at": "2026-10-04T00:45:08+00:00",
+          "has_password": true,
+          "providers": [],
+          "locale": null
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,82 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/items?category=feed"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: category
+      value: feed
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 150 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+    - key: low_stock
+      value: ""
+      disabled: true
+      description: "true: only items with a threshold whose stock is at or below it. — boolean"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a11126-cea8-722d-9ea4-128d7671545a",
+            "name": "Layer Grower Mash",
+            "category": "feed",
+            "description": "Compounded grower mash from the mill",
+            "kind": "feed",
+            "is_system_managed": false,
+            "stock_unit": "kg",
+            "dimension": "weight",
+            "tracks_lots": false,
+            "tracks_expiry": false,
+            "is_active": true,
+            "stock": {
+              "quantity": "318",
+              "unit": "kg",
+              "normalized": {
+                "quantity": "318000",
+                "unit": "g"
+              }
+            },
+            "low_stock_threshold": {
+              "quantity": "50",
+              "unit": "kg"
+            },
+            "is_low_stock": false,
+            "created_at": "2026-10-06T12:18:38.000000Z",
+            "updated_at": "2026-10-06T12:18:38.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

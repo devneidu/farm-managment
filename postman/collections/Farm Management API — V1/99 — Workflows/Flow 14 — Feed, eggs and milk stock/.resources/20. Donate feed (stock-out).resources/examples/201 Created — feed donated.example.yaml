@@ -1,0 +1,130 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/stock-out"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "inventory_item_id": "{{item_feed_id}}",
+        "storage_location_id": "{{store_id}}",
+        "reason": "donation",
+        "components": [
+          {
+            "quantity": "10",
+            "unit": "kg"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-b076-7279-8fef-5229ad15655e",
+          "inventory_item_id": "01a1107d-aed0-72d0-9c40-743bdce081b3",
+          "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_out",
+          "reason": "donation",
+          "reason_label": "Gift / Donation",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "-10000",
+            "unit": "g"
+          },
+          "quantity_delta_display": {
+            "quantity": "-10",
+            "unit": "kg"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "10",
+                "unit": "kg"
+              }
+            ],
+            "normalized": {
+              "quantity": "10000",
+              "unit": "g"
+            },
+            "total": {
+              "quantity": "10",
+              "unit": "kg"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "10",
+                  "unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "10000",
+                "unit": "g"
+              },
+              "total": {
+                "quantity": "10",
+                "unit": "kg"
+              }
+            }
+          },
+          "recorded_at": "2026-10-14T10:00:00.000000Z",
+          "notes": null,
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "production_cycle_id": null,
+          "breeding_project_id": null,
+          "source": {
+            "type": "manual",
+            "id": null
+          },
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z"
+        },
+        "meta": [],
+        "message": "Stock issued."
+      }
+order: 1000

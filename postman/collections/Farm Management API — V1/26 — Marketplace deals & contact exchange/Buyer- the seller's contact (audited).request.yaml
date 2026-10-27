@@ -1,0 +1,30 @@
+$kind: http-request
+name: "Buyer: the seller's contact (audited)"
+description: |-
+  **WHAT IT DOES**
+  The only place the seller's contact is returned. Address only for a pickup deal. Every read is audited; 30/min.
+
+  **INPUTS**
+  none
+
+  **ERRORS**
+  `409` deal_contact_unavailable (cancelled); `404`; `429`
+
+  **BOUNDARY**
+  A deal is a summary of agreed terms. Farmvest takes no payment, holds no funds, reserves no stock, delivers nothing and creates no sale. Contact appears only on the audited contact endpoints.
+url: "{{base_url}}/marketplace/my/deals/{{deal_id}}/contact"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+    language: text/javascript
+order: 11000

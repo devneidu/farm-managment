@@ -1,0 +1,22 @@
+$kind: http-request
+description: |-
+  Fish reference lists for the batch-creation form. Requires `master_data.view`; path `{{species_fish_id}}` is captured by "List species (all animals)".
+
+  Fish purposes: table_fish, fingerling_production, breeding, other. Stages: larva, fry, fingerling, juvenile, adult, unknown. The field label is "Species / Type" and each entry is a farmer-facing fish type. Captures `breed_fish_id` (African Catfish).
+
+  See "Selected animal batch reference" (Chicken) for the full response description. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/master/species/{{species_fish_id}}/batch-reference"
+method: GET
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Selected animal reference is available", function () { pm.response.to.have.status(200); });
+      const d = pm.response.json().data;
+      pm.test("Species-specific creation options (fish)", function () { pm.expect(d.species.code).to.eql("fish"); pm.expect(d.breed_field_label).to.eql("Species / Type"); pm.expect(d.purposes.map(x => x.code)).to.include("table_fish"); pm.expect(d.growth_stages.map(x => x.code)).to.include("fingerling"); pm.expect(d.breeds.length).to.be.above(0); });
+      { const b = d.breeds.find(x => x.code === "african_catfish_clarias_gariepinus"); if (b) pm.environment.set("breed_fish_id", b.id); else console.warn("Could not capture breed_fish_id"); }
+    language: text/javascript
+examples: ./.resources/Selected animal batch reference (Fish).resources/examples
+order: 20000

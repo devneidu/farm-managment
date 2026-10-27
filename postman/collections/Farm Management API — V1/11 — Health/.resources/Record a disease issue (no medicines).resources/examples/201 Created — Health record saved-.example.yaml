@@ -1,0 +1,67 @@
+$kind: http-example
+name: 201 Created — Health record saved.
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "type": "disease_issue",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "problem_type": "breathing",
+          "condition": "Respiratory distress",
+          "severity": "moderate",
+          "symptoms": "Sneezing and watery eyes in Pen 1"
+        },
+        "animals_affected": 12
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-743c-70bd-8351-11409ea6268e",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "disease_issue",
+          "details": {
+            "problem_type": "breathing",
+            "condition": "Respiratory distress",
+            "severity": "moderate",
+            "symptoms": "Sneezing and watery eyes in Pen 1"
+          },
+          "problem_type": "breathing",
+          "problem_type_label": "Breathing problem (coughing, sneezing, nasal discharge)",
+          "animals_affected": 12,
+          "follow_up_on": null,
+          "mortality_record_id": null,
+          "recorded_at": "2026-10-03T22:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "medicines": [],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Health record saved."
+      }
+order: 1000

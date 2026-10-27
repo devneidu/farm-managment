@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/settings/support_email"
+  method: PUT
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "value": "not-an-email"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The value field must be a valid email address.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-d159-7242-a8ab-f84b3135f9f9",
+        "errors": {
+          "value": [
+            "The value field must be a valid email address."
+          ]
+        }
+      }
+order: 2000

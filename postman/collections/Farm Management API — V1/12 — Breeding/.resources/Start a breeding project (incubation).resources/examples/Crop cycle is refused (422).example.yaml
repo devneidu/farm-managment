@@ -1,0 +1,42 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/breeding-projects"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{crop_cycle_id}}",
+        "workflow": "incubation",
+        "start_date": "{{date_10d_ago}}",
+        "eggs_set": 10,
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Breeding applies to livestock cycles only.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-77fe-72d8-8f50-c86f06a750b6",
+        "errors": {
+          "production_cycle_id": [
+            "Breeding applies to livestock cycles only."
+          ]
+        }
+      }
+order: 2000

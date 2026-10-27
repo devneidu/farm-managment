@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/me/preferences"
+  method: PATCH
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "locale": "xx"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "That language is not available yet.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-b9b6-7371-ab6d-e8864c9aef6e",
+        "errors": {
+          "locale": [
+            "That language is not available yet."
+          ]
+        }
+      }
+order: 2000

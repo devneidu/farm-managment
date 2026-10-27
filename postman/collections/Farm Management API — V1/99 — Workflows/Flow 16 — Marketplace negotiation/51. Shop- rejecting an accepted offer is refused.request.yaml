@@ -1,0 +1,22 @@
+$kind: http-request
+name: "51. Shop: rejecting an accepted offer is refused"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/offers/{{offer_id}}/reject"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 409", function () { pm.expect(pm.response.code).to.eql(409); });
+      const json = pm.response.json();
+      pm.test("Error code offer_not_pending", function () { pm.expect(json.code).to.eql("offer_not_pending"); });
+    language: text/javascript
+order: 51000

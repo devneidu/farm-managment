@@ -1,0 +1,146 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/purchases?status=active"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: status
+      value: active
+    - key: contact_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 100 chars
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-90a9-73af-aff3-bf31053cca37",
+            "reference": "PUR-2026-00003",
+            "status": "active",
+            "contact_id": "01a1045e-8d01-706b-a44d-b60c4bc28406",
+            "contact_name": "Mama Nkechi Feeds",
+            "production_cycle_id": null,
+            "supplier_reference": null,
+            "recorded_at": "2026-10-03T22:44:06.000000Z",
+            "total_amount": "8000.00",
+            "currency": "NGN",
+            "finance_category": {
+              "id": "01a1045d-de95-70d5-829d-135e5894286c",
+              "code": "other_expense",
+              "name": "Other expense"
+            },
+            "records_expense": true,
+            "finance_transaction_id": "01a1045e-90b8-71a4-910f-d439bb8ab9f3",
+            "finance_reversal_transaction_id": null,
+            "notes": null,
+            "corrects_purchase_id": null,
+            "cancelled_at": null,
+            "cancel_reason": null,
+            "items": [
+              {
+                "id": "01a1045e-90b0-7025-9a9b-ad8b2c52b0d2",
+                "line_no": 1,
+                "kind": "non_stock",
+                "description": "Casual labour",
+                "inventory_item_id": null,
+                "storage_location_id": null,
+                "inventory_lot_id": null,
+                "lot": null,
+                "quantity": null,
+                "measurement": null,
+                "amount": "8000.00",
+                "inventory_movement_id": null
+              }
+            ],
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-9049-7244-a5a4-efcf066b91de",
+            "reference": "PUR-2026-00002",
+            "status": "active",
+            "contact_id": "01a1045e-8d01-706b-a44d-b60c4bc28406",
+            "contact_name": "Mama Nkechi Feeds",
+            "production_cycle_id": null,
+            "supplier_reference": null,
+            "recorded_at": "2026-10-03T22:44:06.000000Z",
+            "total_amount": "3500.00",
+            "currency": "NGN",
+            "finance_category": {
+              "id": "01a1045d-de95-70d5-829d-135e5894286c",
+              "code": "other_expense",
+              "name": "Other expense"
+            },
+            "records_expense": false,
+            "finance_transaction_id": null,
+            "finance_reversal_transaction_id": null,
+            "notes": null,
+            "corrects_purchase_id": null,
+            "cancelled_at": null,
+            "cancel_reason": null,
+            "items": [
+              {
+                "id": "01a1045e-904e-7327-bcac-08c86cb50504",
+                "line_no": 1,
+                "kind": "non_stock",
+                "description": "Poultry netting repair",
+                "inventory_item_id": null,
+                "storage_location_id": null,
+                "inventory_lot_id": null,
+                "lot": null,
+                "quantity": null,
+                "measurement": null,
+                "amount": "3500.00",
+                "inventory_movement_id": null
+              }
+            ],
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 3
+        },
+        "message": null
+      }
+order: 1000

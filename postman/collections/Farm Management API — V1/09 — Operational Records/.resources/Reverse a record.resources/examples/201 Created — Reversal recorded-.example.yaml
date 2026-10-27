@@ -1,0 +1,102 @@
+$kind: http-example
+name: 201 Created — Reversal recorded.
+request:
+  url: "{{base_url}}/records/{{record_water_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Meter read twice by mistake",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-6869-713b-bc92-f75706630b52",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "reversal",
+          "details": {
+            "reason": "Meter read twice by mistake"
+          },
+          "measurement": {
+            "total": {
+              "unit": "l",
+              "quantity": "120"
+            },
+            "entered": [
+              {
+                "unit": "l",
+                "quantity": "120"
+              }
+            ],
+            "snapshot": {
+              "total": {
+                "unit": "l",
+                "quantity": "120"
+              },
+              "schema": 1,
+              "entered": [
+                {
+                  "unit": {
+                    "code": "l",
+                    "factor": "1000",
+                    "family": "volume",
+                    "strategy": "linear",
+                    "dimension": "volume",
+                    "integer_only": false
+                  },
+                  "quantity": "120"
+                }
+              ],
+              "packages": [],
+              "normalized": {
+                "unit": "ml",
+                "quantity": "120000"
+              },
+              "result_unit": {
+                "code": "l",
+                "factor": "1000",
+                "family": "volume",
+                "strategy": "linear",
+                "dimension": "volume",
+                "integer_only": false
+              }
+            },
+            "normalized": {
+              "unit": "ml",
+              "quantity": "120000"
+            }
+          },
+          "population_delta": 0,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": "01a1045e-657a-702b-b5ce-de430431075a",
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "attachments": []
+        },
+        "meta": {},
+        "message": "Reversal recorded."
+      }
+order: 1000

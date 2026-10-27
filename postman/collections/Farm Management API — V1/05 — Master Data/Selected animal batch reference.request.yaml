@@ -1,0 +1,44 @@
+$kind: http-request
+description: |
+  Requires `master_data.view` (every farm role) and the current farm session.
+
+  **Path:** `{{species_chicken_id}}` - UUID from "List species". Unknown species is `404 not_found`; an invalid query value is `422 validation_failed` (`include_inactive` must be boolean).
+
+  **Response `data`:** `species` (id, code, name, is_active, livestock_group, operation, capability_codes), `breed_field_label` ("Breed / Strain" for Chicken; Fish, Snail, Honeybee, Grasscutter, Camel, Quail and Ostrich use "Species / Type"), `breeds[]` (active system breeds plus this farm's custom breeds; `id`, `species_id`, `code`, `name`, `source`, `is_active`, `is_editable`, `created_at`), `purposes[]` and `growth_stages[]` (`code`, `name`, `is_active`). No pagination.
+
+  **Use:** send a `breeds[].id` as `breed_id`, a `purposes[].code` as `production_purpose` and a `growth_stages[].code` as `growth_stage` to `POST /production-cycles`. Never reuse another animal's codes; re-fetch when the species changes. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+
+  Cattle and Fish equivalents follow in this folder.
+
+  **PRODUCTION PURPOSE: WHAT EACH CODE MEANS** (show the `name`, and this hint under it, in the form)
+  - `meat` - Meat: raised to be sold or eaten as meat.
+  - `eggs` - Eggs: raised for egg production (layers).
+  - `dual_purpose` - Dual purpose (eggs and meat; for cattle: milk and meat): one animal kept for both uses.
+  - `dairy` - Dairy: raised for milk (cattle).
+  - `hide` - Hide: raised for hides/skins (cattle).
+  - `draught` - Draught: work animals used for pulling or carrying (cattle).
+  - `breeding` - Breeding: kept as breeding stock to produce young.
+  - `other` - Other: any purpose not listed.
+  Which codes exist depends on the species (for example Chicken has no `dairy`); always read them from the batch-reference response.
+
+  **GROWTH STAGE (optional)**: `hatchling` (newly hatched), `chick`/`keet`/`duckling`/`calf` (young animal), `weaner` (just weaned), `grower` (growing, not yet adult), `adult`, `unknown`.
+url: "{{base_url}}/master/species/{{species_chicken_id}}/batch-reference"
+method: GET
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+queryParams:
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean (true/false/1/0). Include inactive (historical) choices; default is active choices only.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Selected animal reference is available", function () { pm.response.to.have.status(200); });
+      const d = pm.response.json().data;
+      pm.test("Species-specific creation options (chicken)", function () { pm.expect(d.species.code).to.eql("chicken"); pm.expect(d.breed_field_label).to.eql("Breed / Strain"); pm.expect(d.purposes.map(x => x.code)).to.include("meat"); pm.expect(d.growth_stages.map(x => x.code)).to.include("chick"); pm.expect(d.breeds.length).to.be.above(0); });
+      { const b = d.breeds.find(x => x.code === "cobb_500"); if (b) pm.environment.set("breed_chicken_system_id", b.id); else console.warn("Could not capture breed_chicken_system_id"); }
+    language: text/javascript
+examples: ./.resources/Selected animal batch reference.resources/examples
+order: 18000

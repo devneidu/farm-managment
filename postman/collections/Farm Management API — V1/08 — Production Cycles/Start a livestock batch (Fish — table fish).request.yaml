@@ -1,0 +1,58 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Starts a FISH batch. Fish is a species of the `fishery` operation and is counted in heads (`population_unit: "head"`), like every other livestock batch.
+
+  **VALID COMBINATION**
+  - Operation `fishery` (`{{op_fishery_id}}`), species `fish` (`{{species_fish_id}}`), fish type African Catfish (`{{breed_fish_id}}`, from "Selected animal batch reference (Fish)"; for Fish the backend labels the breed field "Species / Type").
+  - `production_purpose: "table_fish"`, `growth_stage: "fingerling"` are Fish codes (purposes: table_fish, fingerling_production, breeding, other; stages: larva, fry, fingerling, juvenile, adult, unknown). Chicken codes such as `meat` or `chick` are rejected for Fish.
+  - `acquisition_price_per_animal: "35.00"` (NGN per fingerling). `supplier_contact_id` and `production_area_id` are optional and omitted/null here.
+
+  Captures `cycle_fish_id` (does NOT overwrite `cycle_id`). Name carries `{{$timestamp}}` because batch names are unique per farm and kind. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "livestock",
+      "name": "Catfish Pond {{$timestamp}}",
+      "operation_type_id": "{{op_fishery_id}}",
+      "species_id": "{{species_fish_id}}",
+      "breed_id": "{{breed_fish_id}}",
+      "production_purpose": "table_fish",
+      "growth_stage": "fingerling",
+      "acquisition_price_per_animal": "35.00",
+      "supplier_contact_id": null,
+      "initial_population": 2000,
+      "start_date": "{{date_30d_ago}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("Fish purpose, stage and price are echoed; supplier stays null", function () { const l = json.data.livestock; pm.expect(l.species.code).to.eql("fish"); pm.expect(json.data.operation.code).to.eql("fishery"); pm.expect(l.production_purpose.code).to.eql("table_fish"); pm.expect(l.growth_stage.code).to.eql("fingerling"); pm.expect(l.acquisition_price_per_animal).to.eql("35.00"); pm.expect(l.acquisition_currency).to.eql("NGN"); pm.expect(l.supplier_contact).to.eql(null); pm.expect(l.population_unit).to.eql("head"); });
+        { const v = json.data && json.data.id; if (v) pm.environment.set("cycle_fish_id", String(v)); else console.warn("Could not capture cycle_fish_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Start a livestock batch (Fish — table fish).resources/examples
+order: 3000

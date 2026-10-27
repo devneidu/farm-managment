@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/me"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": true,
+          "has_active_farm": false,
+          "next_action": "no_active_farm",
+          "user": {
+            "id": "01a11127-4ee7-7266-8fce-3b5b640eeb36",
+            "email": "chidi.worker@example.com",
+            "name": null,
+            "email_verified_at": "2026-10-06T12:19:12+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": null,
+          "farms": [],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

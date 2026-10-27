@@ -1,0 +1,45 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{crop_cycle_id}}",
+        "type": "vet_visit",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "problem_type": "routine_prevention",
+          "vet_name": "Dr. Bello"
+        }
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This health record type is not applicable to this kind of cycle.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-738e-7375-897b-e0635135cfa9",
+        "errors": {
+          "type": [
+            "This health record type is not applicable to this kind of cycle."
+          ]
+        }
+      }
+order: 5000

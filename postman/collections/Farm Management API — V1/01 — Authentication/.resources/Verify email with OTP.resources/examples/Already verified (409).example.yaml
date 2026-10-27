@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/email/verify"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "code": "123456"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This email address is already verified.",
+        "code": "already_verified",
+        "request_id": "01a1045e-3cf9-730a-a1f5-4c89ac6ba62e"
+      }
+order: 3000

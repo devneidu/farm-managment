@@ -1,0 +1,49 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images/{{listing_image_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "alt_text": "Cover photo",
+        "position": 0
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a118eb-e61c-7088-9202-20bec856f9a9",
+          "url": "/api/v1/marketplace/shops/01a118eb-e021-7194-a3e5-600cd6fd1d47/listings/01a118eb-e4e0-71ff-b6e9-fc20bf9e0886/images/01a118eb-e61c-7088-9202-20bec856f9a9/file",
+          "alt_text": "Cover photo",
+          "position": 0,
+          "width": 480,
+          "height": 320,
+          "mime_type": "image/png",
+          "size": 3754,
+          "original_name": "listing-photo.png",
+          "kind": "seller",
+          "illustrative": false,
+          "created_at": "2026-10-08T00:31:15+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

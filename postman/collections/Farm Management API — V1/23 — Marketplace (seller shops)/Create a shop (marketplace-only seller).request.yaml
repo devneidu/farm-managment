@@ -1,0 +1,53 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates a private `draft` shop owned by the caller. `slug` and `reference` (`SHP-YYYY-NNNNN`) are generated; status and verification cannot be set by the client.
+
+  **INPUTS**
+  - Required: `name` (unique among your shops), `seller_type` (`individual|business|farm`).
+  - Optional: `tagline`, `description`, `categories[]` (`livestock, crops, eggs_dairy, feed_inputs, equipment, processed_goods, services`), `country_code` (default NG), `state`, `city`, `area`, `farm_id`.
+
+  **ERRORS**
+  `409 shop_limit_reached` (platform setting `marketplace_max_shops_per_user`, default 3), `409 farm_shop_exists`, `422` validation.
+url: "{{base_url}}/marketplace/shops"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Ada Poultry Hub",
+      "tagline": "Fresh eggs daily",
+      "seller_type": "business",
+      "categories": [
+        "livestock",
+        "eggs_dairy"
+      ],
+      "description": "Layers, broilers and fresh crates of eggs delivered across Ibadan.",
+      "state": "Oyo",
+      "city": "Ibadan",
+      "area": "Bodija"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        if (json.data && json.data.id) { pm.environment.set("shop_id", json.data && json.data.id); }
+        if (json.data && json.data.slug) { pm.environment.set("shop_slug", json.data && json.data.slug); }
+      }
+    language: text/javascript
+order: 2000

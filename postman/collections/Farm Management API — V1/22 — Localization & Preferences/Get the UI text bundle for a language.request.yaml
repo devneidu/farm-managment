@@ -1,0 +1,58 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The translation bundle for a locale. Missing keys fall back to English PER KEY. Locale never changes money, quantity or timestamp formats: those contracts are locale-independent.
+
+  **WHEN TO USE IT**
+  Loading UI text for a language.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Public; rate limited (60/min). An unknown or not-yet-enabled locale is `404 locale_unavailable`.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Public** — no session required.
+
+  **ACCESS**
+  Everyone.
+  Rate limited by limiter `60,1`: 60 per minute (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `GET {{base_url}}/translations/en`
+
+  **BUSINESS RULES**
+  - Public; rate limited (60/min). An unknown or not-yet-enabled locale is `404 locale_unavailable`.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `locale`, `fallback_locale`, `direction`, `version`, `complete`, `fallback_keys`, `messages`.
+
+  **ERRORS**
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/translations/en"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Get the UI text bundle for a language.resources/examples
+order: 4000

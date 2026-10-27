@@ -1,0 +1,149 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/plans"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: q
+      value: ""
+      disabled: true
+      description: Matches name or slug. — string — max 100 chars
+    - key: is_active
+      value: ""
+      disabled: true
+      description: boolean
+    - key: is_public
+      value: ""
+      disabled: true
+      description: boolean
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+            "slug": "free",
+            "name": "Free",
+            "description": "Get started managing one farm.",
+            "currency": "NGN",
+            "is_active": true,
+            "is_public": true,
+            "is_default": true,
+            "sort_order": 10,
+            "subscribers_count": 2,
+            "prices": [
+              {
+                "interval": "monthly",
+                "amount_minor": 0,
+                "currency": "NGN",
+                "is_active": true
+              }
+            ],
+            "features": [
+              {
+                "key": "advanced_reports",
+                "label": "Advanced reports",
+                "enabled": false
+              },
+              {
+                "key": "data_export",
+                "label": "Data export",
+                "enabled": false
+              }
+            ],
+            "limits": [
+              {
+                "key": "team_members",
+                "label": "Team members",
+                "limit": 3,
+                "unlimited": false
+              },
+              {
+                "key": "active_cycles",
+                "label": "Active production cycles",
+                "limit": 3,
+                "unlimited": false
+              }
+            ],
+            "created_at": "2026-10-04T00:42:32+00:00",
+            "updated_at": "2026-10-04T00:42:32+00:00"
+          },
+          {
+            "id": "01a1045c-cad7-70ab-a173-347099da7b12",
+            "slug": "farm-pro",
+            "name": "Farm Pro",
+            "description": "For growing farms with a team.",
+            "currency": "NGN",
+            "is_active": true,
+            "is_public": true,
+            "is_default": false,
+            "sort_order": 20,
+            "subscribers_count": 0,
+            "prices": [
+              {
+                "interval": "monthly",
+                "amount_minor": 300000,
+                "currency": "NGN",
+                "is_active": true
+              },
+              {
+                "interval": "annual",
+                "amount_minor": 3000000,
+                "currency": "NGN",
+                "is_active": true
+              }
+            ],
+            "features": [
+              {
+                "key": "advanced_reports",
+                "label": "Advanced reports",
+                "enabled": true
+              },
+              {
+                "key": "data_export",
+                "label": "Data export",
+                "enabled": false
+              }
+            ],
+            "limits": [
+              {
+                "key": "team_members",
+                "label": "Team members",
+                "limit": 10,
+                "unlimited": false
+              },
+              {
+                "key": "active_cycles",
+                "label": "Active production cycles",
+                "limit": null,
+                "unlimited": true
+              }
+            ],
+            "created_at": "2026-10-04T00:42:32+00:00",
+            "updated_at": "2026-10-04T00:42:32+00:00"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 25,
+          "last_page": 1,
+          "total": 3
+        },
+        "message": null
+      }
+order: 1000

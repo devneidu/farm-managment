@@ -1,0 +1,277 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/dashboard"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "farm": {
+            "id": "01a11126-a58b-71b1-9ca7-6607802a5952",
+            "name": "Okafor Integrated Farms",
+            "currency": "NGN",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-06",
+            "generated_at": "2026-10-06T12:18:28.069058Z"
+          },
+          "viewer": {
+            "user_id": "01a11126-a0b9-71b9-93f0-6e147def406f",
+            "role": "owner",
+            "role_label": "Owner"
+          },
+          "operations": {
+            "configured": false,
+            "selected": [],
+            "relevant": {
+              "livestock": false,
+              "crop": false
+            }
+          },
+          "sections": {
+            "production": true,
+            "work": true,
+            "calendar": true,
+            "inventory": true,
+            "health": true,
+            "breeding": true,
+            "finance": true,
+            "sales": true
+          },
+          "priority": [],
+          "kpis": [],
+          "work": {
+            "counts": {
+              "overdue": 0,
+              "due_today": 0,
+              "upcoming": 0,
+              "upcoming_7d": 0,
+              "completed_today": 0
+            },
+            "today_and_overdue": [],
+            "upcoming": [],
+            "recently_completed": []
+          },
+          "calendar": {
+            "from": "2026-10-06",
+            "to": "2026-10-12",
+            "timezone": "Africa/Lagos",
+            "today": "2026-10-06",
+            "days": [
+              {
+                "date": "2026-10-06",
+                "is_today": true,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-07",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-08",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-09",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-10",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-11",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              },
+              {
+                "date": "2026-10-12",
+                "is_today": false,
+                "tasks": {
+                  "open": 0,
+                  "overdue": 0,
+                  "due_today": 0,
+                  "upcoming": 0,
+                  "completed": 0
+                },
+                "milestones": []
+              }
+            ]
+          },
+          "quick_record": [],
+          "production": {
+            "total_active": 0,
+            "items": []
+          },
+          "insights": {
+            "total": 0,
+            "by_severity": {
+              "critical": 0,
+              "warning": 0,
+              "info": 0
+            },
+            "items": []
+          },
+          "recent_activity": [],
+          "quick_add": [
+            {
+              "code": "production_cycle",
+              "label": "Start a batch or crop project",
+              "permission": "production_cycle.create",
+              "method": "POST",
+              "endpoint": "/api/v1/production-cycles",
+              "url": "/api/v1/production-cycles",
+              "path": "/production-cycles"
+            },
+            {
+              "code": "task",
+              "label": "Add a task",
+              "permission": "task.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/tasks",
+              "url": "/api/v1/tasks",
+              "path": "/tasks"
+            },
+            {
+              "code": "sale",
+              "label": "Record a sale",
+              "permission": "sale.create",
+              "method": "POST",
+              "endpoint": "/api/v1/sales",
+              "url": "/api/v1/sales",
+              "path": "/sales"
+            },
+            {
+              "code": "purchase",
+              "label": "Record a purchase",
+              "permission": "purchase.create",
+              "method": "POST",
+              "endpoint": "/api/v1/purchases",
+              "url": "/api/v1/purchases",
+              "path": "/purchases"
+            },
+            {
+              "code": "expense",
+              "label": "Record an expense",
+              "permission": "finance.create",
+              "method": "POST",
+              "endpoint": "/api/v1/expenses",
+              "url": "/api/v1/expenses",
+              "path": "/expenses"
+            },
+            {
+              "code": "income",
+              "label": "Record income",
+              "permission": "finance.create",
+              "method": "POST",
+              "endpoint": "/api/v1/income",
+              "url": "/api/v1/income",
+              "path": "/income"
+            },
+            {
+              "code": "stock_in",
+              "label": "Receive stock",
+              "permission": "inventory.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/inventory/stock-in",
+              "url": "/api/v1/inventory/stock-in",
+              "path": "/inventory/stock-in"
+            },
+            {
+              "code": "contact",
+              "label": "Add a customer or supplier",
+              "permission": "contact.manage",
+              "method": "POST",
+              "endpoint": "/api/v1/contacts",
+              "url": "/api/v1/contacts",
+              "path": "/contacts"
+            }
+          ],
+          "empty_state": {
+            "has_operations": false,
+            "has_active_production": false,
+            "message": "No active batch or crop project yet. Start one to see production, work and insights here.",
+            "suggested_actions": [
+              {
+                "code": "production_cycle",
+                "label": "Start a batch or crop project",
+                "permission": "production_cycle.create",
+                "method": "POST",
+                "endpoint": "/api/v1/production-cycles",
+                "url": "/api/v1/production-cycles",
+                "path": "/production-cycles"
+              },
+              {
+                "code": "stock_in",
+                "label": "Receive stock",
+                "permission": "inventory.manage",
+                "method": "POST",
+                "endpoint": "/api/v1/inventory/stock-in",
+                "url": "/api/v1/inventory/stock-in",
+                "path": "/inventory/stock-in"
+              }
+            ]
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

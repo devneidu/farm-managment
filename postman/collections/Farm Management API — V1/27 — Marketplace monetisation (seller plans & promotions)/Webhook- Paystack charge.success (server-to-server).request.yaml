@@ -1,0 +1,41 @@
+$kind: http-request
+name: "Webhook: Paystack charge.success (server-to-server)"
+description: |-
+  **WHAT IT DOES**
+  Not for the frontend. Authenticated only by `x-paystack-signature` (HMAC-SHA512 of the raw body with the secret key); a bad signature is `401 invalid_signature`. The body is never believed: the payment is re-read from Paystack. Deliveries are stored and de-duplicated; a redelivery answers 200 `duplicate`; a temporary failure answers 500 so Paystack redelivers. Can only be exercised with a real or correctly signed payload, so this request is reference-only.
+
+  **ERRORS**
+  `401` invalid_signature
+
+  **BOUNDARY**
+  Farmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.
+url: "{{base_url}}/public/marketplace/payments/paystack/webhook"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Content-Type
+    value: application/json
+  - key: x-paystack-signature
+    value: "{{paystack_signature}}"
+    description: HMAC-SHA512 of the raw body keyed with the Paystack secret. Only Paystack can send a valid one; without it the answer is 401.
+body:
+  type: json
+  content: |-
+    {
+      "event": "charge.success",
+      "data": {
+        "reference": "{{payment_reference}}"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200 or 401", function () { pm.expect(pm.response.code).to.be.oneOf([200, 401]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 20000

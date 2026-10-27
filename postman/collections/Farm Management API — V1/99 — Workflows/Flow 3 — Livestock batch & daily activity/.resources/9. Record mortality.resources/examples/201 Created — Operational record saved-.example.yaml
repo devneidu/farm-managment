@@ -1,0 +1,109 @@
+$kind: http-example
+name: 201 Created — Operational record saved.
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "mortality",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at_3h}}",
+        "idempotency_key": "{{mort_key}}",
+        "details": {
+          "quantity": 5,
+          "cause": "Heat stress during the afternoon"
+        },
+        "notes": "Found during evening inspection"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-62f9-7324-bbe0-08cdd790b9d3",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "mortality",
+          "details": {
+            "quantity": 5,
+            "cause": "Heat stress during the afternoon"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "5",
+                "unit": "head"
+              }
+            ],
+            "normalized": {
+              "quantity": "5",
+              "unit": "head"
+            },
+            "total": {
+              "quantity": "5",
+              "unit": "head"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "5",
+                  "unit": {
+                    "code": "head",
+                    "dimension": "count",
+                    "family": "head",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "head",
+                "dimension": "count",
+                "family": "head",
+                "strategy": "linear",
+                "factor": "1",
+                "integer_only": true
+              },
+              "normalized": {
+                "quantity": "5",
+                "unit": "head"
+              },
+              "total": {
+                "quantity": "5",
+                "unit": "head"
+              }
+            }
+          },
+          "population_delta": -5,
+          "recorded_at": "2026-10-03T21:44:06.000000Z",
+          "notes": "Found during evening inspection",
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "attachments": []
+        },
+        "meta": {},
+        "message": "Operational record saved."
+      }
+order: 1000

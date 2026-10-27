@@ -1,0 +1,210 @@
+$kind: http-example
+name: 201 Created — Stock transferred.
+request:
+  url: "{{base_url}}/inventory/transfers"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "inventory_item_id": "{{item_feed_id}}",
+        "from_storage_location_id": "{{store_id}}",
+        "to_storage_location_id": "{{store2_id}}",
+        "components": [
+          {
+            "quantity": "40",
+            "unit": "kg"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "transfer_group_id": "01a1045e-5e17-72ef-aa6e-96aa906f1eb7",
+          "movements": [
+            {
+              "id": "01a1045e-5e19-70e4-93dc-c545c90a8845",
+              "inventory_item_id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+              "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "inventory_lot_id": null,
+              "lot": null,
+              "type": "transfer_out",
+              "reason": null,
+              "justification": null,
+              "quantity_delta": {
+                "quantity": "-40000",
+                "unit": "g"
+              },
+              "quantity_delta_display": {
+                "quantity": "-40",
+                "unit": "kg"
+              },
+              "measurement": {
+                "entered": [
+                  {
+                    "quantity": "40",
+                    "unit": "kg"
+                  }
+                ],
+                "normalized": {
+                  "quantity": "40000",
+                  "unit": "g"
+                },
+                "total": {
+                  "quantity": "40",
+                  "unit": "kg"
+                },
+                "snapshot": {
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "quantity": "40",
+                      "unit": {
+                        "code": "kg",
+                        "dimension": "weight",
+                        "family": "weight",
+                        "strategy": "linear",
+                        "factor": "1000",
+                        "integer_only": false
+                      }
+                    }
+                  ],
+                  "packages": [],
+                  "result_unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  },
+                  "normalized": {
+                    "quantity": "40000",
+                    "unit": "g"
+                  },
+                  "total": {
+                    "quantity": "40",
+                    "unit": "kg"
+                  }
+                }
+              },
+              "recorded_at": "2026-10-03T23:44:06.000000Z",
+              "notes": null,
+              "operational_record_id": null,
+              "health_record_id": null,
+              "health_record_medicine_id": null,
+              "purchase_id": null,
+              "purchase_item_id": null,
+              "sale_id": null,
+              "sale_item_id": null,
+              "transfer_group_id": "01a1045e-5e17-72ef-aa6e-96aa906f1eb7",
+              "reverses_movement_id": null,
+              "reversed_by_movement_id": null,
+              "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "created_at": "2026-10-04T00:45:08.000000Z"
+            },
+            {
+              "id": "01a1045e-5e2e-71dc-bfd0-63d7f5259416",
+              "inventory_item_id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+              "storage_location_id": "01a1045e-4d46-71a4-8ce4-fc101ebf5462",
+              "inventory_lot_id": null,
+              "lot": null,
+              "type": "transfer_in",
+              "reason": null,
+              "justification": null,
+              "quantity_delta": {
+                "quantity": "40000",
+                "unit": "g"
+              },
+              "quantity_delta_display": {
+                "quantity": "40",
+                "unit": "kg"
+              },
+              "measurement": {
+                "entered": [
+                  {
+                    "quantity": "40",
+                    "unit": "kg"
+                  }
+                ],
+                "normalized": {
+                  "quantity": "40000",
+                  "unit": "g"
+                },
+                "total": {
+                  "quantity": "40",
+                  "unit": "kg"
+                },
+                "snapshot": {
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "quantity": "40",
+                      "unit": {
+                        "code": "kg",
+                        "dimension": "weight",
+                        "family": "weight",
+                        "strategy": "linear",
+                        "factor": "1000",
+                        "integer_only": false
+                      }
+                    }
+                  ],
+                  "packages": [],
+                  "result_unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  },
+                  "normalized": {
+                    "quantity": "40000",
+                    "unit": "g"
+                  },
+                  "total": {
+                    "quantity": "40",
+                    "unit": "kg"
+                  }
+                }
+              },
+              "recorded_at": "2026-10-03T23:44:06.000000Z",
+              "notes": null,
+              "operational_record_id": null,
+              "health_record_id": null,
+              "health_record_medicine_id": null,
+              "purchase_id": null,
+              "purchase_item_id": null,
+              "sale_id": null,
+              "sale_item_id": null,
+              "transfer_group_id": "01a1045e-5e17-72ef-aa6e-96aa906f1eb7",
+              "reverses_movement_id": null,
+              "reversed_by_movement_id": null,
+              "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "created_at": "2026-10-04T00:45:08.000000Z"
+            }
+          ]
+        },
+        "meta": {},
+        "message": "Stock transferred."
+      }
+order: 1000

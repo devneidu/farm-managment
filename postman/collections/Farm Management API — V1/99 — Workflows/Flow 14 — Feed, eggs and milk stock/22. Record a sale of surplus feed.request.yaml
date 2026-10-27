@@ -1,0 +1,102 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Sells surplus feed to another farm or a distributor: one sale + one `sale` stock-out (linked to the line). Feed is a sellable category on its own; it is not relabelled as produce.
+
+  **WHEN TO USE IT**
+  Feed Out → Sold.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `sale.create`. Cancel with `POST /sales/{id}/cancel` to restore the stock. Stock-only feed sales are booked to `other_income`.
+  - Medicine, seed, agrochemicals and general supplies are not sellable (422).
+
+  **OUTPUT-NAMED STOCK LINES (GAP-08)**
+  A stock line names its stock with EXACTLY ONE of `inventory_item_id` (a specific item, always supported) or `output` (`eggs` | `milk`, the farm's automatic output item; no item id needed). A SALE takes the existing output item only: a farm that never stocked it gets `409 insufficient_stock` and nothing is created. `storage_location_id` is optional with `output` (the only active store is used; several active stores need a choice, `422 items.N.storage_location_id`). Both or neither -> `422`; `output` on a non-stock line -> `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`sale.create`**.
+
+  **URL**
+  `POST {{base_url}}/sales`
+
+  **REQUEST BODY** (`application/json`)
+  - `items[]` of `kind: stock` with `inventory_item_id` (feed or produce), `storage_location_id`, `components`, `amount`
+
+  **BUSINESS RULES**
+  - The manual stock-out reason `sale` stays refused.
+
+  **SUCCESS**
+  `201 Created` — the sale.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 insufficient_stock`, `idempotency_conflict`.
+  - `422 items.0.inventory_item_id` — category not sellable.
+url: "{{base_url}}/sales"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "customer_name": "Agro Distributors",
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}",
+      "items": [
+        {
+          "kind": "stock",
+          "inventory_item_id": "{{item_feed_id}}",
+          "storage_location_id": "{{store_id}}",
+          "components": [
+            {
+              "quantity": "50",
+              "unit": "kg"
+            }
+          ],
+          "amount": "25000.00"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("sale_feed_id", String(v)); else console.warn("Could not capture sale_feed_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/22. Record a sale of surplus feed.resources/examples
+order: 22000

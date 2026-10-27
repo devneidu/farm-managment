@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Sign back in, read the auth state, resolve the active farm (and see how X-Farm-Id works) and load the dashboard.
+
+  **Prerequisites:** Flow 1 completed (the account exists and is onboarded).
+
+  Steps: 7. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 2000

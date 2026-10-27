@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Medicine withdrawal windows traceable to the health record, medicine and lot that caused them. `active=1` (default) lists windows that have not ended; `0` includes ended ones.
+
+  **WHEN TO USE IT**
+  Warning banners when selling eggs/milk/meat; "withdrawal" screen.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `production_cycle_id`, `inventory_item_id`, `active`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.view` (taken from the current farm context; never sent by the client).
+  - Reversed records never appear. There is no farm-wide "blocked" flag and sales/harvest are not blocked automatically: the UI decides what to warn about from this list.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`health.view`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/health/withdrawals`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `production_cycle_id` — string (uuid)
+  - `inventory_item_id` — string (uuid)
+  - `active` — enum. 1 (default) = withdrawal windows still running now; 0 = include finished windows. Reversed records never count.. Values: `0`, `1`
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **VARIABLES USED**
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - Reversed records never appear. There is no farm-wide "blocked" flag and sales/harvest are not blocked automatically: the UI decides what to warn about from this list.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `health_record_medicine_id`, `health_record_id`, `production_cycle_id`, `health_record_type`, `inventory_item_id`, `item_name`, `inventory_lot_id`, `lot`, `days`, `source`, `started_at`, `ends_at`, `is_active`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `health.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/health/withdrawals?production_cycle_id={{cycle_id}}&active=1"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: production_cycle_id
+    value: "{{cycle_id}}"
+  - key: active
+    value: "1"
+  - key: inventory_item_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List withdrawal windows.resources/examples
+order: 12000

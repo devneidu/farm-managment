@@ -1,0 +1,47 @@
+$kind: http-request
+description: |-
+  **NEGATIVE: the breed must belong to the selected species.** `{{breed_cattle_id}}` is a Cattle breed (White Fulani (Bunaji)) sent with the Fish species. `422` with `errors.breed_id`: "Breed does not belong to this species." (A species that does not belong to the sent operation is likewise `422` on `species_id`; unknown or foreign ids are `404`.)
+
+  Negative example (nothing is created, no initial population movement). 422 body: `message`, `code: "validation_failed"`, `request_id`, `errors` keyed by field. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "livestock",
+      "name": "Wrong Breed {{$timestamp}}",
+      "operation_type_id": "{{op_fishery_id}}",
+      "species_id": "{{species_fish_id}}",
+      "breed_id": "{{breed_cattle_id}}",
+      "production_purpose": "table_fish",
+      "growth_stage": "fingerling",
+      "initial_population": 2000,
+      "start_date": "{{date_30d_ago}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 422", function () { pm.expect(pm.response.code).to.eql(422); });
+      const json = pm.response.json();
+      pm.test("Standard validation envelope", function () { pm.expect(json.code).to.eql("validation_failed"); pm.expect(json).to.have.property("request_id"); });
+      pm.test("Error is keyed by breed_id", function () { pm.expect(json.errors).to.have.property("breed_id"); pm.expect(Object.keys(json.errors)).to.eql(["breed_id"]); });
+      pm.test("No batch was created", function () { pm.expect(json).to.not.have.property("data"); });
+    language: text/javascript
+examples: ./.resources/Start a livestock batch — breed from another species (422).resources/examples
+order: 7000

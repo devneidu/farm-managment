@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/work-templates/{{template_platform_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "description": "Weekly weighing, drinker cleaning and a vaccination reminder"
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Platform templates cannot be edited; clone one to customise it.",
+        "code": "platform_template_readonly",
+        "request_id": "01a1045e-8362-7387-9584-426a88f25a31"
+      }
+order: 2000

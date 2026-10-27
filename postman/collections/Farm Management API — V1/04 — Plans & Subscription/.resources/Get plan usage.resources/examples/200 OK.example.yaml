@@ -1,0 +1,44 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/subscription/usage"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "limits": {
+            "team_members": {
+              "label": "Team members",
+              "limit": 3,
+              "unlimited": false,
+              "usage": 3,
+              "remaining": 0,
+              "exceeded": false
+            },
+            "active_cycles": {
+              "label": "Active production cycles",
+              "limit": 3,
+              "unlimited": false,
+              "usage": 0,
+              "remaining": 3,
+              "exceeded": false
+            }
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

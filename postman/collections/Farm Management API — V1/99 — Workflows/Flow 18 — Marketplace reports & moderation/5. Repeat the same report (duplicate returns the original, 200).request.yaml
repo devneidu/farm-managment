@@ -1,0 +1,33 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Same reporter + target + issue while open/in_review returns the existing case with 200.
+url: "{{base_url}}/marketplace/reports/listing/{{listing_slug}}"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reason": "suspected_fraud",
+      "description": "The advertised stock does not exist."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Reporter view hides handling detail", () => { pm.expect(json.data).not.to.have.property("history"); pm.expect(json.data).not.to.have.property("reporter_id"); });
+    language: text/javascript
+order: 5000

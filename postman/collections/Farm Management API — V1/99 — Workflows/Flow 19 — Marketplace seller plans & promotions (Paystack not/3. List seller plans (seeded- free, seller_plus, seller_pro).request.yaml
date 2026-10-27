@@ -1,0 +1,22 @@
+$kind: http-request
+name: "3. List seller plans (seeded: free, seller_plus, seller_pro)"
+description: |-
+  **IN THIS FLOW**
+  `free` is active with a 10-listing limit; the paid plans are seeded inactive and unpriced.
+url: "{{base_url}}/platform-admin/marketplace/seller-plans"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Free plan is seeded with limit 10", () => { const f = json.data.find(p => p.code === "free"); pm.expect(f.listing_limit).to.eql(10); });
+    language: text/javascript
+order: 3000

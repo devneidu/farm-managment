@@ -1,0 +1,61 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "contact_id": "{{supplier_id}}",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{purchase_key}}",
+        "supplier_reference": "INV-7781",
+        "production_cycle_id": "{{cycle_id}}",
+        "notes": "Weekly feed delivery",
+        "items": [
+          {
+            "kind": "stock",
+            "inventory_item_id": "{{item_feed_id}}",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "2",
+                "unit": "bag"
+              },
+              {
+                "quantity": "5",
+                "unit": "kg"
+              }
+            ],
+            "amount": "9000.00"
+          },
+          {
+            "kind": "non_stock",
+            "description": "Delivery truck",
+            "amount": "1250.45"
+          }
+        ]
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "You are not allowed to perform this action.",
+        "code": "forbidden",
+        "request_id": "01a1045e-8ff6-71aa-8724-2bf71274db61"
+      }
+order: 5000

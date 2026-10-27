@@ -1,0 +1,72 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Active members of the farm for the team screen: the membership `id` (the path id of `/farm/members/{membership}`, not the user id), `role` and `role_label`, `status`, `joined_at`, `is_current_user` and the member's `user {id, name, email}`. Not paginated.
+
+  **WHEN TO USE IT**
+  The team members table.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `team.view` (taken from the current farm context; never sent by the client).
+  - Removed members are not listed.
+
+  **WHAT TO DO NEXT**
+  Open a member or change their role.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`team.view`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/farm/members`
+
+  **BUSINESS RULES**
+  - Requires `team.view`.
+  - Removed members are not listed.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `role`, `role_label`, `status`, `joined_at`, `is_current_user`, `user`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `team.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+url: "{{base_url}}/farm/members"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => get(r, "user.email") === "chidi.worker@example.com"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("membership_chidi_id", String(v)); else console.warn("Could not capture membership_chidi_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/List team members.resources/examples
+order: 8000

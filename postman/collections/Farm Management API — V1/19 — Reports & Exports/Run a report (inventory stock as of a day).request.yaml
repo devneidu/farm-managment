@@ -1,0 +1,110 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  One row per item: balance as of a farm-local day from the movement ledger, with the low-stock flag.
+
+  **WHEN TO USE IT**
+  The stock position report as of a day.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `from`, `to`, `as_of`, `production_cycle_id`, `kind`, `status`, `per_page`, `page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `report.view` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`report.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `report-run`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `GET {{base_url}}/reports/inventory_stock`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `from` — string (date)
+  - `to` — string (date)
+  - `as_of` — string (date)
+  - `production_cycle_id` — string (uuid)
+  - `kind` — enum. Values: `livestock`, `crop`
+  - `status` — enum. Values: `active`, `closed`, `completed`, `cancelled`
+  - `per_page` — integer, min 1, max 500
+  - `page` — integer, min 1
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `report`, `farm`, `filters`, `timezone`, `generated_at`, `columns`, `rows`, `summary`, `notes`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `report.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/reports/inventory_stock?as_of={{today}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: as_of
+    value: "{{today}}"
+  - key: from
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: to
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: production_cycle_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: kind
+    value: ""
+    disabled: true
+    description: "enum: livestock | crop"
+  - key: status
+    value: ""
+    disabled: true
+    description: "enum: active | closed | completed | cancelled"
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 500
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Run a report (inventory stock as of a day).resources/examples
+order: 5000

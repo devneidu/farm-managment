@@ -1,0 +1,63 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates a private `draft`. Money and quantities are decimal strings. Needs `listing.manage` (owner, manager, staff).
+
+  **INPUTS**
+  - `title`, `product_kind`, `unit` (allowed for the kind), `unit_price` (naira per ONE unit, <=2 decimals), `available_quantity` (seller-declared; whole numbers for `head`).
+  - Product: `species_id` / `crop_type_id` from `product-options`, or `custom_product_name` (required for `other`).
+  - Optional: `min_order_quantity` (<= available), `negotiable`, `package` (REQUIRED for container units), `fulfilment` (`pickup|seller_delivery|both`), `pickup_area`, `delivery_coverage[]`, `dispatch_estimate`, `delivery_charge`, `state/city/area` (default from the shop), `catalog_image_id`, `inventory_item_id` (farm-backed shops).
+
+  **ERRORS**
+  `403`, `404` (not a member), `409 shop_suspended`, `422` (`unit`, `unit_price`, `available_quantity`, `min_order_quantity`, `package`, `species_id`, ...). An image is NOT required.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Healthy point-of-lay chickens",
+      "product_kind": "livestock",
+      "species_id": "{{species_chicken_id}}",
+      "unit": "head",
+      "unit_price": "8000",
+      "available_quantity": "120",
+      "min_order_quantity": "5",
+      "negotiable": true,
+      "description": "Vaccinated, 16 weeks old.",
+      "fulfilment": "both",
+      "pickup_area": "Bodija market",
+      "delivery_coverage": [
+        "Oyo",
+        "Lagos"
+      ],
+      "dispatch_estimate": "1_2_days",
+      "delivery_charge": "agreed_separately"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("listing_id", v); } }
+        { const v = json.data.slug; if (v !== undefined && v !== null) { pm.environment.set("listing_slug", v); } }
+        { const v = json.data.version; if (v !== undefined && v !== null) { pm.environment.set("listing_version", v); } }
+        pm.test("Draft, decimal-safe price", function () { pm.expect(json.data.status).to.eql("draft"); pm.expect(json.data.price.amount).to.eql("8000.00"); pm.expect(json.data.price.amount_minor).to.eql(800000); });
+      }
+    language: text/javascript
+examples: ./.resources/Create a listing (livestock, N8,000 per head).resources/examples
+order: 4000

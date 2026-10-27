@@ -1,0 +1,44 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "planting",
+        "production_cycle_id": "{{crop_cycle_id}}",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "units_planted": 5000
+        }
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Recorded planting would total 5800 units, more than the project baseline of 800 (already recorded: 800).",
+        "code": "validation_failed",
+        "request_id": "01a1045e-6c35-7112-afbb-de9f2e49f2a2",
+        "errors": {
+          "details.units_planted": [
+            "Recorded planting would total 5800 units, more than the project baseline of 800 (already recorded: 800)."
+          ]
+        }
+      }
+order: 2000

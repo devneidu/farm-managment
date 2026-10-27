@@ -1,0 +1,82 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Copies any template into an editable farm template ("customise"), then edit and apply it.
+
+  **WHEN TO USE IT**
+  "Customise" on a platform template.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{template_platform_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.manage` (taken from the current farm context; never sent by the client).
+  - Creates a farm template; nothing is applied.
+  - Works on platform and farm templates; the copy is a farm template (`source: farm`, `cloned_from_id` set) that you can edit and apply.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`task.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `work-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/work-templates/{{template_platform_id}}/clone`
+
+  **PATH PARAMETERS**
+  - `{{template_platform_id}}` — UUID. Captured by "Recommended templates for a cycle" (13 — Tasks, Templates & Calendar) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{template_platform_id}}` — captured by "Recommended templates for a cycle"
+
+  **BUSINESS RULES**
+  - Works on platform and farm templates; the copy is a farm template (`source: farm`, `cloned_from_id` set) that you can edit and apply.
+  - Requires `task.manage`.
+
+  **SUCCESS**
+  `201 Created` — message: "Template cloned."
+
+  `data` fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `items`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/work-templates/{{template_platform_id}}/clone"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Clone a template.resources/examples
+order: 8000

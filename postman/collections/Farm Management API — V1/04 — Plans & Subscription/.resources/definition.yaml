@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Plans, the farm's subscription, entitlements (what the plan allows) and usage. RBAC (can this user?) and entitlements (does this plan allow it?) are separate systems; an action needs both. There is no checkout or billing API in V1: plan changes are made by a Platform Admin.
+
+  Typical screens: pricing page, billing/plan usage, upsell prompts.
+order: 6000

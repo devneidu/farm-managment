@@ -1,0 +1,28 @@
+$kind: http-request
+description: "Demonstrates optimistic concurrency: version 1 is no longer current."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "unit_price": "7000",
+      "version": 1
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 409", function () { pm.expect(pm.response.code).to.be.oneOf([409]); });
+    language: text/javascript
+examples: ./.resources/22. Update with a stale version (409).resources/examples
+order: 22000

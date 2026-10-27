@@ -1,0 +1,98 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Rename, retype, move (`parent_id`) or deactivate/reactivate. Omitted fields are kept.
+
+  **WHEN TO USE IT**
+  Renaming, moving or deactivating a location.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{location_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `location.manage` (taken from the current farm context; never sent by the client).
+  - Deactivating a location with active children is `409 location_has_active_children` (nothing cascades).
+  - Cycles are `409 location_cycle`; too deep is `409 location_depth_exceeded`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`location.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `location-write`: 60 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PATCH {{base_url}}/locations/{{location_id}}`
+
+  **PATH PARAMETERS**
+  - `{{location_id}}` — UUID. Captured by "Create a location" (07 — Locations & Farm Structure) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, optional, max 100 chars, min 1 chars
+  - `type` — enum, optional. Values: `site`, `building`, `house`, `field`, `other`
+  - `parent_id` — string (uuid), optional, nullable. Always references a location, never a batch location (called a *production area* in the API) or storage location.
+  - `is_active` — boolean, optional
+
+  **VARIABLES USED**
+  - `{{location_id}}` — captured by "Create a location"
+
+  **BUSINESS RULES**
+  - Deactivating a location with active children is `409 location_has_active_children` (nothing cascades).
+  - Cycles are `409 location_cycle`; too deep is `409 location_depth_exceeded`.
+
+  **SUCCESS**
+  `200 OK` — message: "Place updated."
+
+  `data` fields: `id`, `kind`, `name`, `type`, `type_label`, `parent_id`, `path`, `path_label`, `depth`, `is_active`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `location.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `duplicate_location`, `location_cycle`, `location_inactive`, `location_depth_exceeded`, `location_has_active_children`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/locations/{{location_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Poultry House One"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Edit, move or deactivate a location.resources/examples
+order: 5000

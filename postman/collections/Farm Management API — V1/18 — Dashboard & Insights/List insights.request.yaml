@@ -1,0 +1,81 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Deterministic rule-based insights over existing data (mortality threshold, low stock, lot expiry, overdue tasks/invoices, medicine withdrawal, breeding due/overdue, cycle past expected end). Each has `severity`, `title`, `message`, `why` (the rule and numbers behind it) and a `subject`.
+
+  **WHEN TO USE IT**
+  The "Alerts & insights" list.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `severity`, `limit`.
+
+  **IMPORTANT BEHAVIOR**
+  - Query: `severity` (`critical`|`warning`|`info`), `limit` (1-50). `meta` has `total`, `by_severity`, `today`, `timezone`.
+  - No AI, scoring or stored state: the same data gives the same insight. Never returns 403: viewers see only rules their permissions allow.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Any active farm member (no specific permission). The response is filtered by the caller's own permissions.
+
+  **URL**
+  `GET {{base_url}}/insights`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `severity` — enum. Values: `critical`, `warning`, `info`
+  - `limit` — integer, min 1, max 50. Most insights to return, 1-50 (default 50).
+
+  **BUSINESS RULES**
+  - Query: `severity` (`critical`|`warning`|`info`), `limit` (1-50). `meta` has `total`, `by_severity`, `today`, `timezone`.
+  - No AI, scoring or stored state: the same data gives the same insight. Never returns 403: viewers see only rules their permissions allow.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `code`, `severity`, `title`, `message`, `why`, `subject`, `data`.
+
+  `meta`: `total`, `by_severity`, `today`, `timezone`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/insights?severity=info"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: severity
+    value: info
+  - key: limit
+    value: ""
+    disabled: true
+    description: Most insights to return, 1-50 (default 50). — integer — min 1, max 50
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List insights.resources/examples
+order: 3000

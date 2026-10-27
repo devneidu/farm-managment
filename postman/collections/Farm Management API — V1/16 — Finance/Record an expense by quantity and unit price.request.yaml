@@ -1,0 +1,134 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Same as "Record an expense", but the amount is computed from `quantity` x `unit_price` (send both, leave `amount` out). Also records how it was paid (`payment_method`).
+
+  **(base description follows)**
+
+  **WHAT IT DOES**
+  Books an expense in the money ledger (`direction` is pinned to `expense`). Optionally allocate it to an open production cycle so it counts toward that cycle's profitability.
+
+  **WHEN TO USE IT**
+  "Add expense" (labour, utilities, ...).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `amount`, `occurred_on`, `idempotency_key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).
+  - One expense row in the money ledger. No stock effect.
+  - Money is an exact decimal STRING with at most two decimals (`"1500.50"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.
+  - `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.
+  - The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/expenses`
+
+  **REQUEST BODY** (`application/json`)
+  - `direction` — enum, optional. Values: `expense`
+  - `finance_category_id` — string (uuid), optional, nullable
+  - `amount` — string, **required**
+  - `occurred_on` — string (date), **required**
+  - `recorded_at` — string (date-time), optional, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `contact_id` — string (uuid), optional, nullable
+  - `production_cycle_id` — string (uuid), optional, nullable
+  - `description` — string, optional, max 500 chars, nullable
+  - `source` — object, optional
+  - `source.type` — enum, **required**. Values: `operational_record`, `health_record`, `purchase`
+  - `source.id` — string (uuid), **required**
+  - `corrects_transaction_id` — string (uuid), optional, nullable
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `farm_id` — string, optional
+  - `created_by` — string, optional
+  - `currency` — string, optional
+  - `entry_type` — string, optional
+  - `reference` — string, optional
+
+  **VARIABLES USED**
+  - `{{cat_labour_id}}` — captured by "List income and expense categories"
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - Money is an exact decimal STRING with at most two decimals (`"1500.50"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.
+  - `occurred_on` is a farm-local day, not in the future; `recorded_at` (optional) is the entry time, kept apart from `created_at`.
+  - The category must be active and match the direction. Omit `production_cycle_id` for farm overhead.
+  - Optional `source {type: operational_record|health_record|purchase, id}` links the expense to the real event: ONE live transaction per source (`409 finance_already_recorded`, `details.transaction_id`).
+  - Never send `farm_id`, `currency`, `created_by`, `entry_type`, `reference` (rejected).
+  - Requires `finance.create` (Owner, Manager, Finance). Tasks never create transactions.
+
+  **SUCCESS**
+  `201 Created` — message: "Expense recorded."
+
+  `data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `finance.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `finance_already_recorded`, `source_reversed`, `cycle_closed`, `contact_inactive`, `category_inactive`, `idempotency_conflict`, `invalid_correction`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+
+  **TRANSACTIONS PAGE ADDITIONS**
+  - Optional `payment_method` (`cash`, `bank_transfer`, `pos`, `mobile_money`, `cheque`, `other`); filter the list with `?payment_method=`.
+  - Optional `quantity` + `unit_price` (both or neither, else 422). With both, `amount` may be omitted and is computed (rounded to 2 decimals); a sent `amount` must match or the response is 422.
+  - Livestock, egg, milk and crop sales categories are refused here with 422 ("Record this through Sales so your stock stays correct."). `GET /finance/categories` returns `manual_entry` so the form can hide them.
+  - A manual expense matching a live purchase (same amount, day and contact) returns `409 possible_duplicate` with `details.purchase_id/label/reference`; resend with `confirm_duplicate: true` to record it anyway.
+  - Every row carries `source {type, id, label, ...}` ("Entered manually" when manual) and `can_reverse_directly`.
+url: "{{base_url}}/expenses"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "finance_category_id": "{{cat_labour_id}}",
+      "quantity": "12.5",
+      "unit_price": "8400.00",
+      "payment_method": "bank_transfer",
+      "occurred_on": "{{today}}",
+      "description": "12.5 bags of layer mash",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("expense_qty_id", String(v)); else console.warn("Could not capture expense_qty_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Record an expense by quantity and unit price.resources/examples
+order: 4000

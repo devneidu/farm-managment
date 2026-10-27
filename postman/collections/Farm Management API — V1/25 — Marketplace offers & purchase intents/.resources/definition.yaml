@@ -1,0 +1,3 @@
+$kind: collection
+description: "**Phase 24.** Controlled negotiation on Marketplace listings: buyer offers (strictly below the listed unit price, not below the platform floor, max 3 per listing, 48h expiry), \"proceed at listed price\" purchase intents, and the shop's accept/reject. Sign-in + verified email only (NO farm). NOT chat, escrow or checkout: nothing is reserved, paid or sold, and seller contact is never returned (Phase 25). Platform settings: `marketplace_max_offers_per_buyer`, `marketplace_offer_expiry_hours`, `marketplace_min_offer_percent` (folder 90 -> settings). Contract: `docs/api/PHASE-24-MARKETPLACE-OFFERS.md`. These requests were NOT executed with Newman (see COVERAGE)."
+order: 27000

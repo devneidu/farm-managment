@@ -1,0 +1,34 @@
+$kind: http-request
+description: 'Admin write. `draft|published|paused -> restricted` with a required `reason`: removed from the public feed at once and frozen against seller edits/publishing; the seller sees the reason. Nothing is deleted. Repeating is a no-op. Audited `platform.marketplace_listing_restricted`. There is no separate "hide".'
+url: "{{base_url}}/platform-admin/marketplace/listings/{{listing_id}}/restrict"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Prohibited product"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("Restricted", function () { pm.expect(json.data.status).to.eql("restricted"); pm.expect(json.data.is_public).to.eql(false); });
+      }
+    language: text/javascript
+examples: ./.resources/Restrict a listing.resources/examples
+order: 3000

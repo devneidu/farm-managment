@@ -1,0 +1,50 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/notifications?unread=1"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: unread
+      value: "1"
+    - key: type
+      value: ""
+      disabled: true
+      description: string — max 40 chars
+    - key: severity
+      value: ""
+      disabled: true
+      description: "enum: critical | warning | info"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [],
+        "meta": {
+          "current_page": 1,
+          "per_page": 25,
+          "last_page": 1,
+          "total": 0,
+          "unread_count": 0
+        },
+        "message": null
+      }
+order: 1000

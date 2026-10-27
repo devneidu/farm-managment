@@ -1,0 +1,21 @@
+$kind: http-example
+name: A priced plan cannot be the default (422 default_plan_must_be_free)
+request:
+  url: "{{base_url}}/platform-admin/plans/{{plan_new_id}}/make-default"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The default plan is the free fallback and cannot have active prices.",
+        "code": "default_plan_must_be_free",
+        "request_id": "01a1045e-ccc6-7201-80fc-4ecab7a863dc"
+      }
+order: 2000

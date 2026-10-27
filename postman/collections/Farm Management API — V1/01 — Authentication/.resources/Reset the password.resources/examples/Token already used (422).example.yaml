@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/password/reset"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "reset_token": "{{reset_token}}",
+        "password": "{{new_password}}",
+        "password_confirmation": "{{new_password}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The reset authorization is invalid or has expired.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-be02-7363-82bd-d5b5508b0cf6",
+        "errors": {
+          "reset_token": [
+            "The reset authorization is invalid or has expired."
+          ]
+        }
+      }
+order: 2000

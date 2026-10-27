@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_egg_sales_id}}",
+        "amount": "5000.00",
+        "occurred_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Record this through Sales so your stock stays correct.",
+        "code": "validation_failed",
+        "request_id": "01a164f1-ab96-702b-bad9-62c57179aa11",
+        "errors": {
+          "finance_category_id": [
+            "Record this through Sales so your stock stays correct."
+          ]
+        }
+      }
+order: 2000

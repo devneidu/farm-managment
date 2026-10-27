@@ -1,0 +1,70 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/lots?inventory_item_id={{item_med_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: inventory_item_id
+      value: "{{item_med_id}}"
+    - key: expired
+      value: ""
+      disabled: true
+      description: "true: only expired lots; false: only unexpired or non-expiring lots. Compared with today in the farm timezone. — boolean"
+    - key: expiring_within_days
+      value: ""
+      disabled: true
+      description: Lots with stock on hand expiring within N days (inclusive of today). — integer — min 0, max 3650
+    - key: include_empty
+      value: ""
+      disabled: true
+      description: boolean
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+            "inventory_item_id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+            "code": "NCD-2026-01",
+            "expires_on": "2027-01-02",
+            "is_expired": false,
+            "stock": {
+              "quantity": "500",
+              "unit": "ml",
+              "normalized": {
+                "quantity": "500",
+                "unit": "ml"
+              }
+            },
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

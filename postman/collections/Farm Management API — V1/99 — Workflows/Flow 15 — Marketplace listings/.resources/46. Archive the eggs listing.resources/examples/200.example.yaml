@@ -1,0 +1,109 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}/archive"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a118eb-e533-73bf-a026-8eca66565f66",
+          "reference": "LST-2026-00002",
+          "slug": "fresh-eggs-by-the-crate-gviz3e",
+          "shop_id": "01a118eb-e021-7194-a3e5-600cd6fd1d47",
+          "version": 3,
+          "status": "archived",
+          "is_public": false,
+          "hidden_because": null,
+          "title": "Fresh eggs by the crate",
+          "description": null,
+          "product": {
+            "kind": "eggs",
+            "kind_label": "Eggs",
+            "species": null,
+            "crop_type": null,
+            "custom_name": null,
+            "name": "Eggs"
+          },
+          "price": {
+            "amount": "6000.00",
+            "amount_minor": 600000,
+            "currency": "NGN",
+            "per": {
+              "code": "crate",
+              "name": "Crate",
+              "symbol": "crate",
+              "integer_only": false,
+              "decimal_places": 2
+            }
+          },
+          "quantity": {
+            "available": "40",
+            "min_order": null,
+            "unit": "crate",
+            "basis": "seller_declared",
+            "updated_at": "2026-10-08T00:31:15+00:00"
+          },
+          "negotiable": false,
+          "package": {
+            "quantity": "30",
+            "unit": "egg",
+            "description": "Standard crate of 30 eggs",
+            "declared_by": "seller",
+            "is_conversion": false
+          },
+          "fulfilment": {
+            "mode": "pickup",
+            "label": "Pickup only",
+            "pickup_area": "Bodija market",
+            "delivery_coverage": [],
+            "dispatch_estimate": null,
+            "delivery_charge": null,
+            "arranged_by": "seller"
+          },
+          "location": {
+            "state": "Oyo",
+            "city": "Ibadan",
+            "area": "Bodija"
+          },
+          "image": {
+            "source": "placeholder",
+            "kind": null,
+            "illustrative": true,
+            "has_image": false,
+            "url": null,
+            "alt_text": "Fresh eggs by the crate",
+            "placeholder_kind": "eggs"
+          },
+          "catalog_image_id": null,
+          "images": [],
+          "inventory_linked": false,
+          "restriction": null,
+          "abilities": {
+            "edit": false,
+            "publish": true
+          },
+          "published_at": "2026-10-08T00:31:15+00:00",
+          "paused_at": null,
+          "archived_at": "2026-10-08T00:31:17+00:00",
+          "created_at": "2026-10-08T00:31:15+00:00",
+          "updated_at": "2026-10-08T00:31:17+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

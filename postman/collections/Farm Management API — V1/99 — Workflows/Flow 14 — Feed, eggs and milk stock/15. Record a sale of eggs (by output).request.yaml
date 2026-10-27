@@ -1,0 +1,106 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Sells eggs from the farm's own Eggs stock: one sale + one `sale` stock-out (linked to the line), the line naming `output: "eggs"` instead of an inventory item id.
+
+  **WHEN TO USE IT**
+  Eggs Out → Sold. No item id is needed, so there is nothing to look up first.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `sale.create`. The line carries exactly one of `inventory_item_id` / `output`.
+  - A sale takes the EXISTING output item only: a farm that never stocked eggs gets `409 insufficient_stock` and nothing is created. Insufficient stock is `409` as for any item.
+  - With no `storage_location_id` the only active store is used (several = 422 `items.N.storage_location_id`).
+  - Cancel with `POST /sales/{id}/cancel` to restore the stock.
+
+  **WHAT TO DO NEXT**
+  Refetch `GET /inventory/output-balances`, the sale and the dashboard.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`sale.create`**.
+
+  **URL**
+  `POST {{base_url}}/sales`
+
+  **REQUEST BODY** (`application/json`)
+  - `items[]` — `kind: stock`, `output: eggs` **or** `inventory_item_id`, `storage_location_id`, `components` (pieces or crates), `amount`
+  - `recorded_at`, `idempotency_key` — **required**
+
+  **BUSINESS RULES**
+  - Produce sales are booked to `crop_sales` unless `finance_category_id` is given.
+
+  **SUCCESS**
+  `201 Created` — the sale; the line shows the resolved `inventory_item_id`.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 insufficient_stock`, `409 idempotency_conflict`.
+  - `422 validation_failed` — both/neither stock target, or several stores and none chosen.
+url: "{{base_url}}/sales"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "customer_name": "Mama Put Kitchen",
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}",
+      "items": [
+        {
+          "kind": "stock",
+          "output": "eggs",
+          "storage_location_id": "{{store_id}}",
+          "components": [
+            {
+              "quantity": "12",
+              "unit": "piece"
+            }
+          ],
+          "amount": "3600.00"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("sale_egg_id", String(v)); else console.warn("Could not capture sale_egg_id from data.id"); }
+        pm.test("the line resolved the eggs item", function () { pm.expect(json.data.items[0].inventory_item_id).to.eql(pm.environment.get("egg_item_id")); });
+      }
+    language: text/javascript
+examples: ./.resources/15. Record a sale of eggs (by output).resources/examples
+order: 15000

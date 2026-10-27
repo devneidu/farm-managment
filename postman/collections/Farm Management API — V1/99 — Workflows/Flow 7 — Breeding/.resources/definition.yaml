@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Start an incubation project, record a candling check and the hatch outcome, and verify the population effect; reverse an outcome.
+
+  **Prerequisites:** Flow 3 (`cycle_id`).
+
+  Steps: 9. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 8000

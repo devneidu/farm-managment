@@ -1,0 +1,57 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The invited member's auth state after accepting.
+
+  **WHEN TO USE IT**
+  Checking the invited member's state after accepting.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Read-only: no side effects.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Log in as the farm owner again**.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Any signed-in user.
+
+  **URL**
+  `GET {{base_url}}/auth/me`
+
+  Full reference (all fields, errors, rules): folder **01 — Authentication** -> "Get auth state as the invited member".
+
+  Full reference (errors, all fields): folder **01 — Authentication** -> "Get auth state as the invited member".
+
+  **FARM DISCOVERY (GAP-07)**
+  `data.farms` lists every farm the user ACTIVELY belongs to (`id`, `name`, `role`; oldest membership first). `data.farm` stays the default farm (the oldest active membership). To work in another farm send its `farms[].id` as the `X-Farm-Id` header, then refetch `GET /farm` (membership + permissions) and `GET /subscription/entitlements` and clear farm-scoped caches. There is no switch endpoint. Permissions are never listed here.
+
+  **MARKETPLACE-ONLY SELLERS (Phase 22)**
+  `data.marketplace.shop_count` = Marketplace shops the user belongs to (any status). `next_action = "marketplace"` is returned only for a verified user with NO active farm who belongs to at least one shop: route to the seller dashboard (`GET /marketplace/my/shops`). A brand-new account with no shop still gets `complete_farm_setup` (offer "open a shop instead" -> `POST /marketplace/shops`, no farm needed). A user with a farm keeps `none`. Farm endpoints still answer `403 onboarding_required` / `no_active_farm`; `POST /onboarding/farm` remains available.
+url: "{{base_url}}/auth/me"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("farms[] lists the active farm memberships (id, name, role)", function () { pm.expect(json.data.farms).to.be.an("array"); json.data.farms.forEach(function (f) { pm.expect(Object.keys(f).sort()).to.eql(["id", "name", "role"]); }); });
+        pm.test("marketplace.shop_count is a number", function () { pm.expect(json.data.marketplace.shop_count).to.be.a("number"); });
+      }
+    language: text/javascript
+examples: ./.resources/7. Get auth state as the invited member.resources/examples
+order: 7000

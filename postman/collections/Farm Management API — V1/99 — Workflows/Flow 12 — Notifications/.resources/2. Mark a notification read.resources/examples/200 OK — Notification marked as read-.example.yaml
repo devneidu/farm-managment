@@ -1,0 +1,46 @@
+$kind: http-example
+name: 200 OK — Notification marked as read.
+request:
+  url: "{{base_url}}/notifications/{{notification_id}}/read"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-b4a5-737a-88b3-8a325ff9b4ce",
+          "type": "medicine_withdrawal",
+          "severity": "info",
+          "title": "Medicine withdrawal in effect",
+          "message": "1 medicine line is still inside the withdrawal period; check before selling eggs, milk or meat.",
+          "source": null,
+          "data": {
+            "why": {
+              "rule": "medicine_withdrawal",
+              "lines": 1,
+              "cycles": 1,
+              "latest_ends_at": "2026-10-10T22:44:06.000000Z"
+            },
+            "period": "2026-W40",
+            "insight_id": "medicine_withdrawal:farm"
+          },
+          "is_read": true,
+          "read_at": "2026-10-04T00:45:08.000000Z",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Notification marked as read."
+      }
+order: 1000

@@ -1,0 +1,56 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "supplier_reference": "MKT-2210",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Eggs bought at the market",
+        "items": [
+          {
+            "kind": "stock",
+            "output": "eggs",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "30",
+                "unit": "piece"
+              }
+            ],
+            "amount": "4500.00",
+            "inventory_item_id": "{{egg_item_id}}"
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The items.0.output field prohibits items.0.inventory_item_id from being present.",
+        "code": "validation_failed",
+        "request_id": "01a11127-166c-7358-afc3-10f5a79c07c4",
+        "errors": {
+          "items.0.output": [
+            "The items.0.output field prohibits items.0.inventory_item_id from being present."
+          ]
+        }
+      }
+order: 2000

@@ -1,0 +1,66 @@
+$kind: http-example
+name: 201 Created — Inventory item created.
+request:
+  url: "{{base_url}}/inventory/items"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Layer Grower Mash",
+        "category": "feed",
+        "stock_unit": "kg",
+        "low_stock_threshold": {
+          "quantity": "50",
+          "unit": "kg"
+        },
+        "description": "Compounded grower mash from the mill"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+          "name": "Layer Grower Mash",
+          "category": "feed",
+          "description": "Compounded grower mash from the mill",
+          "stock_unit": "kg",
+          "dimension": "weight",
+          "tracks_lots": false,
+          "tracks_expiry": false,
+          "is_active": true,
+          "stock": {
+            "quantity": "0",
+            "unit": "kg",
+            "normalized": {
+              "quantity": "0",
+              "unit": "g"
+            }
+          },
+          "low_stock_threshold": {
+            "quantity": "50",
+            "unit": "kg"
+          },
+          "is_low_stock": true,
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Inventory item created."
+      }
+order: 1000

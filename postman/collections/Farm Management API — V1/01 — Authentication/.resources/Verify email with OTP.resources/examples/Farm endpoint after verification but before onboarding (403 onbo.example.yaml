@@ -1,0 +1,28 @@
+$kind: http-example
+name: Farm endpoint after verification but before onboarding (403 onboarding_required)
+request:
+  url: "{{base_url}}/farm"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Complete farm setup to continue.",
+        "code": "onboarding_required",
+        "request_id": "01a1045e-3d0f-70e5-88d8-37b6dbde0532"
+      }
+order: 4000

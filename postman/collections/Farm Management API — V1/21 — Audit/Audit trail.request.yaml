@@ -1,0 +1,121 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Who did what, when, to which resource: a newest-first timeline built IN PLACE from the authoritative append-only records, plus a small log of privileged actions (team, farm settings, exports).
+
+  **WHEN TO USE IT**
+  The audit log screen (owners/managers).
+
+  **IMPORTANT INPUTS**
+  - Query filters: `from`, `to`, `actor_id`, `action`, `resource_type`, `resource_id`, `request_id`, `production_cycle_id`, ....
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `audit.view` (taken from the current farm context; never sent by the client).
+  - Query: `from`, `to` (farm-local days on `performed_at`), `actor_id`, `action` (for example `record.created`, `sale.cancelled`, `team.invitation_sent`), `resource_type`, `resource_id` (everything that happened to one resource, including its reversals), `request_id` (the `X-Request-Id` of the causing request), `production_cycle_id`, `page`, `per_page` (max 100).
+  - `performed_at` = when it happened in the system; `recorded_at` = the business time of the event. Never merged.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`audit.view`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/audit`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `from` — string (date). Inclusive farm-local days, applied to when the action was performed.
+  - `to` — string (date)
+  - `actor_id` — string (uuid)
+  - `action` — string, max 60 chars. Exact action code, for example `record.reversed` or `team.member_role_changed`.
+  - `resource_type` — string, max 40 chars
+  - `resource_id` — string (uuid). Everything that happened to one resource (including the reversal/correction rows that point at it).
+  - `request_id` — string, max 100 chars
+  - `production_cycle_id` — string (uuid)
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Requires `audit.view` (Owner, Manager). A source is only included when the viewer may also view that module.
+  - Query: `from`, `to` (farm-local days on `performed_at`), `actor_id`, `action` (for example `record.created`, `sale.cancelled`, `team.invitation_sent`), `resource_type`, `resource_id` (everything that happened to one resource, including its reversals), `request_id` (the `X-Request-Id` of the causing request), `production_cycle_id`, `page`, `per_page` (max 100).
+  - `performed_at` = when it happened in the system; `recorded_at` = the business time of the event. Never merged.
+  - Never included: money amounts, record details/notes/reasons, tokens or secrets.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `action`, `resource`, `actor`, `performed_at`, `recorded_at`, `changes`, `request_id`, `ip_address`, `related_id`, `production_cycle`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `audit.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/audit?from={{date_7d_ago}}&to={{today}}&resource_type=operational_record"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: from
+    value: "{{date_7d_ago}}"
+  - key: to
+    value: "{{today}}"
+  - key: resource_type
+    value: operational_record
+  - key: actor_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: action
+    value: ""
+    disabled: true
+    description: Exact action code, for example `record.reversed` or `team.member_role_changed`. — string — max 60 chars
+  - key: resource_id
+    value: ""
+    disabled: true
+    description: Everything that happened to one resource (including the reversal/correction rows that point at it). — string (uuid)
+  - key: request_id
+    value: ""
+    disabled: true
+    description: string — max 100 chars
+  - key: production_cycle_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Audit trail.resources/examples
+order: 1000

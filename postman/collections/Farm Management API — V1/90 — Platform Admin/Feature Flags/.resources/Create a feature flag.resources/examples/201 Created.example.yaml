@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/feature-flags"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "key": "new_dashboard_layout",
+        "description": "Experimental dashboard layout"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "key": "new_dashboard_layout",
+          "description": "Experimental dashboard layout",
+          "enabled": false,
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

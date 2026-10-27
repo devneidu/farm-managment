@@ -1,0 +1,43 @@
+$kind: http-example
+name: 200 OK — Custom breed updated.
+request:
+  url: "{{base_url}}/custom-breeds/{{breed_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "{{custom_breed_name}} (renamed)"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1206e-163d-706d-a835-cb1d7ad84c3c",
+          "species_id": "01a1206d-7d65-7126-84ae-ca4491d3d8d1",
+          "code": null,
+          "name": "Isa Brown (Ibadan strain) 1791545448 (renamed)",
+          "source": "farm",
+          "is_active": true,
+          "is_editable": true,
+          "created_at": "2026-10-09T11:30:47+00:00"
+        },
+        "meta": {},
+        "message": "Custom breed updated."
+      }
+order: 1000

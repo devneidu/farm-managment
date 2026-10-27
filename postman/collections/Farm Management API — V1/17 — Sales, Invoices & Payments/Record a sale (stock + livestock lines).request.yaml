@@ -1,0 +1,163 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records what LEFT the farm, to whom and for how much. A sale is the commercial event only: it is NOT an invoice and NOT a payment, so it books no income.
+
+  **WHEN TO USE IT**
+  "Record sale" (produce and/or animals).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `recorded_at`, `idempotency_key`, `items`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Stock lines accept items in a sellable category: `produce` (eggs, milk, harvests) and `feed` (surplus feed sold to another farm). `GET /master/inventory-options` lists them as `sellable_categories`. The sale remains the only writer of a `sale` stock-out; reason `sale` on the manual stock-out is refused.
+  - Requires the farm permission `sale.create` (taken from the current farm context; never sent by the client).
+  - Sale + lines; one `stock_out` per stock line; one population exit (operational record `livestock_sale`, `population_delta = -12`) per livestock line. NO invoice, NO income.
+  - `stock` lines sell PRODUCE items: one stock-out (`reason: sale`) per line, quantities in the components format, never below zero (`409 insufficient_stock`, `details.available/requested`). `livestock` lines remove `head_count` animals from a livestock cycle through the population ledger (`409 insufficient_population`; cycle must be open). `other` lines (description required) have no physical effect.
+  - Customer: `contact_id` must be an active contact with the `customer` role, or send `customer_name` for a walk-in (not both).
+  - `finance_category_id` (an income category) is optional; otherwise derived (livestock-only -> `livestock_sales`, produce-only -> `crop_sales`, else `other_income`) and used when payments are booked.
+
+  **WHAT TO DO NEXT**
+  Issue the invoice if the customer needs one.
+
+  **OUTPUT-NAMED STOCK LINES (GAP-08)**
+  A stock line names its stock with EXACTLY ONE of `inventory_item_id` (a specific item, always supported) or `output` (`eggs` | `milk`, the farm's automatic output item; no item id needed). A SALE takes the existing output item only: a farm that never stocked it gets `409 insufficient_stock` and nothing is created. `storage_location_id` is optional with `output` (the only active store is used; several active stores need a choice, `422 items.N.storage_location_id`). Both or neither -> `422`; `output` on a non-stock line -> `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Refetch the cycle (`current_population`) and inventory stock after saving. Show `payment_status` from the sale: `uninvoiced`, `unpaid`, `partially_paid`, `paid`.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`sale.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/sales`
+
+  **REQUEST BODY** (`application/json`)
+  - `contact_id` — string (uuid), optional, nullable. The customer (an active contact with the customer role, Phase 14). Omit for a walk-in sale.
+  - `customer_name` — string, optional, max 150 chars, nullable. Free-text buyer name for a walk-in sale; not allowed together with contact_id.
+  - `finance_category_id` — string (uuid), optional, nullable. Income category later payments are booked to; defaults from the lines (livestock -> livestock_sales, produce -> crop_sales, otherwise other_income).
+  - `corrects_sale_id` — string (uuid), optional, nullable. Replace a cancelled sale once. Needs sale.cancel.
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `invoice` — object, optional. "Save & Create Invoice": issue the invoice for this sale in the same transaction. A convenience only - the invoice is still its own document. Needs invoice.create.
+  - `invoice.issue_date` — string (date), **required**, nullable
+  - `invoice.due_date` — string (date), **required**, nullable
+  - `invoice.notes` — string, **required**, max 2000 chars, nullable
+  - `items` — array, **required**, min 1 items, max 30 items. 1-30 lines. Total = exact sum of line amounts.
+  - `items[].kind` — enum, **required**. stock = produce leaving inventory through a Phase 9 stock-out; livestock = animals leaving a livestock cycle through the population ledger; other = no physical effect.. Values: `stock`, `livestock`, `other`
+  - `items[].description` — string, **required**, max 190 chars, nullable. Required for other lines; stock and livestock lines are named from the item/cycle (an optional label is kept for livestock).
+  - `items[].inventory_item_id` — string (uuid), **required**. stock only.
+  - `items[].storage_location_id` — string (uuid), **required**
+  - `items[].lot_id` — string (uuid), **required**, nullable
+  - `items[].components` — array, **required**, min 1 items, max 10 items
+  - `items[].components[].quantity` — string, **required**
+  - `items[].components[].unit` — string, **required**, max 32 chars
+  - `items[].production_cycle_id` — string (uuid), **required**, nullable. Required for livestock lines (the cycle the animals leave); optional revenue allocation for the others.
+  - `items[].head_count` — string, **required**. livestock only: whole animals sold.
+  - `items[].amount` — string, **required**. What the buyer pays for the whole line, in the farm currency, a string with at most two decimals.
+
+  **VARIABLES USED**
+  - `{{customer_id}}` — captured by "Create a contact (customer)"
+  - `{{item_eggs_id}}` — captured by "Create an inventory item (produce)"
+  - `{{store_id}}` — captured by "Create a storage location"
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - `stock` lines sell PRODUCE items: one stock-out (`reason: sale`) per line, quantities in the components format, never below zero (`409 insufficient_stock`, `details.available/requested`). `livestock` lines remove `head_count` animals from a livestock cycle through the population ledger (`409 insufficient_population`; cycle must be open). `other` lines (description required) have no physical effect.
+  - Customer: `contact_id` must be an active contact with the `customer` role, or send `customer_name` for a walk-in (not both).
+  - `finance_category_id` (an income category) is optional; otherwise derived (livestock-only -> `livestock_sales`, produce-only -> `crop_sales`, else `other_income`) and used when payments are booked.
+  - Optional `invoice {issue_date, due_date, notes}` is "Save & create invoice": it runs the invoice step in the same transaction (also needs `invoice.create`). The two documents stay separate.
+  - Money is an exact decimal STRING with at most two decimals (`"1500.50"`; integers and JSON numbers with <=2 decimals are accepted), positive, at most 16 integer digits. The API adds and compares with exact decimal arithmetic and always returns two decimals. Do not use JavaScript floats for money: keep strings, or use a decimal library, and let the API do the totals.
+  - `idempotency_key` is required and farm-wide: identical retry returns the original sale (201); changed payload is `409 idempotency_conflict`. Atomic.
+  - Requires `sale.create` (Owner, Manager, Finance).
+
+  **SUCCESS**
+  `201 Created` — message: "Sale recorded."
+
+  `data` fields: `id`, `reference`, `status`, `contact_id`, `customer_name`, `recorded_at`, `total_amount`, `currency`, `finance_category`, `payment_status`, `amount_paid`, `outstanding`, `invoice`, `notes`, `corrects_sale_id`, `cancelled_at`, `cancel_reason`, `items`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `sale.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `insufficient_stock`, `insufficient_population`, `cycle_closed`, `lot_expired`, `item_inactive`, `contact_inactive`, `idempotency_conflict`, `invalid_correction`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/sales"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "contact_id": "{{customer_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{sale_key}}",
+      "notes": "Weekly delivery to the restaurant",
+      "items": [
+        {
+          "kind": "stock",
+          "inventory_item_id": "{{item_eggs_id}}",
+          "storage_location_id": "{{store_id}}",
+          "components": [
+            {
+              "quantity": "90",
+              "unit": "piece"
+            }
+          ],
+          "amount": "27000.00"
+        },
+        {
+          "kind": "livestock",
+          "production_cycle_id": "{{cycle_id}}",
+          "head_count": 12,
+          "description": "Spent layers",
+          "amount": "60000.00"
+        }
+      ]
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("sale_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("sale_id", String(v)); else console.warn("Could not capture sale_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Record a sale (stock + livestock lines).resources/examples
+order: 1000

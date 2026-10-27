@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Every quantity belongs to a measurement dimension (weight, volume, area, count, temperature, package). Ask the API for the units of ONE dimension; quantities are exact decimal STRINGS; package units (bag, crate, bottle) never have a universal size - they convert only through a context (`crop_type`, `custom` context or `inventory_item`).
+
+  Typical screens: every quantity input (unit dropdown per dimension), unit preferences, package-size ("1 bag = 25 kg") settings.
+order: 8000

@@ -1,0 +1,21 @@
+$kind: http-request
+name: "77. Shop: list purchase intents"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/purchase-intents"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Two intents, buyer by display name only", function () { pm.expect(json.data.length).to.eql(2); json.data.forEach((r) => pm.expect(Object.keys(r.buyer)).to.eql(["name"])); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street"].forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 77000

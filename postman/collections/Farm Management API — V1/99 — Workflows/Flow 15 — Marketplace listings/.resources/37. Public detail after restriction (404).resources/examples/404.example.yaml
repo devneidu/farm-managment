@@ -1,0 +1,24 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/public/marketplace/listings/{{listing_slug}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+response:
+  statusCode: 404
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The requested resource was not found.",
+        "code": "not_found",
+        "request_id": "01a118eb-ebe1-70ab-ac8e-870dd91bc039"
+      }
+order: 1000

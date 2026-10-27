@@ -1,0 +1,34 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  No enforcement_action: nothing is suspended or restricted.
+url: "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}/transition"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "status": "resolved",
+      "reason": "The parties clarified the issue."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Report is now resolved", () => pm.expect(json.data.status).to.eql("resolved"));
+      pm.test("Admin view carries history", () => pm.expect(json.data.history).to.be.an("array").that.is.not.empty);
+    language: text/javascript
+order: 19000

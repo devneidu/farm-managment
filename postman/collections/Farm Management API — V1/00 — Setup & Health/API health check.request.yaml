@@ -1,0 +1,56 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Liveness probe for the API. Use it on the frontend's startup screen or in uptime monitors to confirm the API is reachable; it does not touch the session.
+
+  **WHEN TO USE IT**
+  Startup/connectivity screen, uptime monitors, CI smoke tests.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Read-only: no side effects.
+
+  **WHAT TO DO NEXT**
+  Call `GET /auth/csrf-cookie`, then `GET /auth/me`.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Public** — no session required.
+
+  **ACCESS**
+  Everyone.
+
+  **URL**
+  `GET {{base_url}}/health`
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `status`, `service`, `version`, `timestamp`.
+url: "{{base_url}}/health"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/API health check.resources/examples
+order: 1000

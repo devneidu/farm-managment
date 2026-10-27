@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/species/{{species_chicken_id}}/batch-reference?include_inactive=banana"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    include_inactive: banana
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The include inactive field must be true or false.",
+        "code": "validation_failed",
+        "request_id": "01a12034-4f48-721b-abbc-40c8dee604d8",
+        "errors": {
+          "include_inactive": [
+            "The include inactive field must be true or false."
+          ]
+        }
+      }
+order: 3000

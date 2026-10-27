@@ -1,0 +1,41 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow 1 completed (the account exists and is onboarded).
+
+
+
+  **WHAT IT DOES**
+  Initialises the CSRF cookie used by Laravel Sanctum cookie-based SPA authentication: the response is an empty `204` whose only job is to set the `XSRF-TOKEN` (readable) and session (HttpOnly) cookies. Every later POST/PUT/PATCH/DELETE must echo the token in `X-XSRF-TOKEN`.
+
+  **WHEN TO USE IT**
+  Once when the SPA boots, and again after any `419 session_expired`, before the first POST/PUT/PATCH/DELETE.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Every POST/PUT/PATCH/DELETE from the SPA must echo the cookie value in the `X-XSRF-TOKEN` header (URL-decoded). Axios does this automatically with `withCredentials: true` and `withXSRFToken: true`. The Postman collection does it for you in its collection-level pre-request script.
+  - The request must carry an `Origin` header that appears in `SANCTUM_STATEFUL_DOMAINS` (the collection sends `{{frontend_origin}}`), otherwise the API treats the call as non-stateful and no session exists.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Log out**.
+
+  Full reference (errors, all fields): folder **01 — Authentication** -> "Initialise CSRF cookie".
+url: "{{base_url}}/auth/csrf-cookie"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 204", function () { pm.expect(pm.response.code).to.be.oneOf([204]); });
+      pm.test("XSRF-TOKEN cookie issued", function () { pm.expect(pm.cookies.get("XSRF-TOKEN"), "XSRF-TOKEN cookie").to.be.a("string").and.not.empty; });
+      if (pm.cookies.get("XSRF-TOKEN")) { pm.environment.set("xsrf_token", decodeURIComponent(pm.cookies.get("XSRF-TOKEN"))); }
+    language: text/javascript
+examples: ./.resources/1. Initialise CSRF cookie.resources/examples
+order: 1000

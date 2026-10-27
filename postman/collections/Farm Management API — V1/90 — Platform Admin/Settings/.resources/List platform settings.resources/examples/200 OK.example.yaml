@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/settings"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "key": "support_email",
+            "description": "Address shown to farmers who need help.",
+            "value": null,
+            "updated_at": null
+          },
+          {
+            "key": "support_whatsapp",
+            "description": "WhatsApp number (digits, optional leading +) for support.",
+            "value": null,
+            "updated_at": null
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Executable, end-to-end flows built from the same requests as the reference folders. **Run them in order** with the Collection Runner on the **Farm Management — Local** environment (each flow lists its prerequisites in its first request). Variables captured by earlier flows (`cycle_id`, `store_id`, ...) are reused by later ones. Every flow here was executed against the real application to produce the saved examples.
+
+  See `docs/postman/WORKFLOWS.md` for the state changes and business rules of each flow.
+order: 31000

@@ -1,0 +1,244 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/species/{{species_cattle_id}}/batch-reference"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "species": {
+            "id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+            "code": "cattle",
+            "name": "Cattle",
+            "is_active": true,
+            "livestock_group": {
+              "code": "large_ruminants",
+              "name": "Large ruminants"
+            },
+            "operation": {
+              "id": "01a12033-73fe-7365-8dc7-1015e6fa2c8e",
+              "code": "cattle",
+              "name": "Cattle",
+              "category": "livestock",
+              "tracking_model": "population"
+            },
+            "capability_codes": [
+              "produces_milk",
+              "supports_breeding",
+              "supports_feed_records",
+              "supports_group_tracking",
+              "supports_live_weight",
+              "supports_mortality",
+              "supports_pregnancy"
+            ]
+          },
+          "breed_field_label": "Breed / Strain",
+          "breeds": [
+            {
+              "id": "01a12033-b381-7235-adec-8bdeb2cd6b5c",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "adamawa_gudali",
+              "name": "Adamawa Gudali",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b384-716a-93e7-8a4ce95b46c8",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "azawak",
+              "name": "Azawak",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b38c-71a7-b665-ce1e08095349",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "brahman",
+              "name": "Brahman",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b38a-7277-9707-0e2e3ba00ee7",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "holstein_friesian",
+              "name": "Holstein-Friesian",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b38b-705b-8dee-0bf748634277",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "jersey",
+              "name": "Jersey",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b389-7213-9349-3cd44bbf1a2c",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "keteku",
+              "name": "Keteku",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b387-7178-914e-0662da8c872c",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "kuri",
+              "name": "Kuri",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b385-7356-a8fe-25a9260cb6db",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "muturu",
+              "name": "Muturu",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b386-72fb-a6ea-a5fe5516ab92",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "ndama",
+              "name": "N'Dama",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b37e-726c-87fa-d3b8873b53e2",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "red_bororo_rahaji",
+              "name": "Red Bororo (Rahaji)",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b37f-7372-9ab3-01b88dac231c",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "sokoto_gudali",
+              "name": "Sokoto Gudali",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b382-70b1-9436-190ef1873373",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "wadara",
+              "name": "Wadara",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b37d-7182-855d-ce4a8f9d2b28",
+              "species_id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "white_fulani_bunaji",
+              "name": "White Fulani (Bunaji)",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            }
+          ],
+          "purposes": [
+            {
+              "code": "meat",
+              "name": "Meat",
+              "is_active": true
+            },
+            {
+              "code": "dairy",
+              "name": "Dairy",
+              "is_active": true
+            },
+            {
+              "code": "dual_purpose",
+              "name": "Dual purpose (milk & meat)",
+              "is_active": true
+            },
+            {
+              "code": "hide",
+              "name": "Hide",
+              "is_active": true
+            },
+            {
+              "code": "breeding",
+              "name": "Breeding",
+              "is_active": true
+            },
+            {
+              "code": "draught",
+              "name": "Draught",
+              "is_active": true
+            },
+            {
+              "code": "other",
+              "name": "Other",
+              "is_active": true
+            }
+          ],
+          "growth_stages": [
+            {
+              "code": "calf",
+              "name": "Calf",
+              "is_active": true
+            },
+            {
+              "code": "weaner",
+              "name": "Weaner",
+              "is_active": true
+            },
+            {
+              "code": "grower",
+              "name": "Grower",
+              "is_active": true
+            },
+            {
+              "code": "adult",
+              "name": "Adult",
+              "is_active": true
+            },
+            {
+              "code": "unknown",
+              "name": "Unknown",
+              "is_active": true
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

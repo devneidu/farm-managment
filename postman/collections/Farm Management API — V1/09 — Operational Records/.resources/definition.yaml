@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  What DID happen on the farm: feed use, mortality, eggs, weights, water, notes, population adjustments. Records are append-only (reverse, never edit), carry `recorded_at` (event time) separately from `created_at`, and require an `idempotency_key`. Crop-specific record types are in **14 — Crop Operations**.
+
+  Typical screens: "Record activity" menu and forms, batch activity history, evidence uploads.
+order: 11000

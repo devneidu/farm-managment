@@ -1,0 +1,66 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  What this farm's plan allows right now: `features` (boolean map) and `limits` (`{limit, unlimited}` map). Any member can read it, so use it to enable/disable or upsell UI.
+
+  **WHEN TO USE IT**
+  App startup and any screen that must enable/disable or upsell features by plan.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `farm.view` (taken from the current farm context; never sent by the client).
+  - RBAC (can this user?) and entitlements (does this plan allow it?) are separate: an action needs both. Never hard-code plan names or limits.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`farm.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/subscription/entitlements`
+
+  **BUSINESS RULES**
+  - Requires `farm.view` (all roles).
+  - RBAC (can this user?) and entitlements (does this plan allow it?) are separate: an action needs both. Never hard-code plan names or limits.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `plan`, `subscription_inactive`, `features`, `limits`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `farm.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+url: "{{base_url}}/subscription/entitlements"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Get entitlements (what the plan allows).resources/examples
+order: 2000

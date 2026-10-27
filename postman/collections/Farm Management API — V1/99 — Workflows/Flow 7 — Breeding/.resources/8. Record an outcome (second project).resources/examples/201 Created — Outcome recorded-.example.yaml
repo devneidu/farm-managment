@@ -1,0 +1,54 @@
+$kind: http-example
+name: 201 Created — Outcome recorded.
+request:
+  url: "{{base_url}}/breeding-projects/{{breeding_project_b_id}}/outcomes"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "live_count": 20,
+        "loss_count": 10,
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-7b4f-73d1-ab08-9c576c4173fd",
+          "breeding_project_id": "01a1045e-7883-7288-b3ac-9afa42e2ff29",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "kind": "outcome",
+          "live_count": 20,
+          "loss_count": 10,
+          "outcome_date": "2026-10-04",
+          "operational_record_id": "01a1045e-7b6c-717f-a2c4-f404f4b7bd5f",
+          "reverses_outcome_id": null,
+          "corrects_outcome_id": null,
+          "reversed_by_outcome_id": null,
+          "reason": null,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Outcome recorded."
+      }
+order: 1000

@@ -1,0 +1,124 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The money ledger, reversal rows included. Filters: `direction`, `entry_type` (`entry`|`reversal`), `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type` (`operational_record`, `health_record`, `purchase`, `payment`), `source_id`, `from`, `to` (inclusive farm-local days), `page`, `per_page`.
+
+  **WHEN TO USE IT**
+  The money ledger screen.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `direction`, `entry_type`, `finance_category_id`, `contact_id`, `production_cycle_id`, `source_type`, `source_id`, `from`, ....
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.view` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`finance.view`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/finance/transactions`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `direction` — enum. Values: `income`, `expense`
+  - `entry_type` — enum. Values: `entry`, `reversal`
+  - `finance_category_id` — string (uuid)
+  - `contact_id` — string (uuid)
+  - `production_cycle_id` — string (uuid)
+  - `source_type` — enum. Values: `operational_record`, `health_record`, `purchase`, `payment`
+  - `source_id` — string (uuid)
+  - `from` — string (date)
+  - `to` — string (date)
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `finance.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+
+  Filter `payment_method` (cash, bank_transfer, pos, mobile_money, cheque, other) is available. Each row has `source {type, id, label}` and `can_reverse_directly`.
+url: "{{base_url}}/finance/transactions?direction=expense"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: direction
+    value: expense
+  - key: entry_type
+    value: ""
+    disabled: true
+    description: "enum: entry | reversal"
+  - key: finance_category_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: contact_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: production_cycle_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: source_type
+    value: ""
+    disabled: true
+    description: "enum: operational_record | health_record | purchase | payment"
+  - key: source_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: from
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: to
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List finance transactions.resources/examples
+order: 7000

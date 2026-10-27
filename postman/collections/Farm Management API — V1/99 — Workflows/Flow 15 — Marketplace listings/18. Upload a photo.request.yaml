@@ -1,0 +1,40 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Run with Newman using `--working-dir docs/postman` (or pick the file in Postman).
+
+  `multipart/form-data`: `image` (JPEG, PNG or WebP, <=5 MB, <=4096 px) and optional `alt_text`. The file is decoded and RE-ENCODED server-side (EXIF/GPS and appended payloads are dropped), stored privately under a random name and served only by the API. Remote URLs are never accepted. Up to 6 photos; `409 image_limit_reached`. In Postman choose a file for `image` (a generated sample is in `docs/postman/samples/listing-photo.png`; set Postman's working directory to `docs/postman`).
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+body:
+  type: formdata
+  content:
+    - type: file
+      key: image
+      src:
+        - samples/listing-photo.png
+    - type: text
+      key: alt_text
+      value: Two point-of-lay chickens
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("listing_image_id", v); } }
+      }
+    language: text/javascript
+examples: ./.resources/18. Upload a photo.resources/examples
+order: 18000

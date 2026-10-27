@@ -1,0 +1,356 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/medicine-options"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "medicine_types": [
+                  {
+                      "code": "antibiotic",
+                      "label": "Antibiotic"
+                  },
+                  {
+                      "code": "vaccine",
+                      "label": "Vaccine"
+                  },
+                  {
+                      "code": "supplement",
+                      "label": "Supplement"
+                  },
+                  {
+                      "code": "dewormer",
+                      "label": "Dewormer"
+                  },
+                  {
+                      "code": "other",
+                      "label": "Other"
+                  }
+              ],
+              "primary_units": [
+                  {
+                      "code": "mg",
+                      "label": "Milligram",
+                      "symbol": "mg",
+                      "dimension": "weight",
+                      "integer_only": false
+                  },
+                  {
+                      "code": "g",
+                      "label": "Gram",
+                      "symbol": "g",
+                      "dimension": "weight",
+                      "integer_only": false
+                  },
+                  {
+                      "code": "kg",
+                      "label": "Kilogram",
+                      "symbol": "kg",
+                      "dimension": "weight",
+                      "integer_only": false
+                  },
+                  {
+                      "code": "ml",
+                      "label": "Millilitre",
+                      "symbol": "ml",
+                      "dimension": "volume",
+                      "integer_only": false
+                  },
+                  {
+                      "code": "l",
+                      "label": "Litre",
+                      "symbol": "L",
+                      "dimension": "volume",
+                      "integer_only": false
+                  },
+                  {
+                      "code": "piece",
+                      "label": "Piece",
+                      "symbol": "pc",
+                      "dimension": "count",
+                      "integer_only": true
+                  }
+              ],
+              "package_units": [
+                  {
+                      "code": "bottle",
+                      "label": "Bottle"
+                  },
+                  {
+                      "code": "box",
+                      "label": "Box"
+                  },
+                  {
+                      "code": "card",
+                      "label": "Card"
+                  },
+                  {
+                      "code": "sachet",
+                      "label": "Sachet"
+                  },
+                  {
+                      "code": "bag",
+                      "label": "Bag"
+                  },
+                  {
+                      "code": "vial",
+                      "label": "Vial"
+                  }
+              ],
+              "withdrawal_days": {
+                  "min": 0,
+                  "max": 3650
+              },
+              "opening_stock": {
+                  "reason": "opening_balance",
+                  "route": {
+                      "method": "POST",
+                      "path": "/health/medicines",
+                      "field": "opening_stock"
+                  }
+              },
+              "reasons": {
+                  "in": [
+                      {
+                          "code": "purchase",
+                          "label": "Purchased",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "donation",
+                          "label": "Gift / Donation",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "aid",
+                          "label": "Aid / Support",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "received",
+                          "label": "Received",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "opening_balance",
+                          "label": "Opening balance",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "other",
+                          "label": "Other",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-in",
+                              "url": "/api/v1/inventory/stock-in"
+                          }
+                      },
+                      {
+                          "code": "transfer_in",
+                          "label": "Moved between stores",
+                          "manual": false,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "transfer",
+                              "method": "POST",
+                              "path": "/inventory/transfers",
+                              "url": "/api/v1/inventory/transfers"
+                          }
+                      },
+                      {
+                          "code": "adjustment",
+                          "label": "Stock count correction",
+                          "manual": false,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "adjustment",
+                              "method": "POST",
+                              "path": "/inventory/adjustments",
+                              "url": "/api/v1/inventory/adjustments"
+                          }
+                      }
+                  ],
+                  "out": [
+                      {
+                          "code": "use",
+                          "label": "Used on animals",
+                          "manual": false,
+                          "creates_operational_record": true,
+                          "route": {
+                              "kind": "record",
+                              "method": "POST",
+                              "path": "/health-records",
+                              "record_type": "vaccination|medication|deworming|treatment",
+                              "note": "Choose the cycle and add medicine lines; one request writes the health record and the stock-out of every line.",
+                              "url": "/api/v1/health-records"
+                          }
+                      },
+                      {
+                          "code": "donation",
+                          "label": "Gift / Donation",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "damaged",
+                          "label": "Damaged",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "expired",
+                          "label": "Expired",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "spoiled",
+                          "label": "Spoiled",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "lost",
+                          "label": "Lost / Stolen",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "disposal",
+                          "label": "Disposal",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "other",
+                          "label": "Other",
+                          "manual": true,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "inventory",
+                              "method": "POST",
+                              "path": "/inventory/stock-out",
+                              "url": "/api/v1/inventory/stock-out"
+                          }
+                      },
+                      {
+                          "code": "transfer_out",
+                          "label": "Moved between stores",
+                          "manual": false,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "transfer",
+                              "method": "POST",
+                              "path": "/inventory/transfers",
+                              "url": "/api/v1/inventory/transfers"
+                          }
+                      },
+                      {
+                          "code": "adjustment",
+                          "label": "Stock count correction",
+                          "manual": false,
+                          "creates_operational_record": false,
+                          "route": {
+                              "kind": "adjustment",
+                              "method": "POST",
+                              "path": "/inventory/adjustments",
+                              "url": "/api/v1/inventory/adjustments"
+                          }
+                      }
+                  ]
+              }
+          },
+          "meta": [],
+          "message": null
+      }
+order: 1000

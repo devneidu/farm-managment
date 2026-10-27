@@ -1,0 +1,3 @@
+$kind: collection
+description: Staff, manager, buyer and seller accounts -> approved shop with a private contact -> negotiable and fixed-price listings -> offer rules (floor, one pending, fixed price refused) -> unauthorised responses refused (buyer, staff) -> manager may respond -> seller accepts one offer and rejects three -> offer limit -> purchase intent. Every buyer/seller-facing response is asserted to contain none of the shop's private contact details. Executed with Newman on a fresh database.
+order: 17000

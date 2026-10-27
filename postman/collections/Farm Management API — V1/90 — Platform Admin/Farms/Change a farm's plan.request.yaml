@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Moves a farm to another plan. This is how a farm gets a paid plan in V1 (no checkout exists).
+
+  **WHEN TO USE IT**
+  Support/complimentary plan change for a farm.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{farm_id}}`.
+  - Required body fields: `plan_id`, `reason`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Updates the subscription and writes a platform audit entry.
+  - Requires the platform `admin` role (support is read-only: `403 platform_write_forbidden`).
+  - The demo farm needs `farm-business` for the `data_export` feature (report exports) and for more than 3 team members.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Platform role **`admin`** only (`support` is read-only: `403 platform_write_forbidden`; no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+  Rate limited by limiter `platform-admin-write`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan`
+
+  **PATH PARAMETERS**
+  - `{{farm_id}}` — UUID. Captured by "Complete farm setup (onboarding)" (02 — Onboarding & Account) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `plan_id` — string (uuid), **required**
+  - `interval` — enum, optional, nullable. Used for a paid plan (default monthly); ignored for the default plan.. Values: `monthly`, `annual`, `null`
+  - `reason` — string, **required**, max 500 chars, min 3 chars. Why support is changing this farm's plan (kept in the audit trail).
+
+  **VARIABLES USED**
+  - `{{farm_id}}` — captured by "Complete farm setup (onboarding)"
+  - `{{plan_business_id}}` — captured by "List plans"
+
+  **BUSINESS RULES**
+  - Requires the platform `admin` role (support is read-only: `403 platform_write_forbidden`).
+  - The demo farm needs `farm-business` for the `data_export` feature (report exports) and for more than 3 team members.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `status`, `billing_interval`, `starts_at`, `current_period_start`, `current_period_end`, `cancel_at_period_end`, `cancelled_at`, `ends_at`, `subscription_inactive`, `plan`, `effective_plan`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "plan_id": "{{plan_business_id}}",
+      "interval": "monthly",
+      "reason": "Upgraded for the API handoff demo"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Change a farm's plan.resources/examples
+order: 1000

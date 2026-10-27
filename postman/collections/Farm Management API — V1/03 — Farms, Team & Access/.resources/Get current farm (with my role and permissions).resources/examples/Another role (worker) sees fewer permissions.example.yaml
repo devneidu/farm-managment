@@ -1,0 +1,55 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+          "name": "Okafor Integrated Farms",
+          "country_code": "NG",
+          "currency": "NGN",
+          "timezone": "Africa/Lagos",
+          "locale": "en",
+          "membership": {
+            "id": "01a1045e-3df9-70af-8aa0-faf5feada100",
+            "role": "farm_worker",
+            "role_label": "Farm Worker",
+            "permissions": [
+              "farm.view",
+              "master_data.view",
+              "measurement.view",
+              "location.view",
+              "production_cycle.view",
+              "record.view",
+              "record.create",
+              "inventory.view",
+              "inventory.use",
+              "health.view",
+              "health.create",
+              "breeding.view",
+              "breeding.create",
+              "task.view",
+              "task.complete",
+              "report.view"
+            ]
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 3000

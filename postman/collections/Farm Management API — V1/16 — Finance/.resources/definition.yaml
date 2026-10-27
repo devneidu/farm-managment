@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  The append-only money ledger: categories, manual income/expense, reversals and the summary/profitability read model. Money is an exact decimal STRING with at most two decimals. Finance never moves stock.
+
+  Typical screens: money ledger, add expense/income, finance overview and cycle profitability.
+order: 18000

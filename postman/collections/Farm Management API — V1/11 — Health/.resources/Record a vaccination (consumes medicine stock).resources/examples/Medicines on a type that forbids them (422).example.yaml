@@ -1,0 +1,58 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "type": "vet_visit",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "problem_type": "routine_prevention",
+          "vet_name": "Dr. Bello"
+        },
+        "medicines": [
+          {
+            "inventory_item_id": "{{item_med_id}}",
+            "storage_location_id": "{{store_id}}",
+            "lot_id": "{{lot_med_id}}",
+            "components": [
+              {
+                "quantity": "1",
+                "unit": "ml"
+              }
+            ]
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This health record type does not use medicines; record a treatment or medication instead.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-734a-7001-b280-ae82a31056de",
+        "errors": {
+          "medicines": [
+            "This health record type does not use medicines; record a treatment or medication instead."
+          ]
+        }
+      }
+order: 4000

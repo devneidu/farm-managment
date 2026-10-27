@@ -1,0 +1,132 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Starts an incubation (eggs) or pregnancy (females bred) attempt. The response carries a readable `reference` (`BRD-2026-00001`), the frozen `biological_reference`, and an `expectation` that is an exact date OR a window - never a midpoint.
+
+  **WHEN TO USE IT**
+  "Start breeding project" (incubation or pregnancy) on a livestock batch.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `production_cycle_id`, `workflow`, `start_date`, `idempotency_key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Incubation only: send `consume_egg_stock: true` (+ optional `egg_storage_location_id`) to take `eggs_set` eggs out of the farm's available egg stock in the same transaction (stock-out reason `incubation`, linked to the project; also needs `inventory.use`). Too few eggs is `409 insufficient_stock` and no project is created. Without the flag stock is untouched. The project's `egg_stock` shows what it took.
+  - Requires the farm permission `breeding.create` (taken from the current farm context; never sent by the client).
+  - Creates the project. No population, record or task is created (the API only recommends templates).
+  - A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.
+  - The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.
+  - Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).
+
+  **WHAT TO DO NEXT**
+  Record checks and, finally, the outcome.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`breeding.create`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `breeding-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/breeding-projects`
+
+  **REQUEST BODY** (`application/json`)
+  - `production_cycle_id` — string (uuid), **required**
+  - `workflow` — enum, **required**. incubation needs the species capability supports_incubation; pregnancy needs supports_pregnancy.. Values: `incubation`, `pregnancy`
+  - `start_date` — string (date), **required**. Incubation start / service date (farm-local day), between the cycle start and today.
+  - `eggs_set` — integer, optional, min 1, max 999999999, nullable. Incubation only (required there, rejected for pregnancy). Eggs set are not live population.
+  - `females_bred` — integer, optional, min 1, max 999999999, nullable. Pregnancy only: how many females were bred.
+  - `expected_offspring` — integer, optional, min 0, max 999999999, nullable. Expected offspring is an estimate and never changes population.
+  - `expected_date` — string (date), optional. Optional manual expected date (exact). Provide this OR expected_from + expected_to. Overrides the biological reference without altering its snapshot.
+  - `expected_from` — string (date), optional
+  - `expected_to` — string (date), optional
+  - `parents` — array, optional, max 10 items
+  - `parents[].role` — enum, **required**. Values: `dam`, `sire`
+  - `parents[].production_cycle_id` — string (uuid), **required**
+  - `parents[].head_count` — integer, **required**, min 1, max 999999999, nullable
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+
+  **VARIABLES USED**
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - A breeding project is ONE reproductive attempt on one livestock cycle (no individual animals or pedigrees). Eggs set and `expected_offspring` are estimates and never change population; only a recorded live outcome does.
+  - The expected date comes from the species' biological REFERENCE (a snapshot) or a manual entry. References are starting points, never guarantees.
+  - Closed cycles reject every write (`409 cycle_closed`); writes are rate limited (120/hour/user).
+  - `workflow`: `incubation` (needs `eggs_set`; species with `supports_incubation`) or `pregnancy` (optional `females_bred`; species with `supports_pregnancy`). Mismatched fields are rejected.
+  - Optional manual expectation: `expected_date` OR `expected_from` + `expected_to` (not both); it overrides the reference-derived date (`source: manual`).
+  - `parents[]` are livestock cycles of the same farm and species; each role + cycle once.
+  - `start_date` is a farm-local day between the cycle start and today.
+  - Requires `breeding.create` (Owner, Manager, Farm Worker, Vet).
+
+  **SUCCESS**
+  `201 Created` — message: "Breeding project started."
+
+  `data` fields: `id`, `reference`, `production_cycle_id`, `workflow`, `status`, `start_date`, `eggs_set`, `females_bred`, `expected_offspring`, `expectation`, `biological_reference`, `parents`, `checks`, `outcomes`, `result`, `notes`, `cancelled_at`, `cancel_reason`, `created_by`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `breeding.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `cycle_closed`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/breeding-projects"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "workflow": "incubation",
+      "start_date": "{{date_10d_ago}}",
+      "eggs_set": 50,
+      "expected_offspring": 40,
+      "parents": [
+        {
+          "role": "dam",
+          "production_cycle_id": "{{cycle_id}}",
+          "head_count": 20
+        }
+      ],
+      "notes": "Set in the hatchery",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("breeding_project_id", String(v)); else console.warn("Could not capture breeding_project_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Start a breeding project (incubation).resources/examples
+order: 1000

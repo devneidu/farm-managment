@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_labour_id}}",
+        "amount": "18000.00",
+        "contact_id": "{{supplier_id}}",
+        "description": "Diesel",
+        "occurred_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A purchase with the same amount and date already exists. Send confirm_duplicate: true to record this expense anyway.",
+        "code": "possible_duplicate",
+        "request_id": "01a164f1-ae76-7028-b6e7-d70b6b556299",
+        "details": {
+          "purchase_id": "01a164f1-adb3-70d4-927a-83eb99f5d15e",
+          "label": "Purchase #1",
+          "reference": "PUR-2026-00001"
+        }
+      }
+order: 5000

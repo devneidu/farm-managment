@@ -1,0 +1,29 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Without `PAYSTACK_SECRET_KEY` this answers `503 payments_unavailable` and records nothing (`502 gateway_unavailable` if Paystack cannot be reached; the payment is then stored as `failed`); with a Paystack test key it returns `authorization_url`. The paid path is NOT executable here.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/subscription/checkout"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "plan_id": "{{seller_plan_id}}",
+      "interval_days": 30
+    }
+scripts:
+  - type: afterResponse
+    code: 'pm.test("No Paystack key here: 503 payments_unavailable (502 if unreachable; 200/201 with a real test key)", () => pm.expect(pm.response.code).to.be.oneOf([200,201,502,503]));'
+    language: text/javascript
+order: 19000

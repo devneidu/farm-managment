@@ -1,0 +1,213 @@
+$kind: collection
+description: |
+  # Farm Management API — V1
+
+  Backend API of a multi-tenant, Nigeria-first Farm Management SaaS (default timezone `Africa/Lagos`, currency `NGN`, language English). This collection documents **every** frontend-relevant V1 route (`/api/v1`) with realistic payloads, business rules, side effects and saved responses captured from the real application. Phase 20 (WhatsApp / AI) is deferred and is **not** part of V1.
+
+  Companion documents in the repository: `docs/api/API-CONTRACT.md` (the contract), `docs/api/FRONTEND-INTEGRATION.md` (how to use it from React), `docs/postman/WORKFLOWS.md`, `docs/postman/COVERAGE.md`, and `docs/api/openapi.json`.
+
+  ## 1. Quick start
+
+  1. Import this collection **and** `Farm-Management-Local.postman_environment.json`; select the environment.
+  2. Start the API (for example `php artisan serve` -> `http://localhost:8000`) and make sure `.env` lists your Origin in `SANCTUM_STATEFUL_DOMAINS` (host:port) and `CORS_ALLOWED_ORIGINS` (default `localhost:3000`, `localhost:5173`). Keep `MAIL_MAILER=log` so OTP emails land in `storage/logs/laravel.log`.
+  3. **CSRF is handled for you**: the collection adds the `Origin` header to every request and, on writes, the `X-XSRF-TOKEN` header taken from the cookie issued by `GET /auth/csrf-cookie` (run it once first; nothing to copy or paste). Both headers are visible on each request (`Origin: {{frontend_origin}}`, `X-XSRF-TOKEN: {{xsrf_token}}`). If a write returns `419`, run **Initialise CSRF cookie** again; if you see `400 stateful_request_required` or `401` on a logged-in session, `frontend_origin` is not in the API's `SANCTUM_STATEFUL_DOMAINS`.
+  4. Open **99 — Workflows → Flow 1** and run it with the Collection Runner (or send the requests one by one). Paste the emailed 6-digit code into the `otp_code` environment variable before **Verify email**.
+  5. Continue with Flow 2, **Flow S** (demo farm setup) and Flows 3-13.
+
+  ## 2. Authentication (Sanctum first-party SPA — cookies, NOT bearer tokens)
+
+  * The session lives in an HttpOnly cookie set by `register`, `login` or `google`. There is no token to copy.
+  * Every request must come from a **stateful Origin**: every request carries the visible header `Origin: {{frontend_origin}}` (and the pre-request script re-asserts it) plus `Accept: application/json`. Without a stateful Origin the API refuses to start a session (`400 stateful_request_required`).
+  * Every POST/PUT/PATCH/DELETE needs `X-XSRF-TOKEN` = the URL-decoded value of the `XSRF-TOKEN` cookie. The collection does this automatically (pre-request script reads the cookie from the Postman cookie jar into `{{xsrf_token}}`, and each write request carries the visible header `X-XSRF-TOKEN: {{xsrf_token}}`). Run **Initialise CSRF cookie** once first. Logging in (or registering/logging out) ROTATES the CSRF token and the response re-issues the cookie, so the collection refreshes `{{xsrf_token}}` after every response; you do not need to re-run the CSRF request between login and later writes. Run it again only after a `419`. Requires Postman scripting to be enabled (not the Scratch Pad / lightweight client); check the Postman Console for the warning "No XSRF-TOKEN cookie yet".
+  * `GET /auth/me` is the single request the frontend makes on load. `401` = show login. Otherwise route on `data.next_action`: `verify_email`, `complete_farm_setup`, `no_active_farm`, `none`.
+  * Logging in as another user (invitee, platform admin) **replaces** the session in the cookie jar. Log in as the farm owner again to continue.
+
+  ## 3. Farm context and permissions
+
+  * Farm endpoints never take a farm id in the URL or body. The farm is the caller's oldest ACTIVE membership, or the one named in the optional `X-Farm-Id` header (`403 farm_access_denied` if you do not belong to it, `403 no_active_farm` if you have none). There is no "switch farm" or "list my farms" endpoint in V1.
+  * Roles are presets (`owner`, `manager`, `farm_worker`, `finance`, `vet`). `GET /farm` returns `membership.role` and `membership.permissions` (strings like `inventory.manage`). Use them to show/hide UI. **Requests never contain permission strings**: each request description lists the farm permission the endpoint REQUIRES.
+  * **Platform Admin** (folder 90) is a different system: console-granted `admin`/`support` roles with no farm context.
+
+  ## 4. Variables
+
+  Environment variables hold your inputs (`email`, `password`, `otp_code`, ...) and the **ids captured automatically** by each request's Tests script (`farm_id`, `cycle_id`, `item_feed_id`, ...). The collection pre-request script also defines per-request dynamic values: `recorded_at` (UTC, one hour ago, no milliseconds - the API rejects fractional seconds), `recorded_at_2h`, `recorded_at_3h`, `recorded_at_30h`, `today` and the `date_*` helpers (farm-local `Africa/Lagos` days), and `{{$guid}}` is used for every `idempotency_key`.
+
+  | Variable | Kind | Meaning |
+  |---|---|---|
+  | `email` | input | the farm owner's email. |
+  | `password` | input | the farm owner's password. |
+  | `new_password` | input | a new password used by the password reset / change requests. |
+  | `invitee_email` | input | the email of the person you invite. |
+  | `admin_email` | input | the platform admin account email. |
+  | `admin_password` | input | the platform admin password. |
+  | `otp_code` | input | the 6-digit email verification code (copy from the email / `storage/logs/laravel.log`). |
+  | `reset_otp_code` | input | the 6-digit password-reset code. |
+  | `invitation_token` | input | the invitation token from the invitation email. |
+  | `frontend_origin` | input | a stateful frontend Origin. |
+  | `base_url` | input | API base URL including `/api/v1`. |
+  | `area_id` | captured | Set by "Create a production area". |
+  | `attachment_id` | captured | Set by "Upload private evidence (multipart)". |
+  | `breed_id` | captured | Set by "Create a custom breed". |
+  | `breeding_project_b_id` | captured | Set by "Start a breeding project (second attempt)". |
+  | `breeding_project_c_id` | captured | Set by "Start a breeding project (third attempt)". |
+  | `breeding_project_id` | captured | Set by "Start a breeding project (incubation)". |
+  | `capability_code` | captured | Set by "Capability schemas". |
+  | `cat_labour_id` | captured | Set by "List income and expense categories". |
+  | `cat_other_income_id` | captured | Set by "List income and expense categories". |
+  | `cat_utilities_id` | captured | Set by "List income and expense categories". |
+  | `context_id` | captured | Set by "Create a measurement context". |
+  | `conversion_feed_id` | captured | Set by "Create a package conversion (inventory item)". |
+  | `conversion_id` | captured | Set by "Create a package conversion". |
+  | `crop_cycle_id` | captured | Set by "Start a crop project". |
+  | `crop_yam_id` | captured | Set by "List crops". |
+  | `customer_id` | captured | Set by "Create a contact (customer)". |
+  | `custom_breed_name` | captured | Set by the pre-request script of "Create a custom breed" (`Isa Brown (Ibadan strain) <timestamp>`), reused by the duplicate (409) and rename requests. |
+  | `batch_purpose_code` | Flow 3 step 5 | Production purpose code sent when starting the Chicken batch (`meat`). |
+  | `batch_growth_stage_code` | Flow 3 step 5 | Growth stage code sent when starting the Chicken batch (`chick`). |
+  | `cycle_id` | captured | Set by "Start a livestock batch". |
+  | `cycle_pilot_id` | captured | Set by the pre-request script of "Close a production cycle" (a disposable Chicken batch; run Close before Reopen). |
+  | `cycle_reference` | captured | Set by "Start a livestock batch". |
+  | `expense_id` | captured | Set by "Record an expense". |
+  | `farm_id` | captured | Set by "Complete farm setup (onboarding)". |
+  | `formula_id` | captured | Set by "Create a feed formula". |
+  | `health_med2_id` | captured | Set by "Record a medication (second medicine record)". |
+  | `health_record_id` | captured | Set by "Record a vaccination (consumes medicine stock)". |
+  | `invitation_b_id` | captured | Set by "Invite a team member (finance)". |
+  | `invitation_id` | captured | Set by "Invite a team member". |
+  | `invoice_b_id` | captured | Set by "Record a sale and issue its invoice in one step". |
+  | `invoice_c_id` | captured | Set by "Issue an invoice (sale in body)". |
+  | `invoice_id` | captured | Set by "Issue the invoice for a sale". |
+  | `invoice_reference` | captured | Set by "Issue the invoice for a sale". |
+  | `item_eggs_id` | captured | Set by "Create an inventory item (produce)". |
+  | `item_feed_id` | captured | Set by "Create an inventory item (feed)". |
+  | `item_fert_id` | captured | Set by "Create an inventory item (fertilizer)". |
+  | `item_med_id` | captured | Set by "Create an inventory item (lot-tracked medicine)". |
+  | `item_seed_id` | captured | Set by "Create an inventory item (planting material)". |
+  | `item_yam_id` | captured | Set by "Create an inventory item (harvest produce)". |
+  | `location_id` | captured | Set by "Create a location". |
+  | `lot_med_id` | captured | Set by "List lots with stock on hand". |
+  | `master_breed_id` | captured | Set by "Create a reference record (system breed)". |
+  | `membership_chidi_id` | captured | Set by "List team members". |
+  | `membership_owner_id` | captured | Set by "Get current farm (with my role and permissions)". |
+  | `movement_adjust_id` | captured | Set by "Reconcile a physical count (adjustment)". |
+  | `movement_feed_in_id` | captured | Set by "Receive stock (stock-in)". |
+  | `movement_med_in_id` | captured | Set by "Receive stock (lot-tracked, with expiry)". |
+  | `movement_out_id` | captured | Set by "Issue stock (stock-out)". |
+  | `notification_id` | captured | Set by "List my notifications". |
+  | `op_crops_id` | captured | Set by "List farm operations (production types)". |
+  | `op_poultry_id` | captured | Set by "List farm operations (production types)". |
+  | `outcome_b_id` | captured | Set by "Record an outcome (second project)". |
+  | `outcome_id` | captured | Set by "Record the actual outcome (hatch / birth)". |
+  | `payment_b_id` | captured | Set by "Record a payment (full)". |
+  | `payment_id` | captured | Set by "Record a payment (partial)". |
+  | `plan_business_id` | captured | Set by "List plans". |
+  | `plan_free_id` | captured | Set by "List plans". |
+  | `plan_new_id` | captured | Set by "Create a plan". |
+  | `plan_pro_id` | captured | Set by "List plans". |
+  | `platform_template_id` | captured | Set by "Create a draft platform template". |
+  | `purchase_b_id` | captured | Set by "Record a purchase without booking the expense". |
+  | `purchase_c_id` | captured | Set by "Record a purchase (to cancel)". |
+  | `purchase_id` | captured | Set by "Record a purchase (stock + expense)". |
+  | `record_adjust_id` | captured | Set by "Reconcile population (population adjustment)". |
+  | `record_eggs_id` | captured | Set by "Record egg collection (compound quantity)". |
+  | `record_evidence_id` | captured | Set by "Save the actual record that evidences the task". |
+  | `record_feed_id` | captured | Set by "Record feed use (linked to inventory)". |
+  | `record_harvest_id` | captured | Set by "Record harvest (into produce stock)". |
+  | `record_mortality_id` | captured | Set by "Record mortality". |
+  | `record_planting_id` | captured | Set by "Record planting". |
+  | `record_water_id` | captured | Set by "Record water consumption". |
+  | `report_code` | captured | Set by "List reports (catalogue)". |
+  | `report_export_id` | captured | Set by "Request a report export". |
+  | `reset_token` | captured | Set by "Verify a password-reset code". |
+  | `sale_b_id` | captured | Set by "Record a sale and issue its invoice in one step". |
+  | `sale_c_id` | captured | Set by "Record a walk-in sale". |
+  | `sale_id` | captured | Set by "Record a sale (stock + livestock lines)". |
+  | `schedule_id` | captured | Set by "Create a recurring schedule". |
+  | `species_chicken_id` | captured | Set by "List species". |
+  | `store2_id` | captured | Set by "Create a second storage location". |
+  | `store_id` | captured | Set by "Create a storage location". |
+  | `supplier_id` | captured | Set by "Create a contact (supplier)". |
+  | `task_b_id` | captured | Set by "Create a task (to cancel)". |
+  | `task_id` | captured | Set by "Create a task". |
+  | `template_farm_id` | captured | Set by "Create a farm template". |
+  | `template_platform_id` | captured | Set by "Recommended templates for a cycle". |
+  | `transaction_id` | captured | Set by "Record an income or expense transaction". |
+  | `user_chidi_id` | captured | Set by "Accept a farm invitation". |
+  | `user_id` | captured | Set by "Complete farm setup (onboarding)". |
+  | `variety_id` | captured | Set by "Create a custom crop variety". |
+
+  ## 5. Response conventions
+
+  * Success: `{"data": ..., "meta": {}, "message": null}`. Lists: `data` is an array and `meta` is `{current_page, per_page, last_page, total}` (some also add counters such as `unread_count`).
+  * Errors: `{"message": "...", "code": "...", "request_id": "...", "errors": {...}?, "details": {...}?}`. `errors` only on `422` (keys like `details.quantity`); `details` carries structured context (for example plan limits). Branch on `code`, never on `message`.
+  * Every response has an `X-Request-Id` header, echoed as `request_id` in errors: quote it when reporting a problem.
+  * Status/`code`: `401 unauthenticated`, `403 forbidden` (and `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`, `platform_admin_required`, `platform_write_forbidden`), `404 not_found`, `409 conflict` (domain codes such as `insufficient_stock`), `419 session_expired`, `422 validation_failed`, `429 too_many_requests` (+ `Retry-After`).
+
+  ## 6. Identifiers
+
+  Domain resources are identified by **UUIDv7 strings** (`019f0000-0000-7000-8000-000000000001`). Never use sequential integers. Human-readable references (`BAT-2026-00001`, `CRP-...`, `BRD-...`, `TSK-...`, `INV-...`) are display codes only: always send the UUID `id`. Master data additionally has stable `code`s (`chicken`, `poultry`) that you may branch on. `GET /farm/members/{id}` takes the **membership** id, not the user id.
+
+  ## 7. Idempotency
+
+  Mutating endpoints that create real-world events require an `idempotency_key` **in the request body** (1-80 characters: letters, digits, `.`, `_`, `:`, `-`; exports and schedules need at least 8). Same key + same payload returns the original result (usually `201`) and applies no second side effect; same key + changed payload is `409 idempotency_conflict`. Generate one UUID per user action and reuse it only when retrying that same action. The collection uses `{{$guid}}`; requests that demonstrate replay store the key in a variable first.
+
+  ## 8. Money, quantities and time
+
+  * Money is a decimal **string** with at most two decimals (`"1500.50"`); totals are computed by the API with exact arithmetic. Never use JavaScript floats for authoritative money. Plan prices are integer minor units (`amount_minor`, kobo).
+  * Quantities are exact decimal strings in `{quantity, unit}` components (`12 bag + 18 kg`); package units resolve only through a configured context/conversion. Responses include `entered`, `normalized` (canonical g/ml/piece/head/celsius) and a replayable `snapshot`.
+  * Timestamps are UTC ISO-8601. `recorded_at` (when it really happened) is kept separately from `created_at` (when it was stored) and must be `YYYY-MM-DDTHH:MM:SS` followed by `Z` or an offset. Dates (`start_date`, `due_date`, `occurred_on`, report ranges) are farm-local calendar days `YYYY-MM-DD`.
+  * Boolean query parameters: send `1` or `0` (the strings `true`/`false` are rejected by most endpoints).
+
+  ## 9. Folders
+
+  `00`-`22` are the reference, grouped by module. `90 — Platform Admin` is separate. `99 — Workflows` contains executable end-to-end flows. Requests marked with their own saved examples show real success and error responses (lists are truncated to the first two items).
+variables:
+  base_url: http://localhost:8000/api/v1
+  frontend_origin: http://localhost:3000
+  otp_email: ""
+scripts:
+  - type: http:beforeRequest
+    code: |-
+      // Farm Management API - collection pre-request script (runs before EVERY request).
+      // 1) Sanctum SPA requirements of this API (verified against the backend):
+      //    - a stateful Origin on EVERY request (SANCTUM_STATEFUL_DOMAINS), otherwise the session is ignored / register is 400;
+      //    - on POST/PUT/PATCH/DELETE the header X-XSRF-TOKEN = URL-decoded value of the XSRF-TOKEN cookie issued by GET /auth/csrf-cookie.
+      const origin = pm.environment.get("frontend_origin") || pm.collectionVariables.get("frontend_origin") || "http://localhost:3000";
+      pm.variables.set("frontend_origin", origin);                       // also resolves the visible Origin header
+      pm.request.headers.upsert({ key: "Origin", value: origin });
+      pm.request.headers.upsert({ key: "Accept", value: "application/json" });
+      // {{xsrf_token}} is refreshed by the collection Tests script after EVERY response (Laravel rotates the CSRF token on login/register/logout),
+      // so it is the newest value; the cookie jar is only the fallback (first request, or after the variable was cleared).
+      let xsrf = pm.environment.get("xsrf_token");
+      if (!xsrf) { const c = pm.cookies.get("XSRF-TOKEN"); if (c) { xsrf = decodeURIComponent(c); pm.environment.set("xsrf_token", xsrf); } }
+      xsrf = xsrf || "";
+      pm.variables.set("xsrf_token", xsrf);                              // resolves the visible X-XSRF-TOKEN header
+      if (!["GET", "HEAD", "OPTIONS"].includes(pm.request.method)) {
+        if (xsrf) { pm.request.headers.upsert({ key: "X-XSRF-TOKEN", value: xsrf }); }
+        else { console.warn("No XSRF-TOKEN cookie yet: send \"Initialise CSRF cookie\" (GET /auth/csrf-cookie) first."); }
+      }
+      // 2) Per-request dynamic values (local variables). Lagos is UTC+1 with no daylight saving.
+      const H = 3600e3, D = 24 * H, now = Date.now();
+      const iso = (ms) => new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z");
+      const lagos = (days) => new Date(now + H + days * D).toISOString().slice(0, 10);
+      pm.variables.set("recorded_at", iso(now - 1 * H));
+      pm.variables.set("recorded_at_2h", iso(now - 2 * H));
+      pm.variables.set("recorded_at_3h", iso(now - 3 * H));
+      pm.variables.set("recorded_at_30h", iso(now - 30 * H));
+      pm.variables.set("today", lagos(0));
+      [[0, "date_today"], [7, "date_in_7d"], [14, "date_in_14d"], [30, "date_in_30d"], [60, "date_in_60d"], [90, "date_in_90d"], [-7, "date_7d_ago"], [-10, "date_10d_ago"], [-30, "date_30d_ago"]].forEach(([d, k]) => pm.variables.set(k, lagos(d)));
+      pm.variables.set("month_start", lagos(0).slice(0, 8) + "01");
+    language: text/javascript
+  - type: http:afterResponse
+    code: |-
+      // Keep {{xsrf_token}} equal to the CURRENT XSRF-TOKEN cookie after EVERY response.
+      // Laravel rotates the CSRF token whenever the session is regenerated (login, register, logout) and re-issues the cookie on that response;
+      // a value remembered earlier (e.g. at "Initialise CSRF cookie") is then stale and the next write fails with 419 session_expired.
+      // The new value is read from this response's Set-Cookie header (does not depend on the cookie jar API).
+      let fresh;
+      pm.response.headers.each(function (h) { if (String(h.key).toLowerCase() === "set-cookie" && /^XSRF-TOKEN=/.test(h.value)) { fresh = h.value.split(";")[0].slice("XSRF-TOKEN=".length); } });
+      if (!fresh && pm.response.cookies) { fresh = pm.response.cookies.get("XSRF-TOKEN"); }
+      if (!fresh) { fresh = pm.cookies.get("XSRF-TOKEN"); }
+      if (fresh) { pm.environment.set("xsrf_token", decodeURIComponent(fresh)); }
+      console.log("[csrf] xsrf_token " + (fresh ? "refreshed from this response" : "unchanged") + " (fingerprint " + String(pm.environment.get("xsrf_token") || "").slice(12, 24) + ")");
+    language: text/javascript

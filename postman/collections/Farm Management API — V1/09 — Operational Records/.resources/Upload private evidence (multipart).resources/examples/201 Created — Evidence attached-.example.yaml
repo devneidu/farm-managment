@@ -1,0 +1,41 @@
+$kind: http-example
+name: 201 Created — Evidence attached.
+request:
+  url: "{{base_url}}/records/{{record_mortality_id}}/attachments"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: formdata
+    content:
+      - type: file
+        key: file
+        src: []
+        description: "Evidence file: jpg, jpeg, png, webp, pdf, csv, txt, xls or xlsx, max 10 MiB."
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-6aa1-7299-bcf3-7b972cf066ef",
+          "original_name": "field-note.txt",
+          "mime_type": "text/plain",
+          "size": 47,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "download_url": "http://localhost/api/v1/records/01a1045e-62f9-7324-bbe0-08cdd790b9d3/attachments/01a1045e-6aa1-7299-bcf3-7b972cf066ef"
+        },
+        "meta": {},
+        "message": "Evidence attached."
+      }
+order: 1000

@@ -1,0 +1,59 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/sales"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "customer_name": "Fresh Dairy Co",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "items": [
+          {
+            "kind": "stock",
+            "output": "milk",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "100000",
+                "unit": "l"
+              }
+            ],
+            "amount": "1.00"
+          }
+        ]
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "There is not enough stock in this location.",
+        "code": "insufficient_stock",
+        "request_id": "01a11127-1aea-724e-835d-417e0d30834f",
+        "details": {
+          "available": {
+            "quantity": "45",
+            "unit": "l"
+          },
+          "requested": {
+            "quantity": "100000",
+            "unit": "l"
+          }
+        }
+      }
+order: 2000

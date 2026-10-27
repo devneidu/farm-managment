@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/invitations/accept"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "token": "not-a-real-token"
+      }
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This invitation link is not valid.",
+        "code": "invitation_not_found",
+        "request_id": "01a1045e-4302-714b-bbc2-b6688efe40f6"
+      }
+order: 3000

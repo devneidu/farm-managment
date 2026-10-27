@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/records/{{record_water_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Meter read twice by mistake",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This record cannot be reversed again.",
+        "code": "record_already_reversed",
+        "request_id": "01a1045e-6898-7068-9fb3-5746711e41bb"
+      }
+order: 2000

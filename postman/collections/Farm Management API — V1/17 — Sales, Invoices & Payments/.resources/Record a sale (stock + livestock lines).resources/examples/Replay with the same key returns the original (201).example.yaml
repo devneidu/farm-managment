@@ -1,0 +1,176 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/sales"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "contact_id": "{{customer_id}}",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{sale_key}}",
+        "notes": "Weekly delivery to the restaurant",
+        "items": [
+          {
+            "kind": "stock",
+            "inventory_item_id": "{{item_eggs_id}}",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "90",
+                "unit": "piece"
+              }
+            ],
+            "amount": "27000.00"
+          },
+          {
+            "kind": "livestock",
+            "production_cycle_id": "{{cycle_id}}",
+            "head_count": 12,
+            "description": "Spent layers",
+            "amount": "60000.00"
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-9570-7251-9064-968900b60660",
+          "reference": "SAL-2026-00001",
+          "status": "active",
+          "contact_id": "01a1045e-8d77-7352-865c-f90431a3d690",
+          "customer_name": "Mama Put Restaurant",
+          "recorded_at": "2026-10-03T22:44:06.000000Z",
+          "total_amount": "87000.00",
+          "currency": "NGN",
+          "finance_category": {
+            "id": "01a1045d-dfab-7152-885d-fa92588cb01c",
+            "code": "other_income",
+            "name": "Other income"
+          },
+          "payment_status": "uninvoiced",
+          "amount_paid": null,
+          "outstanding": null,
+          "invoice": null,
+          "notes": "Weekly delivery to the restaurant",
+          "corrects_sale_id": null,
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "items": [
+            {
+              "id": "01a1045e-959f-7124-b2d7-390d4e14954e",
+              "line_no": 1,
+              "kind": "stock",
+              "description": "Table Eggs",
+              "inventory_item_id": "01a1045e-55ef-73d7-943b-020b53f4214c",
+              "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "inventory_lot_id": null,
+              "lot": null,
+              "production_cycle_id": null,
+              "head_count": null,
+              "quantity": {
+                "quantity": "90",
+                "unit": "piece",
+                "normalized": {
+                  "quantity": "90",
+                  "unit": "piece"
+                }
+              },
+              "measurement": {
+                "total": {
+                  "unit": "piece",
+                  "quantity": "90"
+                },
+                "entered": [
+                  {
+                    "unit": "piece",
+                    "quantity": "90"
+                  }
+                ],
+                "snapshot": {
+                  "total": {
+                    "unit": "piece",
+                    "quantity": "90"
+                  },
+                  "schema": 1,
+                  "entered": [
+                    {
+                      "unit": {
+                        "code": "piece",
+                        "factor": "1",
+                        "family": "piece",
+                        "strategy": "linear",
+                        "dimension": "count",
+                        "integer_only": true
+                      },
+                      "quantity": "90"
+                    }
+                  ],
+                  "packages": [],
+                  "normalized": {
+                    "unit": "piece",
+                    "quantity": "90"
+                  },
+                  "result_unit": {
+                    "code": "piece",
+                    "factor": "1",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "dimension": "count",
+                    "integer_only": true
+                  }
+                },
+                "normalized": {
+                  "unit": "piece",
+                  "quantity": "90"
+                }
+              },
+              "amount": "27000.00",
+              "inventory_movement_id": "01a1045e-9602-72a3-99ce-a952219520c6",
+              "inventory_reversal_movement_id": null,
+              "operational_record_id": null,
+              "reversal_record_id": null
+            },
+            {
+              "id": "01a1045e-95ab-7001-aab7-d1e52b0119ee",
+              "line_no": 2,
+              "kind": "livestock",
+              "description": "Spent layers",
+              "inventory_item_id": null,
+              "storage_location_id": null,
+              "inventory_lot_id": null,
+              "lot": null,
+              "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+              "head_count": 12,
+              "quantity": null,
+              "measurement": null,
+              "amount": "60000.00",
+              "inventory_movement_id": null,
+              "inventory_reversal_movement_id": null,
+              "operational_record_id": "01a1045e-95cb-70dc-ab23-9876ab5cfdcf",
+              "reversal_record_id": null
+            }
+          ],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Sale recorded."
+      }
+order: 2000

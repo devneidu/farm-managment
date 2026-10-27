@@ -1,0 +1,131 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/stock-out"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "output": "milk",
+        "storage_location_id": "{{store_id}}",
+        "reason": "lost",
+        "components": [
+          {
+            "quantity": "1",
+            "unit": "l"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Spilled"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-19fc-7358-9b41-ee183bc0e642",
+          "inventory_item_id": "01a11127-1760-70ed-8c1d-06e7c5b39a3c",
+          "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_out",
+          "reason": "lost",
+          "reason_label": "Lost / Stolen",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "-1000",
+            "unit": "ml"
+          },
+          "quantity_delta_display": {
+            "quantity": "-1",
+            "unit": "l"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "1",
+                "unit": "l"
+              }
+            ],
+            "normalized": {
+              "quantity": "1000",
+              "unit": "ml"
+            },
+            "total": {
+              "quantity": "1",
+              "unit": "l"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "1",
+                  "unit": {
+                    "code": "l",
+                    "dimension": "volume",
+                    "family": "volume",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "l",
+                "dimension": "volume",
+                "family": "volume",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "1000",
+                "unit": "ml"
+              },
+              "total": {
+                "quantity": "1",
+                "unit": "l"
+              }
+            }
+          },
+          "recorded_at": "2026-10-06T11:18:57.000000Z",
+          "notes": "Spilled",
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "production_cycle_id": null,
+          "breeding_project_id": null,
+          "source": {
+            "type": "manual",
+            "id": null
+          },
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+          "created_at": "2026-10-06T12:18:57.000000Z"
+        },
+        "meta": {},
+        "message": "Stock issued."
+      }
+order: 4000

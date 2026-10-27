@@ -1,0 +1,190 @@
+$kind: http-example
+name: 200 OK — Fish (Species / Type)
+request:
+  url: "{{base_url}}/master/species/{{species_fish_id}}/batch-reference"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "species": {
+            "id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+            "code": "fish",
+            "name": "Fish",
+            "is_active": true,
+            "livestock_group": null,
+            "operation": {
+              "id": "01a12033-7405-739c-949a-6f0604845af0",
+              "code": "fishery",
+              "name": "Fishery",
+              "category": "aquaculture",
+              "tracking_model": "population"
+            },
+            "capability_codes": [
+              "supports_feed_records",
+              "supports_group_tracking",
+              "supports_harvest",
+              "supports_live_weight",
+              "supports_mortality"
+            ]
+          },
+          "breed_field_label": "Species / Type",
+          "breeds": [
+            {
+              "id": "01a12033-b3e9-711d-9baa-be0b09f4326b",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "african_bonytongue",
+              "name": "African Bonytongue",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3df-734f-a649-1b5b01997141",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "african_catfish_clarias_gariepinus",
+              "name": "African Catfish (Clarias gariepinus)",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e8-734a-b442-8cb5075d6e8e",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "common_carp",
+              "name": "Common Carp",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e6-70d2-a78b-8d0fdf30b189",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "galilee_tilapia",
+              "name": "Galilee Tilapia",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e0-70c5-ab29-997e47deaeed",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "heterobranchus_catfish",
+              "name": "Heterobranchus Catfish",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e1-72d6-b742-c3914aafc61e",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "heteroclarias_hybrid",
+              "name": "Heteroclarias Hybrid",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e3-70c3-b436-f6c80fff5c31",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "nile_tilapia",
+              "name": "Nile Tilapia",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e4-7283-975a-b90d07a0afd0",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "red_tilapia",
+              "name": "Red Tilapia",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            },
+            {
+              "id": "01a12033-b3e7-7333-948d-cfc2f3f0cb81",
+              "species_id": "01a12033-7419-7083-9bba-e3f28fb598ae",
+              "code": "redbelly_tilapia",
+              "name": "Redbelly Tilapia",
+              "source": "system",
+              "is_active": true,
+              "is_editable": false,
+              "created_at": "2026-10-09T10:27:01+00:00"
+            }
+          ],
+          "purposes": [
+            {
+              "code": "table_fish",
+              "name": "Table fish",
+              "is_active": true
+            },
+            {
+              "code": "fingerling_production",
+              "name": "Fingerling production",
+              "is_active": true
+            },
+            {
+              "code": "breeding",
+              "name": "Breeding",
+              "is_active": true
+            },
+            {
+              "code": "other",
+              "name": "Other",
+              "is_active": true
+            }
+          ],
+          "growth_stages": [
+            {
+              "code": "larva",
+              "name": "Larva",
+              "is_active": true
+            },
+            {
+              "code": "fry",
+              "name": "Fry",
+              "is_active": true
+            },
+            {
+              "code": "fingerling",
+              "name": "Fingerling",
+              "is_active": true
+            },
+            {
+              "code": "juvenile",
+              "name": "Juvenile",
+              "is_active": true
+            },
+            {
+              "code": "adult",
+              "name": "Adult",
+              "is_active": true
+            },
+            {
+              "code": "unknown",
+              "name": "Unknown",
+              "is_active": true
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

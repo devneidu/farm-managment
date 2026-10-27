@@ -1,0 +1,26 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Hide the picker when this is empty; listings fall back to a placeholder indicator.
+
+  Reusable **illustrative** catalogue images that have an asset (`illustrative: true`; never real product photos). Empty until assets are seeded (see `docs/api/PHASE-23-IMAGE-ASSET-RUNBOOK.md`). Optional query `product_kind`. Pass an entry's `id` as `catalog_image_id`.
+url: "{{base_url}}/marketplace/image-library"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/13. Image library (empty until assets are seeded).resources/examples
+order: 13000

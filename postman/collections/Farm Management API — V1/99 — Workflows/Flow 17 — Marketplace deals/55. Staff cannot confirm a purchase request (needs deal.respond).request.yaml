@@ -1,0 +1,29 @@
+$kind: http-request
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/purchase-intents/{{intent_id}}/confirm"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fulfilment_method": "pickup"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 403", function () { pm.expect(pm.response.code).to.eql(403); });
+      const json = pm.response.json();
+      pm.test("Error code forbidden", function () { pm.expect(json.code).to.eql("forbidden"); });
+    language: text/javascript
+order: 55000

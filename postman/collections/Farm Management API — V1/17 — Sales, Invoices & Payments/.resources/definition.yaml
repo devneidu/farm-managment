@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  THREE separate concepts: a SALE is the event (what left the farm), an INVOICE is the customer document, a PAYMENT is money received. Only a payment books income (cash basis).
+
+  Typical screens: record sale, invoice detail/PDF, record payments, receivables follow-up.
+order: 19000

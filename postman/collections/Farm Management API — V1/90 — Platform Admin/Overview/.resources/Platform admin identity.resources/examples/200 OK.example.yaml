@@ -1,0 +1,28 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/me"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "user": {
+            "id": "01a1045e-38e2-7173-b130-5452688a714c",
+            "name": "Platform admin",
+            "email": "platform.admin@example.com"
+          },
+          "role": "admin",
+          "can_write": true
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

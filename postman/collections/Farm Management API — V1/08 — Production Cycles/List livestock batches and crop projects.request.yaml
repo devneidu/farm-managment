@@ -1,0 +1,115 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Paginated cycles (both kinds unless `kind` is set). Use it for the "My batches / My crops" screens.
+
+  **WHEN TO USE IT**
+  "My batches" / "My crops" lists and cycle pickers.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `kind`, `status`, `operation_type_id`, `species_id`, `crop_type_id`, `production_area_id`, `search`, `page`, ....
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `production_cycle.view` (taken from the current farm context; never sent by the client).
+  - Filters: `kind` (`livestock`|`crop`), `status` (`active`|`closed`), `operation_type_id`, `species_id`, `crop_type_id`, `production_area_id`, `search`, `page`, `per_page`.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`production_cycle.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/production-cycles`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `kind` — enum. Values: `livestock`, `crop`
+  - `status` — enum. Values: `active`, `closed`
+  - `operation_type_id` — string (uuid)
+  - `species_id` — string (uuid)
+  - `crop_type_id` — string (uuid)
+  - `production_area_id` — string (uuid)
+  - `search` — string, max 100 chars
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Filters: `kind` (`livestock`|`crop`), `status` (`active`|`closed`), `operation_type_id`, `species_id`, `crop_type_id`, `production_area_id`, `search`, `page`, `per_page`.
+  - Requires `production_cycle.view` (all roles).
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `kind`, `name`, `reference`, `status`, `operation`, `production_area`, `start_date`, `planting_date`, `expected_end_date`, `end_date`, `notes`, `baseline_locked`, `livestock`, `crop`, `created_at`, `updated_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `production_cycle.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/production-cycles?kind=livestock&status=active"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: kind
+    value: livestock
+  - key: status
+    value: active
+  - key: operation_type_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: species_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: crop_type_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: production_area_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: search
+    value: ""
+    disabled: true
+    description: string — max 100 chars
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List livestock batches and crop projects.resources/examples
+order: 9000

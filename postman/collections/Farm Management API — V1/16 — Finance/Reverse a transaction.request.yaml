@@ -1,0 +1,105 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Appends an offsetting reversal row (same direction, category, amount, contact, cycle and source; `entry_type: "reversal"`). Totals subtract it; the original stays with `is_reversed: true`.
+
+  **WHEN TO USE IT**
+  "Undo" a manual transaction.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{transaction_id}}`.
+  - Required body fields: `reason`, `idempotency_key`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.reverse` (taken from the current farm context; never sent by the client).
+  - Offsetting ledger row.
+  - Nothing is reversed twice (`409 transaction_already_reversed`). Allocated money in a closed cycle needs the cycle reopened (`409 cycle_closed`).
+  - Purchase-booked expenses must be reversed by cancelling the purchase (`409 reverse_via_purchase`); payment income by reversing the payment (`409 reverse_via_payment`).
+  - To replace, POST a new transaction with `corrects_transaction_id` (needs `finance.reverse`).
+  - This is a correction, not an edit: history is kept and a new opposite row is appended.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`finance.reverse`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/finance/transactions/{{transaction_id}}/reverse`
+
+  **PATH PARAMETERS**
+  - `{{transaction_id}}` — UUID. Captured by "Record an income or expense transaction" (16 — Finance) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `reason` — string, **required**, max 2000 chars
+  - `occurred_on` — string (date), optional. Farm-local day of the reversal (between the original day and today); defaults to today.
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+
+  **VARIABLES USED**
+  - `{{transaction_id}}` — captured by "Record an income or expense transaction"
+
+  **BUSINESS RULES**
+  - Nothing is reversed twice (`409 transaction_already_reversed`). Allocated money in a closed cycle needs the cycle reopened (`409 cycle_closed`).
+  - Purchase-booked expenses must be reversed by cancelling the purchase (`409 reverse_via_purchase`); payment income by reversing the payment (`409 reverse_via_payment`).
+  - To replace, POST a new transaction with `corrects_transaction_id` (needs `finance.reverse`).
+  - Requires `finance.reverse` (Owner, Manager, Finance).
+
+  **SUCCESS**
+  `201 Created` — message: "Reversal recorded."
+
+  `data` fields: `id`, `reference`, `entry_type`, `direction`, `category`, `amount`, `currency`, `occurred_on`, `recorded_at`, `contact_id`, `contact_name`, `production_cycle_id`, `description`, `source`, `reverses_transaction_id`, `corrects_transaction_id`, `reversed_by_transaction_id`, `is_reversed`, `reason`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `finance.reverse`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `transaction_already_reversed`, `reverse_via_purchase`, `cycle_closed`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/finance/transactions/{{transaction_id}}/reverse"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Receipt belonged to another farm",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Reverse a transaction.resources/examples
+order: 9000

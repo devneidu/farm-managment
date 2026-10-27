@@ -1,0 +1,34 @@
+$kind: http-request
+name: "43. Buyer: confirm the deal (seller delivery, optional phone)"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/offers/{{deal_offer_id}}/deal"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fulfilment_method": "seller_delivery",
+      "contact_phone": "+2348055501234"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("deal_id", v); } }
+      pm.test("Frozen offer terms; the unknown delivery charge is not invented or added", function () { const d = json.data; pm.expect(d.status).to.eql("accepted"); pm.expect(d.terms_source).to.eql("accepted_offer"); pm.expect(d.terms.unit_price).to.eql("7000.00"); pm.expect(d.terms.product_total).to.eql("70000.00"); pm.expect(d.terms.price_basis).to.eql("negotiated"); pm.expect(d.fulfilment.method).to.eql("seller_delivery"); pm.expect(d.fulfilment.delivery_charge.amount).to.eql(null); pm.expect(d.fulfilment.delivery_charge.display).to.eql("To be agreed directly"); pm.expect(d.fulfilment.delivery_charge.included_in_product_total).to.eql(false); pm.expect(d.completion.verification).to.eql("self_reported"); pm.expect(d.contact).to.eql(null); pm.expect(d.notice).to.include("does not collect payment"); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street","+2348055501234",pm.environment.get("deal_buyer_email"),pm.environment.get("deal_buyer2_email")].filter(Boolean).forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 43000

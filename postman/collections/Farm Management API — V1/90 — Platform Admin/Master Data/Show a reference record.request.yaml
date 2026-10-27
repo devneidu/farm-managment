@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  One reference record (here a breed) by UUID, including inactive ones, with its parent and active flag. Only SYSTEM records appear here; a farm's custom breeds/varieties are `404`.
+
+  **WHEN TO USE IT**
+  A reference record detail.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{master_breed_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/master/breeds/{{master_breed_id}}`
+
+  **PATH PARAMETERS**
+  - `{{master_breed_id}}` — UUID. Captured by "Create a reference record (system breed)" (90 — Platform Admin) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{master_breed_id}}` — captured by "Create a reference record (system breed)"
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `code`, `name`, `species`, `is_active`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+url: "{{base_url}}/platform-admin/master/breeds/{{master_breed_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Show a reference record.resources/examples
+order: 6000

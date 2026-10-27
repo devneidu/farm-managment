@@ -1,0 +1,73 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "code": "cycle_performance",
+            "title": "Production cycle performance",
+            "family": "production",
+            "description": "Every production cycle active in the period: dates, ledger population at the start and end of the period, deaths and mortality rate (livestock), planting baseline (crops).",
+            "filters": [
+              "from",
+              "to",
+              "kind",
+              "status",
+              "production_cycle_id"
+            ],
+            "applies_to": null,
+            "relevant": true,
+            "available": true,
+            "unavailable_reason": null,
+            "required_feature": "advanced_reports",
+            "exportable": true,
+            "export_formats": [
+              "csv",
+              "xlsx",
+              "pdf"
+            ]
+          },
+          {
+            "code": "livestock_population",
+            "title": "Livestock population",
+            "family": "livestock",
+            "description": "Opening head, additions, deaths, sales and adjustments per livestock cycle, reconciled to the population ledger.",
+            "filters": [
+              "from",
+              "to",
+              "status",
+              "production_cycle_id"
+            ],
+            "applies_to": "livestock",
+            "relevant": true,
+            "available": true,
+            "unavailable_reason": null,
+            "required_feature": null,
+            "exportable": true,
+            "export_formats": [
+              "csv",
+              "xlsx",
+              "pdf"
+            ]
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

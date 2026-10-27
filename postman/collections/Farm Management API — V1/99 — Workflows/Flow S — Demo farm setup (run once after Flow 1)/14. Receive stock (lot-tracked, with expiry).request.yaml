@@ -1,0 +1,78 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Receives a lot-tracked medicine: `lot {code, expires_on}` creates (or reuses) the lot. Expired lots cannot be used for treatment (`409 lot_expired`) but can be written off.
+
+  **WHEN TO USE IT**
+  Receiving medicine with a lot and expiry.
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - One `stock_in` movement and a lot.
+  - Medicine items are normally lot-tracked: `lot {code, expires_on}` opens the lot (or joins the existing lot with the same code; a different expiry for an existing code is rejected).
+  - The quantity is in the item's unit dimension (`ml` here); packages resolve only through the item's own conversion.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List lots with stock on hand**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  Full reference (errors, all fields): folder **10 — Inventory** -> "Receive stock (lot-tracked, with expiry)".
+url: "{{base_url}}/inventory/stock-in"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "inventory_item_id": "{{item_med_id}}",
+      "storage_location_id": "{{store_id}}",
+      "reason": "opening_balance",
+      "lot": {
+        "code": "NCD-2026-01",
+        "expires_on": "{{date_in_90d}}"
+      },
+      "components": [
+        {
+          "quantity": "500",
+          "unit": "ml"
+        }
+      ],
+      "recorded_at": "{{recorded_at_30h}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_med_in_id", String(v)); else console.warn("Could not capture movement_med_in_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/14. Receive stock (lot-tracked, with expiry).resources/examples
+order: 14000

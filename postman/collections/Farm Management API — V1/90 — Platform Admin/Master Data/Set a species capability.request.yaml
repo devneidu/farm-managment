@@ -1,0 +1,93 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Enables/disables one capability of a species and optionally sets its biological `reference_config`. The change drives which record types and breeding workflows the species supports (compatibility is checked).
+
+  **WHEN TO USE IT**
+  Enabling/disabling a species capability.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{species_chicken_id}}`.
+  - Required body fields: `enabled`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Audit entry.
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+  - Disabling a capability that active farm data depends on is refused with a `422` compatibility error.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Platform role **`admin`** only (`support` is read-only: `403 platform_write_forbidden`; no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+  Rate limited by limiter `platform-admin-write`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PUT {{base_url}}/platform-admin/master/species/{{species_chicken_id}}/capabilities/supports_live_weight`
+
+  **PATH PARAMETERS**
+  - `{{species_chicken_id}}` — UUID. Captured by "List species" (05 — Master Data) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `enabled` — boolean, **required**
+  - `reference_config` — array, optional, nullable. Allowed keys depend on the capability (see GET /platform-admin/master/capabilities); null or an empty object clears it.
+
+  **VARIABLES USED**
+  - `{{species_chicken_id}}` — captured by "List species"
+
+  **BUSINESS RULES**
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+  - Disabling a capability that active farm data depends on is refused with a `422` compatibility error.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `code`, `label`, `enabled`, `reference_config`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/platform-admin/master/species/{{species_chicken_id}}/capabilities/supports_live_weight"
+method: PUT
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "enabled": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Set a species capability.resources/examples
+order: 3000

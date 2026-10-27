@@ -1,0 +1,51 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Route on `next_action`: `complete_farm_setup` -> show the farm-name screen.
+
+  **WHAT IT DOES**
+  The single request the frontend makes on every app load to decide where the user belongs: login, verify-email, farm setup, "no farm" screen or the application. Returns the same auth-state object as login/register.
+
+  **WHEN TO USE IT**
+  App load and after any auth change; the router reads `next_action` from it.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - `401 unauthenticated` means there is no session: show the login screen.
+  - `data.next_action` is one of `verify_email`, `complete_farm_setup`, `no_active_farm`, `none`.
+  - `data.farm` is the DEFAULT active farm (oldest active membership) with the caller's role. It does NOT list permissions - call `GET /farm` for `membership.permissions`.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Complete farm setup (onboarding)**.
+
+  Full reference (errors, all fields): folder **01 — Authentication** -> "Get current auth state (me)".
+
+  **FARM DISCOVERY (GAP-07)**
+  `data.farms` lists every farm the user ACTIVELY belongs to (`id`, `name`, `role`; oldest membership first). `data.farm` stays the default farm (the oldest active membership). To work in another farm send its `farms[].id` as the `X-Farm-Id` header, then refetch `GET /farm` (membership + permissions) and `GET /subscription/entitlements` and clear farm-scoped caches. There is no switch endpoint. Permissions are never listed here.
+
+  **MARKETPLACE-ONLY SELLERS (Phase 22)**
+  `data.marketplace.shop_count` = Marketplace shops the user belongs to (any status). `next_action = "marketplace"` is returned only for a verified user with NO active farm who belongs to at least one shop: route to the seller dashboard (`GET /marketplace/my/shops`). A brand-new account with no shop still gets `complete_farm_setup` (offer "open a shop instead" -> `POST /marketplace/shops`, no farm needed). A user with a farm keeps `none`. Farm endpoints still answer `403 onboarding_required` / `no_active_farm`; `POST /onboarding/farm` remains available.
+url: "{{base_url}}/auth/me"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("farms[] lists the active farm memberships (id, name, role)", function () { pm.expect(json.data.farms).to.be.an("array"); json.data.farms.forEach(function (f) { pm.expect(Object.keys(f).sort()).to.eql(["id", "name", "role"]); }); });
+        pm.test("marketplace.shop_count is a number", function () { pm.expect(json.data.marketplace.shop_count).to.be.a("number"); });
+      }
+    language: text/javascript
+examples: ./.resources/4. Get current auth state (me).resources/examples
+order: 4000

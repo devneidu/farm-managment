@@ -1,0 +1,48 @@
+$kind: http-request
+name: Start a livestock batch — growth stage from another species (422)
+description: |-
+  **NEGATIVE: growth stages are species-specific.** `chick` is a Chicken/Quail stage; Fish stages are larva, fry, fingerling, juvenile, adult, unknown. `422` with `errors.growth_stage` (the valid `table_fish` purpose is accepted, so only the stage is reported).
+
+  Negative example (nothing is created, no initial population movement). 422 body: `message`, `code: "validation_failed"`, `request_id`, `errors` keyed by field. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "livestock",
+      "name": "Wrong Stage {{$timestamp}}",
+      "operation_type_id": "{{op_fishery_id}}",
+      "species_id": "{{species_fish_id}}",
+      "breed_id": "{{breed_fish_id}}",
+      "production_purpose": "table_fish",
+      "growth_stage": "chick",
+      "initial_population": 2000,
+      "start_date": "{{date_30d_ago}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 422", function () { pm.expect(pm.response.code).to.eql(422); });
+      const json = pm.response.json();
+      pm.test("Standard validation envelope", function () { pm.expect(json.code).to.eql("validation_failed"); pm.expect(json).to.have.property("request_id"); });
+      pm.test("Error is keyed by growth_stage", function () { pm.expect(json.errors).to.have.property("growth_stage"); pm.expect(Object.keys(json.errors)).to.eql(["growth_stage"]); });
+      pm.test("No batch was created", function () { pm.expect(json).to.not.have.property("data"); });
+    language: text/javascript
+examples: ./.resources/Start a livestock batch — growth stage from another species (4.resources/examples
+order: 6000

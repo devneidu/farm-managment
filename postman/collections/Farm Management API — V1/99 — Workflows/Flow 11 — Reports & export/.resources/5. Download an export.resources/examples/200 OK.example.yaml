@@ -1,0 +1,26 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/exports/{{report_export_id}}/download"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: text/csv; charset=UTF-8
+  body:
+    type: text
+    content: |
+      ﻿Direction,Category,"Amount (NGN)"
+      expense,"General supplies",10250.45
+      expense,Labour,15000.00
+      expense,"Other expense",3500.00
+      expense,Utilities,0.00
+      income,"Other income",92000.00
+order: 1000

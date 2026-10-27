@@ -1,0 +1,73 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Filtered to poultry; pick the species by `code`.
+
+  **WHAT IT DOES**
+  Species the farm can raise, optionally narrowed to one operation. Each item has `livestock_group`, `capability_codes` (the enabled behaviours) and a stable `code`. Fish is a species of the Fishery operation.
+
+  **WHEN TO USE IT**
+  Species dropdown after an operation is chosen.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `master_data.view` (taken from the current farm context; never sent by the client).
+  - Which species appear can be narrowed by the farm's selected operations (`available=1`); the capability flags returned decide which record types and breeding workflows exist for that species.
+  - Filters: `operation` (operation code), `category`, `group` (`poultry`, `small_ruminants`, `large_ruminants`, `non_ruminant_mammals`, `equines`, `micro_livestock`), `available`, `include_inactive`.
+  - 21 livestock species plus fish ship by default; see docs/api/LIVESTOCK-CATALOGUE.md.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Get species capabilities**.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Fetch this list; do not hard-code species ids or names.
+
+  Full reference (errors, all fields): folder **05 — Master Data** -> "List species".
+url: "{{base_url}}/master/species?operation=poultry"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: operation
+    value: poultry
+  - key: category
+    value: ""
+    disabled: true
+    description: "enum: livestock | aquaculture | crop"
+  - key: group
+    value: ""
+    disabled: true
+    description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+  - key: available
+    value: ""
+    disabled: true
+    description: boolean
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "chicken"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("species_chicken_id", String(v)); else console.warn("Could not capture species_chicken_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/2. List species.resources/examples
+order: 2000

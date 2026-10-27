@@ -1,0 +1,71 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Streams the file as an attachment. There is no public URL: the call needs the same session and farm access as the record.
+
+  **WHEN TO USE IT**
+  Viewing/downloading an attached evidence file.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{record_mortality_id}}`, `{{attachment_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.view` (taken from the current farm context; never sent by the client).
+  - Response headers include `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Download with an authenticated request (fetch with credentials -> Blob), not a plain `<a href>` to another origin.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`record.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/records/{{record_mortality_id}}/attachments/{{attachment_id}}`
+
+  **PATH PARAMETERS**
+  - `{{record_mortality_id}}` — UUID. Captured by "Record mortality" (09 — Operational Records) or from the list endpoint of this resource.
+  - `{{attachment_id}}` — UUID. Captured by "Upload private evidence (multipart)" (09 — Operational Records) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{record_mortality_id}}` — captured by "Record mortality"
+  - `{{attachment_id}}` — captured by "Upload private evidence (multipart)"
+
+  **BUSINESS RULES**
+  - Response headers include `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`.
+
+  **SUCCESS**
+  `200 OK`
+
+  Non-JSON body (`application/octet-stream`).
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `record.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+url: "{{base_url}}/records/{{record_mortality_id}}/attachments/{{attachment_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+    language: text/javascript
+examples: ./.resources/Download private evidence.resources/examples
+order: 20000

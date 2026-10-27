@@ -1,0 +1,73 @@
+$kind: http-request
+description: |
+  **WHAT IT DOES**
+  Returns the farm's available eggs and milk, derived from the movement ledger, with the per-store split and the item id.
+
+  **WHEN TO USE IT**
+  The "Eggs available / Milk available" card. Production totals ("eggs collected today: 104") come from the dashboard / reports and are a separate, equally true number: 104 collected and 44 available can both be right.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `inventory.view`.
+  - Read-only: it never creates the Eggs / Milk item or a Main Store. `exists: false` and a zero balance means nothing was stocked yet.
+  - `inventory_item_id` is the item to configure package conversions on (`POST /settings/package-conversions`, `context_type: inventory_item`) and to sell (`POST /sales` stock line).
+
+  **WHAT TO DO NEXT**
+  Sell with `POST /sales`, put eggs into incubation with `POST /breeding-projects`, give away / write off with `POST /inventory/stock-out` (`output`).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`inventory.view`**.
+
+  **URL**
+  `GET {{base_url}}/inventory/output-balances`
+
+  **BUSINESS RULES**
+  - Balance = SUM of `inventory_movements.quantity_delta`; never edited.
+  - Eggs: stock unit `piece`; milk: stock unit `l` (canonical `ml`).
+
+  **SUCCESS**
+  `200 OK` — `data.eggs` and `data.milk`: `kind`, `exists`, `inventory_item_id`, `name`, `dimension`, `unit`, `available`, `available_normalized`, `by_storage_location[]`.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+url: "{{base_url}}/inventory/output-balances"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.eggs.inventory_item_id"); if (v !== undefined && v !== null) pm.environment.set("egg_item_id", String(v)); else console.warn("Could not capture egg_item_id from data.eggs.inventory_item_id"); }
+        { const v = get(json, "data.milk.inventory_item_id"); if (v !== undefined && v !== null) pm.environment.set("milk_item_id", String(v)); else console.warn("Could not capture milk_item_id from data.milk.inventory_item_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/5. Egg and milk available balances (read-only).resources/examples
+order: 5000

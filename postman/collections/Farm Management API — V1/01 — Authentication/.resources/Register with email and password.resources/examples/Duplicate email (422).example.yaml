@@ -1,0 +1,34 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/register"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{email}}",
+        "password": "{{password}}",
+        "password_confirmation": "{{password}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The email has already been taken.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-3c10-73a7-92b5-3ead6eaa1ee6",
+        "errors": {
+          "email": [
+            "The email has already been taken."
+          ]
+        }
+      }
+order: 2000

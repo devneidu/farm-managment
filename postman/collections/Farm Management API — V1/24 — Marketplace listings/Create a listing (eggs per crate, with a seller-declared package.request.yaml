@@ -1,0 +1,48 @@
+$kind: http-request
+name: Create a listing (eggs per crate, with a seller-declared package)
+description: "Container units (`bag, sack, crate, tray, carton, bottle, basket`) REQUIRE `package {quantity, unit, description?}`: what ONE crate holds **as declared by the seller**. It is descriptive only - never a conversion, never used for stock."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Fresh eggs by the crate",
+      "product_kind": "eggs",
+      "unit": "crate",
+      "unit_price": "6000",
+      "available_quantity": "40",
+      "package": {
+        "quantity": "30",
+        "unit": "egg",
+        "description": "Standard crate of 30 eggs"
+      },
+      "fulfilment": "pickup",
+      "pickup_area": "Bodija market"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("listing_b_id", v); } }
+        { const v = json.data.slug; if (v !== undefined && v !== null) { pm.environment.set("listing_b_slug", v); } }
+        pm.test("Package is a seller statement, not a conversion", function () { pm.expect(json.data.package.is_conversion).to.eql(false); pm.expect(json.data.package.declared_by).to.eql("seller"); });
+      }
+    language: text/javascript
+examples: ./.resources/Create a listing (eggs per crate, with a seller-declared package.resources/examples
+order: 5000

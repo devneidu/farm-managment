@@ -1,0 +1,82 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  800 PLANTING UNITS (heaps) over 2 hectares. Captures `crop_cycle_id`.
+
+  **WHAT IT DOES**
+  Starts a crop project. A crop project measures THREE separate things: land `area`, `initial_planting_units` (heaps/holes/stands) and later the planting-material quantity and harvest output. They are never converted into each other.
+
+  **WHEN TO USE IT**
+  The "Start crop project" form.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `production_cycle.create` (taken from the current farm context; never sent by the client).
+  - Creates the cycle. No stock is deducted and no records are created.
+  - `initial_planting_units` is the baseline for establishment/survival checks. 800 heaps is not 800 tubers; seed/material quantity is recorded later by planting/input records and stock movements.
+  - `planting_material_type` and `planting_unit_type` are codes from `GET /master/planting-reference`.
+  - `area` is optional `{quantity, unit}` with an AREA unit (`hectare`, `sq_m`, `acre`); it is stored entered + normalised (2 hectare = 20000 sq_m).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Record land preparation**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - The returned `crop` block holds the planting baseline; later `GET /production-cycles/{id}/crop` adds derived establishment, loss and harvest figures.
+
+  Full reference (errors, all fields): folder **08 — Production Cycles** -> "Start a crop project".
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "crop",
+      "name": "2026 Yam",
+      "operation_type_id": "{{op_crops_id}}",
+      "crop_type_id": "{{crop_yam_id}}",
+      "crop_variety_id": "{{variety_id}}",
+      "planting_material_type": "tuber",
+      "planting_unit_type": "heap",
+      "initial_planting_units": 800,
+      "planting_date": "{{date_30d_ago}}",
+      "expected_germination_date": "{{date_in_7d}}",
+      "area": {
+        "quantity": "2",
+        "unit": "hectare"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("crop_cycle_id", String(v)); else console.warn("Could not capture crop_cycle_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/6. Start a crop project.resources/examples
+order: 6000

@@ -1,0 +1,32 @@
+$kind: http-request
+name: "Platform admin: list deals (read-only)"
+description: |-
+  **WHAT IT DOES**
+  Any platform role. Filters `status`, `shop_id`, `reported`, `q`.
+
+  **INPUTS**
+
+
+  **ERRORS**
+  `403`
+
+  **BOUNDARY**
+  A deal is a summary of agreed terms. Farmvest takes no payment, holds no funds, reserves no stock, delivers nothing and creates no sale. Contact appears only on the audited contact endpoints.
+url: "{{base_url}}/platform-admin/marketplace/deals?reported=true"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  reported: "true"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+    language: text/javascript
+order: 18000

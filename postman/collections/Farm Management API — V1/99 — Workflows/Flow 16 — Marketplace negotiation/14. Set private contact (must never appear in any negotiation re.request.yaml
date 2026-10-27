@@ -1,0 +1,33 @@
+$kind: http-request
+name: 14. Set private contact (must never appear in any negotiation response)
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/contact"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "contact_phone": "+2348031234567",
+      "contact_email": "ada.private@example.com",
+      "address_line": "12 Secret Street, Bodija",
+      "preferred_contact_method": "phone"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+    language: text/javascript
+order: 14000

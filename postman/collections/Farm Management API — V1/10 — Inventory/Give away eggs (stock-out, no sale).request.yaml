@@ -1,0 +1,99 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Takes eggs (or milk, with `output: "milk"`) out of stock without a sale: gift, personal use, broken, spoiled, lost.
+
+  **WHEN TO USE IT**
+  "Eggs Out" with reason Gift / Donation, Personal / Internal use, Damaged / Broken, Spoiled, Lost / Stolen, Other. Sold goes to `POST /sales`; Put into incubation goes to `POST /breeding-projects`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `inventory.use`. One `stock_out`; no sale, no income, no record.
+  - `sale` and `incubation` are refused here (422) and name the endpoint to use.
+  - Never negative stock, even at a past `recorded_at` (409 `insufficient_stock`). With `output` the item is never created.
+
+  **WHAT TO DO NEXT**
+  Refetch `GET /inventory/output-balances`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`inventory.use`**.
+
+  **URL**
+  `POST {{base_url}}/inventory/stock-out`
+
+  **REQUEST BODY** (`application/json`)
+  - `output` — `eggs` | `milk`
+  - `reason` — `donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`
+  - `components[]`, `recorded_at`, `idempotency_key` — **required**
+
+  **BUSINESS RULES**
+  - 1 crate = 30 eggs when the Eggs item has a crate conversion; `30 piece` works without one.
+
+  **SUCCESS**
+  `201 Created` — the movement.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 insufficient_stock`, `409 idempotency_conflict`.
+url: "{{base_url}}/inventory/stock-out"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "output": "eggs",
+      "storage_location_id": "{{store_id}}",
+      "reason": "donation",
+      "components": [
+        {
+          "quantity": "30",
+          "unit": "piece"
+        }
+      ],
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}",
+      "notes": "Gave away 1 crate"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_egg_out_id", String(v)); else console.warn("Could not capture movement_egg_out_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Give away eggs (stock-out, no sale).resources/examples
+order: 20000

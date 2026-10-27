@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/master/breeds"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "species_id": "{{species_chicken_id}}",
+        "name": "Kuroiler",
+        "code": "kuroiler"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-cde8-738a-baa4-456e81fa3ae5",
+          "code": "kuroiler",
+          "name": "Kuroiler",
+          "species": {
+            "id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "code": "chicken",
+            "name": "Chicken"
+          },
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

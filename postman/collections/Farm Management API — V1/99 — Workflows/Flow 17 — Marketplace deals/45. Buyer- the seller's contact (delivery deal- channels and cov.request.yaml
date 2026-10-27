@@ -1,0 +1,20 @@
+$kind: http-request
+name: "45. Buyer: the seller's contact (delivery deal: channels and coverage, never the private address)"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/deals/{{deal_id}}/contact"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Seller channels; no address", function () { const c = json.data.contact; pm.expect(json.data.party).to.eql("seller"); pm.expect(c.channels.phone).to.eql("+2348031234567"); pm.expect(c.channels.email).to.eql("ada.private@example.com"); pm.expect(c.pickup).to.eql(undefined); pm.expect(c.delivery.coverage).to.eql(["Oyo","Lagos"]); pm.expect(pm.response.text()).to.not.include("Secret Street"); });
+    language: text/javascript
+order: 45000

@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/images/{{listing_image_id}}"
+  method: DELETE
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": null,
+        "meta": {},
+        "message": "Photo removed."
+      }
+order: 1000

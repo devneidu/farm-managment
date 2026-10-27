@@ -1,0 +1,78 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health/medicines/{{item_med_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+          "name": "Newcastle Vaccine (Lasota)",
+          "category": "medicine",
+          "description": null,
+          "stock_unit": "ml",
+          "dimension": "volume",
+          "tracks_lots": true,
+          "tracks_expiry": true,
+          "is_active": true,
+          "stock": {
+            "quantity": "500",
+            "unit": "ml",
+            "normalized": {
+              "quantity": "500",
+              "unit": "ml"
+            }
+          },
+          "low_stock_threshold": {
+            "quantity": "100",
+            "unit": "ml"
+          },
+          "is_low_stock": false,
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z",
+          "balances": [
+            {
+              "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+              "inventory_lot_id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+              "quantity": "500",
+              "unit": "ml",
+              "normalized": {
+                "quantity": "500",
+                "unit": "ml"
+              }
+            }
+          ],
+          "profile": {
+            "default_withdrawal_days": 7,
+            "notes": "Lasota - hold eggs and meat for 7 days"
+          },
+          "lots": [
+            {
+              "id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+              "code": "NCD-2026-01",
+              "expires_on": "2027-01-02",
+              "is_expired": false,
+              "stock": {
+                "quantity": "500",
+                "unit": "ml"
+              }
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

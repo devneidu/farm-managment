@@ -1,0 +1,131 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/stock-out"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "output": "eggs",
+        "storage_location_id": "{{store_id}}",
+        "reason": "lost",
+        "components": [
+          {
+            "quantity": "3",
+            "unit": "piece"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Stolen from the nest"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-1284-72f7-b6a1-414969940bea",
+          "inventory_item_id": "01a11127-0d22-7361-a379-a02b7d78beed",
+          "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_out",
+          "reason": "lost",
+          "reason_label": "Lost / Stolen",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "-3",
+            "unit": "piece"
+          },
+          "quantity_delta_display": {
+            "quantity": "-3",
+            "unit": "piece"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "3",
+                "unit": "piece"
+              }
+            ],
+            "normalized": {
+              "quantity": "3",
+              "unit": "piece"
+            },
+            "total": {
+              "quantity": "3",
+              "unit": "piece"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "3",
+                  "unit": {
+                    "code": "piece",
+                    "dimension": "count",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "piece",
+                "dimension": "count",
+                "family": "piece",
+                "strategy": "linear",
+                "factor": "1",
+                "integer_only": true
+              },
+              "normalized": {
+                "quantity": "3",
+                "unit": "piece"
+              },
+              "total": {
+                "quantity": "3",
+                "unit": "piece"
+              }
+            }
+          },
+          "recorded_at": "2026-10-06T11:18:55.000000Z",
+          "notes": "Stolen from the nest",
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "production_cycle_id": null,
+          "breeding_project_id": null,
+          "source": {
+            "type": "manual",
+            "id": null
+          },
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+          "created_at": "2026-10-06T12:18:55.000000Z"
+        },
+        "meta": {},
+        "message": "Stock issued."
+      }
+order: 4000

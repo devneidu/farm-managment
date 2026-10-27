@@ -1,0 +1,103 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  2 bags + 5 kg of feed (55 kg) and a delivery line: ONE stock-in and ONE expense of 10,250.45.
+
+  **WHAT IT DOES**
+  Records ONE procurement event: a supplier, a total and its lines. It is the only endpoint that writes stock AND money together, in a single transaction.
+
+  **WHEN TO USE IT**
+  "Record purchase" for stock bought from a supplier.
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `purchase.create` (taken from the current farm context; never sent by the client).
+  - Creates the purchase and lines, one `stock_in` movement per stock line, and one linked expense in the money ledger (`source: purchase`).
+  - `stock` lines add stock (one `stock_in`, reason `purchase`, per line) using the Phase 5 components format; packages (`bag`) resolve ONLY through the item's own package conversion. `non_stock` lines (transport, services) move no stock.
+  - The purchase total is the exact sum of line `amount`s (`9000.00 + 1250.45 = 10250.45`); one expense is booked for the total unless `record_expense: false`. Its category is derived from the lines unless `finance_category_id` (an expense category) is sent.
+  - `production_cycle_id` (an OPEN cycle) allocates the cost to that cycle's profitability.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Show a purchase with its lines**.
+
+  **OUTPUT-NAMED STOCK LINES (GAP-08)**
+  A stock line names its stock with EXACTLY ONE of `inventory_item_id` (a specific item, always supported) or `output` (`eggs` | `milk`, the farm's automatic output item; no item id needed). A PURCHASE resolves (or creates) the output item exactly like `POST /inventory/stock-in {output}`, and with no store and no active store creates "Main Store". `storage_location_id` is optional with `output` (the only active store is used; several active stores need a choice, `422 items.N.storage_location_id`). Both or neither -> `422`; `output` on a non-stock line -> `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Refetch inventory (`GET /inventory/items/{id}`) and finance summary after saving.
+
+  Full reference (errors, all fields): folder **15 — Contacts & Purchasing** -> "Record a purchase (stock + expense)".
+url: "{{base_url}}/purchases"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "contact_id": "{{supplier_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{purchase_key}}",
+      "supplier_reference": "INV-7781",
+      "production_cycle_id": "{{cycle_id}}",
+      "notes": "Weekly feed delivery",
+      "items": [
+        {
+          "kind": "stock",
+          "inventory_item_id": "{{item_feed_id}}",
+          "storage_location_id": "{{store_id}}",
+          "components": [
+            {
+              "quantity": "2",
+              "unit": "bag"
+            },
+            {
+              "quantity": "5",
+              "unit": "kg"
+            }
+          ],
+          "amount": "9000.00"
+        },
+        {
+          "kind": "non_stock",
+          "description": "Delivery truck",
+          "amount": "1250.45"
+        }
+      ]
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("purchase_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("purchase_id", String(v)); else console.warn("Could not capture purchase_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/3. Record a purchase (stock + expense).resources/examples
+order: 3000

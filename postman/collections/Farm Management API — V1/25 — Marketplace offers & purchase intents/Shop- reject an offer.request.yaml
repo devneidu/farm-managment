@@ -1,0 +1,29 @@
+$kind: http-request
+name: "Shop: reject an offer"
+description: |-
+  **WHAT IT DOES**
+  Needs `offer.respond`. Allowed while the offer is pending, even if the listing is paused. A rejected offer still counts as one of the buyer's attempts. Idempotent on a rejected offer; `409 offer_not_pending` on an accepted one; `409 offer_expired` on a lapsed one.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/offers/{{offer_id}}/reject"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 9000

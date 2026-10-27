@@ -1,0 +1,114 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Moves stock between two storage locations as two linked movements (`transfer_out` + `transfer_in`). Total stock is unchanged.
+
+  **WHEN TO USE IT**
+  "Move stock" between two stores.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `inventory_item_id`, `from_storage_location_id`, `to_storage_location_id`, `components`, `recorded_at`, `idempotency_key`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - Two linked movements.
+  - Source needs enough stock (`409 insufficient_stock`); both locations must be active.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/inventory/transfers`
+
+  **REQUEST BODY** (`application/json`)
+  - `inventory_item_id` — string (uuid), **required**
+  - `from_storage_location_id` — string (uuid), **required**
+  - `to_storage_location_id` — string (uuid), **required**
+  - `lot_id` — string (uuid), optional, nullable
+  - `components` — array, **required**, min 1 items, max 10 items
+  - `components[].quantity` — string, **required**
+  - `components[].unit` — string, **required**, max 32 chars
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `notes` — string, optional, max 5000 chars, nullable
+
+  **VARIABLES USED**
+  - `{{item_feed_id}}` — captured by "Create an inventory item (feed)"
+  - `{{store_id}}` — captured by "Create a storage location"
+  - `{{store2_id}}` — captured by "Create a second storage location"
+
+  **BUSINESS RULES**
+  - Source needs enough stock (`409 insufficient_stock`); both locations must be active.
+  - Requires `inventory.manage`.
+
+  **SUCCESS**
+  `201 Created` — message: "Stock transferred."
+
+  `data` fields: `transfer_group_id`, `movements`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `insufficient_stock`, `item_inactive`, `location_inactive`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/inventory/transfers"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "inventory_item_id": "{{item_feed_id}}",
+      "from_storage_location_id": "{{store_id}}",
+      "to_storage_location_id": "{{store2_id}}",
+      "components": [
+        {
+          "quantity": "40",
+          "unit": "kg"
+        }
+      ],
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Transfer stock between storage locations.resources/examples
+order: 27000

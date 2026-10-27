@@ -1,0 +1,54 @@
+$kind: http-example
+name: 201 Created — Reversal recorded.
+request:
+  url: "{{base_url}}/health-records/{{health_med2_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Wrong flock selected",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-763f-72cd-b5e0-e5e2a52514a8",
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "type": "reversal",
+          "details": {
+            "reason": "Wrong flock selected"
+          },
+          "animals_affected": null,
+          "follow_up_on": null,
+          "mortality_record_id": null,
+          "recorded_at": "2026-10-03T23:44:06.000000Z",
+          "notes": null,
+          "reverses_record_id": "01a1045e-7497-70f9-b56c-549a345ecd02",
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "medicines": [],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Reversal recorded."
+      }
+order: 1000

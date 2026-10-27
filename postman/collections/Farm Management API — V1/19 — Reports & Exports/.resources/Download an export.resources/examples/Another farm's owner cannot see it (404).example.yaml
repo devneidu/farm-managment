@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/exports/{{report_export_id}}/download"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The requested resource was not found.",
+        "code": "not_found",
+        "request_id": "01a1045e-b3dc-726e-add5-000cb9cebd0e"
+      }
+order: 2000

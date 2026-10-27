@@ -1,0 +1,73 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_labour_id}}",
+        "amount": "18000.00",
+        "contact_id": "{{supplier_id}}",
+        "description": "Diesel",
+        "confirm_duplicate": true,
+        "occurred_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a164f1-af75-715c-8f6a-d81db3f27e85",
+          "reference": "FIN-2026-00004",
+          "entry_type": "entry",
+          "direction": "expense",
+          "category": {
+            "id": "01a164f0-88d6-737b-a530-4ffe216603b7",
+            "code": "feed",
+            "name": "Feed"
+          },
+          "amount": "18000.00",
+          "currency": "NGN",
+          "occurred_on": "2026-10-14",
+          "recorded_at": "2026-10-14T12:00:00.000000Z",
+          "contact_id": "01a164f1-a9e9-7191-acb6-e439ec0b19d2",
+          "contact_name": "Green Valley Feeds",
+          "production_cycle_id": null,
+          "description": "Diesel",
+          "payment_method": null,
+          "quantity": null,
+          "unit_price": null,
+          "source": {
+            "type": null,
+            "id": null,
+            "label": "Entered manually"
+          },
+          "can_reverse_directly": true,
+          "reverses_transaction_id": null,
+          "corrects_transaction_id": null,
+          "reversed_by_transaction_id": null,
+          "is_reversed": false,
+          "reason": null,
+          "created_by": "01a164f1-a71f-7332-bf6f-d05915768db8",
+          "created_at": "2026-10-14T12:00:00.000000Z"
+        },
+        "meta": [],
+        "message": "Expense recorded."
+      }
+order: 6000

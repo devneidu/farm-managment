@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Load crop master data, start a crop project and follow it from planting through harvest to the crop project summary.
+
+  **Prerequisites:** Flow S (needs `store_id`, `item_seed_id`, `item_fert_id`, `item_yam_id`).
+
+  Steps: 14. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 5000

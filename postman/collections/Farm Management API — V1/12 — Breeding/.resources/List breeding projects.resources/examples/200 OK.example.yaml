@@ -1,0 +1,138 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/breeding-projects?status=active"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: status
+      value: active
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: workflow
+      value: ""
+      disabled: true
+      description: "enum: incubation | pregnancy"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-78f0-7168-be5a-8bf79aa26127",
+            "reference": "BRD-2026-00003",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "workflow": "incubation",
+            "status": "active",
+            "start_date": "2026-09-27",
+            "eggs_set": 20,
+            "females_bred": null,
+            "expected_offspring": null,
+            "expectation": {
+              "type": "exact",
+              "source": "manual",
+              "date": "2026-10-18",
+              "from": null,
+              "to": null,
+              "no_expectation_reason": null
+            },
+            "biological_reference": {
+              "days": 21,
+              "kind": "exact",
+              "note": null,
+              "days_max": null,
+              "days_min": null,
+              "workflow": "incubation",
+              "capability": "supports_incubation",
+              "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+              "approximate": false,
+              "captured_at": "2026-10-04T00:45:08.153034Z",
+              "species_code": "chicken",
+              "no_automatic_reason": null,
+              "automatic_expectation": true
+            },
+            "parents": [],
+            "checks": [],
+            "outcomes": [],
+            "result": null,
+            "notes": null,
+            "cancelled_at": null,
+            "cancel_reason": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z",
+            "updated_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-7883-7288-b3ac-9afa42e2ff29",
+            "reference": "BRD-2026-00002",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "workflow": "incubation",
+            "status": "active",
+            "start_date": "2026-09-27",
+            "eggs_set": 30,
+            "females_bred": null,
+            "expected_offspring": null,
+            "expectation": {
+              "type": "exact",
+              "source": "reference",
+              "date": "2026-10-18",
+              "from": null,
+              "to": null,
+              "no_expectation_reason": null
+            },
+            "biological_reference": {
+              "days": 21,
+              "kind": "exact",
+              "note": null,
+              "days_max": null,
+              "days_min": null,
+              "workflow": "incubation",
+              "capability": "supports_incubation",
+              "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+              "approximate": false,
+              "captured_at": "2026-10-04T00:45:08.153034Z",
+              "species_code": "chicken",
+              "no_automatic_reason": null,
+              "automatic_expectation": true
+            },
+            "parents": [],
+            "checks": [],
+            "outcomes": [],
+            "result": null,
+            "notes": null,
+            "cancelled_at": null,
+            "cancel_reason": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z",
+            "updated_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 3
+        },
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/invoices/{{invoice_id}}/payments"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "amount": "100.00",
+        "method": "barter",
+        "received_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The selected method is invalid.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-a390-738c-bbe7-3d7831b6313e",
+        "errors": {
+          "method": [
+            "The selected method is invalid."
+          ]
+        }
+      }
+order: 3000

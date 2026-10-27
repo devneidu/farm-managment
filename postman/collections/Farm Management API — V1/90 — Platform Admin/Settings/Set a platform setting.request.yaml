@@ -1,0 +1,84 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Sets one registry setting by key. `value` is required (use `null` to clear) and validated per key (email, digits with optional `+`, or text up to 500 chars).
+
+  **WHEN TO USE IT**
+  Saving a platform setting.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `value`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Audit entry.
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+  - An unknown key is `404`; an invalid value is `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Platform role **`admin`** only (`support` is read-only: `403 platform_write_forbidden`; no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+  Rate limited by limiter `platform-admin-write`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PUT {{base_url}}/platform-admin/settings/support_email`
+
+  **REQUEST BODY** (`application/json`)
+  - `value` — string, **required**. Shape depends on the setting key and is validated against that setting's own rule.
+
+  **BUSINESS RULES**
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+  - An unknown key is `404`; an invalid value is `422`.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `key`, `description`, `value`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/platform-admin/settings/support_email"
+method: PUT
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "support@farmapp.example.com"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Set a platform setting.resources/examples
+order: 2000

@@ -1,0 +1,161 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Starts a livestock batch (poultry, cattle, fish, ...): the production cycle that every livestock record, health event, breeding project, task and sale line later points at. The server assigns the UUIDv7 `id`, a readable `reference` such as `BAT-2026-00001` and `status: "active"`.
+
+  **WHEN TO USE IT**
+  The "Start livestock batch" form (poultry, cattle, fish, ...).
+
+  **IMPORTANT INPUTS**
+  - Required body fields for a livestock batch: `kind`, `name`, `operation_type_id`, `species_id`, `production_purpose`, `initial_population`, `start_date`.
+  - Optional livestock fields: `breed_id`, `growth_stage`, `acquisition_price_per_animal` (NGN string, at most 2 decimals, 0 allowed), `supplier_contact_id` (active supplier contact of this farm), `production_area_id`, `expected_end_date`, `notes`.
+  - Take `breed_id`, `production_purpose` and `growth_stage` from `GET /master/species/{species}/batch-reference` (folder 05) for the selected species. Cattle and Fish examples and the 422 examples follow in this folder.
+
+  **PRODUCTION PURPOSE: WHAT EACH CODE MEANS** (show the `name`, and this hint under it, in the form)
+  - `meat` - Meat: raised to be sold or eaten as meat.
+  - `eggs` - Eggs: raised for egg production (layers).
+  - `dual_purpose` - Dual purpose (eggs and meat; for cattle: milk and meat): one animal kept for both uses.
+  - `dairy` - Dairy: raised for milk (cattle).
+  - `hide` - Hide: raised for hides/skins (cattle).
+  - `draught` - Draught: work animals used for pulling or carrying (cattle).
+  - `breeding` - Breeding: kept as breeding stock to produce young.
+  - `other` - Other: any purpose not listed.
+  Which codes exist depends on the species (for example Chicken has no `dairy`); always read them from the batch-reference response.
+
+  **GROWTH STAGE (optional)**: `hatchling` (newly hatched), `chick`/`keet`/`duckling`/`calf` (young animal), `weaner` (just weaned), `grower` (growing, not yet adult), `adult`, `unknown`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `production_cycle.create` (taken from the current farm context; never sent by the client).
+  - Creates the cycle and its opening population movement. No inventory, finance or task side effects.
+  - `initial_population` is the immutable STARTING head count (fish are heads too). It is NOT the live population: `livestock.current_population` is derived from the population movement ledger (mortality, sales, births, adjustments) and can never be written directly.
+  - Counts must be positive whole numbers (JSON integers or digit strings). Dates are `YYYY-MM-DD` calendar dates; historical dates are valid. Expected dates are optional user estimates and cannot precede the start.
+  - Name is unique per farm and kind, including closed cycles (`409 duplicate_cycle_name`).
+
+  **WHAT TO DO NEXT**
+  Open the batch (`GET /production-cycles/{cycle}`) and start recording activity.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Build the form from master data: operation -> species -> breed. Show `current_population`, not `initial_population`, as "birds alive".
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`production_cycle.create`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `production-cycle-write`: 60 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/production-cycles`
+
+  **REQUEST BODY** (`application/json`)
+  - `kind` — enum, **required**. Values: `livestock`, `crop`
+  - `name` — string, **required**, max 100 chars
+  - `operation_type_id` — string (uuid), **required**
+  - `production_area_id` — string (uuid), optional, nullable
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `expected_end_date` — string (date), optional, nullable
+  - `start_date` — string (date), **required when `kind=livestock`**
+  - `species_id` — string (uuid), **required when `kind=livestock`**
+  - `breed_id` — string (uuid), optional, nullable; an active breed of that species (system or this farm's custom)
+  - `production_purpose` — string (code), **required when `kind=livestock`**, max 64; an active purpose code of that species
+  - `growth_stage` — string (code), optional, nullable, max 64; an active stage code of that species (starting snapshot, never auto-advanced)
+  - `acquisition_price_per_animal` — string|number, optional, nullable; NGN, non-negative, at most 2 decimals; send a string
+  - `supplier_contact_id` — string (uuid), optional, nullable; active contact of this farm with the `supplier` role
+  - `initial_population` — integer, **required when `kind=livestock`**, min 1, max 999999999999
+  - `planting_date` — string (date), optional
+  - `crop_type_id` — string (uuid), optional
+  - `crop_variety_id` — string (uuid), optional, nullable
+  - `planting_material_type` — string, optional, max 40 chars
+  - `planting_unit_type` — string, optional, max 40 chars
+  - `initial_planting_units` — integer, optional, min 1, max 999999999999
+  - `expected_germination_date` — string (date), optional, nullable
+  - `area` — object, optional, nullable
+  - `area.quantity` — string|number, **required**
+  - `area.unit` — string, **required**, max 32 chars
+
+  **VARIABLES USED**
+  - `{{op_poultry_id}}` — captured by "List farm operations (production types)"
+  - `{{species_chicken_id}}` — captured by "List species"
+  - `{{breed_id}}` — captured by "Create a custom breed" (a farm custom breed; system breeds come from batch-reference)
+  - `{{area_id}}` — captured by "Create a batch location (pen, house, pond or plot)"
+
+  **BUSINESS RULES**
+  - `initial_population` is the immutable STARTING head count (fish are heads too). It is NOT the live population: `livestock.current_population` is derived from the population movement ledger (mortality, sales, births, adjustments) and can never be written directly.
+  - Counts must be positive whole numbers (JSON integers or digit strings). Dates are `YYYY-MM-DD` calendar dates; historical dates are valid. Expected dates are optional user estimates and cannot precede the start.
+  - Name is unique per farm and kind, including closed cycles (`409 duplicate_cycle_name`).
+  - Operation/species and species/breed relationships are validated; unknown or foreign ids are `404`, inactive ones `422`.
+  - `production_area_id` is optional (zero areas is valid). Never send `farm_id`.
+  - Requires `production_cycle.create` (Owner, Manager). On a capped plan `409 plan_limit_reached` (`active_cycles`).
+
+  **SUCCESS**
+  `201 Created` — message: "Production cycle created."
+
+  `data` fields: `id`, `kind`, `name`, `reference`, `status`, `operation`, `production_area`, `start_date`, `planting_date`, `expected_end_date`, `end_date`, `notes`, `baseline_locked`, `livestock`, `crop`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `production_cycle.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `duplicate_cycle_name`, `location_inactive`, `plan_limit_reached`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+
+  Livestock creation update (2026-10-09), now represented by the requests in this folder: production_purpose is required; growth_stage, acquisition_price_per_animal (NGN, non-negative, max 2 decimals), supplier_contact_id (active farm supplier) are optional. Use GET /master/species/{species}/batch-reference for species-specific codes. No automatic financial or stock booking. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "livestock",
+      "name": "October Broilers",
+      "operation_type_id": "{{op_poultry_id}}",
+      "species_id": "{{species_chicken_id}}",
+      "breed_id": "{{breed_id}}",
+      "initial_population": 500,
+      "start_date": "{{date_30d_ago}}",
+      "production_area_id": "{{area_id}}",
+      "expected_end_date": "{{date_in_30d}}",
+      "notes": "First flock of the season",
+      "production_purpose": "meat",
+      "growth_stage": "chick",
+      "acquisition_price_per_animal": null,
+      "supplier_contact_id": null
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("cycle_id", String(v)); else console.warn("Could not capture cycle_id from data.id"); }
+        { const v = get(json, "data.reference"); if (v !== undefined && v !== null) pm.environment.set("cycle_reference", String(v)); else console.warn("Could not capture cycle_reference from data.reference"); }
+      }
+    language: text/javascript
+examples: ./.resources/Start a livestock batch.resources/examples
+order: 1000

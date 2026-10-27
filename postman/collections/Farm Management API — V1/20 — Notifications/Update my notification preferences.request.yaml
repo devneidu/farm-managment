@@ -1,0 +1,91 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Changes channel and/or per-type switches; omitted values keep their setting. An unknown channel or type, or a type my role cannot receive, is `422`. A type or channel that is off means the notification is not created for me.
+
+  **WHEN TO USE IT**
+  Saving notification settings.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Changes what future notifications are created/sent for this user on this farm.
+  - Both `channels` and `types` are optional and merged: omitted values keep their setting. Allowed channels: `in_app`, `email` (there is no WhatsApp channel).
+  - Only types the caller can receive are accepted; others are `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Any active farm member (no specific permission). The response is filtered by the caller's own permissions.
+
+  **URL**
+  `PATCH {{base_url}}/notification-preferences`
+
+  **REQUEST BODY** (`application/json`)
+  - `channels` — object, optional. Channel switches. Omitted channels keep their value.
+  - `channels.in_app` — boolean, **required**
+  - `channels.email` — boolean, **required**
+  - `types` — array, optional. Per-type switches ({type_code: bool}); only the types GET /notification-preferences lists for you are accepted.
+
+  **BUSINESS RULES**
+  - Both `channels` and `types` are optional and merged: omitted values keep their setting. Allowed channels: `in_app`, `email` (there is no WhatsApp channel).
+  - Only types the caller can receive are accepted; others are `422`.
+
+  **SUCCESS**
+  `200 OK` — message: "Preferences updated."
+
+  `data` fields: `channels`, `types`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/notification-preferences"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "channels": {
+        "email": false
+      },
+      "types": {
+        "low_stock": true
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update my notification preferences.resources/examples
+order: 5000

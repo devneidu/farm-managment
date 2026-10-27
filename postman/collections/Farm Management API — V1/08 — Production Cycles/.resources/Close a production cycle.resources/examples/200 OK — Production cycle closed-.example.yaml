@@ -1,0 +1,110 @@
+$kind: http-example
+name: 200 OK — Production cycle closed.
+request:
+  url: "{{base_url}}/production-cycles/{{cycle_pilot_id}}/close"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "end_date": "{{today}}",
+        "reason": "Batch sold out and house cleaned"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1206e-2624-73cb-998b-fe076a5eacaa",
+          "kind": "livestock",
+          "name": "Pilot flock 1791545452010",
+          "reference": "BAT-2026-00005",
+          "status": "closed",
+          "operation": {
+            "id": "01a1206d-7d5a-7304-a12a-50a8e7112ac9",
+            "code": "poultry",
+            "name": "Poultry",
+            "tracking_model": "population"
+          },
+          "production_area": {
+            "id": "01a1206d-e779-71fe-9772-0bc693cb8e49",
+            "kind": "production_area",
+            "name": "Pen 1",
+            "type": "pen",
+            "type_label": "Pen",
+            "parent_id": "01a1206d-e6ec-706c-aeab-7040deb18d8b",
+            "path": [
+              {
+                "id": "01a1206d-e6ec-706c-aeab-7040deb18d8b",
+                "kind": "location",
+                "name": "Poultry House 1"
+              },
+              {
+                "id": "01a1206d-e779-71fe-9772-0bc693cb8e49",
+                "kind": "production_area",
+                "name": "Pen 1"
+              }
+            ],
+            "path_label": "Poultry House 1 / Pen 1",
+            "depth": 1,
+            "is_active": true,
+            "created_at": "2026-10-09T11:30:36+00:00",
+            "updated_at": "2026-10-09T11:30:36+00:00"
+          },
+          "start_date": "2026-09-09",
+          "planting_date": null,
+          "expected_end_date": null,
+          "end_date": "2026-10-09",
+          "notes": null,
+          "baseline_locked": true,
+          "livestock": {
+            "species": {
+              "id": "01a1206d-7d65-7126-84ae-ca4491d3d8d1",
+              "code": "chicken",
+              "name": "Chicken"
+            },
+            "breed": {
+              "id": "01a1206e-163d-706d-a835-cb1d7ad84c3c",
+              "name": "Isa Brown (Ibadan strain) 1791545448 (renamed)",
+              "is_active": true
+            },
+            "production_purpose": {
+              "code": "meat",
+              "name": "Meat",
+              "is_active": true
+            },
+            "growth_stage": {
+              "code": "chick",
+              "name": "Chick",
+              "is_active": true
+            },
+            "acquisition_price_per_animal": null,
+            "acquisition_currency": null,
+            "supplier_contact": null,
+            "initial_population": 50,
+            "current_population": 50,
+            "population_unit": "head",
+            "population_basis": "population_movements"
+          },
+          "crop": null,
+          "created_at": "2026-10-09T11:30:52.000000Z",
+          "updated_at": "2026-10-09T11:30:52.000000Z"
+        },
+        "meta": {},
+        "message": "Production cycle closed."
+      }
+order: 1000

@@ -1,0 +1,59 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Adds a farm-specific variety to a crop. Use the returned `id` as `crop_variety_id` when starting a crop project.
+
+  **WHEN TO USE IT**
+  "+ Add custom variety" inside the crop project form.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `master_data.manage` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Start a crop project**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  Full reference (errors, all fields): folder **05 — Master Data** -> "Create a custom crop variety".
+url: "{{base_url}}/custom-varieties"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "crop_type_id": "{{crop_yam_id}}",
+      "name": "Pona (white yam)"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("variety_id", String(v)); else console.warn("Could not capture variety_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/5. Create a custom crop variety.resources/examples
+order: 5000

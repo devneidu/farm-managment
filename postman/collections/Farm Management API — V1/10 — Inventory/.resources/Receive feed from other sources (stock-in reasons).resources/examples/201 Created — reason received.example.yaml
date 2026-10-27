@@ -1,0 +1,130 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/stock-in"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "inventory_item_id": "{{item_feed_id}}",
+        "storage_location_id": "{{store_id}}",
+        "reason": "received",
+        "components": [
+          {
+            "quantity": "5",
+            "unit": "kg"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-1ce4-72ae-a72c-9ec7b78dfd04",
+          "inventory_item_id": "01a11126-cea8-722d-9ea4-128d7671545a",
+          "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_in",
+          "reason": "received",
+          "reason_label": "Received",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "5000",
+            "unit": "g"
+          },
+          "quantity_delta_display": {
+            "quantity": "5",
+            "unit": "kg"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "5",
+                "unit": "kg"
+              }
+            ],
+            "normalized": {
+              "quantity": "5000",
+              "unit": "g"
+            },
+            "total": {
+              "quantity": "5",
+              "unit": "kg"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "5",
+                  "unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "5000",
+                "unit": "g"
+              },
+              "total": {
+                "quantity": "5",
+                "unit": "kg"
+              }
+            }
+          },
+          "recorded_at": "2026-10-06T11:18:58.000000Z",
+          "notes": null,
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "production_cycle_id": null,
+          "breeding_project_id": null,
+          "source": {
+            "type": "manual",
+            "id": null
+          },
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+          "created_at": "2026-10-06T12:18:58.000000Z"
+        },
+        "meta": {},
+        "message": "Stock received."
+      }
+order: 4000

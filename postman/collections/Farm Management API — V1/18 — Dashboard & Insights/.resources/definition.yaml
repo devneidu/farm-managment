@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Read models for the home screen and rule-based insights. Everything is derived live and filtered by the viewer's own permissions.
+
+  Typical screens: home dashboard, calendar strip, alerts.
+order: 20000

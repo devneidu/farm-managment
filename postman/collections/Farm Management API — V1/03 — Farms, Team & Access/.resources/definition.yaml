@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  The current farm, its team and invitations. **Farm context**: farm endpoints never take a farm id in the URL. The API resolves the farm from the caller's ACTIVE memberships: the oldest active membership by default, or the farm named in the optional `X-Farm-Id` header.
+
+  **Roles** are presets: `owner`, `manager`, `farm_worker`, `finance`, `vet`. The frontend receives the caller's role and permission strings from `GET /farm` (`membership.permissions`) and uses them to show/hide UI; the backend re-checks every request. The frontend NEVER sends a permission string.
+
+  Typical screens: farm settings, team members, invitations, role picker.
+order: 5000

@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow 1 and a farm plan that allows more than 3 team members (Flow S).
+
+  The invitation token only exists in the email. Locally copy it from `storage/logs/laravel.log` into `invitation_token`.
+
+  **WHAT IT DOES**
+  Invites someone to the farm with a preset role. The invitee receives an email with `{FRONTEND_URL}/invitations/accept?token=...` (valid 7 days, single use). The token is never returned by the API.
+
+  **WHEN TO USE IT**
+  "Invite team member" dialog.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `team.invite` (taken from the current farm context; never sent by the client).
+  - Creates a pending invitation and sends the invitation email (local: `storage/logs/laravel.log`).
+  - `role` is one of `manager`, `farm_worker`, `finance`, `vet` for an Owner; a Manager may only invite `farm_worker`, `finance`, `vet`. Nobody can invite or assign `owner` (`422 ownership_transfer_unsupported`).
+  - Pending invitations count toward the plan's `team_members` limit together with active members: when the limit is reached the call is `409 plan_limit_reached` (see `details`).
+  - Inviting someone who is already a member is `409 already_member`; a second open invitation to the same email is `409 invitation_already_pending`.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List open invitations**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Fetch `GET /roles` to build the role picker: it says which roles the caller may assign. The invitation token only exists in the email, so locally copy it from `storage/logs/laravel.log` into the `invitation_token` environment variable.
+
+  Full reference (errors, all fields): folder **03 — Farms, Team & Access** -> "Invite a team member".
+url: "{{base_url}}/farm/invitations"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{invitee_email}}",
+      "role": "farm_worker"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("invitation_id", String(v)); else console.warn("Could not capture invitation_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/1. Invite a team member.resources/examples
+order: 1000

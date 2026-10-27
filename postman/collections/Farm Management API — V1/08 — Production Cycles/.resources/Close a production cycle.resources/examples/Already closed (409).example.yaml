@@ -1,0 +1,34 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/{{cycle_pilot_id}}/close"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "end_date": "{{today}}",
+        "reason": "Batch sold out and house cleaned"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The cycle is already in the requested state.",
+        "code": "invalid_status_transition",
+        "request_id": "01a1206e-26ff-7225-9402-46973fec49de"
+      }
+order: 2000

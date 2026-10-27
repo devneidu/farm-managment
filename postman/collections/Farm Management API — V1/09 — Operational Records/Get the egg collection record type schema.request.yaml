@@ -1,0 +1,72 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The contract of the egg collection record type: its measurement, its permissions and how it integrates with stock.
+
+  **WHEN TO USE IT**
+  Building the egg form: which permissions to check and what the stock side effect is.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `record.view`.
+  - `permissions_required.always` = `["record.create", "inventory.use"]`: egg/milk records always write a stock-in.
+  - `inventory.mode = automatic_output`, `output = eggs`: the stock-in is automatic; `details.inventory` only picks the store (`fields.storage_location_id: optional`).
+  - The compound `components` / `context` shapes are in `docs/api/FRONTEND-WORKFLOWS.md` §0.4.
+
+  **WHAT TO DO NEXT**
+  Render the form from the schema; `POST /records`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **ACCESS**
+  Required permission: **`record.view`**.
+
+  **URL**
+  `GET {{base_url}}/record-types/egg_collection/schema`
+
+  **BUSINESS RULES**
+  - Unknown types: 404.
+
+  **SUCCESS**
+  `200 OK` — the schema.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `404 not_found` — unknown type.
+url: "{{base_url}}/record-types/egg_collection/schema"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("states the integration", function () { pm.expect(json.data.permissions_required.always).to.eql(["record.create", "inventory.use"]); pm.expect(json.data.inventory.mode).to.eql("automatic_output"); pm.expect(json.data.inventory.output).to.eql("eggs"); });
+      }
+    language: text/javascript
+examples: ./.resources/Get the egg collection record type schema.resources/examples
+order: 5000

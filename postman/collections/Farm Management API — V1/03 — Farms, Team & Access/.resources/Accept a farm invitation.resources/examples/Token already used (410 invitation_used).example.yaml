@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/invitations/accept"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "token": "{{invitation_token}}"
+      }
+response:
+  statusCode: 410
+  statusText: Gone
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This invitation has already been used.",
+        "code": "invitation_used",
+        "request_id": "01a1045e-42e9-710c-97dd-650438006c23"
+      }
+order: 2000

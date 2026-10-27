@@ -1,0 +1,37 @@
+$kind: http-example
+name: 200 OK — Preferences updated.
+request:
+  url: "{{base_url}}/me/preferences"
+  method: PATCH
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "locale": "en"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "locale": "en",
+          "effective_locale": "en",
+          "default_locale": "en",
+          "fallback_locale": "en",
+          "farm_locale": "en",
+          "available_locales": [
+            "en"
+          ]
+        },
+        "meta": {},
+        "message": "Preferences updated."
+      }
+order: 1000

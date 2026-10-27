@@ -1,0 +1,171 @@
+$kind: http-example
+name: 201 Created — Stock received.
+request:
+  url: "{{base_url}}/inventory/stock-in"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "inventory_item_id": "{{item_feed_id}}",
+        "storage_location_id": "{{store_id}}",
+        "reason": "opening_balance",
+        "components": [
+          {
+            "quantity": "12",
+            "unit": "bag"
+          },
+          {
+            "quantity": "18",
+            "unit": "kg"
+          }
+        ],
+        "recorded_at": "{{recorded_at_30h}}",
+        "idempotency_key": "{{stockin_key}}",
+        "notes": "Opening stock count"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-5769-7334-a7b7-a8bc6836468a",
+          "inventory_item_id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+          "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_in",
+          "reason": "opening_balance",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "318000",
+            "unit": "g"
+          },
+          "quantity_delta_display": {
+            "quantity": "318",
+            "unit": "kg"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "12",
+                "unit": "bag"
+              },
+              {
+                "quantity": "18",
+                "unit": "kg"
+              }
+            ],
+            "normalized": {
+              "quantity": "318000",
+              "unit": "g"
+            },
+            "total": {
+              "quantity": "318",
+              "unit": "kg"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "12",
+                  "unit": {
+                    "code": "bag",
+                    "dimension": "package",
+                    "family": null,
+                    "strategy": "none",
+                    "factor": null,
+                    "integer_only": false
+                  }
+                },
+                {
+                  "quantity": "18",
+                  "unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [
+                {
+                  "conversion_id": "01a1045e-56b4-7263-a671-1c2e95979ba4",
+                  "version": 1,
+                  "context": {
+                    "type": "inventory_item",
+                    "id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+                    "label": "Layer Grower Mash"
+                  },
+                  "package_unit": {
+                    "code": "bag",
+                    "dimension": "package",
+                    "family": null,
+                    "strategy": "none",
+                    "factor": null,
+                    "integer_only": false
+                  },
+                  "target_unit": {
+                    "code": "kg",
+                    "dimension": "weight",
+                    "family": "weight",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  },
+                  "per_package": "25"
+                }
+              ],
+              "result_unit": {
+                "code": "kg",
+                "dimension": "weight",
+                "family": "weight",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "318000",
+                "unit": "g"
+              },
+              "total": {
+                "quantity": "318",
+                "unit": "kg"
+              }
+            }
+          },
+          "recorded_at": "2026-10-02T18:44:06.000000Z",
+          "notes": "Opening stock count",
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Stock received."
+      }
+order: 1000

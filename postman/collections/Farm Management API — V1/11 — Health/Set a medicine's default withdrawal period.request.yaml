@@ -1,0 +1,98 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Stores the medicine's default withdrawal period (days before animal products are safe). `default_withdrawal_days` is required (`null` clears it). It applies to FUTURE health lines only; past lines keep the value they were saved with.
+
+  **WHEN TO USE IT**
+  Setting a medicine's default withdrawal period in medicine settings.
+
+  **IMPORTANT INPUTS**
+  - Optional `medicine_type` (`antibiotic|vaccine|supplement|dewormer|other`; omit = unchanged, `null` = not specified).
+  - Path ids (UUIDv7): `{{item_med_id}}`.
+  - Required body fields: `default_withdrawal_days`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.manage` (taken from the current farm context; never sent by the client).
+  - The item must be a `medicine` item (other categories are `404`).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`health.manage`** — granted to: `owner`, `manager`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `health-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PUT {{base_url}}/health/medicines/{{item_med_id}}/profile`
+
+  **PATH PARAMETERS**
+  - `{{item_med_id}}` — UUID. Captured by "Create an inventory item (lot-tracked medicine)" (10 — Inventory) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `default_withdrawal_days` — integer, **required**, min 0, max 3650, nullable. Default withdrawal period in days applied to new health lines that do not state their own. null clears it. Past records keep the days they used.
+  - `notes` — string, optional, max 2000 chars, nullable
+
+  **VARIABLES USED**
+  - `{{item_med_id}}` — captured by "Create an inventory item (lot-tracked medicine)"
+
+  **BUSINESS RULES**
+  - Requires `health.manage` (Owner, Manager, Vet).
+  - The item must be a `medicine` item (other categories are `404`).
+
+  **SUCCESS**
+  `200 OK` — message: "Medicine profile updated."
+
+  `data` fields: `id`, `name`, `category`, `description`, `stock_unit`, `dimension`, `tracks_lots`, `tracks_expiry`, `is_active`, `stock`, `low_stock_threshold`, `is_low_stock`, `created_at`, `updated_at`, `profile`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `health.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/health/medicines/{{item_med_id}}/profile"
+method: PUT
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "default_withdrawal_days": 7,
+      "medicine_type": "vaccine",
+      "notes": "Lasota - hold eggs and meat for 7 days"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Set a medicine's default withdrawal period.resources/examples
+order: 4000

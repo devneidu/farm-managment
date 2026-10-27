@@ -1,0 +1,77 @@
+$kind: http-request
+name: Start a livestock batch (Cattle — dairy, with price and supplier)
+description: |-
+  **WHAT IT DOES**
+  Starts a CATTLE livestock batch with every optional acquisition field filled in. Same endpoint and rules as "Start a livestock batch" (Chicken).
+
+  **VALID COMBINATION**
+  - Operation `cattle` (`{{op_cattle_id}}`), species `cattle` (`{{species_cattle_id}}`), system breed White Fulani (Bunaji) (`{{breed_cattle_id}}`, from "Selected animal batch reference (Cattle)").
+  - `production_purpose: "dairy"` and `growth_stage: "calf"` are Cattle codes (Cattle purposes: meat, dairy, dual_purpose, hide, breeding, draught, other; stages: calf, weaner, grower, adult, unknown).
+  - `acquisition_price_per_animal` is an NGN amount sent as a string (`"185000.50"`): non-negative, at most two decimals. The response returns it as a string with `acquisition_currency: "NGN"`.
+  - `supplier_contact_id` must be an ACTIVE contact of THIS farm holding the `supplier` role (`{{supplier_id}}`, created in folder 15; this request creates one named "Kano Cattle Traders" if `supplier_id` is still empty).
+
+  **IMPORTANT BEHAVIOR**
+  - The acquisition price is informational: no expense, purchase, payment or inventory movement is created.
+  - The four metadata fields are part of the immutable baseline: `PATCH /production-cycles/{id}` with any of them returns `409 baseline_locked`.
+  - Captures `cycle_cattle_id` (does NOT overwrite `cycle_id`, which the Chicken request and the workflows use).
+  - The name carries `{{$timestamp}}` because a batch name is unique per farm and kind (`409 duplicate_cycle_name`).
+
+  See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/production-cycles"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "kind": "livestock",
+      "name": "Dairy Herd {{$timestamp}}",
+      "operation_type_id": "{{op_cattle_id}}",
+      "species_id": "{{species_cattle_id}}",
+      "breed_id": "{{breed_cattle_id}}",
+      "production_purpose": "dairy",
+      "growth_stage": "calf",
+      "acquisition_price_per_animal": "185000.50",
+      "supplier_contact_id": "{{supplier_id}}",
+      "initial_population": 12,
+      "start_date": "{{date_30d_ago}}",
+      "production_area_id": "{{area_id}}",
+      "notes": "Calves bought from a Kano trader"
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Needs an ACTIVE supplier contact on this farm. Reuses {{supplier_id}} (folder 15); creates one only when it is still empty.
+      if (!pm.environment.get("supplier_id")) {
+        pm.sendRequest({ url: pm.variables.replaceIn("{{base_url}}/contacts"), method: "POST", header: { "Accept": "application/json", "Content-Type": "application/json", "Origin": pm.variables.replaceIn("{{frontend_origin}}"), "X-XSRF-TOKEN": pm.environment.get("xsrf_token") || "" }, body: { mode: "raw", raw: JSON.stringify({ name: "Kano Cattle Traders", kind: "business", roles: ["supplier"] }) } }, function (err, res) {
+          if (!err && res.code === 201) { pm.environment.set("supplier_id", res.json().data.id); } else { console.warn("Could not create a supplier contact: " + (err || res.code)); }
+        });
+      }
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("Cattle purpose, stage and acquisition metadata are echoed", function () { const l = json.data.livestock; pm.expect(l.species.code).to.eql("cattle"); pm.expect(l.production_purpose.code).to.eql("dairy"); pm.expect(l.growth_stage.code).to.eql("calf"); pm.expect(l.acquisition_price_per_animal).to.eql("185000.50"); pm.expect(l.acquisition_currency).to.eql("NGN"); pm.expect(l.supplier_contact.id).to.eql(pm.environment.get("supplier_id")); pm.expect(l.current_population).to.eql(12); });
+        { const v = json.data && json.data.id; if (v) pm.environment.set("cycle_cattle_id", String(v)); else console.warn("Could not capture cycle_cattle_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Start a livestock batch (Cattle — dairy, with price and suppli.resources/examples
+order: 2000

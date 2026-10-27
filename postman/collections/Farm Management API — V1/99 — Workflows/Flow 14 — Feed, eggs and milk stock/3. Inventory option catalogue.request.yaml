@@ -1,0 +1,50 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Returns the inventory option catalogue: item categories, the categories a sale may sell (`sellable_categories`), movement types, every stock-in / stock-out reason code, and `reasons` - the human labels and routing for each kind of stock.
+
+  **WHEN TO USE IT**
+  Build the Feed / Eggs / Milk "In" and "Out" screens from `reasons.by_item_kind.{feed|eggs|milk|general}.{in|out}`: render each entry's `label`, and call its `route` (the authoritative endpoint). Nothing about which reason belongs to which stock should be hard-coded.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `inventory.view`.
+  - `manual: true` reasons are accepted on `POST /inventory/stock-in|stock-out`; `manual: false` ones (sale, production_use, incubation, returned) are recorded by `POST /sales`, `POST /records` (feed_use), `POST /breeding-projects` and are refused (422) on the manual endpoints so an event is entered once.
+  - `creates_operational_record` tells you which events create a record (only egg_collection, milk and feed_use do).
+  - `legacy: true` reasons (`use`, `expired`, `wasted`) are kept for existing clients.
+
+  **WHAT TO DO NEXT**
+  Use `GET /inventory/output-balances` for the eggs / milk balance card.
+
+  See `docs/api/FEED-EGGS-MILK-STOCK.md`.
+
+  **FLAT LISTS ARE NOT ITEM-AWARE (GAP-05)**
+  `reasons.by_item_kind` is authoritative. The flat `reasons.in` / `reasons.out` lists are deprecated (`reasons.flat_lists.deprecated: true`): their `manual` only means "not system-only" (e.g. `production` is `manual: true` there, true for feed, false for eggs/milk). Each flat entry now has `manual_for_kinds` (derived from `by_item_kind`): the item kinds for which the reason is really enterable by hand.
+
+  **ROUTES (GAP-06)**
+  Every `route` / `also` entry keeps its relative `path` (relative to `{{base_url}}`) and now also carries `url` (the same route as an absolute `/api/v1/...` URL).
+url: "{{base_url}}/master/inventory-options"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("flat reasons are flagged deprecated and carry manual_for_kinds", function () { pm.expect(json.data.reasons.flat_lists.deprecated).to.eql(true); json.data.reasons.in.concat(json.data.reasons.out).forEach(function (x) { pm.expect(x.manual_for_kinds).to.be.an("array"); }); });
+        pm.test("every metadata route has path and url", function () { const routes = []; ["in", "out"].forEach(function (d) { Object.values(json.data.reasons.by_item_kind).forEach(function (k) { k[d].forEach(function (e) { routes.push(e.route); (e.also || []).forEach(function (a) { routes.push(a); }); }); }); }); routes.forEach(function (rt) { pm.expect(rt.url).to.eql("/api/v1" + rt.path); }); });
+      }
+    language: text/javascript
+examples: ./.resources/3. Inventory option catalogue.resources/examples
+order: 3000

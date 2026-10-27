@@ -1,0 +1,73 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flows 3 and 5 (`item_feed_id`, `cycle_id`, `store_id`).
+
+  Captures `supplier_id`.
+
+  **WHAT IT DOES**
+  Creates a person/business the farm deals with. One contact can be both supplier and customer: `roles` is an array of `supplier` and/or `customer`.
+
+  **WHEN TO USE IT**
+  "Add supplier".
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `contact.manage` (taken from the current farm context; never sent by the client).
+  - Names are unique per farm (case/space-insensitive): a second create is `409 contact_exists` - add the missing role with PATCH instead of creating a duplicate.
+  - Purchases require a SUPPLIER; sales require a CUSTOMER; finance transactions accept any active contact.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List income and expense categories**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  Full reference (errors, all fields): folder **15 — Contacts & Purchasing** -> "Create a contact (supplier)".
+url: "{{base_url}}/contacts"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Mama Nkechi Feeds",
+      "kind": "business",
+      "roles": [
+        "supplier"
+      ],
+      "phone": "08031234567",
+      "email": "orders@mamankechifeeds.example.com",
+      "address": "14 Market Road, Ibadan"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("supplier_id", String(v)); else console.warn("Could not capture supplier_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/1. Create a contact (supplier).resources/examples
+order: 1000

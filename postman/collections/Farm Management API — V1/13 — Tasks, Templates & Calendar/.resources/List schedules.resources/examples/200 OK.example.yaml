@@ -1,0 +1,105 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/schedules?status=active"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: status
+      value: active
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: breeding_project_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-896c-7308-8a4e-0cea588ac5f2",
+            "status": "active",
+            "title": "Clean drinkers",
+            "category": "cleaning_sanitation",
+            "instructions": null,
+            "recurrence": "weekly",
+            "interval_value": 1,
+            "weekdays": [
+              1,
+              4
+            ],
+            "starts_on": "2026-10-04",
+            "ends_on": null,
+            "occurrence_limit": null,
+            "due_time": null,
+            "reminder_offsets": null,
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "breeding_project_id": null,
+            "template_application_id": null,
+            "assigned_user_id": null,
+            "assigned_role": null,
+            "linked_record_type": null,
+            "requires_evidence": false,
+            "tasks_count": 9,
+            "open_tasks_count": 9,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-8158-7174-9bc9-a707a3e1a34e",
+            "status": "active",
+            "title": "Weigh a sample",
+            "category": "growth_monitoring",
+            "instructions": null,
+            "recurrence": "weekly",
+            "interval_value": 1,
+            "weekdays": null,
+            "starts_on": "2026-09-11",
+            "ends_on": null,
+            "occurrence_limit": null,
+            "due_time": null,
+            "reminder_offsets": null,
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "breeding_project_id": null,
+            "template_application_id": "01a1045e-7da1-7207-a3f1-6bde057caf2c",
+            "assigned_user_id": null,
+            "assigned_role": null,
+            "linked_record_type": "weight",
+            "requires_evidence": false,
+            "tasks_count": 4,
+            "open_tasks_count": 4,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 4
+        },
+        "message": null
+      }
+order: 1000

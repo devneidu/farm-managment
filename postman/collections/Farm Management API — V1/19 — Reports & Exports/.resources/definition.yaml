@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Sixteen derived reports, plus queued CSV/XLSX/PDF exports (plan feature `data_export`) that are private to the requesting user.
+
+  Typical screens: reports menu/viewer and the "my exports" list.
+order: 21000

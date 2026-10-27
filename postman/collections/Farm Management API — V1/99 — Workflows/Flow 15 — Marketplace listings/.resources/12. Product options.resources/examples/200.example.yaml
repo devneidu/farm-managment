@@ -1,0 +1,919 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/product-options"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "kinds": [
+            {
+              "code": "livestock",
+              "label": "Livestock",
+              "units": [
+                {
+                  "code": "head",
+                  "name": "Head",
+                  "symbol": "head",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                }
+              ],
+              "products": [
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b84-737c-a4ec-5d5d716a8c72",
+                  "code": "chicken",
+                  "name": "Chicken"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a846-72ca-8387-07925ab8c4a3",
+                  "code": "turkey",
+                  "name": "Turkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a854-7022-b520-9911d03e5df6",
+                  "code": "guinea_fowl",
+                  "name": "Guinea Fowl"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a862-7215-b192-53cc19d07eb5",
+                  "code": "duck",
+                  "name": "Duck"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a872-71d4-b794-78f9664bfcf9",
+                  "code": "goose",
+                  "name": "Goose"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a880-71fa-b6c9-edcdd92b1e0f",
+                  "code": "quail",
+                  "name": "Quail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a88e-7211-aed6-3f94642682f9",
+                  "code": "pigeon",
+                  "name": "Pigeon"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a89b-71cc-bbba-61d55fa88880",
+                  "code": "ostrich",
+                  "name": "Ostrich"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b85-73b8-831f-c7c5215d8951",
+                  "code": "cattle",
+                  "name": "Cattle"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8bd-7014-a615-c3c2c489c3d9",
+                  "code": "camel",
+                  "name": "Camel"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8ca-7032-b356-1e2c35867b27",
+                  "code": "water_buffalo",
+                  "name": "Water Buffalo"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b86-71bf-afeb-2ba0d7089500",
+                  "code": "goat",
+                  "name": "Goat"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b88-71ef-96bc-2834c5010e05",
+                  "code": "sheep",
+                  "name": "Sheep"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b89-709f-a585-6765165a716f",
+                  "code": "pig",
+                  "name": "Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b8a-7372-832d-f11f65a626a6",
+                  "code": "rabbit",
+                  "name": "Rabbit"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8f2-72b7-b23f-e86baf2e93de",
+                  "code": "grasscutter",
+                  "name": "Grasscutter"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a908-7342-8328-1f321e849019",
+                  "code": "guinea_pig",
+                  "name": "Guinea Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a91a-73d9-a0ff-3b3d0a7cc330",
+                  "code": "horse",
+                  "name": "Horse"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a926-714b-8cc6-550925757e41",
+                  "code": "donkey",
+                  "name": "Donkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a933-71a4-a4cf-cae67ed92d3c",
+                  "code": "snail",
+                  "name": "Snail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a940-7356-add4-c00819acf37a",
+                  "code": "honeybee",
+                  "name": "Honeybee"
+                }
+              ],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": false
+            },
+            {
+              "code": "fish",
+              "label": "Fish",
+              "units": [
+                {
+                  "code": "kg",
+                  "name": "Kilogram",
+                  "symbol": "kg",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "head",
+                  "name": "Head",
+                  "symbol": "head",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                }
+              ],
+              "products": [
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b8b-731b-8a0a-8c0bf9c685e6",
+                  "code": "fish",
+                  "name": "Fish"
+                }
+              ],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": false
+            },
+            {
+              "code": "crop_produce",
+              "label": "Crops and produce",
+              "units": [
+                {
+                  "code": "kg",
+                  "name": "Kilogram",
+                  "symbol": "kg",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "tonne",
+                  "name": "Tonne",
+                  "symbol": "t",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "piece",
+                  "name": "Piece",
+                  "symbol": "pc",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "bag",
+                  "name": "Bag",
+                  "symbol": "bag",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "sack",
+                  "name": "Sack",
+                  "symbol": "sack",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "basket",
+                  "name": "Basket",
+                  "symbol": "basket",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "crate",
+                  "name": "Crate",
+                  "symbol": "crate",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "tuber",
+                  "name": "Tuber",
+                  "symbol": "tuber",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "bunch",
+                  "name": "Bunch",
+                  "symbol": "bunch",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": false
+                }
+              ],
+              "products": [
+                {
+                  "type": "crop_type",
+                  "id": "01a118eb-9b8d-70c2-a52a-303db41ab789",
+                  "code": "maize",
+                  "name": "Maize"
+                },
+                {
+                  "type": "crop_type",
+                  "id": "01a118eb-9b8f-7305-b7ff-53953e366c7c",
+                  "code": "cassava",
+                  "name": "Cassava"
+                },
+                {
+                  "type": "crop_type",
+                  "id": "01a118eb-9b8f-7305-b7ff-53953ef057a9",
+                  "code": "yam",
+                  "name": "Yam"
+                },
+                {
+                  "type": "crop_type",
+                  "id": "01a118eb-9b91-72ab-a337-4a0489bc2a30",
+                  "code": "vegetables",
+                  "name": "Vegetables"
+                },
+                {
+                  "type": "crop_type",
+                  "id": "01a118eb-9b92-7076-8db9-1b9868892939",
+                  "code": "fruits",
+                  "name": "Fruits"
+                }
+              ],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": true
+            },
+            {
+              "code": "eggs",
+              "label": "Eggs",
+              "units": [
+                {
+                  "code": "egg",
+                  "name": "Egg",
+                  "symbol": "egg",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "tray",
+                  "name": "Tray",
+                  "symbol": "tray",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "crate",
+                  "name": "Crate",
+                  "symbol": "crate",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "carton",
+                  "name": "Carton",
+                  "symbol": "carton",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                }
+              ],
+              "products": [
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b84-737c-a4ec-5d5d716a8c72",
+                  "code": "chicken",
+                  "name": "Chicken"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a846-72ca-8387-07925ab8c4a3",
+                  "code": "turkey",
+                  "name": "Turkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a854-7022-b520-9911d03e5df6",
+                  "code": "guinea_fowl",
+                  "name": "Guinea Fowl"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a862-7215-b192-53cc19d07eb5",
+                  "code": "duck",
+                  "name": "Duck"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a872-71d4-b794-78f9664bfcf9",
+                  "code": "goose",
+                  "name": "Goose"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a880-71fa-b6c9-edcdd92b1e0f",
+                  "code": "quail",
+                  "name": "Quail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a88e-7211-aed6-3f94642682f9",
+                  "code": "pigeon",
+                  "name": "Pigeon"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a89b-71cc-bbba-61d55fa88880",
+                  "code": "ostrich",
+                  "name": "Ostrich"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b85-73b8-831f-c7c5215d8951",
+                  "code": "cattle",
+                  "name": "Cattle"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8bd-7014-a615-c3c2c489c3d9",
+                  "code": "camel",
+                  "name": "Camel"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8ca-7032-b356-1e2c35867b27",
+                  "code": "water_buffalo",
+                  "name": "Water Buffalo"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b86-71bf-afeb-2ba0d7089500",
+                  "code": "goat",
+                  "name": "Goat"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b88-71ef-96bc-2834c5010e05",
+                  "code": "sheep",
+                  "name": "Sheep"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b89-709f-a585-6765165a716f",
+                  "code": "pig",
+                  "name": "Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b8a-7372-832d-f11f65a626a6",
+                  "code": "rabbit",
+                  "name": "Rabbit"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8f2-72b7-b23f-e86baf2e93de",
+                  "code": "grasscutter",
+                  "name": "Grasscutter"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a908-7342-8328-1f321e849019",
+                  "code": "guinea_pig",
+                  "name": "Guinea Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a91a-73d9-a0ff-3b3d0a7cc330",
+                  "code": "horse",
+                  "name": "Horse"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a926-714b-8cc6-550925757e41",
+                  "code": "donkey",
+                  "name": "Donkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a933-71a4-a4cf-cae67ed92d3c",
+                  "code": "snail",
+                  "name": "Snail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a940-7356-add4-c00819acf37a",
+                  "code": "honeybee",
+                  "name": "Honeybee"
+                }
+              ],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": true
+            },
+            {
+              "code": "milk",
+              "label": "Milk",
+              "units": [
+                {
+                  "code": "l",
+                  "name": "Litre",
+                  "symbol": "L",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "bottle",
+                  "name": "Bottle",
+                  "symbol": "bottle",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                }
+              ],
+              "products": [
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b84-737c-a4ec-5d5d716a8c72",
+                  "code": "chicken",
+                  "name": "Chicken"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a846-72ca-8387-07925ab8c4a3",
+                  "code": "turkey",
+                  "name": "Turkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a854-7022-b520-9911d03e5df6",
+                  "code": "guinea_fowl",
+                  "name": "Guinea Fowl"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a862-7215-b192-53cc19d07eb5",
+                  "code": "duck",
+                  "name": "Duck"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a872-71d4-b794-78f9664bfcf9",
+                  "code": "goose",
+                  "name": "Goose"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a880-71fa-b6c9-edcdd92b1e0f",
+                  "code": "quail",
+                  "name": "Quail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a88e-7211-aed6-3f94642682f9",
+                  "code": "pigeon",
+                  "name": "Pigeon"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a89b-71cc-bbba-61d55fa88880",
+                  "code": "ostrich",
+                  "name": "Ostrich"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b85-73b8-831f-c7c5215d8951",
+                  "code": "cattle",
+                  "name": "Cattle"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8bd-7014-a615-c3c2c489c3d9",
+                  "code": "camel",
+                  "name": "Camel"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8ca-7032-b356-1e2c35867b27",
+                  "code": "water_buffalo",
+                  "name": "Water Buffalo"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b86-71bf-afeb-2ba0d7089500",
+                  "code": "goat",
+                  "name": "Goat"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b88-71ef-96bc-2834c5010e05",
+                  "code": "sheep",
+                  "name": "Sheep"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b89-709f-a585-6765165a716f",
+                  "code": "pig",
+                  "name": "Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-9b8a-7372-832d-f11f65a626a6",
+                  "code": "rabbit",
+                  "name": "Rabbit"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a8f2-72b7-b23f-e86baf2e93de",
+                  "code": "grasscutter",
+                  "name": "Grasscutter"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a908-7342-8328-1f321e849019",
+                  "code": "guinea_pig",
+                  "name": "Guinea Pig"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a91a-73d9-a0ff-3b3d0a7cc330",
+                  "code": "horse",
+                  "name": "Horse"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a926-714b-8cc6-550925757e41",
+                  "code": "donkey",
+                  "name": "Donkey"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a933-71a4-a4cf-cae67ed92d3c",
+                  "code": "snail",
+                  "name": "Snail"
+                },
+                {
+                  "type": "species",
+                  "id": "01a118eb-a940-7356-add4-c00819acf37a",
+                  "code": "honeybee",
+                  "name": "Honeybee"
+                }
+              ],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": true
+            },
+            {
+              "code": "feed",
+              "label": "Feed",
+              "units": [
+                {
+                  "code": "kg",
+                  "name": "Kilogram",
+                  "symbol": "kg",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "tonne",
+                  "name": "Tonne",
+                  "symbol": "t",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "bag",
+                  "name": "Bag",
+                  "symbol": "bag",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "sack",
+                  "name": "Sack",
+                  "symbol": "sack",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                }
+              ],
+              "products": [],
+              "allows_custom_name": true,
+              "custom_name_required": false,
+              "inventory_linkable": true
+            },
+            {
+              "code": "other",
+              "label": "Other agricultural products",
+              "units": [
+                {
+                  "code": "kg",
+                  "name": "Kilogram",
+                  "symbol": "kg",
+                  "integer_only": false,
+                  "decimal_places": 3,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "g",
+                  "name": "Gram",
+                  "symbol": "g",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "l",
+                  "name": "Litre",
+                  "symbol": "L",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "piece",
+                  "name": "Piece",
+                  "symbol": "pc",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "bag",
+                  "name": "Bag",
+                  "symbol": "bag",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "sack",
+                  "name": "Sack",
+                  "symbol": "sack",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "crate",
+                  "name": "Crate",
+                  "symbol": "crate",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "tray",
+                  "name": "Tray",
+                  "symbol": "tray",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "carton",
+                  "name": "Carton",
+                  "symbol": "carton",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "bottle",
+                  "name": "Bottle",
+                  "symbol": "bottle",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "basket",
+                  "name": "Basket",
+                  "symbol": "basket",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": true
+                },
+                {
+                  "code": "bunch",
+                  "name": "Bunch",
+                  "symbol": "bunch",
+                  "integer_only": false,
+                  "decimal_places": 2,
+                  "requires_package_details": false
+                },
+                {
+                  "code": "tuber",
+                  "name": "Tuber",
+                  "symbol": "tuber",
+                  "integer_only": true,
+                  "decimal_places": 0,
+                  "requires_package_details": false
+                }
+              ],
+              "products": [],
+              "allows_custom_name": true,
+              "custom_name_required": true,
+              "inventory_linkable": true
+            }
+          ],
+          "fulfilment": [
+            {
+              "value": "pickup",
+              "label": "Pickup only"
+            },
+            {
+              "value": "seller_delivery",
+              "label": "Seller-arranged delivery only"
+            },
+            {
+              "value": "both",
+              "label": "Pickup or seller-arranged delivery"
+            }
+          ],
+          "dispatch_estimates": [
+            {
+              "value": "same_day",
+              "label": "Same day"
+            },
+            {
+              "value": "1_2_days",
+              "label": "1-2 days"
+            },
+            {
+              "value": "3_5_days",
+              "label": "3-5 days"
+            },
+            {
+              "value": "within_week",
+              "label": "Within a week"
+            },
+            {
+              "value": "to_be_agreed",
+              "label": "To be agreed"
+            }
+          ],
+          "delivery_charges": [
+            {
+              "value": "included",
+              "label": "Delivery included in the price"
+            },
+            {
+              "value": "agreed_separately",
+              "label": "Delivery charge agreed separately"
+            }
+          ],
+          "package_content_units": [
+            {
+              "code": "kg",
+              "name": "Kilogram",
+              "symbol": "kg",
+              "integer_only": false,
+              "decimal_places": 3,
+              "requires_package_details": false
+            },
+            {
+              "code": "g",
+              "name": "Gram",
+              "symbol": "g",
+              "integer_only": false,
+              "decimal_places": 2,
+              "requires_package_details": false
+            },
+            {
+              "code": "tonne",
+              "name": "Tonne",
+              "symbol": "t",
+              "integer_only": false,
+              "decimal_places": 3,
+              "requires_package_details": false
+            },
+            {
+              "code": "l",
+              "name": "Litre",
+              "symbol": "L",
+              "integer_only": false,
+              "decimal_places": 2,
+              "requires_package_details": false
+            },
+            {
+              "code": "ml",
+              "name": "Millilitre",
+              "symbol": "ml",
+              "integer_only": false,
+              "decimal_places": 1,
+              "requires_package_details": false
+            },
+            {
+              "code": "piece",
+              "name": "Piece",
+              "symbol": "pc",
+              "integer_only": true,
+              "decimal_places": 0,
+              "requires_package_details": false
+            },
+            {
+              "code": "egg",
+              "name": "Egg",
+              "symbol": "egg",
+              "integer_only": true,
+              "decimal_places": 0,
+              "requires_package_details": false
+            },
+            {
+              "code": "head",
+              "name": "Head",
+              "symbol": "head",
+              "integer_only": true,
+              "decimal_places": 0,
+              "requires_package_details": false
+            }
+          ],
+          "currency": "NGN",
+          "limits": {
+            "max_images_per_listing": 6,
+            "max_image_kilobytes": 5120,
+            "image_mime_types": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ],
+            "max_delivery_coverage_entries": 20
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,86 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Cancels the project; the farmer states how many of its eggs are usable again and they return to available stock (stock-in reason `returned`, linked to the project).
+
+  **WHEN TO USE IT**
+  Cancelling an incubation. Omit `eggs_returned_to_stock` and nothing returns - the eggs are never assumed to be usable.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `breeding.create`, and `inventory.use` when returning eggs.
+  - At most what the project took and has not returned (422 otherwise); 422 when the project never took eggs from stock.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permission: **`breeding.create`** (+ **`inventory.use`** to return eggs).
+
+  **URL**
+  `POST {{base_url}}/breeding-projects/{project}/cancel`
+
+  **REQUEST BODY** (`application/json`)
+  - `reason` — **required**
+  - `eggs_returned_to_stock` — integer ≥ 1, optional
+  - `egg_storage_location_id` — uuid, optional (default: where the eggs came from)
+
+  **BUSINESS RULES**
+  - No instruction = no inventory increase.
+
+  **SUCCESS**
+  `200 OK` — the cancelled project with `egg_stock`.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 project_not_active`, `cycle_closed`.
+  - `422` — more eggs returned than taken.
+url: "{{base_url}}/breeding-projects/{{breeding_project_egg_id}}/cancel"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Incubator power failure",
+      "eggs_returned_to_stock": 10,
+      "egg_storage_location_id": "{{store_id}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+      }
+    language: text/javascript
+examples: ./.resources/14. Cancel incubation returning eggs to stock.resources/examples
+order: 14000

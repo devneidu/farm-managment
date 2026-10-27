@@ -1,0 +1,53 @@
+$kind: http-example
+name: 200 OK — Place updated.
+request:
+  url: "{{base_url}}/locations/{{location_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Poultry House One"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+          "kind": "location",
+          "name": "Poultry House One",
+          "type": "house",
+          "type_label": "House",
+          "parent_id": null,
+          "path": [
+            {
+              "id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+              "kind": "location",
+              "name": "Poultry House One"
+            }
+          ],
+          "path_label": "Poultry House One",
+          "depth": 0,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Place updated."
+      }
+order: 1000

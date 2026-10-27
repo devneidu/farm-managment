@@ -1,0 +1,74 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/health-record-types"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "type": "vaccination",
+            "label": "Vaccination",
+            "cycle_kinds": [
+              "livestock"
+            ],
+            "fields": {
+              "target_disease": [
+                "required",
+                "string",
+                "max:200"
+              ]
+            },
+            "medicines": "required",
+            "medicine_category": "medicine",
+            "common_fields": {
+              "animals_affected": "livestock only, whole count <= current population",
+              "follow_up_on": "Y-m-d, not before the event day",
+              "mortality_record_id": "livestock only, an existing Phase 8 mortality record of the same cycle",
+              "notes": "string"
+            },
+            "population_effect": "none",
+            "stock_effect": "one stock_out per medicine line"
+          },
+          {
+            "type": "medication",
+            "label": "Medication",
+            "cycle_kinds": [
+              "livestock"
+            ],
+            "fields": {
+              "condition": [
+                "required",
+                "string",
+                "max:300"
+              ]
+            },
+            "medicines": "required",
+            "medicine_category": "medicine",
+            "common_fields": {
+              "animals_affected": "livestock only, whole count <= current population",
+              "follow_up_on": "Y-m-d, not before the event day",
+              "mortality_record_id": "livestock only, an existing Phase 8 mortality record of the same cycle",
+              "notes": "string"
+            },
+            "population_effect": "none",
+            "stock_effect": "one stock_out per medicine line"
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

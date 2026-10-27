@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Apply a template, create a task that needs evidence, save the actual record, complete the task with that evidence and check the calendar.
+
+  **Prerequisites:** Flows 1 and 3 (`user_id`, `cycle_id`).
+
+  Steps: 11. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 9000

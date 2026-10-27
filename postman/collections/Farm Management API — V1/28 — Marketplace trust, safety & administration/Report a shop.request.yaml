@@ -1,0 +1,26 @@
+$kind: http-request
+description: "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+url: "{{base_url}}/marketplace/reports/shop/{{shop_slug}}"
+method: POST
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+  Content-Type: application/json
+  X-XSRF-TOKEN: "{{xsrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"description\": \"Please investigate repeated unsolicited messages.\",\r
+
+    \  \"reason\": \"spam\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Successful response", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));
+      if (pm.response.code < 300) { const j = pm.response.json(); pm.test("Envelope", () => { pm.expect(j).to.have.property("data"); pm.expect(j).to.have.property("meta"); }); }
+      if (pm.response.code < 300) { pm.environment.set("report_id", pm.response.json().data.id); pm.environment.set("report_type", "content"); pm.test("Reporter confidentiality", () => pm.expect(pm.response.json().data).not.to.have.property("history")); }
+    language: text/javascript
+order: 2000

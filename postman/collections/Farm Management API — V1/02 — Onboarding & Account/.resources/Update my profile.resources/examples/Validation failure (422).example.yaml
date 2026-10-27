@@ -1,0 +1,32 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/account"
+  method: PATCH
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "name": ""
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The name field is required.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-b965-71cc-97c8-8dbe6bcce238",
+        "errors": {
+          "name": [
+            "The name field is required."
+          ]
+        }
+      }
+order: 2000

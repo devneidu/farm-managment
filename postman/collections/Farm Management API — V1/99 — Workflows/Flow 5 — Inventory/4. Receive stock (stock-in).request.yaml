@@ -1,0 +1,87 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  12 bags + 18 kg = 318 kg. The balance is the sum of movements.
+
+  **WHAT IT DOES**
+  Appends a `stock_in` movement to the ledger. The item's balance is the sum of its movements - there is no balance column to edit. `components` are the entered parts (12 bags + 18 kg); they are normalised to the item's stock unit (12 x 25 kg + 18 kg = 318 kg).
+
+  **WHEN TO USE IT**
+  "Receive stock" (opening balance, donation, manual intake).
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - One `stock_in` inventory movement (and a lot if lot-tracked). No finance entry.
+  - Package units (bag, crate, bottle) resolve only through the item's own package conversion; otherwise `422 conversion_not_configured`.
+  - `reason`: `opening_balance`, `purchase`, `donation`, `other`. This endpoint creates NO supplier or expense; use Purchases for stock + expense together.
+  - Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The location must be active with active ancestors.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List inventory items with derived stock**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Generate one idempotency key per user action (a UUID) and reuse it only when retrying that same action after a network failure.
+
+  Full reference (errors, all fields): folder **10 — Inventory** -> "Receive stock (stock-in)".
+url: "{{base_url}}/inventory/stock-in"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "inventory_item_id": "{{item_feed_id}}",
+      "storage_location_id": "{{store_id}}",
+      "reason": "opening_balance",
+      "components": [
+        {
+          "quantity": "12",
+          "unit": "bag"
+        },
+        {
+          "quantity": "18",
+          "unit": "kg"
+        }
+      ],
+      "recorded_at": "{{recorded_at_30h}}",
+      "idempotency_key": "{{stockin_key}}",
+      "notes": "Opening stock count"
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("stockin_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_feed_in_id", String(v)); else console.warn("Could not capture movement_feed_in_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/4. Receive stock (stock-in).resources/examples
+order: 4000

@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Crop events are ordinary operational records posted to `POST /records` (land preparation, planting, establishment checks, growth stage, fertilizer, pesticide, irrigation, weeding, pest observation, crop loss, harvest) plus the crop project detail read model. Planting units are the baseline; they are not seed quantity or land area.
+
+  Typical screens: crop project activity forms (planting, fertilizer, harvest, ...) and the crop project dashboard.
+order: 16000

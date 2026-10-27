@@ -1,0 +1,128 @@
+$kind: http-request
+name: Record a disease issue — problem type Other (disease name required)
+description: |-
+  **WHAT IT DOES**
+  Records an observed disease issue. Types without medicines never touch inventory.
+
+  **WHEN TO USE IT**
+  "Record disease issue" (no medicine).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `type`, `production_cycle_id`, `recorded_at`, `idempotency_key`, `details`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.create` (taken from the current farm context; never sent by the client).
+  - Creates the health record only.
+  - A health record is something that HAPPENED (a vaccination given, a vet visit). It is immutable: no PATCH/DELETE - correct with Reverse and an optional replacement (`corrects_record_id`).
+  - `recorded_at` is the event time (UTC with seconds and `Z`/offset, between cycle start and now); `created_at` is when the system stored it.
+  - `idempotency_key` is required (<=80 chars of `A-Za-z0-9._:-`): identical retry returns the original (201) and never deducts stock twice; same key with different content is `409 idempotency_conflict`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`health.create`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `health-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/health-records`
+
+  **REQUEST BODY** (`application/json`)
+  - `type` — enum, **required**. Values: `vaccination`, `medication`, `deworming`, `treatment`, `disease_issue`, `vet_visit`
+  - `production_cycle_id` — string (uuid), **required**
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `details` — object, **required**. Type-specific object; only fields returned by /master/health-record-types are accepted.
+  - `animals_affected` — string, optional, nullable
+  - `follow_up_on` — string (date), optional, nullable
+  - `mortality_record_id` — string (uuid), optional, nullable. An existing Phase 8 mortality record of the same cycle. Health never creates a mortality event itself.
+  - `corrects_record_id` — string (uuid), optional, nullable. Replace a reversed health record once (same type and cycle).
+  - `medicines` — array, optional, max 10 items. One entry per medicine used. Each consumes linked stock exactly once.
+  - `medicines[].inventory_item_id` — string (uuid), **required**
+  - `medicines[].storage_location_id` — string (uuid), **required**
+  - `medicines[].lot_id` — string (uuid), **required**, nullable
+  - `medicines[].components` — array, **required**, min 1 items, max 10 items
+  - `medicines[].components[].quantity` — string, **required**
+  - `medicines[].components[].unit` — string, **required**, max 32 chars
+  - `medicines[].dose_per_animal` — array, **required**, min 1 items, max 10 items
+  - `medicines[].dose_per_animal[].quantity` — string, **required**
+  - `medicines[].dose_per_animal[].unit` — string, **required**, max 32 chars
+  - `medicines[].dosage_instructions` — string, **required**, max 500 chars, nullable
+  - `medicines[].withdrawal_days` — integer, **required**, min 0, max 3650, nullable. Overrides the medicine's default withdrawal period. 0 = none.
+
+  **VARIABLES USED**
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - A health record is something that HAPPENED (a vaccination given, a vet visit). It is immutable: no PATCH/DELETE - correct with Reverse and an optional replacement (`corrects_record_id`).
+  - `recorded_at` is the event time (UTC with seconds and `Z`/offset, between cycle start and now); `created_at` is when the system stored it.
+  - `idempotency_key` is required (<=80 chars of `A-Za-z0-9._:-`): identical retry returns the original (201) and never deducts stock twice; same key with different content is `409 idempotency_conflict`.
+
+  **SUCCESS**
+  `201 Created` — message: "Health record saved."
+
+  `data` fields: `id`, `production_cycle_id`, `type`, `details`, `animals_affected`, `follow_up_on`, `mortality_record_id`, `recorded_at`, `notes`, `reverses_record_id`, `corrects_record_id`, `reversed_by_record_id`, `medicines`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `health.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `cycle_closed`, `insufficient_stock`, `lot_expired`, `item_inactive`, `idempotency_conflict`, `invalid_correction`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/health-records"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "type": "disease_issue",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "details": {
+        "problem_type": "other",
+        "condition": "Fowl pox",
+        "severity": "moderate",
+        "symptoms": "Sneezing and watery eyes in Pen 1"
+      },
+      "animals_affected": 12
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Record a disease issue — problem type Other (disease name requ.resources/examples
+order: 9000

@@ -1,0 +1,44 @@
+$kind: http-request
+name: "Buyer: confirm an accepted offer as a deal"
+description: |-
+  **WHAT IT DOES**
+  Only the BUYER can turn an offer the seller accepted into a deal, within `marketplace_deal_confirmation_hours` (72h) of acceptance. Freezes the offer's quantity, unit price and total. Idempotent (201 first, then 200).
+
+  **INPUTS**
+  - `fulfilment_method` pickup|seller_delivery (required only if the listing offers both)
+  - `contact_phone` optional, this deal only
+
+  **ERRORS**
+  `409` offer_not_accepted, deal_window_closed, deal_terms_stale, quantity_unavailable, listing_unavailable, shop_not_active, seller_contact_unavailable; `422`; `404`
+
+  **BOUNDARY**
+  A deal is a summary of agreed terms. Farmvest takes no payment, holds no funds, reserves no stock, delivers nothing and creates no sale. Contact appears only on the audited contact endpoints.
+url: "{{base_url}}/marketplace/my/offers/{{offer_id}}/deal"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fulfilment_method": "pickup",
+      "contact_phone": "+2348055501234"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("deal_id", v); } }
+    language: text/javascript
+order: 1000

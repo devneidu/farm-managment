@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    - key: X-Farm-Id
+      value: "{{other_farm_id}}"
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "You do not have access to this farm.",
+        "code": "farm_access_denied",
+        "request_id": "01a1045e-3ddc-70ad-82da-e808e1f1b0bb"
+      }
+order: 2000

@@ -1,0 +1,55 @@
+$kind: http-example
+name: 200 OK — Feed formula updated.
+request:
+  url: "{{base_url}}/feed-formulas/{{formula_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "description": "Home-mixed starter ration (revised)"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-5f71-70ad-976e-8b991ab70e8a",
+          "name": "Broiler starter 22% CP",
+          "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+          "description": "Home-mixed starter ration (revised)",
+          "version": 1,
+          "is_active": true,
+          "items": [
+            {
+              "ingredient_name": "Maize",
+              "inclusion_percent": "55",
+              "inventory_item_id": null
+            },
+            {
+              "ingredient_name": "Soybean meal",
+              "inclusion_percent": "30",
+              "inventory_item_id": null
+            }
+          ],
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Feed formula updated."
+      }
+order: 1000

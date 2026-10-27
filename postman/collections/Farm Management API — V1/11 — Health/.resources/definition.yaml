@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Vaccinations, treatments, disease issues and vet visits for livestock, medicine stock and withdrawal windows. A health record never changes population; medicine lines consume stock through the inventory ledger.
+
+  Typical screens: health history, record vaccination/treatment, medicine stock and withdrawal banners.
+order: 13000

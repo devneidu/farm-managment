@@ -1,0 +1,121 @@
+$kind: http-example
+name: 201 Created — Medicine created.
+request:
+  url: "{{base_url}}/health/medicines"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "idempotency_key": "create-oxytet-001",
+        "name": "Oxytetracycline 20% LA",
+        "medicine_type": "antibiotic",
+        "stock_unit": "ml",
+        "packaging": {
+          "unit": "bottle",
+          "quantity_per_package": "100"
+        },
+        "default_withdrawal_days": 14,
+        "notes": "Keep below 25 C",
+        "opening_stock": {
+          "storage_location_id": "01a135b0-9289-70f0-9e18-e89b1135a808",
+          "components": [
+            {
+              "quantity": "5",
+              "unit": "bottle"
+            }
+          ],
+          "lot": {
+            "code": "OXY-2026-01",
+            "expires_on": "2028-06-30"
+          },
+          "recorded_at": "2026-10-01T08:00:00Z",
+          "notes": "Opening shelf count"
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "id": "01a135b0-92a7-7272-b144-8ff1b266e8b9",
+              "name": "Oxytetracycline 20% LA",
+              "category": "medicine",
+              "description": null,
+              "kind": "general",
+              "is_system_managed": false,
+              "stock_unit": "ml",
+              "dimension": "volume",
+              "tracks_lots": true,
+              "tracks_expiry": true,
+              "is_active": true,
+              "stock": {
+                  "quantity": "500",
+                  "unit": "ml",
+                  "normalized": {
+                      "quantity": "500",
+                      "unit": "ml"
+                  }
+              },
+              "low_stock_threshold": null,
+              "is_low_stock": false,
+              "created_at": "2026-10-13T14:35:26.000000Z",
+              "updated_at": "2026-10-13T14:35:26.000000Z",
+              "balances": [
+                  {
+                      "storage_location_id": "01a135b0-9289-70f0-9e18-e89b1135a808",
+                      "inventory_lot_id": "01a135b0-92be-7273-b6ad-768b26068078",
+                      "quantity": "500",
+                      "unit": "ml",
+                      "normalized": {
+                          "quantity": "500",
+                          "unit": "ml"
+                      }
+                  }
+              ],
+              "profile": {
+                  "default_withdrawal_days": 14,
+                  "notes": "Keep below 25 C"
+              },
+              "medicine_type": "antibiotic",
+              "medicine_type_label": "Antibiotic",
+              "packaging": [
+                  {
+                      "conversion_id": "01a135b0-92b0-7058-85b3-d7b270777303",
+                      "package_unit": "bottle",
+                      "package_unit_label": "Bottle",
+                      "quantity_per_package": "100",
+                      "unit": "ml"
+                  }
+              ],
+              "lots": [
+                  {
+                      "id": "01a135b0-92be-7273-b6ad-768b26068078",
+                      "code": "OXY-2026-01",
+                      "expires_on": "2028-06-30",
+                      "is_expired": false,
+                      "stock": {
+                          "quantity": "500",
+                          "unit": "ml"
+                      }
+                  }
+              ]
+          },
+          "meta": [],
+          "message": "Medicine created."
+      }
+order: 1000

@@ -1,0 +1,54 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "supplier_reference": "MKT-2210",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Eggs bought at the market",
+        "items": [
+          {
+            "kind": "stock",
+            "storage_location_id": "{{store_id}}",
+            "components": [
+              {
+                "quantity": "30",
+                "unit": "piece"
+              }
+            ],
+            "amount": "4500.00"
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Name the stock with exactly one of inventory_item_id or output.",
+        "code": "validation_failed",
+        "request_id": "01a11127-16b1-71aa-b830-e0b131e04362",
+        "errors": {
+          "items.0.inventory_item_id": [
+            "Name the stock with exactly one of inventory_item_id or output."
+          ]
+        }
+      }
+order: 3000

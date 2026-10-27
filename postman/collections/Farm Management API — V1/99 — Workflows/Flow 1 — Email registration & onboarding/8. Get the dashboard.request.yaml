@@ -1,0 +1,53 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  A brand-new farm shows `kpis: []` and an `empty_state` with suggested actions.
+
+  **WHAT IT DOES**
+  The whole command centre for THIS farm and THIS viewer, in one call: `farm` (with `today` and `timezone`), `viewer`, `operations`, `sections`, `priority` insights, `kpis`, `work`, `calendar` strip, `quick_record`, `production`, `insights`, `recent_activity`, `quick_add` and an `empty_state`.
+
+  **WHEN TO USE IT**
+  The home screen; refetch after ledger-affecting actions.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Cards depend on the farm's operations and on what the viewer may see; a crop-only farm gets no population or egg cards.
+  - It is a READ MODEL: nothing is stored; every figure is read live from the owning module and reversed/cancelled events never count.
+  - Every block is gated by the viewer's own permissions, not by role names: a Farm Worker never receives money cards. `sections` says which blocks the viewer may see. The endpoint never returns 403.
+  - Operation-aware: a crop-only farm gets no population or egg cards. A brand-new farm gets `kpis: []` and an `empty_state` with suggested actions.
+
+  **ROUTE FORMS (GAP-06)**
+  `quick_add[].endpoint` is the absolute `/api/v1/...` URL (unchanged); `quick_add[].url` repeats it and `quick_add[].path` is the same route relative to `{{base_url}}`.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Render cards from `kpis` generically (code/label/value/unit) and refetch after any ledger-affecting action.
+
+  Full reference (errors, all fields): folder **18 — Dashboard & Insights** -> "Get the dashboard".
+url: "{{base_url}}/dashboard"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("quick_add routes have endpoint, url and path", function () { json.data.quick_add.forEach(function (a) { pm.expect(a.url).to.eql(a.endpoint); pm.expect("/api/v1" + a.path).to.eql(a.endpoint); }); });
+      }
+    language: text/javascript
+examples: ./.resources/8. Get the dashboard.resources/examples
+order: 8000

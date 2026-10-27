@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/custom-breeds"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "species_id": "{{species_chicken_id}}",
+        "name": "{{custom_breed_name}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "An item with this name already exists.",
+        "code": "duplicate_name",
+        "request_id": "01a1206e-16bd-7305-836f-428544306aa9",
+        "details": {
+          "existing_id": "01a1206e-163d-706d-a835-cb1d7ad84c3c",
+          "source": "farm",
+          "is_active": true
+        }
+      }
+order: 2000

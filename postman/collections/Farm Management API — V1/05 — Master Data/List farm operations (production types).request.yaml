@@ -1,0 +1,114 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The production types the platform understands (Poultry, Cattle, Fishery, Crops, ...). Each carries `category` (`livestock`, `aquaculture`, `crop`) and `tracking_model` (`population` for livestock/fish heads, `planting_units` for crops). This is the first dropdown of "Start livestock batch / crop project".
+
+  **WHEN TO USE IT**
+  The first dropdown of "Start livestock batch / crop project" and the farm operations settings.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `operation`, `category`, `group`, `available`, `include_inactive`.
+  - `operation`: Filter by operation code.
+  - `category`: livestock | aquaculture | crop
+  - `available`: `true` returns only operations usable by this farm.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `master_data.view` (taken from the current farm context; never sent by the client).
+  - Operations are optional preferences: when the farm has selected operations, `available=1` narrows the species/crop lists to them, but unfiltered lists still return everything and nothing is blocked. The dashboard also shows livestock or crop cards only when relevant to the farm.
+  - Never branch on `name`; use `code`, `category` and `tracking_model`.
+  - Every active operation is returned; `available` narrows to the farm's optional selection (see farm operations). `selected` = explicit farm choice.
+
+  **WHAT TO DO NEXT**
+  Load species (`GET /master/species`) or crops (`GET /master/crops`).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Also captures `op_cattle_id` and `op_fishery_id` (used by the Cattle and Fish livestock batch examples in folder 08).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`master_data.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/master/farm-operations`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `operation` — string, max 64 chars. Filter by operation code.
+  - `category` — enum. Values: `livestock`, `aquaculture`, `crop`. livestock | aquaculture | crop
+  - `group` — enum. Values: `poultry`, `small_ruminants`, `large_ruminants`, `non_ruminant_mammals`, `equines`, `micro_livestock`
+  - `available` — boolean. `true` returns only operations usable by this farm.
+  - `include_inactive` — boolean. `true` includes retired operations (to label old data).
+
+  **BUSINESS RULES**
+  - Never branch on `name`; use `code`, `category` and `tracking_model`.
+  - Every active operation is returned; `available` narrows to the farm's optional selection (see farm operations). `selected` = explicit farm choice.
+  - Requires `master_data.view` (all roles). Not plan-gated.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `code`, `name`, `category`, `tracking_model`, `is_active`, `selected`, `available`.
+
+  `meta`: `farm_operations_configured`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `master_data.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/master/farm-operations"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: operation
+    value: ""
+    disabled: true
+    description: string — max 64 chars
+  - key: category
+    value: ""
+    disabled: true
+    description: "enum: livestock | aquaculture | crop"
+  - key: group
+    value: ""
+    disabled: true
+    description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+  - key: available
+    value: ""
+    disabled: true
+    description: boolean
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "poultry"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("op_poultry_id", String(v)); else console.warn("Could not capture op_poultry_id"); }
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "crops"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("op_crops_id", String(v)); else console.warn("Could not capture op_crops_id"); }
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "cattle"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("op_cattle_id", String(v)); else console.warn("Could not capture op_cattle_id"); }
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "fishery"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("op_fishery_id", String(v)); else console.warn("Could not capture op_fishery_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/List farm operations (production types).resources/examples
+order: 1000

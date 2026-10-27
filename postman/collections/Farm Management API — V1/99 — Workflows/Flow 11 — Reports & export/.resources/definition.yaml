@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Browse the report catalogue, run a report, request a queued export, poll its status and download it.
+
+  **Prerequisites:** Flows 9-10 (so the reports have data) and the farm on a plan with `data_export` (Flow S).
+
+  Steps: 5. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 12000

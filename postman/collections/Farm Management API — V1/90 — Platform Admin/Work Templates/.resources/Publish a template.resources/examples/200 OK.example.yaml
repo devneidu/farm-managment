@@ -1,0 +1,78 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/work-templates/{{platform_template_id}}/publish"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "state": "published",
+          "published_at": "2026-10-04T00:45:08+00:00",
+          "id": "01a1045e-cf26-70d5-be12-3db9ec14accd",
+          "source": "platform",
+          "code": "broiler_basic",
+          "name": "Broiler basic routine",
+          "description": "Daily feeding, weekly weighing and a vaccination reminder",
+          "applies_to": "production_cycle",
+          "cycle_kind": "livestock",
+          "operation_type_id": null,
+          "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+          "crop_type_id": null,
+          "breeding_workflow": null,
+          "version": 1,
+          "is_active": true,
+          "cloned_from_id": null,
+          "application_id": null,
+          "items": [
+            {
+              "id": "01a1045e-cf2b-702c-9a0a-49714b93b21f",
+              "position": 1,
+              "title": "Morning feeding",
+              "category": "feeding_watering",
+              "instructions": null,
+              "anchor": "cycle_start",
+              "offset_days": 0,
+              "recurrence": "daily",
+              "interval_value": 1,
+              "weekdays": null,
+              "until_offset_days": 42,
+              "occurrence_limit": null,
+              "due_time": "06:30",
+              "reminder_offsets": null,
+              "assigned_role": null,
+              "linked_record_type": "feed_use",
+              "requires_evidence": false
+            },
+            {
+              "id": "01a1045e-cf30-702d-836b-b4ca461151b1",
+              "position": 2,
+              "title": "Weigh a sample",
+              "category": "growth_monitoring",
+              "instructions": null,
+              "anchor": "cycle_start",
+              "offset_days": 7,
+              "recurrence": "weekly",
+              "interval_value": 1,
+              "weekdays": null,
+              "until_offset_days": 42,
+              "occurrence_limit": null,
+              "due_time": null,
+              "reminder_offsets": null,
+              "assigned_role": null,
+              "linked_record_type": null,
+              "requires_evidence": false
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,96 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Returns the actual selectable units of ONE measurement dimension, e.g. `?dimension=weight` returns the weight units (such as `kg`, `g`) and `?dimension=volume` the volume units. The `dimension` query parameter is required.
+
+  **WHEN TO USE IT**
+  Populating the unit dropdown of ONE quantity field.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `dimension` (required), `family`, `include_inactive`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `measurement.view` (taken from the current farm context; never sent by the client).
+  - Each unit has a stable `code` (send this), a label/symbol, its `family`, `integer_only` (heads/eggs reject fractions) and whether it is active for new entries.
+  - Units convert only inside one family; package units (bag, crate) need a context to convert.
+  - Optional `family` (e.g. `piece`, `egg`, `head` for count) and `include_inactive`.
+  - Send unit `code` values (e.g. `kg`, `l`, `hectare`, `crate`) in requests, never labels.
+  - Units convert only inside one family: 50 heads never become 50 eggs.
+
+  **WHAT TO DO NEXT**
+  Send the chosen unit `code` in the quantity.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Never hard-code units: build every unit dropdown from this endpoint using the dimension the field belongs to (weight, volume, area, count, temperature, package).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`measurement.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/master/units`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `dimension` — string, **required**
+  - `family` — string, max 32 chars
+  - `include_inactive` — boolean
+
+  **BUSINESS RULES**
+  - Optional `family` (e.g. `piece`, `egg`, `head` for count) and `include_inactive`.
+  - Send unit `code` values (e.g. `kg`, `l`, `hectare`, `crate`) in requests, never labels.
+  - Units convert only inside one family: 50 heads never become 50 eggs.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `code`, `name`, `symbol`, `dimension`, `family`, `is_canonical`, `integer_only`, `decimal_places`, `is_active`, `source`.
+
+  `meta`: `dimension`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `measurement.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/master/units?dimension=weight"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: dimension
+    value: weight
+  - key: family
+    value: ""
+    disabled: true
+    description: string — max 32 chars
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List units of one dimension.resources/examples
+order: 2000

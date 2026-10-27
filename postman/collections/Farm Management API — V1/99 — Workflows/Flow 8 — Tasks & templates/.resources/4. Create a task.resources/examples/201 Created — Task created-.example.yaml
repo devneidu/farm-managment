@@ -1,0 +1,69 @@
+$kind: http-example
+name: 201 Created — Task created.
+request:
+  url: "{{base_url}}/tasks"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "title": "Weigh a sample of 20 birds",
+        "category": "growth_monitoring",
+        "due_date": "{{date_in_7d}}",
+        "due_time": "08:00",
+        "production_cycle_id": "{{cycle_id}}",
+        "linked_record_type": "weight",
+        "requires_evidence": true,
+        "assigned_user_id": "{{user_id}}",
+        "instructions": "Weigh 20 random birds from Pen 1 and record the total",
+        "idempotency_key": "{{task_key}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-84ed-72e0-864d-1358b9dc28c2",
+          "reference": "TSK-2026-00069",
+          "status": "open",
+          "due_state": "upcoming",
+          "title": "Weigh a sample of 20 birds",
+          "category": "growth_monitoring",
+          "instructions": "Weigh 20 random birds from Pen 1 and record the total",
+          "due_date": "2026-10-11",
+          "due_time": "08:00",
+          "due_at": "2026-10-11T07:00:00.000000Z",
+          "timezone": "Africa/Lagos",
+          "reminder_offsets": null,
+          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "breeding_project_id": null,
+          "schedule_id": null,
+          "occurrence_date": null,
+          "assigned_user_id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "assigned_user_name": null,
+          "assigned_role": null,
+          "linked_record_type": "weight",
+          "requires_evidence": true,
+          "completion": null,
+          "cancellation": null,
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Task created."
+      }
+order: 1000

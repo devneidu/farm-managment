@@ -1,0 +1,102 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Crops the farm can plant (Yam, Cassava, Maize, ...). All belong to the `crops` operation with `tracking_model: planting_units`.
+
+  **WHEN TO USE IT**
+  Crop dropdown of the crop project form.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `operation`, `category`, `group`, `available`, `include_inactive`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `master_data.view` (taken from the current farm context; never sent by the client).
+  - Crops belong to the `crops` operation; `available=1` narrows to the farm's selected operations.
+  - Same filters as species (`operation`, `available`, `include_inactive`).
+
+  **WHAT TO DO NEXT**
+  Load varieties and the planting reference.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`master_data.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/master/crops`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `operation` — string, max 64 chars
+  - `category` — enum. Values: `livestock`, `aquaculture`, `crop`
+  - `group` — enum. Values: `poultry`, `small_ruminants`, `large_ruminants`, `non_ruminant_mammals`, `equines`, `micro_livestock`
+  - `available` — boolean
+  - `include_inactive` — boolean
+
+  **BUSINESS RULES**
+  - Same filters as species (`operation`, `available`, `include_inactive`).
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `code`, `name`, `is_active`, `operation`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `master_data.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/master/crops"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: operation
+    value: ""
+    disabled: true
+    description: string — max 64 chars
+  - key: category
+    value: ""
+    disabled: true
+    description: "enum: livestock | aquaculture | crop"
+  - key: group
+    value: ""
+    disabled: true
+    description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+  - key: available
+    value: ""
+    disabled: true
+    description: boolean
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: boolean
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "yam"); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("crop_yam_id", String(v)); else console.warn("Could not capture crop_yam_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/List crops.resources/examples
+order: 6000

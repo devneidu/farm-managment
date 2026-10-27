@@ -1,0 +1,60 @@
+$kind: http-example
+name: 201 Created — Place created.
+request:
+  url: "{{base_url}}/production-areas"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Pen 1",
+        "type": "pen",
+        "parent_id": "{{location_id}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+          "kind": "production_area",
+          "name": "Pen 1",
+          "type": "pen",
+          "type_label": "Pen",
+          "parent_id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+          "path": [
+            {
+              "id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+              "kind": "location",
+              "name": "Poultry House One"
+            },
+            {
+              "id": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+              "kind": "production_area",
+              "name": "Pen 1"
+            }
+          ],
+          "path_label": "Poultry House One / Pen 1",
+          "depth": 1,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Place created."
+      }
+order: 1000

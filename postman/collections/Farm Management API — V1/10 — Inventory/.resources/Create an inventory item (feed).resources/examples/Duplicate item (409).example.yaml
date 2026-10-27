@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/items"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Layer Grower Mash",
+        "category": "feed",
+        "stock_unit": "kg",
+        "low_stock_threshold": {
+          "quantity": "50",
+          "unit": "kg"
+        },
+        "description": "Compounded grower mash from the mill"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "An inventory item with this name already exists on this farm.",
+        "code": "inventory_item_exists",
+        "request_id": "01a1045e-54fb-71a2-b15e-0067d374af0e"
+      }
+order: 2000

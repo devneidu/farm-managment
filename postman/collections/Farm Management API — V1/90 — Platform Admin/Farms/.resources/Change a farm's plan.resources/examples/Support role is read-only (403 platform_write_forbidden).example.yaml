@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "plan_id": "{{plan_business_id}}",
+        "interval": "monthly",
+        "reason": "Upgraded for the API handoff demo"
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Your platform role is read-only.",
+        "code": "platform_write_forbidden",
+        "request_id": "01a1045e-4149-7273-8dd2-3e06dc49cc04"
+      }
+order: 2000

@@ -1,0 +1,52 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/location-types"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "kind": "location",
+            "types": [
+              {
+                "code": "site",
+                "label": "Site"
+              },
+              {
+                "code": "building",
+                "label": "Building"
+              }
+            ]
+          },
+          {
+            "kind": "production_area",
+            "types": [
+              {
+                "code": "house",
+                "label": "House"
+              },
+              {
+                "code": "pen",
+                "label": "Pen"
+              }
+            ]
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

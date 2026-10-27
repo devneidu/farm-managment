@@ -1,0 +1,85 @@
+$kind: http-example
+name: 201 Created — Purchase recorded.
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "contact_id": "{{supplier_id}}",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "record_expense": false,
+        "items": [
+          {
+            "kind": "non_stock",
+            "description": "Poultry netting repair",
+            "amount": "3500.00"
+          }
+        ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-9049-7244-a5a4-efcf066b91de",
+          "reference": "PUR-2026-00002",
+          "status": "active",
+          "contact_id": "01a1045e-8d01-706b-a44d-b60c4bc28406",
+          "contact_name": "Mama Nkechi Feeds",
+          "production_cycle_id": null,
+          "supplier_reference": null,
+          "recorded_at": "2026-10-03T22:44:06.000000Z",
+          "total_amount": "3500.00",
+          "currency": "NGN",
+          "finance_category": {
+            "id": "01a1045d-de95-70d5-829d-135e5894286c",
+            "code": "other_expense",
+            "name": "Other expense"
+          },
+          "records_expense": false,
+          "finance_transaction_id": null,
+          "finance_reversal_transaction_id": null,
+          "notes": null,
+          "corrects_purchase_id": null,
+          "cancelled_at": null,
+          "cancel_reason": null,
+          "items": [
+            {
+              "id": "01a1045e-904e-7327-bcac-08c86cb50504",
+              "line_no": 1,
+              "kind": "non_stock",
+              "description": "Poultry netting repair",
+              "inventory_item_id": null,
+              "storage_location_id": null,
+              "inventory_lot_id": null,
+              "lot": null,
+              "quantity": null,
+              "measurement": null,
+              "amount": "3500.00",
+              "inventory_movement_id": null
+            }
+          ],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Purchase recorded."
+      }
+order: 1000

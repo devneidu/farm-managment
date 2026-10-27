@@ -1,0 +1,84 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health/withdrawals?production_cycle_id={{cycle_id}}&active=1"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: production_cycle_id
+      value: "{{cycle_id}}"
+    - key: active
+      value: "1"
+    - key: inventory_item_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "health_record_medicine_id": "01a1045e-74cd-719d-8547-ae23e8701327",
+            "health_record_id": "01a1045e-7497-70f9-b56c-549a345ecd02",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "health_record_type": "medication",
+            "inventory_item_id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+            "item_name": "Newcastle Vaccine (Lasota)",
+            "inventory_lot_id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+            "lot": {
+              "code": "NCD-2026-01",
+              "expires_on": "2027-01-02"
+            },
+            "days": 7,
+            "source": "item_default",
+            "started_at": "2026-10-03T22:44:06.000000Z",
+            "ends_at": "2026-10-10T22:44:06.000000Z",
+            "is_active": true
+          },
+          {
+            "health_record_medicine_id": "01a1045e-720e-7157-9919-136fb840f4d4",
+            "health_record_id": "01a1045e-71c7-7136-836e-110a2edba3cd",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "health_record_type": "vaccination",
+            "inventory_item_id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+            "item_name": "Newcastle Vaccine (Lasota)",
+            "inventory_lot_id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+            "lot": {
+              "code": "NCD-2026-01",
+              "expires_on": "2027-01-02"
+            },
+            "days": 7,
+            "source": "explicit",
+            "started_at": "2026-10-03T22:44:06.000000Z",
+            "ends_at": "2026-10-10T22:44:06.000000Z",
+            "is_active": true
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 2
+        },
+        "message": null
+      }
+order: 1000

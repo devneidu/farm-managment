@@ -1,0 +1,93 @@
+$kind: http-example
+name: 200 OK — Invoice voided.
+request:
+  url: "{{base_url}}/invoices/{{invoice_b_id}}/void"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Customer collected goods under a different invoice",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-a5d4-73b3-8c22-069ff9f7e376",
+          "reference": "INV-2026-00002",
+          "sale_id": "01a1045e-a5ba-73c3-905a-ea76735ddccc",
+          "sale_reference": "SAL-2026-00002",
+          "status": "void",
+          "payment_status": "unpaid",
+          "issue_date": "2026-10-04",
+          "due_date": "2026-10-18",
+          "is_overdue": false,
+          "total_amount": "5000.05",
+          "amount_paid": "0.00",
+          "outstanding": "0.00",
+          "currency": "NGN",
+          "customer": {
+            "contact_id": "01a1045e-8d77-7352-865c-f90431a3d690",
+            "name": "Mama Put Restaurant",
+            "phone": "08030000000",
+            "email": null,
+            "address": "12 Market Road, Ibadan"
+          },
+          "seller_name": "Okafor Integrated Farms Ltd",
+          "notes": "Cash on collection",
+          "voided_at": "2026-10-04T00:45:08.000000Z",
+          "void_reason": "Customer collected goods under a different invoice",
+          "items": [
+            {
+              "id": "01a1045e-a5da-7246-9569-5f18698f41b0",
+              "line_no": 1,
+              "sale_item_id": "01a1045e-a5be-7350-a802-986dd69b95b4",
+              "kind": "other",
+              "description": "Manure (25 kg bags)",
+              "quantity_label": null,
+              "amount": "5000.05"
+            }
+          ],
+          "payments": [
+            {
+              "id": "01a1045e-a653-726a-9795-5ff9fea9bf23",
+              "reference": "PAY-2026-00003",
+              "entry_type": "payment",
+              "amount": "5000.05",
+              "method": "mobile_money",
+              "received_on": "2026-10-04",
+              "is_reversed": true
+            },
+            {
+              "id": "01a1045e-a6d2-721b-b623-398644ea57f7",
+              "reference": "PAY-2026-00004",
+              "entry_type": "reversal",
+              "amount": "5000.05",
+              "method": "mobile_money",
+              "received_on": "2026-10-04",
+              "is_reversed": false
+            }
+          ],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Invoice voided."
+      }
+order: 1000

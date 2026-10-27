@@ -1,0 +1,19 @@
+$kind: http-request
+name: "89. Platform admin: the deal is read-only"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/platform-admin/marketplace/deals/{{deal_b_id}}"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 405", function () { pm.expect(pm.response.code).to.eql(405); });
+    language: text/javascript
+order: 89000

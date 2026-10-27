@@ -1,0 +1,96 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  A second medicine record (50 ml) to demonstrate reversal.
+
+  **WHAT IT DOES**
+  A second medicine-consuming record, used to demonstrate a reversal that returns stock.
+
+  **WHEN TO USE IT**
+  Recording a second medicine-consuming event.
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.create` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Reverse a health record**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`health.create`** — granted to: `owner`, `manager`, `farm_worker`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `POST {{base_url}}/health-records`
+
+  Full reference (all fields, errors, rules): folder **11 — Health** -> "Record a medication (second medicine record)".
+
+  Full reference (errors, all fields): folder **11 — Health** -> "Record a medication (second medicine record)".
+url: "{{base_url}}/health-records"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "type": "medication",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "details": {
+        "problem_type": "digestive",
+        "condition": "Respiratory distress"
+      },
+      "animals_affected": 12,
+      "medicines": [
+        {
+          "inventory_item_id": "{{item_med_id}}",
+          "storage_location_id": "{{store_id}}",
+          "lot_id": "{{lot_med_id}}",
+          "components": [
+            {
+              "quantity": "50",
+              "unit": "ml"
+            }
+          ]
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("health_med2_id", String(v)); else console.warn("Could not capture health_med2_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/9. Record a medication (second medicine record).resources/examples
+order: 9000

@@ -1,0 +1,88 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates a medicine in ONE all-or-nothing call: the inventory item (category `medicine`), its type/withdrawal profile, an optional package conversion and an optional opening balance written through the inventory ledger.
+
+  **WHEN TO USE IT**
+  The "Add medicine" form. Existing endpoints (`POST /inventory/items`, `PUT /health/medicines/{item}/profile`, `POST /settings/package-conversions`, `POST /inventory/stock-in`) keep working.
+
+  **IMPORTANT INPUTS**
+  - Required: `name` (unique on the farm), `medicine_type` (`antibiotic|vaccine|supplement|dewormer|other`), `stock_unit` (`mg|g|kg|ml|l|piece`).
+  - `packaging` `{unit: bottle|box|card|sachet|bag|vial, quantity_per_package: positive}` — 1 package = that many `stock_unit` (whole number for `piece`).
+  - `default_withdrawal_days` 0–3650, `notes`, `tracks_lots`, `tracks_expiry` (default to true when the opening-stock lot has a code / `expires_on`; cannot change after the first movement).
+  - `opening_stock` `{storage_location_id, components[{quantity,unit}], lot{code,expires_on}, recorded_at, idempotency_key, notes}` — components may use the packaging unit (5 bottle × 100 ml = 500 ml). Written as a stock-in with reason `opening_balance`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `health.manage` AND `inventory.manage` (plus `measurement.manage` when `packaging` is sent). Owner and Manager have all three; Vet and Farm worker do not.
+  - No expense, supplier or purchase is created. To book a bought-in lot with its cost use `POST /purchases`.
+  - Idempotent with the optional request-level `idempotency_key` (max 64), with or without opening stock: an identical retry returns the original medicine with `200` and receives nothing twice; the same key with a changed payload is `409 idempotency_conflict`. When it is sent, `opening_stock.idempotency_key` is optional (derived). Without any key, opening stock still needs `opening_stock.idempotency_key`, and a repeat of a no-stock create is `409 inventory_item_exists`.
+  - Any failure rolls everything back (no item, profile, conversion or movement is left behind).
+
+  **SUCCESS**
+  `201 Created` with the full medicine: item fields, `stock`, `balances`, `lots`, `profile`, `medicine_type`, `medicine_type_label` and `packaging[]`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks the required permission(s); other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `opening_stock.lot.code`); `conversion_not_configured` / `invalid_conversion_ratio` for packaging problems.
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/health/medicines"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "idempotency_key": "create-oxytet-001",
+      "name": "Oxytetracycline 20% LA",
+      "medicine_type": "antibiotic",
+      "stock_unit": "ml",
+      "packaging": {
+        "unit": "bottle",
+        "quantity_per_package": "100"
+      },
+      "default_withdrawal_days": 14,
+      "notes": "Keep below 25 C",
+      "opening_stock": {
+        "storage_location_id": "01a135b0-9289-70f0-9e18-e89b1135a808",
+        "components": [
+          {
+            "quantity": "5",
+            "unit": "bottle"
+          }
+        ],
+        "lot": {
+          "code": "OXY-2026-01",
+          "expires_on": "2028-06-30"
+        },
+        "recorded_at": "2026-10-01T08:00:00Z",
+        "notes": "Opening shelf count"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Create a medicine (type, packaging, withdrawal, opening stock).resources/examples
+order: 3000

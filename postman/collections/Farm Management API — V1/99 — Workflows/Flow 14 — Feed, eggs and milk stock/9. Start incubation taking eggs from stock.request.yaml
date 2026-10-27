@@ -1,0 +1,92 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  "Put 40 eggs into Incubator A": creates the breeding project AND takes 40 eggs out of the farm's available egg stock (stock-out reason `incubation`, linked to the project and cycle) in one transaction.
+
+  **WHEN TO USE IT**
+  Eggs Out → Put into incubation.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `breeding.create` and `inventory.use`. Too few eggs → `409 insufficient_stock` and NO project is created. Retrying the same key takes nothing more.
+  - Hatching later never changes egg stock; cancelling returns eggs only when you say so (`eggs_returned_to_stock`).
+  - `egg_stock {consumed, returned, net_out, movements[]}` on the project is derived from its movements.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie (verified, onboarded, active member of the current farm). State-changing requests need `X-XSRF-TOKEN` and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required permissions: **`breeding.create`** and **`inventory.use`**.
+
+  **URL**
+  `POST {{base_url}}/breeding-projects`
+
+  **REQUEST BODY** (`application/json`)
+  - `consume_egg_stock` — boolean, incubation only
+  - `egg_storage_location_id` — uuid, optional with one active store; required with several
+  - plus the usual project fields (`production_cycle_id`, `workflow`, `start_date`, `eggs_set`, `idempotency_key`)
+
+  **BUSINESS RULES**
+  - Omit `consume_egg_stock` to leave stock untouched (existing behaviour).
+  - Pregnancy projects reject it (422).
+
+  **SUCCESS**
+  `201 Created` — the project with `egg_stock`.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `409 insufficient_stock`, `cycle_closed`, `idempotency_conflict`.
+url: "{{base_url}}/breeding-projects"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "production_cycle_id": "{{cycle_id}}",
+      "workflow": "incubation",
+      "start_date": "{{date_today}}",
+      "eggs_set": 40,
+      "consume_egg_stock": true,
+      "egg_storage_location_id": "{{store_id}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("breeding_project_egg_id", String(v)); else console.warn("Could not capture breeding_project_egg_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/9. Start incubation taking eggs from stock.resources/examples
+order: 9000

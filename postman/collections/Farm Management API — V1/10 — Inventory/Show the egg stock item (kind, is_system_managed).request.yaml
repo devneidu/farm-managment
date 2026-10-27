@@ -1,0 +1,71 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The farm's automatic Eggs output item, read as an ordinary inventory item. It carries `kind: "eggs"` and `is_system_managed: true`, so the UI never infers it from the name.
+
+  **WHEN TO USE IT**
+  An item detail screen, or deciding which stock reasons apply to an item: `GET /master/inventory-options → reasons.by_item_kind[item.kind]`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `inventory.view`.
+  - `kind` is `feed` | `eggs` | `milk` | `general`; `is_system_managed` is `true` only for the automatic Eggs / Milk items.
+  - Egg and milk screens need no item picker at all: send `output: "eggs"|"milk"` instead of the id.
+
+  **WHAT TO DO NEXT**
+  Use `kind` to choose the reason list; send `output` to the stock/sale/purchase endpoints.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **ACCESS**
+  Required permission: **`inventory.view`**.
+
+  **URL**
+  `GET {{base_url}}/inventory/items/{{egg_item_id}}`
+
+  **BUSINESS RULES**
+  - `egg_item_id` comes from `GET /inventory/output-balances` (`data.eggs.inventory_item_id`), which is `null` until the first egg stock exists.
+
+  **SUCCESS**
+  `200 OK` — the item with `kind`, `is_system_managed`, `stock` and `balances`.
+
+  **ERRORS**
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 forbidden` — the caller lacks the permission above.
+  - `404 not_found` — unknown id or another farm's item.
+url: "{{base_url}}/inventory/items/{{egg_item_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("is the automatic eggs item", function () { pm.expect(json.data.kind).to.eql("eggs"); pm.expect(json.data.is_system_managed).to.eql(true); });
+      }
+    language: text/javascript
+examples: ./.resources/Show the egg stock item (kind, is_system_managed).resources/examples
+order: 25000

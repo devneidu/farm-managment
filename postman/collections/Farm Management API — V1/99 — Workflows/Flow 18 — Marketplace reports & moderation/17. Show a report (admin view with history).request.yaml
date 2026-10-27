@@ -1,0 +1,20 @@
+$kind: http-request
+description: |
+  **IN THIS FLOW**
+url: "{{base_url}}/platform-admin/marketplace/reports/content/{{report_a_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Admin sees reporter and history", () => { pm.expect(json.data).to.have.property("reporter_id"); pm.expect(json.data.history).to.be.an("array"); });
+    language: text/javascript
+order: 17000

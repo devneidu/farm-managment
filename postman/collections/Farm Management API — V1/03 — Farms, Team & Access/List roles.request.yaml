@@ -1,0 +1,69 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The five role presets (`owner`, `manager`, `farm_worker`, `finance`, `vet`) with labels and, per role, whether the CALLER may assign it. Use it to build the role picker in invite/change-role dialogs.
+
+  **WHEN TO USE IT**
+  Building the role picker in the invite / change-role dialogs.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `team.view` (taken from the current farm context; never sent by the client).
+  - This lists roles only. Permissions come from `GET /farm` (`membership.permissions`); there is no endpoint that lists every permission.
+
+  **WHAT TO DO NEXT**
+  Call `POST /farm/invitations` or `PATCH /farm/members/{membership}`.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`team.view`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/roles`
+
+  **BUSINESS RULES**
+  - Requires `team.view`.
+  - This lists roles only. Permissions come from `GET /farm` (`membership.permissions`); there is no endpoint that lists every permission.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `label`, `permissions`, `assignable`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `team.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+url: "{{base_url}}/roles"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List roles.resources/examples
+order: 4000

@@ -1,0 +1,72 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  One plan with prices, features, limits and `subscribers_count`.
+
+  **WHEN TO USE IT**
+  A plan detail screen.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{plan_new_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+  - Plan ids are UUIDs (non-UUID path segments do not match the route).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/plans/{{plan_new_id}}`
+
+  **PATH PARAMETERS**
+  - `{{plan_new_id}}` — UUID. Captured by "Create a plan" (90 — Platform Admin) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{plan_new_id}}` — captured by "Create a plan"
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+  - Plan ids are UUIDs (non-UUID path segments do not match the route).
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `slug`, `name`, `description`, `currency`, `is_active`, `is_public`, `is_default`, `sort_order`, `subscribers_count`, `prices`, `features`, `limits`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+url: "{{base_url}}/platform-admin/plans/{{plan_new_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Show a plan.resources/examples
+order: 3000

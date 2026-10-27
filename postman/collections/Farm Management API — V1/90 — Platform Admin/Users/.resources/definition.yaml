@@ -1,0 +1,3 @@
+$kind: collection
+description: Support view of users, suspension and restoration.
+order: 2000

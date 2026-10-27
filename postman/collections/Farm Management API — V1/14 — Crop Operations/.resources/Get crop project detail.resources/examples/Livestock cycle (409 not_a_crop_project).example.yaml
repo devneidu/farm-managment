@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/{{cycle_id}}/crop"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Crop project detail is only available for crop projects.",
+        "code": "not_a_crop_project",
+        "request_id": "01a1045e-7056-731f-8def-fc993373eb36"
+      }
+order: 2000

@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/contacts"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Mama Nkechi Feeds",
+        "kind": "business",
+        "roles": [
+          "supplier"
+        ],
+        "phone": "08031234567",
+        "email": "orders@mamankechifeeds.example.com",
+        "address": "14 Market Road, Ibadan"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A contact with this name already exists on this farm; add the missing role to it instead.",
+        "code": "contact_exists",
+        "request_id": "01a1045e-8d1b-7096-b9df-5b48f6a248ec"
+      }
+order: 2000

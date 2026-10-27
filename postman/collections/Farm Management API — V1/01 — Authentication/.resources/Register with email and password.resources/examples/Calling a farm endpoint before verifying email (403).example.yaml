@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Verify your email address to continue.",
+        "code": "email_verification_required",
+        "request_id": "01a1045e-3c4d-730d-b61d-f1c4431c61af"
+      }
+order: 4000

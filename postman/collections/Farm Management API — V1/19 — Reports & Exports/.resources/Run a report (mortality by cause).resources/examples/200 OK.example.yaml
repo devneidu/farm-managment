@@ -1,0 +1,103 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/mortality?from={{date_30d_ago}}&to={{today}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: from
+      value: "{{date_30d_ago}}"
+    - key: to
+      value: "{{today}}"
+    - key: as_of
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: kind
+      value: ""
+      disabled: true
+      description: "enum: livestock | crop"
+    - key: status
+      value: ""
+      disabled: true
+      description: "enum: active | closed | completed | cancelled"
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 500
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "report": {
+            "code": "mortality",
+            "title": "Mortality by cause",
+            "family": "livestock",
+            "description": "Deaths per livestock cycle and cause in the period; reversed mortality records are excluded."
+          },
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "currency": "NGN"
+          },
+          "filters": {
+            "from": "2026-09-04",
+            "to": "2026-10-04"
+          },
+          "timezone": "Africa/Lagos",
+          "generated_at": "2026-10-04T00:45:08.153034Z",
+          "columns": [
+            {
+              "key": "reference",
+              "label": "Reference",
+              "type": "string"
+            },
+            {
+              "key": "name",
+              "label": "Cycle",
+              "type": "string"
+            }
+          ],
+          "rows": [
+            {
+              "reference": "BAT-2026-00001",
+              "name": "October Broilers",
+              "cause": "Heat stress during the afternoon",
+              "records": 1,
+              "deaths": 5
+            }
+          ],
+          "summary": {
+            "deaths": 5,
+            "records": 1
+          },
+          "notes": []
+        },
+        "meta": {
+          "current_page": 1,
+          "per_page": 100,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,65 @@
+$kind: http-example
+name: 200 OK — Invitation accepted.
+request:
+  url: "{{base_url}}/invitations/accept"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "token": "{{invitation_token}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": true,
+          "has_active_farm": true,
+          "next_action": "none",
+          "user": {
+            "id": "01a1045e-4251-709f-a2f4-bfa626691fbc",
+            "email": "chidi.worker@example.com",
+            "name": null,
+            "email_verified_at": "2026-10-04T00:45:08+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "country_code": "NG",
+            "currency": "NGN",
+            "timezone": "Africa/Lagos",
+            "locale": "en",
+            "role": "farm_worker"
+          },
+          "farms": [
+            {
+              "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+              "name": "Okafor Integrated Farms Ltd",
+              "role": "farm_worker"
+            }
+          ],
+          "marketplace": {
+            "shop_count": 0
+          }
+        },
+        "meta": {
+          "accepted_farm_id": "01a1045e-3d57-71be-bf77-53f72c7c2dac"
+        },
+        "message": "Invitation accepted."
+      }
+order: 1000

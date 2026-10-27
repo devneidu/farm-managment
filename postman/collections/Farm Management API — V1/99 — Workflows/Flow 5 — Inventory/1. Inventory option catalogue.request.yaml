@@ -1,0 +1,58 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow S (needs `store_id`).
+
+
+
+  **WHAT IT DOES**
+  The option lists the inventory forms need: item `categories` (feed, medicine, seed_planting_material, fertilizer_agrochemical, general_supply, produce), stock-in reasons (`opening_balance`, `purchase`, `donation`, `other`) and stock-out reasons (`use`, `damaged`, `expired`, `wasted`, `other`).
+
+  **WHEN TO USE IT**
+  Populating category and reason dropdowns of inventory forms.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.view` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Create an inventory item (feed)**.
+
+  **FLAT LISTS ARE NOT ITEM-AWARE (GAP-05)**
+  `reasons.by_item_kind` is authoritative. The flat `reasons.in` / `reasons.out` lists are deprecated (`reasons.flat_lists.deprecated: true`): their `manual` only means "not system-only" (e.g. `production` is `manual: true` there, true for feed, false for eggs/milk). Each flat entry now has `manual_for_kinds` (derived from `by_item_kind`): the item kinds for which the reason is really enterable by hand.
+
+  **ROUTES (GAP-06)**
+  Every `route` / `also` entry keeps its relative `path` (relative to `{{base_url}}`) and now also carries `url` (the same route as an absolute `/api/v1/...` URL).
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  Full reference (errors, all fields): folder **10 — Inventory** -> "Inventory option catalogue".
+url: "{{base_url}}/master/inventory-options"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("flat reasons are flagged deprecated and carry manual_for_kinds", function () { pm.expect(json.data.reasons.flat_lists.deprecated).to.eql(true); json.data.reasons.in.concat(json.data.reasons.out).forEach(function (x) { pm.expect(x.manual_for_kinds).to.be.an("array"); }); });
+        pm.test("every metadata route has path and url", function () { const routes = []; ["in", "out"].forEach(function (d) { Object.values(json.data.reasons.by_item_kind).forEach(function (k) { k[d].forEach(function (e) { routes.push(e.route); (e.also || []).forEach(function (a) { routes.push(a); }); }); }); }); routes.forEach(function (rt) { pm.expect(rt.url).to.eql("/api/v1" + rt.path); }); });
+      }
+    language: text/javascript
+examples: ./.resources/1. Inventory option catalogue.resources/examples
+order: 1000

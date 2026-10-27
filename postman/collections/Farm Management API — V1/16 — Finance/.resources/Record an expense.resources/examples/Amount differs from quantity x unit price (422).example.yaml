@@ -1,0 +1,43 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_labour_id}}",
+        "amount": "100000.00",
+        "quantity": "12.5",
+        "unit_price": "8400.00",
+        "occurred_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The amount must equal quantity x unit price (105000.00), or be left out.",
+        "code": "validation_failed",
+        "request_id": "01a164f1-ac1f-739e-87fc-719a4af6745b",
+        "errors": {
+          "amount": [
+            "The amount must equal quantity x unit price (105000.00), or be left out."
+          ]
+        }
+      }
+order: 3000

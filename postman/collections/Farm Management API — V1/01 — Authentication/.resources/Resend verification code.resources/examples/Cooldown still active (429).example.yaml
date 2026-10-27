@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/email/resend"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 429
+  statusText: Too Many Requests
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Please wait 60 seconds before requesting another code.",
+        "code": "too_many_requests",
+        "request_id": "01a1045e-3c99-7256-a23a-89efd7b784ae"
+      }
+order: 2000

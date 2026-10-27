@@ -1,0 +1,122 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/receivables"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: as_of
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: kind
+      value: ""
+      disabled: true
+      description: "enum: livestock | crop"
+    - key: status
+      value: ""
+      disabled: true
+      description: "enum: active | closed | completed | cancelled"
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 500
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "report": {
+            "code": "receivables",
+            "title": "Invoices, payments and receivables",
+            "family": "sales",
+            "description": "Invoices issued in the period per customer: invoiced, received (net of reversed payments), outstanding and overdue as of today. Void invoices are excluded."
+          },
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "currency": "NGN"
+          },
+          "filters": {
+            "from": "2026-09-05",
+            "to": "2026-10-04"
+          },
+          "timezone": "Africa/Lagos",
+          "generated_at": "2026-10-04T00:45:08.153034Z",
+          "columns": [
+            {
+              "key": "customer",
+              "label": "Customer",
+              "type": "string"
+            },
+            {
+              "key": "invoices",
+              "label": "Invoices",
+              "type": "integer"
+            }
+          ],
+          "rows": [
+            {
+              "customer": "Mama Put Restaurant",
+              "invoices": 1,
+              "invoiced": "87000.00",
+              "received": "87000.00",
+              "outstanding": "0.00",
+              "overdue": "0.00"
+            },
+            {
+              "customer": "Walk-in buyer",
+              "invoices": 1,
+              "invoiced": "2500.00",
+              "received": "0.00",
+              "outstanding": "2500.00",
+              "overdue": "0.00"
+            }
+          ],
+          "summary": {
+            "currency": "NGN",
+            "invoices": 2,
+            "invoiced": "89500.00",
+            "received": "87000.00",
+            "outstanding": "2500.00",
+            "overdue": "0.00"
+          },
+          "notes": [
+            "Overdue is measured against today in the farm timezone."
+          ]
+        },
+        "meta": {
+          "current_page": 1,
+          "per_page": 100,
+          "last_page": 1,
+          "total": 2
+        },
+        "message": null
+      }
+order: 1000

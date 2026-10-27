@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "contact_id": "{{supplier_id}}",
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{$guid}}",
+        "items": [
+          {
+            "kind": "non_stock",
+            "description": "Delivery truck",
+            "amount": "10.555"
+          }
+        ]
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The items.0.amount must be an amount with at most two decimal places.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-8fd2-72d2-957c-15ab7def197a",
+        "errors": {
+          "items.0.amount": [
+            "The items.0.amount must be an amount with at most two decimal places."
+          ]
+        }
+      }
+order: 4000

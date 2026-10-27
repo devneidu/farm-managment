@@ -1,0 +1,15 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/csrf-cookie"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 204
+  statusText: No Content
+  headers:
+    Content-Type: application/json
+  body:
+    type: text
+    content: ""
+order: 1000

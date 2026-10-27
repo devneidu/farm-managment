@@ -1,0 +1,73 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Returns the active farm and, importantly, what the CALLER may do on it: `membership.role`, `membership.role_label` and the full `membership.permissions` list. This is the only endpoint that returns permissions - drive menu/action visibility from it.
+
+  **WHEN TO USE IT**
+  App startup after `next_action = none`, and whenever role/plan may have changed. It is the only source of the caller's permissions.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `farm.view` (taken from the current farm context; never sent by the client).
+  - The farm is the oldest active membership, or the one named in the optional `X-Farm-Id` header (403 `farm_access_denied` if you do not belong to it).
+  - Permissions are plain strings such as `inventory.manage`; the frontend never sends them back. The backend re-checks every request.
+
+  **WHAT TO DO NEXT**
+  Store `membership.permissions`; then call `GET /subscription/entitlements`.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`farm.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/farm`
+
+  **BUSINESS RULES**
+  - The farm is the oldest active membership, or the one named in the optional `X-Farm-Id` header (403 `farm_access_denied` if you do not belong to it).
+  - Permissions are plain strings such as `inventory.manage`; the frontend never sends them back. The backend re-checks every request.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `name`, `country_code`, `currency`, `timezone`, `locale`, `membership`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `farm.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+url: "{{base_url}}/farm"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.membership.id"); if (v !== undefined && v !== null) pm.environment.set("membership_owner_id", String(v)); else console.warn("Could not capture membership_owner_id from data.membership.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Get current farm (with my role and permissions).resources/examples
+order: 1000

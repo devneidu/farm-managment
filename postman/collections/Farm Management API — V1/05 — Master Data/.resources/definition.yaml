@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  What the platform UNDERSTANDS: operations, species, breeds, crops, varieties, capabilities and planting reference lists. Fetch these instead of hard-coding ids or names; branch on stable `code`, `category`, `tracking_model` and capability codes, never on `name`.
+
+  Typical screens: dependent dropdowns in the batch/project forms (operation → species → breed; crop → variety), custom breed/variety management, farm operations preference.
+order: 7000

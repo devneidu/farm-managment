@@ -1,0 +1,74 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Creates an item with no quantity. Captures `item_feed_id`.
+
+  **WHAT IT DOES**
+  Creates an inventory item (the thing you stock), not a quantity. The item has a `category` and a fixed `stock_unit`; its on-hand balance is DERIVED from movements and starts at zero.
+
+  **WHEN TO USE IT**
+  "Add inventory item" (feed).
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - `stock_unit` must belong to a dimension the category can use (weight/volume/count). Use `GET /master/units?dimension=...` to pick one.
+  - `tracks_lots` / `tracks_expiry` make lot codes (and expiry dates) mandatory on stock-in. They are fixed once the item has movements (`409 item_has_movements`).
+  - There is no `quantity` field: `quantity`, `balance`, `stock` in the body are rejected. Receive stock with the stock-in endpoint.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Create a package conversion (inventory item)**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  Full reference (errors, all fields): folder **10 — Inventory** -> "Create an inventory item (feed)".
+url: "{{base_url}}/inventory/items"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Layer Grower Mash",
+      "category": "feed",
+      "stock_unit": "kg",
+      "low_stock_threshold": {
+        "quantity": "50",
+        "unit": "kg"
+      },
+      "description": "Compounded grower mash from the mill"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("item_feed_id", String(v)); else console.warn("Could not capture item_feed_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/2. Create an inventory item (feed).resources/examples
+order: 2000

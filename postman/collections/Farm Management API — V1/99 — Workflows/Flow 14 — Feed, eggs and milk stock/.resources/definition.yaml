@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** One real-world event, one entry, every effect. Collect eggs (record + stock-in), receive eggs from other sources (stock only), put eggs into incubation (project + stock-out), write eggs off, sell and buy eggs by `output` (no item id), receive and sell milk by `output`, receive feed from other sources, donate and sell feed. The balance is always derived from the ledger; production totals stay separate.
+
+  **Prerequisites:** Flows 1 and S (farm, plan, `store_id`, `store2_id`), Flow 3 (`cycle_id`: a chicken batch) and Flow 5 (`item_feed_id` with stock). Flow 14 creates its own measurement context and crate conversion, and uses the `date_today` / `recorded_at_*` variables from the collection pre-request script.
+
+  Steps: 22. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 15000

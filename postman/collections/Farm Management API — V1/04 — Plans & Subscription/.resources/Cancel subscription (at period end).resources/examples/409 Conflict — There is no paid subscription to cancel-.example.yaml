@@ -1,0 +1,26 @@
+$kind: http-example
+name: 409 Conflict — There is no paid subscription to cancel.
+request:
+  url: "{{base_url}}/subscription/cancel"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "There is no paid subscription to cancel.",
+        "code": "subscription_not_cancellable",
+        "request_id": "01a1045e-3ffd-735c-90fe-11fa745e1654"
+      }
+order: 1000

@@ -1,0 +1,80 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Changes the signed-in user's display `name` (the only editable profile field; the email is read-only in V1). Returns the updated account.
+
+  **WHEN TO USE IT**
+  Saving the profile name.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`.
+
+  **IMPORTANT BEHAVIOR**
+  - `name` is required, max 120 characters.
+  - `name` is required, max 120 characters.
+  - Needs a verified email only; no farm required.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user (no farm needed). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Any verified user.
+
+  **URL**
+  `PATCH {{base_url}}/account`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 120 chars, min 2 chars
+
+  **BUSINESS RULES**
+  - `name` is required, max 120 characters.
+  - `name` is required, max 120 characters.
+  - Needs a verified email only; no farm required.
+
+  **SUCCESS**
+  `200 OK` — message: "Profile updated."
+
+  `data` fields: `id`, `name`, `email`, `email_verified_at`, `has_password`, `providers`, `locale`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`, `email_verification_required`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/account"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Ada Okafor"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update my profile.resources/examples
+order: 3000

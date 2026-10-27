@@ -1,0 +1,3 @@
+$kind: collection
+description: "**Phase 26.** Seller plans (per shop, prepaid 30/365 days, Free = 10 published listings) and fixed-price promoted listings, paid to Farmvest through Paystack. Activation only after server-side verification; redirects and webhook bodies are never trusted; settlement is idempotent. Both features are OFF by default (feature flags `marketplace_seller_plans`, `marketplace_promotions`). No commission, escrow, wallet, payout or buyer-seller payment. Saved example responses are not included: the payment steps need a real Paystack test-mode transaction (see docs/api/PHASE-26-MARKETPLACE-MONETISATION.md)."
+order: 29000

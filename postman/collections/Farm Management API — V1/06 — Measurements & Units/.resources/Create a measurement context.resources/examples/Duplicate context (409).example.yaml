@@ -1,0 +1,37 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/settings/measurement-contexts"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Eggs"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A measurement context with this name already exists.",
+        "code": "measurement_context_exists",
+        "request_id": "01a1045e-4824-7143-85bf-b72c292d1d17",
+        "details": {
+          "existing_id": "01a1045e-4812-722e-a358-827f49841712",
+          "is_active": true
+        }
+      }
+order: 2000

@@ -1,0 +1,104 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Teaches the engine that one `bag` of THIS feed item is 25 kg. Package units used in stock movements resolve ONLY through the item's own conversion (or the crop/context given), never through a global "bag = X kg".
+
+  **WHEN TO USE IT**
+  Defining the bag size of a specific inventory item before receiving it in bags.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `context_type`, `context_id`, `package_unit`, `target_unit`, `quantity_per_package`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `measurement.manage` (taken from the current farm context; never sent by the client).
+  - Without it, `12 bag` on this item is `422 conversion_not_configured`.
+
+  **WHAT TO DO NEXT**
+  Receive stock with `POST /inventory/stock-in`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`measurement.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `measurement-write`: 60 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/settings/package-conversions`
+
+  **REQUEST BODY** (`application/json`)
+  - `context_type` — enum, **required**. What a package conversion is about. The context is what makes "1 bag = ? kg" answerable: a bag of maize and a bag of feed differ. Stored as a (type, id) pair - the id always identifies a real, validated entity, never display text - so later phases can add their own types (for example `inventory_item`, id = the item's UUID) without a schema change. . Values: `crop_type`, `inventory_item`, `custom`
+  - `context_id` — string, **required**, max 36 chars. Existence/ownership is checked in PackageConversionService::resolveContext (crop type, or this farm's context).
+  - `package_unit` — string, **required**, max 32 chars
+  - `target_unit` — string, **required**, max 32 chars
+  - `quantity_per_package` — string, **required**
+
+  Server-owned fields — NOT accepted, sending any of them is a `422`: `farm_id`, `context_label`, `crop_type_id`.
+
+  **VARIABLES USED**
+  - `{{item_feed_id}}` — captured by "Create an inventory item (feed)"
+
+  **BUSINESS RULES**
+  - Without it, `12 bag` on this item is `422 conversion_not_configured`.
+
+  **SUCCESS**
+  `201 Created` — message: "Package conversion created."
+
+  `data` fields: `id`, `context`, `package_unit`, `target_unit`, `quantity_per_package`, `version`, `is_active`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `measurement.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — A definition already exists for this package in this context.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/settings/package-conversions"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "context_type": "inventory_item",
+      "context_id": "{{item_feed_id}}",
+      "package_unit": "bag",
+      "target_unit": "kg",
+      "quantity_per_package": "25"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("conversion_feed_id", String(v)); else console.warn("Could not capture conversion_feed_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create a package conversion (inventory item).resources/examples
+order: 12000

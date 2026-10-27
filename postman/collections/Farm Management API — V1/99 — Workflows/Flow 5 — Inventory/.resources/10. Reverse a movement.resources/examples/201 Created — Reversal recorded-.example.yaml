@@ -1,0 +1,118 @@
+$kind: http-example
+name: 201 Created — Reversal recorded.
+request:
+  url: "{{base_url}}/inventory/movements/{{movement_out_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Entered against the wrong store",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-5e8c-7150-a247-aafadedf1c3e",
+            "inventory_item_id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+            "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+            "inventory_lot_id": null,
+            "lot": null,
+            "type": "reversal",
+            "reason": null,
+            "justification": "Entered against the wrong store",
+            "quantity_delta": {
+              "quantity": "25000",
+              "unit": "g"
+            },
+            "quantity_delta_display": {
+              "quantity": "25",
+              "unit": "kg"
+            },
+            "measurement": {
+              "total": {
+                "unit": "kg",
+                "quantity": "25"
+              },
+              "entered": [
+                {
+                  "unit": "kg",
+                  "quantity": "25"
+                }
+              ],
+              "snapshot": {
+                "total": {
+                  "unit": "kg",
+                  "quantity": "25"
+                },
+                "schema": 1,
+                "entered": [
+                  {
+                    "unit": {
+                      "code": "kg",
+                      "factor": "1000",
+                      "family": "weight",
+                      "strategy": "linear",
+                      "dimension": "weight",
+                      "integer_only": false
+                    },
+                    "quantity": "25"
+                  }
+                ],
+                "packages": [],
+                "normalized": {
+                  "unit": "g",
+                  "quantity": "25000"
+                },
+                "result_unit": {
+                  "code": "kg",
+                  "factor": "1000",
+                  "family": "weight",
+                  "strategy": "linear",
+                  "dimension": "weight",
+                  "integer_only": false
+                }
+              },
+              "normalized": {
+                "unit": "g",
+                "quantity": "25000"
+              }
+            },
+            "recorded_at": "2026-10-03T23:44:06.000000Z",
+            "notes": null,
+            "operational_record_id": null,
+            "health_record_id": null,
+            "health_record_medicine_id": null,
+            "purchase_id": null,
+            "purchase_item_id": null,
+            "sale_id": null,
+            "sale_item_id": null,
+            "transfer_group_id": null,
+            "reverses_movement_id": "01a1045e-5c7c-7227-acec-3be4ae113268",
+            "reversed_by_movement_id": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {},
+        "message": "Reversal recorded."
+      }
+order: 1000

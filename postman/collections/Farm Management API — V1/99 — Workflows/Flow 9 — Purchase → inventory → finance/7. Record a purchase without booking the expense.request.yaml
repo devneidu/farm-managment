@@ -1,0 +1,87 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  A purchase with `record_expense: false` books no expense yet.
+
+  **WHAT IT DOES**
+  A purchase with `record_expense: false`: no expense is booked. It can be booked later, once, with `POST /expenses` and `source: {type: "purchase", id}` for exactly the purchase total.
+
+  **WHEN TO USE IT**
+  Recording a purchase whose expense is booked separately.
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `purchase.create` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Record an expense linked to a purchase**.
+
+  **OUTPUT-NAMED STOCK LINES (GAP-08)**
+  A stock line names its stock with EXACTLY ONE of `inventory_item_id` (a specific item, always supported) or `output` (`eggs` | `milk`, the farm's automatic output item; no item id needed). A PURCHASE resolves (or creates) the output item exactly like `POST /inventory/stock-in {output}`, and with no store and no active store creates "Main Store". `storage_location_id` is optional with `output` (the only active store is used; several active stores need a choice, `422 items.N.storage_location_id`). Both or neither -> `422`; `output` on a non-stock line -> `422`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`purchase.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `POST {{base_url}}/purchases`
+
+  Full reference (all fields, errors, rules): folder **15 — Contacts & Purchasing** -> "Record a purchase without booking the expense".
+
+  Full reference (errors, all fields): folder **15 — Contacts & Purchasing** -> "Record a purchase without booking the expense".
+url: "{{base_url}}/purchases"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "contact_id": "{{supplier_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "record_expense": false,
+      "items": [
+        {
+          "kind": "non_stock",
+          "description": "Poultry netting repair",
+          "amount": "3500.00"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("purchase_b_id", String(v)); else console.warn("Could not capture purchase_b_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/7. Record a purchase without booking the expense.resources/examples
+order: 7000

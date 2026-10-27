@@ -1,0 +1,15 @@
+$kind: http-request
+description: "**Public.** Streams a seller photo only while its listing is publicly visible (`404` otherwise)."
+url: "{{base_url}}/public/marketplace/images/{{listing_image_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 200 or 404", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404]); });
+    language: text/javascript
+order: 29000

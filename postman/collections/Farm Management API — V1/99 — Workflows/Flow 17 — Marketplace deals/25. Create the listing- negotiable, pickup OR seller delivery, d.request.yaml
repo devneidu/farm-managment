@@ -1,0 +1,49 @@
+$kind: http-request
+name: "25. Create the listing: negotiable, pickup OR seller delivery, delivery charge agreed separately"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "title": "Point-of-lay chickens",
+      "product_kind": "livestock",
+      "species_id": "{{species_chicken_id}}",
+      "unit": "head",
+      "unit_price": "8000",
+      "available_quantity": "120",
+      "min_order_quantity": "5",
+      "negotiable": true,
+      "description": "Vaccinated, 16 weeks old.",
+      "fulfilment": "both",
+      "pickup_area": "Bodija market",
+      "delivery_coverage": [
+        "Oyo",
+        "Lagos"
+      ],
+      "dispatch_estimate": "1_2_days",
+      "delivery_charge": "agreed_separately"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("listing_id", v); } }
+      { const v = json.data.slug; if (v !== undefined && v !== null) { pm.environment.set("listing_slug", v); } }
+      { const v = json.data.version; if (v !== undefined && v !== null) { pm.environment.set("listing_version", v); } }
+    language: text/javascript
+order: 25000

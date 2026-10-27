@@ -1,0 +1,73 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/invoices/{{invoice_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-9933-71de-b5f4-5b15db2730ef",
+          "reference": "INV-2026-00001",
+          "sale_id": "01a1045e-9570-7251-9064-968900b60660",
+          "sale_reference": "SAL-2026-00001",
+          "status": "issued",
+          "payment_status": "unpaid",
+          "issue_date": "2026-10-04",
+          "due_date": "2026-10-18",
+          "is_overdue": false,
+          "total_amount": "87000.00",
+          "amount_paid": "0.00",
+          "outstanding": "87000.00",
+          "currency": "NGN",
+          "customer": {
+            "contact_id": "01a1045e-8d77-7352-865c-f90431a3d690",
+            "name": "Mama Put Restaurant",
+            "phone": "08030000000",
+            "email": null,
+            "address": "12 Market Road, Ibadan"
+          },
+          "seller_name": "Okafor Integrated Farms Ltd",
+          "notes": "Net 14 days",
+          "voided_at": null,
+          "void_reason": null,
+          "items": [
+            {
+              "id": "01a1045e-9944-73ab-80fa-5f31fb6788c3",
+              "line_no": 1,
+              "sale_item_id": "01a1045e-959f-7124-b2d7-390d4e14954e",
+              "kind": "stock",
+              "description": "Table Eggs",
+              "quantity_label": "90 piece",
+              "amount": "27000.00"
+            },
+            {
+              "id": "01a1045e-994a-72c2-a060-fc0649d66528",
+              "line_no": 2,
+              "sale_item_id": "01a1045e-95ab-7001-aab7-d1e52b0119ee",
+              "kind": "livestock",
+              "description": "Spent layers",
+              "quantity_label": "12 head",
+              "amount": "60000.00"
+            }
+          ],
+          "payments": [],
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

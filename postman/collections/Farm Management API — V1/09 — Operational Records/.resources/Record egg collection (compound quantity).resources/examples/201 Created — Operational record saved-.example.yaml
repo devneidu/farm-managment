@@ -1,0 +1,181 @@
+$kind: http-example
+name: 201 Created — Operational record saved.
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "egg_collection",
+        "production_cycle_id": "{{cycle_id}}",
+        "recorded_at": "{{recorded_at_3h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "components": [
+            {
+              "quantity": "3",
+              "unit": "crate"
+            },
+            {
+              "quantity": "14",
+              "unit": "piece"
+            }
+          ],
+          "context": {
+            "type": "custom",
+            "id": "{{context_id}}"
+          },
+          "inventory": {
+            "storage_location_id": "{{store_id}}"
+          }
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-a9df-734d-8ec5-519b0a047fc8",
+          "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+          "type": "egg_collection",
+          "details": {
+            "components": [
+              {
+                "quantity": "3",
+                "unit": "crate"
+              },
+              {
+                "quantity": "14",
+                "unit": "piece"
+              }
+            ],
+            "context": {
+              "type": "custom",
+              "id": "01a1107d-a89a-73ec-98d3-6eb5dc40d769"
+            },
+            "inventory": {
+              "item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+              "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5"
+            }
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "3",
+                "unit": "crate"
+              },
+              {
+                "quantity": "14",
+                "unit": "piece"
+              }
+            ],
+            "normalized": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "total": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "3",
+                  "unit": {
+                    "code": "crate",
+                    "dimension": "package",
+                    "family": null,
+                    "strategy": "none",
+                    "factor": null,
+                    "integer_only": false
+                  }
+                },
+                {
+                  "quantity": "14",
+                  "unit": {
+                    "code": "piece",
+                    "dimension": "count",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  }
+                }
+              ],
+              "packages": [
+                {
+                  "conversion_id": "01a1107d-a8d3-7174-b7fd-bf3fb2a09daf",
+                  "version": 1,
+                  "context": {
+                    "type": "custom",
+                    "id": "01a1107d-a89a-73ec-98d3-6eb5dc40d769",
+                    "label": "Eggs"
+                  },
+                  "package_unit": {
+                    "code": "crate",
+                    "dimension": "package",
+                    "family": null,
+                    "strategy": "none",
+                    "factor": null,
+                    "integer_only": false
+                  },
+                  "target_unit": {
+                    "code": "piece",
+                    "dimension": "count",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  },
+                  "per_package": "30"
+                }
+              ],
+              "result_unit": {
+                "code": "piece",
+                "dimension": "count",
+                "family": "piece",
+                "strategy": "linear",
+                "factor": "1",
+                "integer_only": true
+              },
+              "normalized": {
+                "quantity": "104",
+                "unit": "piece"
+              },
+              "total": {
+                "quantity": "104",
+                "unit": "piece"
+              }
+            }
+          },
+          "population_delta": 0,
+          "recorded_at": "2026-10-14T02:00:00.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": "01a1107d-a9f1-71b0-9f41-7cdd1d8fff84",
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z",
+          "attachments": []
+        },
+        "meta": [],
+        "message": "Operational record saved."
+      }
+order: 1000

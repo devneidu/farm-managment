@@ -1,0 +1,64 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/items/{{item_feed_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11126-cea8-722d-9ea4-128d7671545a",
+          "name": "Layer Grower Mash",
+          "category": "feed",
+          "description": "Compounded grower mash from the mill",
+          "kind": "feed",
+          "is_system_managed": false,
+          "stock_unit": "kg",
+          "dimension": "weight",
+          "tracks_lots": false,
+          "tracks_expiry": false,
+          "is_active": true,
+          "stock": {
+            "quantity": "318",
+            "unit": "kg",
+            "normalized": {
+              "quantity": "318000",
+              "unit": "g"
+            }
+          },
+          "low_stock_threshold": {
+            "quantity": "50",
+            "unit": "kg"
+          },
+          "is_low_stock": false,
+          "created_at": "2026-10-06T12:18:38.000000Z",
+          "updated_at": "2026-10-06T12:18:38.000000Z",
+          "balances": [
+            {
+              "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+              "inventory_lot_id": null,
+              "quantity": "318",
+              "unit": "kg",
+              "normalized": {
+                "quantity": "318000",
+                "unit": "g"
+              }
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

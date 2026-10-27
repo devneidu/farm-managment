@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Record a sale (stock + livestock), issue its invoice, receive partial then final payments and verify the finance effect.
+
+  **Prerequisites:** Flows S and 3 (`item_eggs_id`, `store_id`, `cycle_id`).
+
+  Steps: 12. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 11000

@@ -1,0 +1,49 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/breeding-projects"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "workflow": "incubation",
+        "start_date": "{{date_today}}",
+        "eggs_set": 40,
+        "consume_egg_stock": true,
+        "egg_storage_location_id": "{{store_id}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "There is not enough stock in this location.",
+        "code": "insufficient_stock",
+        "request_id": "01a1107d-ac49-70e5-b7d3-6b8e0765f686",
+        "details": {
+          "available": {
+            "quantity": "84",
+            "unit": "piece"
+          },
+          "requested": {
+            "quantity": "4000",
+            "unit": "piece"
+          }
+        }
+      }
+order: 2000

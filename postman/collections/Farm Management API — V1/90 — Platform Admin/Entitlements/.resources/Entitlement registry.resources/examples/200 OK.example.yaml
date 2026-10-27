@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/entitlements"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "features": [
+            {
+              "key": "advanced_reports",
+              "label": "Advanced reports"
+            },
+            {
+              "key": "data_export",
+              "label": "Data export"
+            }
+          ],
+          "limits": [
+            {
+              "key": "team_members",
+              "label": "Team members"
+            },
+            {
+              "key": "active_cycles",
+              "label": "Active production cycles"
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

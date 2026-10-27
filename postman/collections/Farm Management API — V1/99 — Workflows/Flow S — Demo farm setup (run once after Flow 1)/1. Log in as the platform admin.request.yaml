@@ -1,0 +1,69 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow 1 completed. Needs a platform admin account for the first four requests (optional).
+
+  Needs a platform admin account (`admin_email` / `admin_password` environment variables, granted with `php artisan platform:grant-admin`). Skip steps 1-4 if you have none: reports and exports need the `farm-business` plan.
+
+  **WHAT IT DOES**
+  Signs in the platform administrator account (granted by an operator with `php artisan platform:grant-admin <email>`). Your browser/Postman cookie jar now holds the ADMIN session: farm requests will be answered for the admin user until you log in as the farmer again.
+
+  **WHEN TO USE IT**
+  Signing in the platform admin account (demo/support tooling).
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Read-only: no side effects.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **List plans**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Everyone.
+
+  **URL**
+  `POST {{base_url}}/auth/login`
+
+  Full reference (all fields, errors, rules): folder **01 — Authentication** -> "Log in as the platform admin".
+
+  Full reference (errors, all fields): folder **01 — Authentication** -> "Log in as the platform admin".
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{admin_email}}",
+      "password": "{{admin_password}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/1. Log in as the platform admin.resources/examples
+order: 1000

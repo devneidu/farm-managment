@@ -1,0 +1,124 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records a physical stock count. You send what the system expected and what you counted; the API stores the difference as an `adjustment` movement.
+
+  **WHEN TO USE IT**
+  "Stock count" after a physical count (expected vs counted).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `inventory_item_id`, `storage_location_id`, `expected`, `counted`, `reason`, `recorded_at`, `idempotency_key`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.adjust` (taken from the current farm context; never sent by the client).
+  - One `adjustment` movement (zero difference is rejected).
+  - `expected` must equal the current derived balance, otherwise `409 stock_changed` (someone moved stock meanwhile: reload and recount).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.adjust`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/inventory/adjustments`
+
+  **REQUEST BODY** (`application/json`)
+  - `inventory_item_id` — string (uuid), **required**
+  - `storage_location_id` — string (uuid), **required**
+  - `lot_id` — string (uuid), optional, nullable
+  - `expected` — array, **required**, min 1 items, max 10 items
+  - `expected[].quantity` — string, **required**
+  - `expected[].unit` — string, **required**, max 32 chars
+  - `counted` — array, **required**, min 1 items, max 10 items
+  - `counted[].quantity` — string, **required**
+  - `counted[].unit` — string, **required**, max 32 chars
+  - `reason` — string, **required**, max 2000 chars
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `notes` — string, optional, max 5000 chars, nullable
+
+  **VARIABLES USED**
+  - `{{item_feed_id}}` — captured by "Create an inventory item (feed)"
+  - `{{store_id}}` — captured by "Create a storage location"
+
+  **BUSINESS RULES**
+  - `expected` must equal the current derived balance, otherwise `409 stock_changed` (someone moved stock meanwhile: reload and recount).
+  - Requires `inventory.adjust` (Owner, Manager).
+
+  **SUCCESS**
+  `201 Created` — message: "Adjustment recorded."
+
+  `data` fields: `id`, `inventory_item_id`, `storage_location_id`, `inventory_lot_id`, `lot`, `type`, `reason`, `justification`, `quantity_delta`, `quantity_delta_display`, `measurement`, `recorded_at`, `notes`, `operational_record_id`, `health_record_id`, `health_record_medicine_id`, `purchase_id`, `purchase_item_id`, `sale_id`, `sale_item_id`, `transfer_group_id`, `reverses_movement_id`, `reversed_by_movement_id`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.adjust`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `stock_changed`, `item_inactive`, `insufficient_stock`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/inventory/adjustments"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "inventory_item_id": "{{item_feed_id}}",
+      "storage_location_id": "{{store_id}}",
+      "expected": [
+        {
+          "quantity": "293",
+          "unit": "kg"
+        }
+      ],
+      "counted": [
+        {
+          "quantity": "290",
+          "unit": "kg"
+        }
+      ],
+      "reason": "Stock count - spillage at the mill",
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_adjust_id", String(v)); else console.warn("Could not capture movement_adjust_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Reconcile a physical count (adjustment).resources/examples
+order: 26000

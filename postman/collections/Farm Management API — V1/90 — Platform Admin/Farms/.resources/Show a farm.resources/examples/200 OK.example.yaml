@@ -1,0 +1,106 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/farms/{{farm_id}}"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+          "name": "Okafor Integrated Farms Ltd",
+          "country_code": "NG",
+          "currency": "NGN",
+          "timezone": "Africa/Lagos",
+          "owner": {
+            "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "name": "Ada Okafor",
+            "email": "ada.okafor@example.com"
+          },
+          "members_count": null,
+          "plan": {
+            "id": "01a1045c-caee-70d3-987f-f54e34a22ef4",
+            "slug": "farm-business",
+            "name": "Farm Business"
+          },
+          "subscription_status": "active",
+          "current_period_end": "2026-11-04T00:45:08+00:00",
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "members": [
+            {
+              "membership_id": "01a1045e-3d68-7120-81fe-71d691c8d2f6",
+              "user_id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "name": "Ada Okafor",
+              "email": "ada.okafor@example.com",
+              "role": "owner",
+              "status": "active"
+            },
+            {
+              "membership_id": "01a1045e-3df9-70af-8aa0-faf5feada100",
+              "user_id": "01a1045e-3df6-7186-8536-5b14645d5b85",
+              "name": "Farm_worker Sample",
+              "email": "bhuels@example.net",
+              "role": "farm_worker",
+              "status": "active"
+            }
+          ],
+          "operations": [
+            "crops",
+            "poultry"
+          ],
+          "entitlements": {
+            "plan": {
+              "id": "01a1045c-caee-70d3-987f-f54e34a22ef4",
+              "slug": "farm-business",
+              "name": "Farm Business"
+            },
+            "subscription_inactive": false,
+            "features": {
+              "advanced_reports": true,
+              "data_export": true
+            },
+            "limits": {
+              "team_members": {
+                "limit": null,
+                "unlimited": true,
+                "usage": 3
+              },
+              "active_cycles": {
+                "limit": null,
+                "unlimited": true,
+                "usage": 3
+              }
+            }
+          },
+          "subscription_events": [
+            {
+              "type": "created",
+              "from_plan_id": null,
+              "to_plan_id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+              "from_status": null,
+              "to_status": "active",
+              "actor_user_id": null,
+              "occurred_at": "2026-10-04T00:45:08+00:00"
+            },
+            {
+              "type": "plan_changed",
+              "from_plan_id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+              "to_plan_id": "01a1045c-caee-70d3-987f-f54e34a22ef4",
+              "from_status": "active",
+              "to_status": "active",
+              "actor_user_id": "01a1045e-38e2-7173-b130-5452688a714c",
+              "occurred_at": "2026-10-04T00:45:08+00:00"
+            }
+          ]
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

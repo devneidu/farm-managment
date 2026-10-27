@@ -1,0 +1,61 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/users?q=okafor"
+  method: GET
+  headers:
+    Accept: application/json
+  queryParams:
+    - key: q
+      value: okafor
+    - key: status
+      value: ""
+      disabled: true
+      description: "enum: active | suspended"
+    - key: platform_role
+      value: ""
+      disabled: true
+      description: "enum: admin | support"
+    - key: verified
+      value: ""
+      disabled: true
+      description: boolean
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "name": "Ada Okafor",
+            "email": "ada.okafor@example.com",
+            "email_verified": true,
+            "onboarded": true,
+            "status": "active",
+            "suspended_at": null,
+            "platform_role": null,
+            "active_farms_count": 1,
+            "created_at": "2026-10-04T00:44:06+00:00"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 25,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,108 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Paginated storage locations (stores, cold rooms). Use it for the "Store" selector of stock-in, stock-out, transfers and purchases; inactive stores are hidden unless `include_inactive=1`.
+
+  **WHEN TO USE IT**
+  The "Store" selector of stock-in/out, transfers and purchases.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `include_inactive`, `type`, `parent_id`, `top_level`, `search`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `location.view` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`location.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/storage-locations`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `include_inactive` — boolean. Include inactive rows for management/history; omitted means active only.
+  - `type` — enum. A stable code from GET /master/location-types, appropriate to this endpoint's kind.. Values: `site`, `building`, `house`, `field`, `pen`, `pond`, `plot`, `store`, `other`
+  - `parent_id` — string (uuid). Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true.
+  - `top_level` — boolean
+  - `search` — string, max 100 chars, min 1 chars
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Requires `location.view`. Default `per_page` 50.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `kind`, `name`, `type`, `type_label`, `parent_id`, `path`, `path_label`, `depth`, `is_active`, `created_at`, `updated_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `location.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/storage-locations"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: include_inactive
+    value: ""
+    disabled: true
+    description: Include inactive rows for management/history; omitted means active only. — boolean
+  - key: type
+    value: ""
+    disabled: true
+    description: "A stable code from GET /master/location-types, appropriate to this endpoint's kind. — enum: site | building | house | field | pen | pond | plot | store | other"
+  - key: parent_id
+    value: ""
+    disabled: true
+    description: Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true. — string (uuid)
+  - key: top_level
+    value: ""
+    disabled: true
+    description: boolean
+  - key: search
+    value: ""
+    disabled: true
+    description: string — max 100 chars, min 1 chars
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List storage locations.resources/examples
+order: 11000

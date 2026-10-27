@@ -1,0 +1,59 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Public pricing/comparison data: active, public plans ordered by `sort_order`, each listing ALL features and limits with prices in minor units (kobo).
+
+  **WHEN TO USE IT**
+  The public pricing/comparison page (no login).
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - No authentication. Rate limited (60/min).
+  - Prices are integer minor units: `amount_minor: 300000` = ₦3,000.00.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Public** — no session required.
+
+  **ACCESS**
+  Everyone.
+  Rate limited by limiter `60,1`: 60 per minute (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `GET {{base_url}}/public/plans`
+
+  **BUSINESS RULES**
+  - No authentication. Rate limited (60/min).
+  - Prices are integer minor units: `amount_minor: 300000` = ₦3,000.00.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `slug`, `name`, `description`, `currency`, `is_default`, `prices`, `features`, `limits`.
+
+  **ERRORS**
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/public/plans"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List public plans (pricing page).resources/examples
+order: 6000

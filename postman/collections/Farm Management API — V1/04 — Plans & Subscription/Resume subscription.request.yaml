@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Withdraws a scheduled cancellation so the paid subscription renews normally at the end of the current period. Only meaningful after `POST /subscription/cancel` on a paid plan.
+
+  **WHEN TO USE IT**
+  "Keep my subscription" after a scheduled cancellation.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `subscription.manage` (taken from the current farm context; never sent by the client).
+  - Clears `cancel_at_period_end`.
+  - `409 subscription_not_cancelled` when nothing is scheduled.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`subscription.manage`** — granted to: `owner`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `POST {{base_url}}/subscription/resume`
+
+  **BUSINESS RULES**
+  - Requires `subscription.manage`.
+  - `409 subscription_not_cancelled` when nothing is scheduled.
+
+  **SUCCESS**
+  `409 Conflict` — message: "There is no scheduled cancellation to resume."
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `subscription.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — No scheduled cancellation.
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/subscription/resume"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200 or 409", function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Resume subscription.resources/examples
+order: 5000

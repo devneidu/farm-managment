@@ -1,0 +1,47 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  A buyer proposes a unit price and quantity on a NEGOTIABLE, public listing. Not a chat, escrow or checkout: nothing is reserved, charged or sold, and no seller contact is returned.
+
+  **INPUTS**
+  - `quantity` (decimal string; the unit's precision, minimum order, declared availability)
+  - `unit_price` (naira per ONE unit, <=2 decimals): strictly below the listed unit price and at least `marketplace_min_offer_percent` (default 70%) of it. Exact decimal arithmetic on the unit price, not the order total.
+
+  **RULES**
+  All validation (422/403/404/409 listing_not_negotiable) happens BEFORE an attempt is used. One open offer at a time (`409 offer_pending`); at most `marketplace_max_offers_per_buyer` (3) per listing - pending, accepted, rejected and expired count, voided do not (`409 offer_limit_reached` with `details.max_attempts/attempts_used`); `409 offer_already_accepted`; shop members and the linked farm's owner get `403 cannot_negotiate_own_listing`. Expires after `marketplace_offer_expiry_hours` (48h).
+
+  **NEXT**
+  The seller accepts or rejects (shop folder offers). Poll `GET /my/offers/{id}`.
+url: "{{base_url}}/marketplace/listings/{{listing_slug}}/offers"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "10",
+      "unit_price": "7000"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("offer_id", v); } }
+        pm.test("Pending, 48h, no contact", function () { pm.expect(json.data.status).to.eql("pending"); pm.expect(json.data.contact).to.eql(null); pm.expect(json.data.terms.total).to.eql("70000.00"); });
+      }
+    language: text/javascript
+order: 1000

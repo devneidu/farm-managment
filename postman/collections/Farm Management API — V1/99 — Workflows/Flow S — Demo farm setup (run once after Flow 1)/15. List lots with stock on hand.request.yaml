@@ -1,0 +1,82 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Captures `lot_med_id` (the vaccine lot used by Flow 6).
+
+  **WHAT IT DOES**
+  Lots with their remaining stock and expiry. Filters: `inventory_item_id`, `expired`, `expiring_within_days`, `include_empty`.
+
+  **WHEN TO USE IT**
+  Lot/expiry screens and choosing a lot for medicine/stock.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.view` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Create an inventory item (produce)**.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/inventory/lots`
+
+  Full reference (errors, all fields): folder **10 — Inventory** -> "List lots with stock on hand".
+url: "{{base_url}}/inventory/lots?inventory_item_id={{item_med_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: inventory_item_id
+    value: "{{item_med_id}}"
+  - key: expired
+    value: ""
+    disabled: true
+    description: "true: only expired lots; false: only unexpired or non-expiring lots. Compared with today in the farm timezone. — boolean"
+  - key: expiring_within_days
+    value: ""
+    disabled: true
+    description: Lots with stock on hand expiring within N days (inclusive of today). — integer — min 0, max 3650
+  - key: include_empty
+    value: ""
+    disabled: true
+    description: boolean
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => true); const v = row && get(row, "id"); if (v !== undefined && v !== null) pm.environment.set("lot_med_id", String(v)); else console.warn("Could not capture lot_med_id"); }
+      }
+    language: text/javascript
+examples: ./.resources/15. List lots with stock on hand.resources/examples
+order: 15000

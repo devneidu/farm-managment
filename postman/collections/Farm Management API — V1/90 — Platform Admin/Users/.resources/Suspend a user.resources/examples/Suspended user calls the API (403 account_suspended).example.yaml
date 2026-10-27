@@ -1,0 +1,21 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/me"
+  method: GET
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This account is suspended.",
+        "code": "account_suspended",
+        "request_id": "01a1045e-ca8e-7360-8b5c-08e8e71d8b0a"
+      }
+order: 2000

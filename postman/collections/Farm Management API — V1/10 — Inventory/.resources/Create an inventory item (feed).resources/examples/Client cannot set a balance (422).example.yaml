@@ -1,0 +1,41 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/items"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Sneaky Feed",
+        "category": "feed",
+        "stock_unit": "kg",
+        "quantity": "100"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The quantity field must be missing.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-5532-71f2-98df-031c3e4bc451",
+        "errors": {
+          "quantity": [
+            "The quantity field must be missing."
+          ]
+        }
+      }
+order: 3000

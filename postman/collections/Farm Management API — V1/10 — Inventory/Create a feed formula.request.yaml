@@ -1,0 +1,119 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Stores a feed recipe: ingredients with `inclusion_percent`. A formula is a reference document - it NEVER deducts stock by itself.
+
+  **WHEN TO USE IT**
+  Saving a feed recipe.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`, `items`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - Inclusion percentages must add up to 100. `inventory_item_id` per ingredient is optional.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/feed-formulas`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 150 chars
+  - `species_id` — string (uuid), optional, nullable
+  - `description` — string, optional, max 2000 chars, nullable
+  - `items` — array, **required**, min 1 items, max 50 items. Ingredients as percentages of the mix; they must add up to exactly 100. A formula never holds or changes stock.
+  - `items[].ingredient_name` — string, **required**, max 150 chars
+  - `items[].inclusion_percent` — string, **required**
+  - `items[].inventory_item_id` — string (uuid), **required**, nullable
+
+  **VARIABLES USED**
+  - `{{species_chicken_id}}` — captured by "List species"
+  - `{{item_feed_id}}` — captured by "Create an inventory item (feed)"
+
+  **BUSINESS RULES**
+  - Inclusion percentages must add up to 100. `inventory_item_id` per ingredient is optional.
+  - Requires `inventory.manage`.
+
+  **SUCCESS**
+  `201 Created` — message: "Feed formula created."
+
+  `data` fields: `id`, `name`, `species_id`, `description`, `version`, `is_active`, `items`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — conflict with current state.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/feed-formulas"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Broiler starter 22% CP",
+      "species_id": "{{species_chicken_id}}",
+      "description": "Home-mixed starter ration",
+      "items": [
+        {
+          "ingredient_name": "Maize",
+          "inclusion_percent": "55"
+        },
+        {
+          "ingredient_name": "Soybean meal",
+          "inclusion_percent": "30"
+        },
+        {
+          "ingredient_name": "Fish meal",
+          "inclusion_percent": "10"
+        },
+        {
+          "ingredient_name": "Premix and lysine",
+          "inclusion_percent": "5",
+          "inventory_item_id": "{{item_feed_id}}"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("formula_id", String(v)); else console.warn("Could not capture formula_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create a feed formula.resources/examples
+order: 29000

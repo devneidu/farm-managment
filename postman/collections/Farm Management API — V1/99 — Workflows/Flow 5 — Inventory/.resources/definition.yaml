@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Create an item, receive stock (with a package conversion), view derived stock, consume stock and read the movement history.
+
+  **Prerequisites:** Flow S (needs `store_id`).
+
+  Steps: 10. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 6000

@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/custom-varieties?crop_type_id={{crop_yam_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: crop_type_id
+      value: "{{crop_yam_id}}"
+    - key: species_id
+      value: ""
+      disabled: true
+      description: string — max 36 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-45a9-73e2-b37a-592fa0640aa9",
+            "crop_type_id": "01a1045c-d836-73a8-8e28-0ccc276424e2",
+            "code": null,
+            "name": "Pona white yam",
+            "source": "farm",
+            "is_active": true,
+            "is_editable": true,
+            "created_at": "2026-10-04T00:45:08+00:00"
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

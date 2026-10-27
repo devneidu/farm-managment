@@ -1,0 +1,49 @@
+$kind: http-request
+name: 4. List batch locations (the "Default Location" picker)
+description: |-
+  **IN THIS FLOW**
+  Step 1 of the "Start livestock batch" form: **Default Location**. The picked `id` is sent as `production_area_id` in the batch request (step 6).
+
+  **WHAT IT DOES**
+  Lists the farm's active batch locations (called *production areas* in the API) (house, pen, pond, field, plot). Show `path_label` (for example "Main Site / Broiler House 1 / Pen 3") in the selector. A batch location belongs to a location (`parent_id`), so this is the farm's physical-place picker.
+
+  **WHEN TO USE IT**
+  Filling the "Default Location" dropdown. The field is optional: a batch can be started with no area.
+
+  **"+ New Location"**
+  Create the place first with **POST /production-areas** (body `name`, `type`, optional `parent_id`; see folder **07 — Locations & Farm Structure**; needs `location.manage`), then use the returned `id`. Create the parent first with POST /locations if the farm has none.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `location.view`. Inactive areas (or areas under an inactive location) are rejected with `409 location_inactive` when a batch is started; another farm's area is `404`.
+  - This flow already has `area_id` from Flow S; the test only fills it when it is empty.
+
+  **WHAT TO DO NEXT**
+  Next: **Get batch-creation options**.
+url: "{{base_url}}/production-areas?is_active=true"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  is_active: "true"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code === 200) {
+        const json = pm.response.json();
+        pm.test("Active production areas for the picker (id, name, path_label)", function () { pm.expect(json.data).to.be.an("array").that.is.not.empty; pm.expect(json.data[0]).to.have.all.keys("id", "kind", "name", "type", "type_label", "parent_id", "path", "path_label", "depth", "is_active", "created_at", "updated_at"); });
+        if (!pm.environment.get("area_id") && json.data.length) { pm.environment.set("area_id", json.data[0].id); }
+        pm.test("The chosen area_id is one of the listed areas", function () { pm.expect(json.data.map(function (a) { return a.id; })).to.include(pm.environment.get("area_id")); });
+      }
+    language: text/javascript
+examples: ./.resources/4. List batch locations (the -Default Location- picker).resources/examples
+order: 4000

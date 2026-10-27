@@ -1,0 +1,83 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-areas?type=pen"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: type
+      value: pen
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: Include inactive rows for management/history; omitted means active only. — boolean
+    - key: parent_id
+      value: ""
+      disabled: true
+      description: Direct children only; UUID of a location in this farm. Mutually exclusive with top_level=true. — string (uuid)
+    - key: top_level
+      value: ""
+      disabled: true
+      description: boolean
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 100 chars, min 1 chars
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+            "kind": "production_area",
+            "name": "Pen 1",
+            "type": "pen",
+            "type_label": "Pen",
+            "parent_id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+            "path": [
+              {
+                "id": "01a1045e-4ad1-705b-b1ef-6d07173ac928",
+                "kind": "location",
+                "name": "Poultry House One"
+              },
+              {
+                "id": "01a1045e-4c4e-7376-ad1d-0d77ba79e3b4",
+                "kind": "production_area",
+                "name": "Pen 1"
+              }
+            ],
+            "path_label": "Poultry House One / Pen 1",
+            "depth": 1,
+            "is_active": true,
+            "created_at": "2026-10-04T00:45:08+00:00",
+            "updated_at": "2026-10-04T00:45:08+00:00"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

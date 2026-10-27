@@ -1,0 +1,37 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/invoices/{{invoice_id}}/void"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Test",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Reverse the payments received on this invoice before voiding it.",
+        "code": "invoice_has_payments",
+        "request_id": "01a1045e-a72a-72d4-a4ac-6748a515e0a1",
+        "details": {
+          "amount_paid": "87000.00"
+        }
+      }
+order: 2000

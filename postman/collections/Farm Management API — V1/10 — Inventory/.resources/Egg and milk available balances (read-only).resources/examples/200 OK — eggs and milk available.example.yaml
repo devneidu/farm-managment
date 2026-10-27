@@ -1,0 +1,76 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/inventory/output-balances"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "eggs": {
+            "kind": "eggs",
+            "exists": true,
+            "inventory_item_id": "01a1107d-a9a6-715b-a401-03e4bffa6184",
+            "name": "Eggs",
+            "dimension": "count",
+            "unit": "piece",
+            "available": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "available_normalized": {
+              "quantity": "104",
+              "unit": "piece"
+            },
+            "by_storage_location": [
+              {
+                "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+                "available": {
+                  "quantity": "104",
+                  "unit": "piece"
+                }
+              }
+            ]
+          },
+          "milk": {
+            "kind": "milk",
+            "exists": true,
+            "inventory_item_id": "01a1107d-aa54-70b2-9540-3b51ebca6ca9",
+            "name": "Milk",
+            "dimension": "volume",
+            "unit": "l",
+            "available": {
+              "quantity": "50",
+              "unit": "l"
+            },
+            "available_normalized": {
+              "quantity": "50000",
+              "unit": "ml"
+            },
+            "by_storage_location": [
+              {
+                "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5",
+                "available": {
+                  "quantity": "50",
+                  "unit": "l"
+                }
+              }
+            ]
+          }
+        },
+        "meta": [],
+        "message": null
+      }
+order: 1000

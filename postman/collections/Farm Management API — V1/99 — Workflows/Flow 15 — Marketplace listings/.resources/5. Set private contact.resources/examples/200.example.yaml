@@ -1,0 +1,44 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/contact"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "contact_phone": "+2348031234567",
+        "contact_email": "ada.private@example.com",
+        "address_line": "12 Secret Street, Bodija",
+        "preferred_contact_method": "phone"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "address_line": "12 Secret Street, Bodija",
+          "contact_phone": "+2348031234567",
+          "contact_whatsapp": null,
+          "contact_email": "ada.private@example.com",
+          "preferred_contact_method": "phone"
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

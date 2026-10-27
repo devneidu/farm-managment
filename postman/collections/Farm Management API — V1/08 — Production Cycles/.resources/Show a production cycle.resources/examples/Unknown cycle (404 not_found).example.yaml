@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/00000000-0000-7000-8000-000000000000"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The requested resource was not found.",
+        "code": "not_found",
+        "request_id": "01a1045e-5435-73b4-90be-7e292e657cc3"
+      }
+order: 2000

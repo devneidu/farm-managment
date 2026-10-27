@@ -1,0 +1,197 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/species/{{species_chicken_id}}/breeds"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: operation
+      value: ""
+      disabled: true
+      description: string — max 64 chars
+    - key: category
+      value: ""
+      disabled: true
+      description: "enum: livestock | aquaculture | crop"
+    - key: group
+      value: ""
+      disabled: true
+      description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+    - key: available
+      value: ""
+      disabled: true
+      description: boolean
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a12035-01a5-7350-ade8-9d07347ccb31",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "arbor_acres",
+            "name": "Arbor Acres",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-019e-7151-92ef-681fedb8c7a1",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "cobb_500",
+            "name": "Cobb 500",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-018d-7027-af93-32320ad93fd6",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "fulani",
+            "name": "Fulani",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-0191-701d-a8f3-daeb28831282",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "funaab_alpha",
+            "name": "FUNAAB Alpha",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-0196-714c-b666-b5efcfdc25af",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "isa_brown",
+            "name": "ISA Brown",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-0199-7115-ab01-b67d2458571a",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "kuroiler",
+            "name": "Kuroiler",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-018a-7271-8f7f-aae99330700b",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "localindigenous",
+            "name": "Local/Indigenous",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-01a2-7263-9a6f-3517d42ae091",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "marshall",
+            "name": "Marshall",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-018f-7099-9405-9f116f7576fb",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "noiler",
+            "name": "Noiler",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-01a6-72d5-9f5f-f1a8ff41a207",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "rhode_island_red",
+            "name": "Rhode Island Red",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-01a0-7194-9e56-e81358762f91",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "ross_308",
+            "name": "Ross 308",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-019c-73a1-8637-8deede750d5c",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "sasso",
+            "name": "Sasso",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-0193-7319-ae3b-99d1ff48db05",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "shika_brown",
+            "name": "Shika-Brown",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-01a8-71ea-8e6a-8ddc64977476",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": "white_leghorn",
+            "name": "White Leghorn",
+            "source": "system",
+            "is_active": true,
+            "is_editable": false,
+            "created_at": "2026-10-09T10:28:27+00:00"
+          },
+          {
+            "id": "01a12035-2052-71e5-afa0-2931cac8e0af",
+            "species_id": "01a12034-bd70-713e-92ed-10af44b0c296",
+            "code": null,
+            "name": "Isa Brown (Ibadan strain)",
+            "source": "farm",
+            "is_active": true,
+            "is_editable": true,
+            "created_at": "2026-10-09T10:28:35+00:00"
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

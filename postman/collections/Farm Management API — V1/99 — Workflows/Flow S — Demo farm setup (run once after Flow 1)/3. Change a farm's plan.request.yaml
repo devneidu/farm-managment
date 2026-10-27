@@ -1,0 +1,61 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Moves the demo farm to `farm-business` so exports and unlimited cycles/members work.
+
+  **WHAT IT DOES**
+  Moves a farm to another plan. This is how a farm gets a paid plan in V1 (no checkout exists).
+
+  **WHEN TO USE IT**
+  Support/complimentary plan change for a farm.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{farm_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Updates the subscription and writes a platform audit entry.
+  - Requires the platform `admin` role (support is read-only: `403 platform_write_forbidden`).
+  - The demo farm needs `farm-business` for the `data_export` feature (report exports) and for more than 3 team members.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Log in as the farm owner again**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  Full reference (errors, all fields): folder **Farms** -> "Change a farm's plan".
+url: "{{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "plan_id": "{{plan_business_id}}",
+      "interval": "monthly",
+      "reason": "Upgraded for the API handoff demo"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/3. Change a farm's plan.resources/examples
+order: 3000

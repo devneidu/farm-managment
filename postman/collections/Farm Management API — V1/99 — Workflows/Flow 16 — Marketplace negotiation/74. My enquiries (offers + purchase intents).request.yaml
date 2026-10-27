@@ -1,0 +1,22 @@
+$kind: http-request
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/enquiries?per_page=50"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  per_page: "50"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("1 accepted + 3 rejected offers and 2 purchase intents", function () { const k = (x) => json.data.filter((r) => r.kind === x).length; pm.expect(k("offer")).to.eql(4); pm.expect(k("purchase_intent")).to.eql(2); pm.expect(json.data.every((r) => r.contact === null)).to.eql(true); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street"].forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 74000

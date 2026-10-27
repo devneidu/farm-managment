@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Read the notification centre, mark one read, mark all read and verify the unread count.
+
+  **Prerequisites:** Flow 11 (an export produces an `export_ready` notification) and the scheduler/queue commands noted in the first request.
+
+  Steps: 4. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 13000

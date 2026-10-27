@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/users/{{user_chidi_id}}/restore"
+  method: POST
+  headers:
+    Accept: application/json
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This account is not suspended.",
+        "code": "not_suspended",
+        "request_id": "01a1045e-cb04-714a-b043-bc39989e5e49"
+      }
+order: 2000

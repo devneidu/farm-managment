@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The report catalogue for this farm and viewer. A report whose data the viewer cannot see is NOT listed. Each entry has `filters` it accepts, `relevant` (false when the farm has no operation of that kind), `available`/`unavailable_reason`/`required_feature` (advanced reports need the `advanced_reports` plan feature), `exportable` and `export_formats`.
+
+  **WHEN TO USE IT**
+  The reports menu (only reports the user may run).
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `report.view` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Run a report.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`report.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/reports`
+
+  **BUSINESS RULES**
+  - Requires `report.view` (Owner, Manager, Finance, Farm Worker, Vet). The 16 report codes: cycle_performance, livestock_population, mortality, livestock_growth, production_output, crop_performance, breeding_outcomes, health_treatment, inventory_stock, input_consumption, income_expense, cycle_profitability, sales_summary, receivables, task_compliance, contact_history.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `code`, `title`, `family`, `description`, `filters`, `applies_to`, `relevant`, `available`, `unavailable_reason`, `required_feature`, `exportable`, `export_formats`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `report.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+url: "{{base_url}}/reports"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const row = (get(json, "data") || []).find((r) => get(r, "code") === "income_expense"); const v = row && get(row, "code"); if (v !== undefined && v !== null) pm.environment.set("report_code", String(v)); else console.warn("Could not capture report_code"); }
+      }
+    language: text/javascript
+examples: ./.resources/List reports (catalogue).resources/examples
+order: 1000

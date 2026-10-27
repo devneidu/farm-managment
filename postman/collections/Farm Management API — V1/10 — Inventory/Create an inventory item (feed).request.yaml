@@ -1,0 +1,113 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates an inventory item (the thing you stock), not a quantity. The item has a `category` and a fixed `stock_unit`; its on-hand balance is DERIVED from movements and starts at zero.
+
+  **WHEN TO USE IT**
+  "Add inventory item" (feed).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`, `category`, `stock_unit`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - `stock_unit` must belong to a dimension the category can use (weight/volume/count). Use `GET /master/units?dimension=...` to pick one.
+  - `tracks_lots` / `tracks_expiry` make lot codes (and expiry dates) mandatory on stock-in. They are fixed once the item has movements (`409 item_has_movements`).
+  - There is no `quantity` field: `quantity`, `balance`, `stock` in the body are rejected. Receive stock with the stock-in endpoint.
+
+  **WHAT TO DO NEXT**
+  Define a package size if you receive in bags, then `POST /inventory/stock-in`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/inventory/items`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 150 chars
+  - `category` — enum, **required**. Shared movement infrastructure; categories carry no extra schema (produce receives crop harvests in Phase 13). . Values: `feed`, `medicine`, `seed_planting_material`, `fertilizer_agrochemical`, `general_supply`, `produce`
+  - `stock_unit` — string, **required**, max 32 chars. Unit code (kg, g, l, ml, piece, egg, head, planting_unit...). Fixes the item's measurement basis; packages never.
+  - `tracks_lots` — boolean, optional
+  - `tracks_expiry` — boolean, optional. Expiry tracking requires lot tracking: expiry belongs to a lot.
+  - `low_stock_threshold` — object, optional
+  - `low_stock_threshold.quantity` — string, **required**
+  - `low_stock_threshold.unit` — string, **required**, max 32 chars
+  - `description` — string, optional, max 2000 chars, nullable
+
+  **BUSINESS RULES**
+  - `stock_unit` must belong to a dimension the category can use (weight/volume/count). Use `GET /master/units?dimension=...` to pick one.
+  - `tracks_lots` / `tracks_expiry` make lot codes (and expiry dates) mandatory on stock-in. They are fixed once the item has movements (`409 item_has_movements`).
+  - There is no `quantity` field: `quantity`, `balance`, `stock` in the body are rejected. Receive stock with the stock-in endpoint.
+  - Duplicate name+category is `409 inventory_item_exists`.
+  - Requires `inventory.manage` (Owner, Manager).
+
+  **SUCCESS**
+  `201 Created` — message: "Inventory item created."
+
+  `data` fields: `id`, `name`, `category`, `description`, `stock_unit`, `dimension`, `tracks_lots`, `tracks_expiry`, `is_active`, `stock`, `low_stock_threshold`, `is_low_stock`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — conflict with current state.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/inventory/items"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Layer Grower Mash",
+      "category": "feed",
+      "stock_unit": "kg",
+      "low_stock_threshold": {
+        "quantity": "50",
+        "unit": "kg"
+      },
+      "description": "Compounded grower mash from the mill"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("item_feed_id", String(v)); else console.warn("Could not capture item_feed_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Create an inventory item (feed).resources/examples
+order: 2000

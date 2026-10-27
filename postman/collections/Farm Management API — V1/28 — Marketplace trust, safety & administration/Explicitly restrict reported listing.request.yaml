@@ -1,0 +1,29 @@
+$kind: http-request
+description: "Phase 27: see docs/api/PHASE-27-MARKETPLACE-SAFETY.md for permissions, filters, confidentiality, examples and errors. Participant requests need a verified session; platform reads admin/support, writes admin only. Enforcement is explicit. Closed reports are final."
+url: "{{base_url}}/platform-admin/marketplace/reports/{{report_type}}/{{report_id}}/transition"
+method: POST
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+  Content-Type: application/json
+  X-XSRF-TOKEN: "{{xsrf_token}}"
+body:
+  type: json
+  content: "{\r
+
+    \  \"enforcement_id\": \"{{listing_id}}\",\r
+
+    \  \"reason\": \"Prohibited content was confirmed.\",\r
+
+    \  \"enforcement_action\": \"restrict_listing\",\r
+
+    \  \"status\": \"resolved\"\r
+
+    }"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Successful response", () => pm.expect(pm.response.code).to.be.oneOf([200,201]));
+      if (pm.response.code < 300) { const j = pm.response.json(); pm.test("Envelope", () => { pm.expect(j).to.have.property("data"); pm.expect(j).to.have.property("meta"); }); }
+    language: text/javascript
+order: 13000

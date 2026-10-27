@@ -1,0 +1,87 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/record-types/feed_use/schema"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "type": "feed_use",
+          "cycle_kind": "livestock",
+          "capability": "supports_feed_records",
+          "fields": {
+            "feed_name": [
+              "required",
+              "string",
+              "max:200"
+            ],
+            "inventory": [
+              "sometimes",
+              "array:item_id,storage_location_id,lot_id"
+            ]
+          },
+          "measurement": {
+            "dimension": "weight",
+            "display_unit": "kg",
+            "normalized_unit": "g",
+            "required": true,
+            "components_max": 10
+          },
+          "area_fields": [],
+          "population_effect": "none",
+          "permission": "record.create",
+          "permissions_required": {
+            "always": [
+              "record.create"
+            ],
+            "when_inventory_linked": [
+              "inventory.use"
+            ],
+            "when_correcting": [
+              "record.reverse"
+            ]
+          },
+          "inventory_effect_enabled": true,
+          "inventory_category": "feed",
+          "inventory_direction": "out",
+          "inventory_required": false,
+          "inventory_dimensions": [
+            "weight"
+          ],
+          "inventory_automatic": false,
+          "inventory_output": null,
+          "inventory": {
+            "mode": "optional_link",
+            "direction": "out",
+            "output": null,
+            "item_category": "feed",
+            "dimensions": [
+              "weight"
+            ],
+            "optional": true,
+            "creates_item": false,
+            "object": "details.inventory",
+            "fields": {
+              "item_id": "required",
+              "storage_location_id": "required",
+              "lot_id": "optional"
+            }
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

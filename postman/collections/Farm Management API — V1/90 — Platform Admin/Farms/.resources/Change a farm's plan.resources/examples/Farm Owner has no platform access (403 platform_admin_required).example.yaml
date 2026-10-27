@@ -1,0 +1,29 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/farms/{{farm_id}}/subscription/plan"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "plan_id": "{{plan_business_id}}",
+        "interval": "monthly",
+        "reason": "Upgraded for the API handoff demo"
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This area is restricted to platform administrators.",
+        "code": "platform_admin_required",
+        "request_id": "01a1045e-4164-72e4-9248-4bcecfa064f1"
+      }
+order: 3000

@@ -1,0 +1,188 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records?production_cycle_id={{cycle_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: production_cycle_id
+      value: "{{cycle_id}}"
+    - key: type
+      value: ""
+      disabled: true
+      description: "enum: vaccination | medication | deworming | treatment | disease_issue | vet_visit | reversal"
+    - key: problem_type
+      value: ""
+      disabled: true
+      description: "enum: breathing | digestive | worms_internal_parasites | skin_external_parasites | nervous | leg_foot_movement | eye | injury_wound | reproduction_udder_laying | weak_not_eating | sudden_death_unknown | routine_prevention | other"
+    - key: inventory_item_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: recorded_from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: recorded_to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-7497-70f9-b56c-549a345ecd02",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "type": "medication",
+            "details": {
+              "problem_type": "digestive",
+              "condition": "Respiratory distress"
+            },
+            "problem_type": "digestive",
+            "problem_type_label": "Stomach or droppings problem (diarrhoea, bloody droppings, bloating)",
+            "animals_affected": 12,
+            "follow_up_on": null,
+            "mortality_record_id": null,
+            "recorded_at": "2026-10-03T22:44:06.000000Z",
+            "notes": null,
+            "reverses_record_id": null,
+            "corrects_record_id": null,
+            "reversed_by_record_id": null,
+            "medicines": [
+              {
+                "id": "01a1045e-74cd-719d-8547-ae23e8701327",
+                "line_no": 1,
+                "inventory_item_id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+                "item_name": "Newcastle Vaccine (Lasota)",
+                "storage_location_id": "01a1045e-4d12-721b-ab5f-1d8d23ae91e2",
+                "inventory_lot_id": "01a1045e-58de-7120-8df3-f8bf86df450f",
+                "lot": {
+                  "code": "NCD-2026-01",
+                  "expires_on": "2027-01-02"
+                },
+                "quantity_used": {
+                  "quantity": "50",
+                  "unit": "ml",
+                  "normalized": {
+                    "quantity": "50",
+                    "unit": "ml"
+                  }
+                },
+                "measurement": {
+                  "total": {
+                    "unit": "ml",
+                    "quantity": "50"
+                  },
+                  "entered": [
+                    {
+                      "unit": "ml",
+                      "quantity": "50"
+                    }
+                  ],
+                  "snapshot": {
+                    "total": {
+                      "unit": "ml",
+                      "quantity": "50"
+                    },
+                    "schema": 1,
+                    "entered": [
+                      {
+                        "unit": {
+                          "code": "ml",
+                          "factor": "1",
+                          "family": "volume",
+                          "strategy": "linear",
+                          "dimension": "volume",
+                          "integer_only": false
+                        },
+                        "quantity": "50"
+                      }
+                    ],
+                    "packages": [],
+                    "normalized": {
+                      "unit": "ml",
+                      "quantity": "50"
+                    },
+                    "result_unit": {
+                      "code": "ml",
+                      "factor": "1",
+                      "family": "volume",
+                      "strategy": "linear",
+                      "dimension": "volume",
+                      "integer_only": false
+                    }
+                  },
+                  "normalized": {
+                    "unit": "ml",
+                    "quantity": "50"
+                  }
+                },
+                "dose_per_animal": null,
+                "dosage_instructions": null,
+                "withdrawal": {
+                  "days": 7,
+                  "source": "item_default",
+                  "started_at": "2026-10-03T22:44:06.000000Z",
+                  "ends_at": "2026-10-10T22:44:06.000000Z",
+                  "is_active": true
+                },
+                "inventory_movement_id": "01a1045e-74d8-731d-b9a8-abebeaa20eec"
+              }
+            ],
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          },
+          {
+            "id": "01a1045e-743c-70bd-8351-11409ea6268e",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "type": "disease_issue",
+            "details": {
+              "problem_type": "breathing",
+              "severity": "moderate",
+              "symptoms": "Sneezing and watery eyes in Pen 1",
+              "condition": "Respiratory distress"
+            },
+            "problem_type": "breathing",
+            "problem_type_label": "Breathing problem (coughing, sneezing, nasal discharge)",
+            "animals_affected": 12,
+            "follow_up_on": null,
+            "mortality_record_id": null,
+            "recorded_at": "2026-10-03T22:44:06.000000Z",
+            "notes": null,
+            "reverses_record_id": null,
+            "corrects_record_id": null,
+            "reversed_by_record_id": null,
+            "medicines": [],
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 3
+        },
+        "message": null
+      }
+order: 1000

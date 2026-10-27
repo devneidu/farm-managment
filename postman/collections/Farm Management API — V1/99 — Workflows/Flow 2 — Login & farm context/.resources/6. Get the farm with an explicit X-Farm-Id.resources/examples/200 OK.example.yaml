@@ -1,0 +1,99 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+          "name": "Okafor Integrated Farms",
+          "country_code": "NG",
+          "currency": "NGN",
+          "timezone": "Africa/Lagos",
+          "locale": "en",
+          "membership": {
+            "id": "01a1045e-3d68-7120-81fe-71d691c8d2f6",
+            "role": "owner",
+            "role_label": "Owner",
+            "permissions": [
+              "farm.view",
+              "farm.update",
+              "team.view",
+              "team.invite",
+              "team.update_role",
+              "team.remove",
+              "subscription.view",
+              "subscription.manage",
+              "master_data.view",
+              "master_data.manage",
+              "measurement.view",
+              "measurement.manage",
+              "location.view",
+              "location.manage",
+              "production_cycle.view",
+              "production_cycle.create",
+              "production_cycle.update",
+              "production_cycle.close",
+              "production_cycle.reopen",
+              "record.view",
+              "record.create",
+              "record.reverse",
+              "record.adjust",
+              "inventory.view",
+              "inventory.use",
+              "inventory.manage",
+              "inventory.adjust",
+              "health.view",
+              "health.create",
+              "health.reverse",
+              "health.manage",
+              "breeding.view",
+              "breeding.create",
+              "breeding.reverse",
+              "task.view",
+              "task.complete",
+              "task.manage",
+              "contact.view",
+              "contact.manage",
+              "purchase.view",
+              "purchase.create",
+              "purchase.cancel",
+              "finance.view",
+              "finance.create",
+              "finance.reverse",
+              "sale.view",
+              "sale.create",
+              "sale.cancel",
+              "invoice.view",
+              "invoice.create",
+              "invoice.void",
+              "payment.view",
+              "payment.create",
+              "payment.reverse",
+              "report.view",
+              "report.export",
+              "audit.view",
+              "livestock.batch.create"
+            ]
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

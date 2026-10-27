@@ -1,0 +1,76 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Sets the preferred language. `locale: null` clears the explicit choice (the API then follows `Accept-Language`, then the platform default).
+
+  **WHEN TO USE IT**
+  Saving the preferred language.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - `locale` must be one of the enabled codes from `GET /locales`; otherwise `422` ("That language is not available yet.").
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user (no farm needed). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Any verified user.
+
+  **URL**
+  `PATCH {{base_url}}/me/preferences`
+
+  **REQUEST BODY** (`application/json`)
+  - `locale` — enum, optional, nullable. null clears the explicit choice (follow Accept-Language / the platform default).. Values: `en`, `null`
+
+  **BUSINESS RULES**
+  - `locale` must be one of the enabled codes from `GET /locales`; otherwise `422` ("That language is not available yet.").
+
+  **SUCCESS**
+  `200 OK` — message: "Preferences updated."
+
+  `data` fields: `locale`, `effective_locale`, `default_locale`, `fallback_locale`, `farm_locale`, `available_locales`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`, `email_verification_required`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/me/preferences"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "locale": "en"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update my preferences.resources/examples
+order: 2000

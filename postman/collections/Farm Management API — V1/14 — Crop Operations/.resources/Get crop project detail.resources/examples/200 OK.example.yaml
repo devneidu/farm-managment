@@ -1,0 +1,85 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles/{{crop_cycle_id}}/crop"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "production_cycle_id": "01a1045e-505b-72ef-b497-d1ec4ef86059",
+          "name": "2026 Yam",
+          "reference": "CRP-2026-00002",
+          "status": "active",
+          "crop_type": {
+            "id": "01a1045c-d836-73a8-8e28-0ccc276424e2",
+            "code": "yam",
+            "name": "Yam"
+          },
+          "production_area": null,
+          "planting_date": "2026-09-04",
+          "baseline": {
+            "planting_unit_type": "heap",
+            "planting_unit_label": "Heap",
+            "initial_planting_units": 800
+          },
+          "planting": {
+            "units_planted": 800,
+            "units_remaining_to_plant": 0,
+            "events": 1
+          },
+          "establishment": {
+            "record_id": "01a1045e-6caf-707c-9ec2-409a2d7c9bb0",
+            "assessed_at": "2026-10-03T22:44:06.000000Z",
+            "established_units": 752,
+            "failed_units": 48,
+            "survival_percent": "94",
+            "assessments": 1
+          },
+          "growth_stage": {
+            "record_id": "01a1045e-6d00-7298-93dd-47acf17cf144",
+            "stage": "vegetative",
+            "recorded_at": "2026-10-03T22:44:06.000000Z"
+          },
+          "losses": {
+            "units_lost": 12,
+            "events": 1,
+            "by_cause": {
+              "Flooding after heavy rain": 12
+            }
+          },
+          "harvest": {
+            "events": 1,
+            "last_harvest_at": "2026-10-03T22:44:06.000000Z",
+            "totals": [
+              {
+                "unit": "g",
+                "quantity": "300000"
+              }
+            ]
+          },
+          "activity": {
+            "land_preparation": 1,
+            "fertilizer_applications": 1,
+            "pesticide_applications": 1,
+            "irrigation": 1,
+            "weeding": 1,
+            "pest_observations": 1
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

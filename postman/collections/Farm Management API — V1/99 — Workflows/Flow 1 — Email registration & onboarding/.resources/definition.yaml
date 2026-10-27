@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Create an account, verify the email, create the first farm and land on the dashboard.
+
+  **Prerequisites:** None (start of a fresh environment).
+
+  Steps: 8. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 1000

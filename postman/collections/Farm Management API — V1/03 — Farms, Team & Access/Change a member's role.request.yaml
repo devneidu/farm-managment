@@ -1,0 +1,94 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Changes a member's role preset; the member's permissions change immediately.
+
+  **WHEN TO USE IT**
+  "Change role" on a member.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{membership_chidi_id}}`.
+  - Required body fields: `role`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `team.update_role` (taken from the current farm context; never sent by the client).
+  - Role change (audited).
+  - Nobody can assign `owner` (`422 ownership_transfer_unsupported`), change their own role, or demote the last owner (`409 last_owner`). A Manager may only manage Farm Worker, Finance and Vet members (`403 insufficient_role`).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`team.update_role`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `PATCH {{base_url}}/farm/members/{{membership_chidi_id}}`
+
+  **PATH PARAMETERS**
+  - `{{membership_chidi_id}}` — UUID. Captured by "List team members" (03 — Farms, Team & Access) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `role` — enum, **required**. MVP farm roles (stable machine identifiers). A role is a preset of permissions; the role->permission mapping below is the only place roles are compared to capabilities. | | |---| | `owner` <br/>  | | `manager` <br/>  | | `farm_worker` <br/>  | | `finance` <br/>  | | `vet` <br/> Veterinary preset: health and medicine work, read-only elsewhere. |. Values: `owner`, `manager`, `farm_worker`, `finance`, `vet`
+
+  **VARIABLES USED**
+  - `{{membership_chidi_id}}` — captured by "List team members"
+
+  **BUSINESS RULES**
+  - Nobody can assign `owner` (`422 ownership_transfer_unsupported`), change their own role, or demote the last owner (`409 last_owner`). A Manager may only manage Farm Worker, Finance and Vet members (`403 insufficient_role`).
+  - Requires `team.update_role` (Owner, Manager).
+
+  **SUCCESS**
+  `200 OK` — message: "Role updated."
+
+  `data` fields: `id`, `role`, `role_label`, `status`, `joined_at`, `is_current_user`, `user`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `team.update_role`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — Would leave the farm without an owner.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/farm/members/{{membership_chidi_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "role": "finance"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Change a member's role.resources/examples
+order: 10000

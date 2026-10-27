@@ -1,0 +1,70 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  One schedule: its recurrence rule (`recurrence`, `interval_value`, `weekdays`, `starts_on`, `ends_on`, `occurrence_limit`), the cycle/breeding project it belongs to and how many tasks it generated (`tasks_count`, `open_tasks_count`).
+
+  **WHEN TO USE IT**
+  A schedule detail view.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{schedule_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `task.manage` (taken from the current farm context; never sent by the client).
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`task.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/schedules/{{schedule_id}}`
+
+  **PATH PARAMETERS**
+  - `{{schedule_id}}` — UUID. Captured by "Create a recurring schedule" (13 — Tasks, Templates & Calendar) or from the list endpoint of this resource.
+
+  **VARIABLES USED**
+  - `{{schedule_id}}` — captured by "Create a recurring schedule"
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `status`, `title`, `category`, `instructions`, `recurrence`, `interval_value`, `weekdays`, `starts_on`, `ends_on`, `occurrence_limit`, `due_time`, `reminder_offsets`, `production_cycle_id`, `breeding_project_id`, `template_application_id`, `assigned_user_id`, `assigned_role`, `linked_record_type`, `requires_evidence`, `tasks_count`, `open_tasks_count`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `task.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+url: "{{base_url}}/schedules/{{schedule_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Show a schedule.resources/examples
+order: 18000

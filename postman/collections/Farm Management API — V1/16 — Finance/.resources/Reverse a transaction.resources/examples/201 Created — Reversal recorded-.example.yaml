@@ -1,0 +1,69 @@
+$kind: http-example
+name: 201 Created — Reversal recorded.
+request:
+  url: "{{base_url}}/finance/transactions/{{transaction_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Receipt belonged to another farm",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-946e-72c5-ad5a-f9aacf4e48fe",
+          "reference": "FIN-2026-00008",
+          "entry_type": "reversal",
+          "direction": "expense",
+          "category": {
+            "id": "01a1045d-ddb5-72e0-a017-c6787a53b98b",
+            "code": "utilities",
+            "name": "Utilities"
+          },
+          "amount": "4200.00",
+          "currency": "NGN",
+          "occurred_on": "2026-10-04",
+          "recorded_at": "2026-10-04T00:45:08.000000Z",
+          "contact_id": null,
+          "contact_name": null,
+          "production_cycle_id": null,
+          "description": "Borehole pump fuel",
+          "payment_method": null,
+          "quantity": null,
+          "unit_price": null,
+          "source": {
+            "type": null,
+            "id": null,
+            "label": "Entered manually"
+          },
+          "can_reverse_directly": false,
+          "reverses_transaction_id": "01a1045e-93c9-7280-bcf4-d4546718cc8b",
+          "corrects_transaction_id": null,
+          "reversed_by_transaction_id": null,
+          "is_reversed": false,
+          "reason": "Receipt belonged to another farm",
+          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+          "created_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Reversal recorded."
+      }
+order: 1000

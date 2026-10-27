@@ -1,0 +1,19 @@
+$kind: http-request
+name: "76. Buyer 2: contact access ended with the cancellation"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/deals/{{deal_b_id}}/contact"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 409", function () { pm.expect(pm.response.code).to.eql(409); });
+      const json = pm.response.json();
+      pm.test("Error code deal_contact_unavailable", function () { pm.expect(json.code).to.eql("deal_contact_unavailable"); });
+    language: text/javascript
+order: 76000

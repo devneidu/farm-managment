@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/master/capabilities"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "code": "supports_group_tracking",
+            "label": "Supports group tracking",
+            "config_schema": []
+          },
+          {
+            "code": "supports_individual_tracking",
+            "label": "Supports individual tracking",
+            "config_schema": []
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

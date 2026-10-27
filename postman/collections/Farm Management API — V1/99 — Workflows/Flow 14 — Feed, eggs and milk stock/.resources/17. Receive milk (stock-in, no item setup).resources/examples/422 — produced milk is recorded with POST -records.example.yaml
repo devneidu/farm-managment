@@ -1,0 +1,49 @@
+$kind: http-example
+name: 422 — produced milk is recorded with POST /records
+request:
+  url: "{{base_url}}/inventory/stock-in"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "output": "milk",
+        "storage_location_id": "{{store_id}}",
+        "reason": "production",
+        "components": [
+          {
+            "quantity": "5",
+            "unit": "l"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Produce is stocked by recording the production (POST /records: egg_collection, milk or crop_harvest), so stock and production cannot disagree. Use donation, purchase, received, opening_balance or other for produce that was not produced on this farm.",
+        "code": "validation_failed",
+        "request_id": "01a11127-186a-73ce-baf1-9e326c4023a7",
+        "errors": {
+          "reason": [
+            "Produce is stocked by recording the production (POST /records: egg_collection, milk or crop_harvest), so stock and production cannot disagree. Use donation, purchase, received, opening_balance or other for produce that was not produced on this farm."
+          ]
+        }
+      }
+order: 4000

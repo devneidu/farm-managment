@@ -1,0 +1,118 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/inventory_stock?as_of={{today}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: as_of
+      value: "{{today}}"
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: kind
+      value: ""
+      disabled: true
+      description: "enum: livestock | crop"
+    - key: status
+      value: ""
+      disabled: true
+      description: "enum: active | closed | completed | cancelled"
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 500
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "report": {
+            "code": "inventory_stock",
+            "title": "Stock on hand",
+            "family": "inventory",
+            "description": "Balance per inventory item at the end of the as-of day, summed from the stock movement ledger, with low-stock flags."
+          },
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "currency": "NGN"
+          },
+          "filters": {
+            "as_of": "2026-10-04"
+          },
+          "timezone": "Africa/Lagos",
+          "generated_at": "2026-10-04T00:45:08.153034Z",
+          "columns": [
+            {
+              "key": "item",
+              "label": "Item",
+              "type": "string"
+            },
+            {
+              "key": "category",
+              "label": "Category",
+              "type": "string"
+            }
+          ],
+          "rows": [
+            {
+              "item": "Fresh Yam Tubers",
+              "category": "produce",
+              "unit": "kg",
+              "quantity": "300",
+              "low_stock_threshold": null,
+              "low_stock": "no",
+              "status": "active"
+            },
+            {
+              "item": "Layer Grower Mash",
+              "category": "feed",
+              "unit": "kg",
+              "quantity": "345",
+              "low_stock_threshold": "75",
+              "low_stock": "no",
+              "status": "active"
+            }
+          ],
+          "summary": {
+            "items": 6,
+            "low_stock_items": 0,
+            "empty_items": 0
+          },
+          "notes": [
+            "Each row is in its own item unit; quantities are not totalled across items."
+          ]
+        },
+        "meta": {
+          "current_page": 1,
+          "per_page": 100,
+          "last_page": 1,
+          "total": 6
+        },
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,102 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Invites someone to the farm with a preset role. The invitee receives an email with `{FRONTEND_URL}/invitations/accept?token=...` (valid 7 days, single use). The token is never returned by the API.
+
+  **WHEN TO USE IT**
+  "Invite team member" dialog.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `email`, `role`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `team.invite` (taken from the current farm context; never sent by the client).
+  - Creates a pending invitation and sends the invitation email (local: `storage/logs/laravel.log`).
+  - `role` is one of `manager`, `farm_worker`, `finance`, `vet` for an Owner; a Manager may only invite `farm_worker`, `finance`, `vet`. Nobody can invite or assign `owner` (`422 ownership_transfer_unsupported`).
+  - Pending invitations count toward the plan's `team_members` limit together with active members: when the limit is reached the call is `409 plan_limit_reached` (see `details`).
+  - Inviting someone who is already a member is `409 already_member`; a second open invitation to the same email is `409 invitation_already_pending`.
+
+  **WHAT TO DO NEXT**
+  List invitations; the invitee follows the emailed link.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Fetch `GET /roles` to build the role picker: it says which roles the caller may assign. The invitation token only exists in the email, so locally copy it from `storage/logs/laravel.log` into the `invitation_token` environment variable.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`team.invite`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `team-invite`: 30 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/farm/invitations`
+
+  **REQUEST BODY** (`application/json`)
+  - `email` — string (email), **required**, max 254 chars
+  - `role` — enum, **required**. MVP farm roles (stable machine identifiers). A role is a preset of permissions; the role->permission mapping below is the only place roles are compared to capabilities. | | |---| | `owner` <br/>  | | `manager` <br/>  | | `farm_worker` <br/>  | | `finance` <br/>  | | `vet` <br/> Veterinary preset: health and medicine work, read-only elsewhere. |. Values: `owner`, `manager`, `farm_worker`, `finance`, `vet`
+
+  **VARIABLES USED**
+  - `{{invitee_email}}` — Environment input: the email of the person you invite.
+
+  **BUSINESS RULES**
+  - `role` is one of `manager`, `farm_worker`, `finance`, `vet` for an Owner; a Manager may only invite `farm_worker`, `finance`, `vet`. Nobody can invite or assign `owner` (`422 ownership_transfer_unsupported`).
+  - Pending invitations count toward the plan's `team_members` limit together with active members: when the limit is reached the call is `409 plan_limit_reached` (see `details`).
+  - Inviting someone who is already a member is `409 already_member`; a second open invitation to the same email is `409 invitation_already_pending`.
+  - Rate limited (`team-invite`).
+
+  **SUCCESS**
+  `201 Created` — message: "Invitation sent."
+
+  `data` fields: `id`, `email`, `role`, `role_label`, `status`, `expires_at`, `last_sent_at`, `created_at`, `invited_by`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `team.invite`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `already_member`, `invitation_already_pending`, `plan_limit_reached`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/farm/invitations"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{invitee_email}}",
+      "role": "farm_worker"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("invitation_id", String(v)); else console.warn("Could not capture invitation_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Invite a team member.resources/examples
+order: 3000

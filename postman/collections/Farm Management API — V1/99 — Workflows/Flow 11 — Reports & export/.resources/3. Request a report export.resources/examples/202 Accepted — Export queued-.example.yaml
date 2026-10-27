@@ -1,0 +1,61 @@
+$kind: http-example
+name: 202 Accepted — Export queued.
+request:
+  url: "{{base_url}}/reports/exports"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "report": "income_expense",
+        "format": "csv",
+        "filters": {
+          "from": "{{month_start}}",
+          "to": "{{today}}"
+        },
+        "idempotency_key": "{{export_key}}"
+      }
+response:
+  statusCode: 202
+  statusText: Accepted
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-b0d7-72cd-abb6-f16f2d4ca21d",
+          "report": "income_expense",
+          "format": "csv",
+          "filters": {
+            "from": "2026-10-01",
+            "to": "2026-10-04"
+          },
+          "status": "queued",
+          "row_count": null,
+          "file_name": null,
+          "file_size": null,
+          "download_path": null,
+          "error_code": null,
+          "error_message": null,
+          "requested_at": "2026-10-04T00:45:08.000000Z",
+          "started_at": null,
+          "completed_at": null,
+          "failed_at": null,
+          "expires_at": null,
+          "download_count": null
+        },
+        "meta": {},
+        "message": "Export queued."
+      }
+order: 1000

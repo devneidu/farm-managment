@@ -1,0 +1,36 @@
+$kind: http-request
+name: "Shop: accept an offer"
+description: |-
+  **WHAT IT DOES**
+  Needs `offer.respond` (owner, manager; staff 403). Pending, unexpired offer on a live listing of an active shop whose snapshot still matches. A TERMINAL agreement in principle: no stock reserved, no availability guaranteed, no sale, no contact shared.
+
+  **IDEMPOTENT**
+  Accepting an accepted offer returns 200 unchanged.
+
+  **ERRORS**
+  `409 offer_expired` (lapse recorded), `409 offer_voided`, `409 offer_not_pending` (already rejected), `409 listing_unavailable` (paused/archived/restricted), `409 shop_not_active`.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/offers/{{offer_id}}/accept"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("Accepted in principle", function () { pm.expect(json.data.status).to.eql("accepted"); pm.expect(json.data.agreement).to.eql("seller_accepted"); pm.expect(json.data.contact).to.eql(null); });
+      }
+    language: text/javascript
+order: 8000

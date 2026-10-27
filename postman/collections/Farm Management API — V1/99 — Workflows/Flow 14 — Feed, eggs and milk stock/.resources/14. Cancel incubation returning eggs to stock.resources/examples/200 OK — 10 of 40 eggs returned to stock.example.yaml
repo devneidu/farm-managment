@@ -1,0 +1,99 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/breeding-projects/{{breeding_project_egg_id}}/cancel"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "Incubator power failure",
+        "eggs_returned_to_stock": 10,
+        "egg_storage_location_id": "{{store_id}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-ac03-7050-9a47-0d3652f5309e",
+          "reference": "BRD-2026-00001",
+          "production_cycle_id": "01a1107d-a734-734a-bb59-cbac9776786d",
+          "workflow": "incubation",
+          "status": "cancelled",
+          "start_date": "2026-10-14",
+          "eggs_set": 40,
+          "females_bred": null,
+          "expected_offspring": null,
+          "expectation": {
+            "type": "exact",
+            "source": "reference",
+            "date": "2026-11-04",
+            "from": null,
+            "to": null,
+            "no_expectation_reason": null
+          },
+          "biological_reference": {
+            "days": 21,
+            "kind": "exact",
+            "note": null,
+            "days_max": null,
+            "days_min": null,
+            "workflow": "incubation",
+            "capability": "supports_incubation",
+            "species_id": "01a1107d-5eb1-709e-ad65-c59bb545bd3b",
+            "approximate": false,
+            "captured_at": "2026-10-14T12:00:00.000000Z",
+            "species_code": "chicken",
+            "no_automatic_reason": null,
+            "automatic_expectation": true
+          },
+          "egg_stock": {
+            "consumed": 40,
+            "returned": 10,
+            "net_out": 30,
+            "movements": [
+              {
+                "id": "01a1107d-ac17-72e0-9a04-c04723245366",
+                "type": "stock_out",
+                "reason": "incubation",
+                "quantity": "40",
+                "recorded_at": "2026-10-14T12:00:00.000000Z"
+              },
+              {
+                "id": "01a1107d-add4-720f-bb4b-c7613945e739",
+                "type": "stock_in",
+                "reason": "returned",
+                "quantity": "10",
+                "recorded_at": "2026-10-14T12:00:00.000000Z"
+              }
+            ]
+          },
+          "parents": [],
+          "checks": [],
+          "outcomes": [],
+          "result": null,
+          "notes": null,
+          "cancelled_at": "2026-10-14T12:00:00.000000Z",
+          "cancel_reason": "Incubator power failure",
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z",
+          "updated_at": "2026-10-14T12:00:00.000000Z"
+        },
+        "meta": [],
+        "message": "Breeding project cancelled."
+      }
+order: 1000

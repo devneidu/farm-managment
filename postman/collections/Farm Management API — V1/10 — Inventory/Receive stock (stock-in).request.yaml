@@ -1,0 +1,137 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Appends a `stock_in` movement to the ledger. The item's balance is the sum of its movements - there is no balance column to edit. `components` are the entered parts (12 bags + 18 kg); they are normalised to the item's stock unit (12 x 25 kg + 18 kg = 318 kg).
+
+  **WHEN TO USE IT**
+  "Receive stock" (opening balance, donation, manual intake).
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `inventory_item_id`, `storage_location_id`, `reason`, `components`, `recorded_at`, `idempotency_key`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.manage` (taken from the current farm context; never sent by the client).
+  - One `stock_in` inventory movement (and a lot if lot-tracked). No finance entry.
+  - Package units (bag, crate, bottle) resolve only through the item's own package conversion; otherwise `422 conversion_not_configured`.
+  - `reason`: `opening_balance`, `purchase`, `donation`, `aid`, `received`, `production` (feed made on the farm; never for produce) and `other`. This endpoint creates NO supplier or expense; use Purchases for stock + expense together.
+  - Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The location must be active with active ancestors.
+
+  **WHAT TO DO NEXT**
+  Refetch the item (`GET /inventory/items/{item}`) to show derived stock.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - Generate one idempotency key per user action (a UUID) and reuse it only when retrying that same action after a network failure.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/inventory/stock-in`
+
+  **REQUEST BODY** (`application/json`)
+  - `inventory_item_id` — string (uuid), **required unless `output` is sent**
+  - `output` — `eggs` | `milk`, optional: stock the farm's own egg / milk item without any item setup (donated / purchased / received - never produced; produced eggs and milk are recorded with `POST /records`)
+  - `storage_location_id` — string (uuid), **required unless `output` is sent** (then: the only active store, a "Main Store" created on first use, or 422 when several stores exist)
+  - `lot_id` — string (uuid), optional, nullable. Existing lot of this item. Use `lot` instead to receive into a (new or existing) lot by code.
+  - `lot` — object, optional. Lot code (and expiry for expiry-tracked items). An existing code of the same item is reused; a different expiry is rejected.
+  - `lot.code` — string, **required**, max 100 chars
+  - `lot.expires_on` — string (date), **required**, nullable
+  - `reason` — enum, **required**. Descriptive for manual stock-in; purchases (Phase 14) book their own "purchase" stock-in with a source link and expense. . Values: `opening_balance`, `purchase`, `donation`, `aid`, `received`, `production` (feed made on the farm; never for produce) and `other`
+  - `components` — array, **required**, min 1 items, max 10 items
+  - `components[].quantity` — string, **required**
+  - `components[].unit` — string, **required**, max 32 chars
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `notes` — string, optional, max 5000 chars, nullable
+
+  **VARIABLES USED**
+  - `{{item_feed_id}}` — captured by "Create an inventory item (feed)"
+  - `{{store_id}}` — captured by "Create a storage location"
+
+  **BUSINESS RULES**
+  - Package units (bag, crate, bottle) resolve only through the item's own package conversion; otherwise `422 conversion_not_configured`.
+  - `reason`: `opening_balance`, `purchase`, `donation`, `aid`, `received`, `production` (feed made on the farm; never for produce) and `other`. This endpoint creates NO supplier or expense; use Purchases for stock + expense together.
+  - Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The location must be active with active ancestors.
+  - `recorded_at` is when it really happened (UTC, `YYYY-MM-DDTHH:MM:SSZ`, no milliseconds); the server keeps `created_at` separately.
+  - `idempotency_key` is required and farm-wide: same key + same payload returns the original movement; same key + different payload is `409 idempotency_conflict`.
+  - Requires `inventory.manage` (Owner, Manager). Rate limited.
+
+  **SUCCESS**
+  `201 Created` — message: "Stock received."
+
+  `data` fields: `id`, `inventory_item_id`, `storage_location_id`, `inventory_lot_id`, `lot`, `type`, `reason`, `justification`, `quantity_delta`, `quantity_delta_display`, `measurement`, `recorded_at`, `notes`, `operational_record_id`, `health_record_id`, `health_record_medicine_id`, `purchase_id`, `purchase_item_id`, `sale_id`, `sale_item_id`, `transfer_group_id`, `reverses_movement_id`, `reversed_by_movement_id`, `created_by`, `created_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.manage`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `409` — `item_inactive`, `location_inactive`, `lot_expired`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/inventory/stock-in"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "inventory_item_id": "{{item_feed_id}}",
+      "storage_location_id": "{{store_id}}",
+      "reason": "opening_balance",
+      "components": [
+        {
+          "quantity": "12",
+          "unit": "bag"
+        },
+        {
+          "quantity": "18",
+          "unit": "kg"
+        }
+      ],
+      "recorded_at": "{{recorded_at_30h}}",
+      "idempotency_key": "{{stockin_key}}",
+      "notes": "Opening stock count"
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("stockin_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("movement_feed_in_id", String(v)); else console.warn("Could not capture movement_feed_in_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Receive stock (stock-in).resources/examples
+order: 5000

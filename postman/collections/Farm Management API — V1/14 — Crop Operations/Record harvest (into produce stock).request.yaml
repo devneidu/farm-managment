@@ -1,0 +1,129 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records harvested output. With `inventory` pointing at a `produce` item, the same transaction adds the harvested quantity to stock (one harvest = one record = one `stock_in`).
+
+  **WHEN TO USE IT**
+  "Record harvest" on a crop project.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `type`, `production_cycle_id`, `recorded_at`, `idempotency_key`, `details`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.create` (taken from the current farm context; never sent by the client).
+  - Creates the record and one `stock_in` movement (reason `harvest`) when linked. Reversing the record removes that produce (`409 insufficient_stock` if it was already used).
+  - A record says what DID happen. It is append-only: there is no PATCH or DELETE - correct with Reverse (and optionally a replacement using `corrects_record_id`).
+  - `recorded_at` is when the event really happened (UTC with seconds and `Z`/offset, no milliseconds, between the cycle start and now); the server keeps its own `created_at`.
+  - `idempotency_key` (1-80 chars of letters, digits, `.`, `_`, `:`, `-`) is required: same key + same payload returns the original record (201), changed payload is `409 idempotency_conflict`.
+
+  **WHAT TO DO NEXT**
+  Open the crop project detail to see totals.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`record.create`** — granted to: `owner`, `manager`, `farm_worker`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `record-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/records`
+
+  **REQUEST BODY** (`application/json`)
+  - `type` — enum, **required**. Values: `feed_use`, `egg_collection`, `milk`, `mortality`, `weight`, `temperature`, `water`, `irrigation`, `weeding`, `fertilizer_application`, `pesticide_application`, `land_preparation`, `planting`, `establishment_check`, `growth_stage`, `crop_loss`, `crop_harvest`, `pest_observation`, `general_note`, `population_adjustment`
+  - `production_cycle_id` — string (uuid), **required**
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+  - `details` — object, **required**. Type-specific object; only fields returned by /record-types/{type}/schema are accepted.
+  - `notes` — string, optional, max 5000 chars, nullable
+  - `corrects_record_id` — string (uuid), optional, nullable
+
+  **VARIABLES USED**
+  - `{{crop_cycle_id}}` — captured by "Start a crop project"
+  - `{{item_yam_id}}` — captured by "Create an inventory item (harvest produce)"
+  - `{{store_id}}` — captured by "Create a storage location"
+
+  **BUSINESS RULES**
+  - A record says what DID happen. It is append-only: there is no PATCH or DELETE - correct with Reverse (and optionally a replacement using `corrects_record_id`).
+  - `recorded_at` is when the event really happened (UTC with seconds and `Z`/offset, no milliseconds, between the cycle start and now); the server keeps its own `created_at`.
+  - `idempotency_key` (1-80 chars of letters, digits, `.`, `_`, `:`, `-`) is required: same key + same payload returns the original record (201), changed payload is `409 idempotency_conflict`.
+  - Inventory is optional: without `details.inventory` the harvest is just a record counted in the project's harvest totals.
+  - The item decides the dimension (kg item = weight, litre = volume, piece = count). Packages resolve only through that item's own package conversion. Lot-tracked items need `lot_id` or `lot {code, expires_on}`.
+  - Requires `record.create` and, for a linked harvest, `inventory.use`.
+
+  **SUCCESS**
+  `201 Created` — message: "Operational record saved."
+
+  `data` fields: `id`, `production_cycle_id`, `type`, `details`, `measurement`, `population_delta`, `recorded_at`, `notes`, `reverses_record_id`, `corrects_record_id`, `reversed_by_record_id`, `inventory_movement_id`, `created_by`, `created_at`, `attachments`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `record.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `cycle_closed`, `insufficient_population`, `population_changed`, `idempotency_conflict`, `invalid_correction`, `cycle_reconciliation_failed`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/records"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "type": "crop_harvest",
+      "production_cycle_id": "{{crop_cycle_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "details": {
+        "quality": "Grade A",
+        "components": [
+          {
+            "quantity": "300",
+            "unit": "kg"
+          }
+        ],
+        "inventory": {
+          "item_id": "{{item_yam_id}}",
+          "storage_location_id": "{{store_id}}"
+        }
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("record_harvest_id", String(v)); else console.warn("Could not capture record_harvest_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Record harvest (into produce stock).resources/examples
+order: 11000

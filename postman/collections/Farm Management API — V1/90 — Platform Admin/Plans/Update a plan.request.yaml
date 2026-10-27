@@ -1,0 +1,96 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Edits name, description, visibility, active flag and sort order. Farms already on a retired plan keep working: the default plan is honoured when the plan lapses.
+
+  **WHEN TO USE IT**
+  Editing or activating a plan.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{plan_new_id}}`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `admin` (taken from the current farm context; never sent by the client).
+  - Audit entry.
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Platform role **`admin`** only (`support` is read-only: `403 platform_write_forbidden`; no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+  Rate limited by limiter `platform-admin-write`: 60 per minute per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `PATCH {{base_url}}/platform-admin/plans/{{plan_new_id}}`
+
+  **PATH PARAMETERS**
+  - `{{plan_new_id}}` — UUID. Captured by "Create a plan" (90 — Platform Admin) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, optional, max 150 chars
+  - `description` — string, optional, max 2000 chars, nullable
+  - `is_public` — boolean, optional
+  - `is_active` — boolean, optional
+  - `sort_order` — integer, optional, min 0, max 100000
+
+  **VARIABLES USED**
+  - `{{plan_new_id}}` — captured by "Create a plan"
+
+  **BUSINESS RULES**
+  - Requires the platform `admin` role (a `support` role is read-only: `403 platform_write_forbidden`). Writes are rate limited (60/min).
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` fields: `id`, `slug`, `name`, `description`, `currency`, `is_active`, `is_public`, `is_default`, `sort_order`, `subscribers_count`, `prices`, `features`, `limits`, `created_at`, `updated_at`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/platform-admin/plans/{{plan_new_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Farm Starter Plus (2026)",
+      "is_public": true,
+      "is_active": true,
+      "sort_order": 16
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Update a plan.resources/examples
+order: 4000

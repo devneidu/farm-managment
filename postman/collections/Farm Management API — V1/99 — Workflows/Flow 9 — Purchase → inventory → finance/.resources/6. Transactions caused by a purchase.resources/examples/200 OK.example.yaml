@@ -1,0 +1,107 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/finance/transactions?source_type=purchase&source_id={{purchase_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: source_type
+      value: purchase
+    - key: source_id
+      value: "{{purchase_id}}"
+    - key: direction
+      value: ""
+      disabled: true
+      description: "enum: income | expense"
+    - key: entry_type
+      value: ""
+      disabled: true
+      description: "enum: entry | reversal"
+    - key: finance_category_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: contact_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-8f0f-7051-a260-eb03b324fe69",
+            "reference": "FIN-2026-00001",
+            "entry_type": "entry",
+            "direction": "expense",
+            "category": {
+              "id": "01a1045d-de2c-7014-825f-7e6f055272dd",
+              "code": "general_supplies",
+              "name": "General supplies"
+            },
+            "amount": "10250.45",
+            "currency": "NGN",
+            "occurred_on": "2026-10-03",
+            "recorded_at": "2026-10-03T22:44:06.000000Z",
+            "contact_id": "01a1045e-8d01-706b-a44d-b60c4bc28406",
+            "contact_name": "Mama Nkechi Feeds",
+            "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+            "description": "Purchase PUR-2026-00001",
+            "payment_method": null,
+            "quantity": null,
+            "unit_price": null,
+            "source": {
+              "type": "purchase",
+              "id": "01a1045e-8e99-70da-b099-7f36342ce82d",
+              "label": "Purchase #1"
+            },
+            "can_reverse_directly": false,
+            "reverses_transaction_id": null,
+            "corrects_transaction_id": null,
+            "reversed_by_transaction_id": null,
+            "is_reversed": false,
+            "reason": null,
+            "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "created_at": "2026-10-04T00:45:08.000000Z"
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 1
+        },
+        "message": null
+      }
+order: 1000

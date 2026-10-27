@@ -1,0 +1,94 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Creates the user's first farm and makes them its Owner. The only onboarding input is the farm name; Nigeria (`NG`), `Africa/Lagos`, `NGN` and English are applied as defaults. Returns the auth state with `next_action: "none"` and `data.farm` filled in.
+
+  **WHEN TO USE IT**
+  The one-time farm-name screen after email verification.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `name`.
+
+  **IMPORTANT BEHAVIOR**
+  - Creates the farm, an Owner membership, a default (Free) subscription and marks the user as onboarded (never cleared afterwards).
+  - Requires a verified email. Calling it twice is `409 already_onboarded` - onboarding is a one-time step, even if the user later loses every membership.
+  - A new farm starts on the default (Free) plan, with no places, cycles or inventory. Nothing else is created automatically.
+
+  **WHAT TO DO NEXT**
+  Load `GET /farm` and `GET /dashboard`.
+
+  **FARM DISCOVERY (GAP-07)**
+  `data.farms` lists every farm the user ACTIVELY belongs to (`id`, `name`, `role`; oldest membership first). `data.farm` stays the default farm (the oldest active membership). To work in another farm send its `farms[].id` as the `X-Farm-Id` header, then refetch `GET /farm` (membership + permissions) and `GET /subscription/entitlements` and clear farm-scoped caches. There is no switch endpoint. Permissions are never listed here.
+
+  **MARKETPLACE-ONLY SELLERS (Phase 22)**
+  `data.marketplace.shop_count` = Marketplace shops the user belongs to (any status). `next_action = "marketplace"` is returned only for a verified user with NO active farm who belongs to at least one shop: route to the seller dashboard (`GET /marketplace/my/shops`). A brand-new account with no shop still gets `complete_farm_setup` (offer "open a shop instead" -> `POST /marketplace/shops`, no farm needed). A user with a farm keeps `none`. Farm endpoints still answer `403 onboarding_required` / `no_active_farm`; `POST /onboarding/farm` remains available.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Store `data.farm.id` only if you plan to send `X-Farm-Id`; the API otherwise resolves the farm for you.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user (no farm needed). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Any verified user.
+
+  **URL**
+  `POST {{base_url}}/onboarding/farm`
+
+  **REQUEST BODY** (`application/json`)
+  - `name` — string, **required**, max 120 chars, min 2 chars. Only farm name is collected; country/currency/timezone/language use platform defaults.
+
+  **BUSINESS RULES**
+  - Requires a verified email. Calling it twice is `409 already_onboarded` - onboarding is a one-time step, even if the user later loses every membership.
+  - A new farm starts on the default (Free) plan, with no places, cycles or inventory. Nothing else is created automatically.
+
+  **SUCCESS**
+  `201 Created` — message: "Farm created."
+
+  `data` fields: `authenticated`, `email_verified`, `onboarded`, `has_active_farm`, `next_action`, `user`, `farm`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — other codes: `account_suspended`, `email_verification_required`.
+  - `409` — Farm setup already completed.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+url: "{{base_url}}/onboarding/farm"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Okafor Integrated Farms"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.farm.id"); if (v !== undefined && v !== null) pm.environment.set("farm_id", String(v)); else console.warn("Could not capture farm_id from data.farm.id"); }
+        { const v = get(json, "data.user.id"); if (v !== undefined && v !== null) pm.environment.set("user_id", String(v)); else console.warn("Could not capture user_id from data.user.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Complete farm setup (onboarding).resources/examples
+order: 1000

@@ -1,0 +1,40 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm/invitations"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "email": "dr.bello.vet@example.com",
+        "role": "vet"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Your farm's plan allows 3 team members and the limit has been reached.",
+        "code": "plan_limit_reached",
+        "request_id": "01a1045e-3f06-7035-b100-715c6c7cd6a6",
+        "details": {
+          "entitlement_key": "team_members",
+          "limit": 3,
+          "usage": 3,
+          "remaining": 0
+        }
+      }
+order: 2000

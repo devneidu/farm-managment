@@ -1,0 +1,100 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  The single expense linked to the purchase.
+
+  **WHAT IT DOES**
+  Verify the financial effect of a purchase: the single expense linked to it.
+
+  **WHEN TO USE IT**
+  Checking the expense a purchase created.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.view` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Record a purchase without booking the expense**.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`finance.view`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/finance/transactions`
+
+  Full reference (all fields, errors, rules): folder **16 — Finance** -> "Transactions caused by a purchase".
+
+  Full reference (errors, all fields): folder **16 — Finance** -> "Transactions caused by a purchase".
+url: "{{base_url}}/finance/transactions?source_type=purchase&source_id={{purchase_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: source_type
+    value: purchase
+  - key: source_id
+    value: "{{purchase_id}}"
+  - key: direction
+    value: ""
+    disabled: true
+    description: "enum: income | expense"
+  - key: entry_type
+    value: ""
+    disabled: true
+    description: "enum: entry | reversal"
+  - key: finance_category_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: contact_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: production_cycle_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: from
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: to
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/6. Transactions caused by a purchase.resources/examples
+order: 6000

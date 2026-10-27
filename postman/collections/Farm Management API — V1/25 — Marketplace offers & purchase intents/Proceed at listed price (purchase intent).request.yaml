@@ -1,0 +1,41 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records the buyer's INTEREST in buying `quantity` at the listed unit price. NOT an acceptance, order, payment or deal; nothing is reserved or deducted. Allowed on fixed-price and negotiable listings, also after offers are used up.
+
+  **IDEMPOTENT**
+  First call 201; same quantity again 200 (same record); different quantity 200 (refreshed). `is_current` is computed on read.
+
+  **ERRORS**
+  `404`, `403 cannot_negotiate_own_listing`, `422 quantity`.
+url: "{{base_url}}/marketplace/listings/{{listing_slug}}/purchase-intent"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "10"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("intent_id", v); } }
+      }
+    language: text/javascript
+order: 3000

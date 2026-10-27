@@ -1,0 +1,83 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Signs in or registers with a Google ID token (the `credential` from Google Identity Services / One Tap). `201` = new account, `200` = existing account; an existing email/password account with the same email is LINKED, not duplicated. The email is treated as verified and no OTP is sent; `next_action` is `complete_farm_setup` until a farm exists.
+
+  **WHEN TO USE IT**
+  The "Continue with Google" button, after Google Identity Services returns an ID token.
+
+  **IMPORTANT INPUTS**
+  - Required body fields: `credential`.
+
+  **IMPORTANT BEHAVIOR**
+  - Creates/links the user and starts the session.
+  - Needs `GOOGLE_CLIENT_ID` in the backend `.env` (the same OAuth Web client id the frontend uses); otherwise `503 google_unavailable`.
+  - An invalid, expired or wrongly-audienced token is rejected. In Postman you must paste a real token to see a success: the saved example shows the failure only.
+  - Rate limited.
+
+  **WHAT TO DO NEXT**
+  Route by `next_action`.
+
+  **FARM DISCOVERY (GAP-07)**
+  `data.farms` lists every farm the user ACTIVELY belongs to (`id`, `name`, `role`; oldest membership first). `data.farm` stays the default farm (the oldest active membership). To work in another farm send its `farms[].id` as the `X-Farm-Id` header, then refetch `GET /farm` (membership + permissions) and `GET /subscription/entitlements` and clear farm-scoped caches. There is no switch endpoint. Permissions are never listed here.
+
+  **MARKETPLACE-ONLY SELLERS (Phase 22)**
+  `data.marketplace.shop_count` = Marketplace shops the user belongs to (any status). `next_action = "marketplace"` is returned only for a verified user with NO active farm who belongs to at least one shop: route to the seller dashboard (`GET /marketplace/my/shops`). A brand-new account with no shop still gets `complete_farm_setup` (offer "open a shop instead" -> `POST /marketplace/shops`, no farm needed). A user with a farm keeps `none`. Farm endpoints still answer `403 onboarding_required` / `no_active_farm`; `POST /onboarding/farm` remains available.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Public** — no session required. State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Everyone.
+  Rate limited by limiter `auth-google`: 20 per minute per IP (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/auth/google`
+
+  **REQUEST BODY** (`application/json`)
+  - `credential` — string, **required**, max 4096 chars. Google Identity Services ID token (JWT) obtained by the frontend.
+
+  **BUSINESS RULES**
+  - Needs `GOOGLE_CLIENT_ID` in the backend `.env` (the same OAuth Web client id the frontend uses); otherwise `503 google_unavailable`.
+  - An invalid, expired or wrongly-audienced token is rejected. In Postman you must paste a real token to see a success: the saved example shows the failure only.
+  - Rate limited.
+
+  **SUCCESS**
+  `401 Unauthorized` — message: "The Google credential is invalid."
+
+  **ERRORS**
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `503` — `google_unavailable`.
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/auth/google"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "credential": "REPLACE_WITH_GOOGLE_ID_TOKEN"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 401 or 422 or 503", function () { pm.expect(pm.response.code).to.be.oneOf([401, 422, 503]); });
+    language: text/javascript
+examples: ./.resources/Continue with Google.resources/examples
+order: 11000

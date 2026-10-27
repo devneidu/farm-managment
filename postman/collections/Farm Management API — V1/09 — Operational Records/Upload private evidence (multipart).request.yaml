@@ -1,0 +1,102 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Attaches a private evidence file (photo, PDF, spreadsheet) to a record. Send `multipart/form-data` with a single `file` field.
+
+  **WHEN TO USE IT**
+  Attaching a photo/PDF as evidence to a saved record.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{record_mortality_id}}`.
+  - Required body fields: `file`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.create` (taken from the current farm context; never sent by the client).
+  - Stores the file privately. No population, stock or finance effect.
+  - Allowed: jpg, jpeg, png, webp, pdf, csv, txt, xls, xlsx; max 10 MiB per file and 10 attachments per record. The detected content must match the extension.
+  - The same file (SHA-256) uploaded twice to one record returns the existing attachment.
+  - Closed cycle: `409 cycle_closed`. Requires `record.create`.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+  - In Postman choose a file for the `file` field (the collection ships it empty). The CSRF header still applies.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`record.create`** — granted to: `owner`, `manager`, `farm_worker`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `record-write`: 120 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/records/{{record_mortality_id}}/attachments`
+
+  **PATH PARAMETERS**
+  - `{{record_mortality_id}}` — UUID. Captured by "Record mortality" (09 — Operational Records) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`multipart/form-data`)
+  - `file` — string (binary), **required**. Maximum file size: 10240 kilobytes.
+
+  **VARIABLES USED**
+  - `{{record_mortality_id}}` — captured by "Record mortality"
+
+  **BUSINESS RULES**
+  - Allowed: jpg, jpeg, png, webp, pdf, csv, txt, xls, xlsx; max 10 MiB per file and 10 attachments per record. The detected content must match the extension.
+  - The same file (SHA-256) uploaded twice to one record returns the existing attachment.
+  - Closed cycle: `409 cycle_closed`. Requires `record.create`.
+
+  **SUCCESS**
+  `201 Created` — message: "Evidence attached."
+
+  `data` fields: `id`, `original_name`, `mime_type`, `size`, `created_by`, `created_at`, `download_url`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `record.create`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `cycle_closed`, `attachment_limit_reached`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/records/{{record_mortality_id}}/attachments"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: formdata
+  content:
+    - type: file
+      key: file
+      src: []
+      description: "Evidence file: jpg, jpeg, png, webp, pdf, csv, txt, xls or xlsx, max 10 MiB."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("attachment_id", String(v)); else console.warn("Could not capture attachment_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/Upload private evidence (multipart).resources/examples
+order: 19000

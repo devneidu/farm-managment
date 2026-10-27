@@ -1,0 +1,47 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/custom-breeds?species_id={{species_chicken_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: species_id
+      value: "{{species_chicken_id}}"
+    - key: crop_type_id
+      value: ""
+      disabled: true
+      description: string — max 36 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-44ec-70a5-a6c6-dc586c45bbdd",
+            "species_id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "code": null,
+            "name": "Isa Brown (Ibadan)",
+            "source": "farm",
+            "is_active": true,
+            "is_editable": true,
+            "created_at": "2026-10-04T00:45:08+00:00"
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

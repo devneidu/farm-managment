@@ -1,0 +1,132 @@
+$kind: http-example
+name: 201 Created — reason purchase (stock only; book the cost with POST /purchases)
+request:
+  url: "{{base_url}}/inventory/stock-in"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "output": "eggs",
+        "storage_location_id": "{{store_id}}",
+        "reason": "purchase",
+        "components": [
+          {
+            "quantity": "6",
+            "unit": "piece"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Bought from a neighbour (stock only)"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a11127-0f5a-73e8-ab9b-751dbe5bb238",
+          "inventory_item_id": "01a11127-0d22-7361-a379-a02b7d78beed",
+          "storage_location_id": "01a11126-b5f4-7333-89d8-d60d0143904d",
+          "inventory_lot_id": null,
+          "lot": null,
+          "type": "stock_in",
+          "reason": "purchase",
+          "reason_label": "Purchased",
+          "justification": null,
+          "quantity_delta": {
+            "quantity": "6",
+            "unit": "piece"
+          },
+          "quantity_delta_display": {
+            "quantity": "6",
+            "unit": "piece"
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "6",
+                "unit": "piece"
+              }
+            ],
+            "normalized": {
+              "quantity": "6",
+              "unit": "piece"
+            },
+            "total": {
+              "quantity": "6",
+              "unit": "piece"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "6",
+                  "unit": {
+                    "code": "piece",
+                    "dimension": "count",
+                    "family": "piece",
+                    "strategy": "linear",
+                    "factor": "1",
+                    "integer_only": true
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "piece",
+                "dimension": "count",
+                "family": "piece",
+                "strategy": "linear",
+                "factor": "1",
+                "integer_only": true
+              },
+              "normalized": {
+                "quantity": "6",
+                "unit": "piece"
+              },
+              "total": {
+                "quantity": "6",
+                "unit": "piece"
+              }
+            }
+          },
+          "recorded_at": "2026-10-06T11:18:54.000000Z",
+          "notes": "Bought from a neighbour (stock only)",
+          "operational_record_id": null,
+          "health_record_id": null,
+          "health_record_medicine_id": null,
+          "purchase_id": null,
+          "purchase_item_id": null,
+          "sale_id": null,
+          "sale_item_id": null,
+          "transfer_group_id": null,
+          "production_cycle_id": null,
+          "breeding_project_id": null,
+          "source": {
+            "type": "manual",
+            "id": null
+          },
+          "reverses_movement_id": null,
+          "reversed_by_movement_id": null,
+          "created_by": "01a11126-a0b9-71b9-93f0-6e147def406f",
+          "created_at": "2026-10-06T12:18:54.000000Z"
+        },
+        "meta": {},
+        "message": "Stock received."
+      }
+order: 2000

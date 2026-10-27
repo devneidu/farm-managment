@@ -1,0 +1,77 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Books the expense later, once, for exactly the total.
+
+  **WHAT IT DOES**
+  Books the expense for a purchase recorded with `record_expense: false`, for EXACTLY the purchase total.
+
+  **WHEN TO USE IT**
+  Booking the expense of a purchase recorded without one.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `finance.create` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Finance summary and cycle profitability**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **ACCESS**
+  Required backend farm permission: **`finance.create`** — granted to: `owner`, `manager`, `finance`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `POST {{base_url}}/expenses`
+
+  Full reference (all fields, errors, rules): folder **16 — Finance** -> "Record an expense linked to a purchase".
+
+  Full reference (errors, all fields): folder **16 — Finance** -> "Record an expense linked to a purchase".
+url: "{{base_url}}/expenses"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "amount": "3500.00",
+      "occurred_on": "{{today}}",
+      "source": {
+        "type": "purchase",
+        "id": "{{purchase_b_id}}"
+      },
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/8. Record an expense linked to a purchase.resources/examples
+order: 8000

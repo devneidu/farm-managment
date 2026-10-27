@@ -1,0 +1,28 @@
+$kind: http-request
+name: "41. Buyer: the listing offers both methods, so one must be chosen"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/offers/{{deal_offer_id}}/deal"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: "{}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 422", function () { pm.expect(pm.response.code).to.eql(422); });
+      const json = pm.response.json();
+      pm.test("Error code validation_failed", function () { pm.expect(json.code).to.eql("validation_failed"); });
+      pm.test("fulfilment_method error", function () { pm.expect(JSON.stringify(json.errors)).to.include("fulfilment_method"); });
+    language: text/javascript
+order: 41000

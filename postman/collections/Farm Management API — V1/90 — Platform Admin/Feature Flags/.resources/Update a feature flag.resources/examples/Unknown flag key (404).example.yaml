@@ -1,0 +1,27 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/platform-admin/feature-flags/does_not_exist"
+  method: PATCH
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "enabled": true
+      }
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The requested resource was not found.",
+        "code": "not_found",
+        "request_id": "01a1045e-d3a1-70ab-bf47-546ad68902c0"
+      }
+order: 2000

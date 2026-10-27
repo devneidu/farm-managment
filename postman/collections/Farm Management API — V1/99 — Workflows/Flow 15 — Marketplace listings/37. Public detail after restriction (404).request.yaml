@@ -1,0 +1,16 @@
+$kind: http-request
+description: The same address answers `404` as soon as the listing is paused, archived, restricted or its shop is suspended/closed.
+url: "{{base_url}}/public/marketplace/listings/{{listing_slug}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 404", function () { pm.expect(pm.response.code).to.be.oneOf([404]); });
+    language: text/javascript
+examples: ./.resources/37. Public detail after restriction (404).resources/examples
+order: 37000

@@ -1,0 +1,50 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/measurement-dimensions"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-e54c-700f-b8f3-5e64b822615f",
+            "code": "weight",
+            "name": "Weight",
+            "supports_preference": true,
+            "canonical_unit": {
+              "code": "g",
+              "symbol": "g"
+            },
+            "unit_count": 5,
+            "is_active": true
+          },
+          {
+            "id": "01a1045c-e554-7133-b9df-021252787740",
+            "code": "volume",
+            "name": "Volume",
+            "supports_preference": true,
+            "canonical_unit": {
+              "code": "ml",
+              "symbol": "ml"
+            },
+            "unit_count": 3,
+            "is_active": true
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

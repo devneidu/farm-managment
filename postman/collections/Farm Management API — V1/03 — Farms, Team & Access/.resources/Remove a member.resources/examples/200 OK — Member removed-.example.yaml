@@ -1,0 +1,26 @@
+$kind: http-example
+name: 200 OK — Member removed.
+request:
+  url: "{{base_url}}/farm/members/{{membership_chidi_id}}"
+  method: DELETE
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": null,
+        "meta": {},
+        "message": "Member removed."
+      }
+order: 1000

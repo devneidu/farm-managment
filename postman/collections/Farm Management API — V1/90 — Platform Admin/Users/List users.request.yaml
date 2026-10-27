@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Support view of all users. Filters: `q`, `status` (`active`|`suspended`), `platform_role`, `verified`, `page`, `per_page`.
+
+  **WHEN TO USE IT**
+  Support user search.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `q`, `status`, `platform_role`, `verified`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/users`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `q` — string, max 100 chars. Matches name or email.
+  - `status` — enum. Values: `active`, `suspended`
+  - `platform_role` — enum. Values: `admin`, `support`
+  - `verified` — boolean
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `name`, `email`, `email_verified`, `onboarded`, `status`, `suspended_at`, `platform_role`, `active_farms_count`, `created_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/platform-admin/users?q=okafor"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  - key: q
+    value: okafor
+  - key: status
+    value: ""
+    disabled: true
+    description: "enum: active | suspended"
+  - key: platform_role
+    value: ""
+    disabled: true
+    description: "enum: admin | support"
+  - key: verified
+    value: ""
+    disabled: true
+    description: boolean
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List users.resources/examples
+order: 3000

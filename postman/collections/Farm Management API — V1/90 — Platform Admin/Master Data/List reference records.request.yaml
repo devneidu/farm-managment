@@ -1,0 +1,103 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Lists reference records of one KIND. Kinds: `operation-types`, `species`, `crop-types`, `breeds`, `varieties`, `reference-values`. Filters: `q`, `is_active`, `parent_id`, `category`, `list` (for reference-values: `planting_material_type`, `planting_unit_type`), `page`, `per_page`.
+
+  **WHEN TO USE IT**
+  The reference-data admin list.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `q`, `is_active`, `parent_id`, `category`, `list`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform Admin read: needs a platform role (`admin` or `support`), not a farm role.
+  - Any platform role (`admin` or `support`) may read.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — signed-in, email-verified user holding a **platform role**. This is NOT a farm role.
+
+  **ACCESS**
+  Platform role **`admin` or `support`** (no grant: `403 platform_admin_required`).
+  Farm roles (Owner, Manager, ...) confer nothing here.
+
+  **URL**
+  `GET {{base_url}}/platform-admin/master/species`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `q` — string, max 100 chars. Matches name or code.
+  - `is_active` — boolean
+  - `parent_id` — string (uuid). Filter by the parent record (operation type / species / crop type id).
+  - `category` — enum. Operation types only.. Values: `livestock`, `aquaculture`, `crop`
+  - `list` — enum. Reference values only.. Values: `planting_material_type`, `planting_unit_type`
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **BUSINESS RULES**
+  - Any platform role (`admin` or `support`) may read.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `code`, `name`, `livestock_group`, `operation_type`, `sort_order`, `is_active`, `created_at`, `updated_at`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403 platform_admin_required` — no platform grant; `403 platform_write_forbidden` — read-only (`support`) role on a write endpoint; `account_suspended`, `email_verification_required`.
+  - `404 not_found` — unknown id.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/platform-admin/master/species?q=chick"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  - key: q
+    value: chick
+  - key: is_active
+    value: ""
+    disabled: true
+    description: boolean
+  - key: parent_id
+    value: ""
+    disabled: true
+    description: Filter by the parent record (operation type / species / crop type id). — string (uuid)
+  - key: category
+    value: ""
+    disabled: true
+    description: "Operation types only. — enum: livestock | aquaculture | crop"
+  - key: list
+    value: ""
+    disabled: true
+    description: "Reference values only. — enum: planting_material_type | planting_unit_type"
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List reference records.resources/examples
+order: 4000

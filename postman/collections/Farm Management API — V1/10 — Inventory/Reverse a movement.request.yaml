@@ -1,0 +1,105 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Corrects a movement without rewriting history: a NEW `reversal` movement with the opposite effect is appended; the original stays.
+
+  **WHEN TO USE IT**
+  "Undo" a standalone movement entered by mistake.
+
+  **IMPORTANT INPUTS**
+  - Path ids (UUIDv7): `{{movement_out_id}}`.
+  - Required body fields: `reason`, `recorded_at`, `idempotency_key`.
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `inventory.adjust` (taken from the current farm context; never sent by the client).
+  - One `reversal` movement.
+  - A movement already reversed is `409 movement_already_reversed`. Movements created by a record, health event, purchase or sale must be reversed through that parent (`409 reverse_via_record`).
+  - Reversing a stock-in whose stock has since been used is `409 insufficient_stock`.
+  - This is a correction, not an edit: history is kept and a new opposite row is appended.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Route by the UUIDv7 `id`; any `reference` code (`BAT-2026-00001`, ...) is display-only.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
+
+  **ACCESS**
+  Required backend farm permission: **`inventory.adjust`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
+
+  **URL**
+  `POST {{base_url}}/inventory/movements/{{movement_out_id}}/reverse`
+
+  **PATH PARAMETERS**
+  - `{{movement_out_id}}` — UUID. Captured by "Issue stock (stock-out)" (10 — Inventory) or from the list endpoint of this resource.
+
+  **REQUEST BODY** (`application/json`)
+  - `reason` — string, **required**, max 2000 chars
+  - `recorded_at` — string (date-time), **required**, `YYYY-MM-DDTHH:MM:SS` + `Z` or `+HH:MM` (no milliseconds)
+  - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
+
+  **VARIABLES USED**
+  - `{{movement_out_id}}` — captured by "Issue stock (stock-out)"
+
+  **BUSINESS RULES**
+  - A movement already reversed is `409 movement_already_reversed`. Movements created by a record, health event, purchase or sale must be reversed through that parent (`409 reverse_via_record`).
+  - Reversing a stock-in whose stock has since been used is `409 insufficient_stock`.
+  - Requires `inventory.adjust` (Owner, Manager).
+
+  **SUCCESS**
+  `201 Created` — message: "Reversal recorded."
+
+  `data` is an array of objects with fields: `id`, `inventory_item_id`, `storage_location_id`, `inventory_lot_id`, `lot`, `type`, `reason`, `justification`, `quantity_delta`, `quantity_delta_display`, `measurement`, `recorded_at`, `notes`, `operational_record_id`, `health_record_id`, `health_record_medicine_id`, `purchase_id`, `purchase_item_id`, `sale_id`, `sale_item_id`, `transfer_group_id`, `reverses_movement_id`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `inventory.adjust`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `404 not_found` — unknown id, or an id that belongs to another farm (never distinguishable).
+  - `409` — `movement_already_reversed`, `reverse_via_record`, `insufficient_stock`, `idempotency_conflict`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+  - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
+  - `429 too_many_requests` — honour `Retry-After`.
+url: "{{base_url}}/inventory/movements/{{movement_out_id}}/reverse"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Entered against the wrong store",
+      "recorded_at": "{{recorded_at}}",
+      "idempotency_key": "{{$guid}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200 or 201", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Reverse a movement.resources/examples
+order: 28000

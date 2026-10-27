@@ -1,0 +1,53 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  PREREQUISITES: Flow S (`item_med_id`, `lot_med_id`, `store_id`) and Flow 3 (`cycle_id`).
+
+
+
+  **WHAT IT DOES**
+  The closed vocabulary of health events (`vaccination`, `medication`, `deworming`, `treatment`, `disease_issue`, `vet_visit`) with required `details` fields and whether medicine lines are `required` or `forbidden` for each.
+
+  **WHEN TO USE IT**
+  Building the health event form (types and required fields).
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `health.view` (taken from the current farm context; never sent by the client).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Set a medicine's default withdrawal period**.
+
+  **FRONTEND NOTES**
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  Full reference (errors, all fields): folder **11 — Health** -> "List health record types and field contracts".
+
+  **PROBLEM TYPE (every health type)**
+  Each entry also returns `problem_types[] {code,label}` (13 fixed choices), `question` (the dropdown label), `default_problem_type` (deworming → `worms_internal_parasites`, others `null`) and `text_field {key,label,required_when_problem_type}` (the optional "Disease name (if known)" box; required when `problem_type` = `other`). The UI must require a problem-type selection on every health form (deworming preselects `worms_internal_parasites`; all others start empty and cannot be submitted until one is chosen). The API still accepts an omitted `problem_type` only for backward compatibility with older clients; new UI must always send it.
+url: "{{base_url}}/master/health-record-types"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/1. List health record types and field contracts.resources/examples
+order: 1000

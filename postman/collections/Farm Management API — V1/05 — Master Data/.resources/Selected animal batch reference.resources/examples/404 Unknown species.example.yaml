@@ -1,0 +1,20 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/species/00000000-0000-7000-8000-000000000000/batch-reference"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 404
+  statusText: Not Found
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The requested resource was not found.",
+        "code": "not_found",
+        "request_id": "01a12034-4ef4-731c-a07a-6f5db1c3468e"
+      }
+order: 2000

@@ -1,0 +1,109 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Paginated records of the farm, newest first. Reversed originals stay in the list (with `reversed_by_record_id`) and their reversal records appear too.
+
+  **WHEN TO USE IT**
+  The activity/history list of a batch, a plot or the whole farm.
+
+  **IMPORTANT INPUTS**
+  - Query filters: `production_cycle_id`, `production_area_id`, `type`, `recorded_from`, `recorded_to`, `page`, `per_page`.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.view` (taken from the current farm context; never sent by the client).
+  - Filters: `production_cycle_id`, `production_area_id` (every project on that plot), `type` (including `reversal`), `recorded_from`/`recorded_to` (inclusive farm-local `YYYY-MM-DD` days), `page`, `per_page` (default 50, max 100).
+  - Do not sum `measurement.total` across a record and its reversal: use the reversal relationship.
+
+  **FRONTEND NOTES**
+  - Needs the signed-in session cookie (send requests with credentials).
+  - Boolean query values: send `1`/`0` (`true`/`false` is rejected on most endpoints).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).
+
+  **ACCESS**
+  Required backend farm permission: **`record.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)
+
+  **URL**
+  `GET {{base_url}}/records`
+
+  **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
+  - `production_cycle_id` — string (uuid)
+  - `production_area_id` — string (uuid)
+  - `type` — enum. Values: `feed_use`, `egg_collection`, `milk`, `mortality`, `weight`, `temperature`, `water`, `irrigation`, `weeding`, `fertilizer_application`, `pesticide_application`, `land_preparation`, `planting`, `establishment_check`, `growth_stage`, `crop_loss`, `crop_harvest`, `pest_observation`, `general_note`, `population_adjustment`, `reversal`, `breeding_outcome`
+  - `recorded_from` — string (date)
+  - `recorded_to` — string (date)
+  - `page` — integer, min 1
+  - `per_page` — integer, min 1, max 100
+
+  **VARIABLES USED**
+  - `{{cycle_id}}` — captured by "Start a livestock batch"
+
+  **BUSINESS RULES**
+  - Filters: `production_cycle_id`, `production_area_id` (every project on that plot), `type` (including `reversal`), `recorded_from`/`recorded_to` (inclusive farm-local `YYYY-MM-DD` days), `page`, `per_page` (default 50, max 100).
+  - Do not sum `measurement.total` across a record and its reversal: use the reversal relationship.
+
+  **SUCCESS**
+  `200 OK`
+
+  `data` is an array of objects with fields: `id`, `production_cycle_id`, `type`, `details`, `measurement`, `population_delta`, `recorded_at`, `notes`, `reverses_record_id`, `corrects_record_id`, `reversed_by_record_id`, `inventory_movement_id`, `created_by`, `created_at`, `attachments`.
+
+  `meta`: `current_page`, `per_page`, `last_page`, `total`.
+
+  **ERRORS**
+  - `401 unauthenticated` — no valid session: show the login screen.
+  - `403` — `forbidden` when the caller lacks `record.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`.
+  - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
+url: "{{base_url}}/records?production_cycle_id={{cycle_id}}&type=mortality"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+queryParams:
+  - key: production_cycle_id
+    value: "{{cycle_id}}"
+  - key: type
+    value: mortality
+  - key: production_area_id
+    value: ""
+    disabled: true
+    description: string (uuid)
+  - key: recorded_from
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: recorded_to
+    value: ""
+    disabled: true
+    description: string (date)
+  - key: page
+    value: ""
+    disabled: true
+    description: integer — min 1
+  - key: per_page
+    value: ""
+    disabled: true
+    description: integer — min 1, max 100
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/List operational records.resources/examples
+order: 16000

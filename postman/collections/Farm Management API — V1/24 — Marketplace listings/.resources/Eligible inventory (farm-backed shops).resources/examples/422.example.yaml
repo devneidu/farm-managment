@@ -1,0 +1,31 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/eligible-inventory?product_kind=eggs"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  queryParams:
+    product_kind: eggs
+response:
+  statusCode: 422
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This shop is not linked to a farm, so it has no inventory to link.",
+        "code": "validation_failed",
+        "request_id": "01a118eb-e5ad-711b-9634-e99075e01f07",
+        "errors": {
+          "inventory_item_id": [
+            "This shop is not linked to a farm, so it has no inventory to link."
+          ]
+        }
+      }
+order: 1000

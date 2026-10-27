@@ -1,0 +1,67 @@
+$kind: http-example
+name: 201 Created — Inventory item created.
+request:
+  url: "{{base_url}}/inventory/items"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Newcastle Vaccine (Lasota)",
+        "category": "medicine",
+        "stock_unit": "ml",
+        "tracks_lots": true,
+        "tracks_expiry": true,
+        "low_stock_threshold": {
+          "quantity": "100",
+          "unit": "ml"
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-5596-7376-961d-47ffe755e2a9",
+          "name": "Newcastle Vaccine (Lasota)",
+          "category": "medicine",
+          "description": null,
+          "stock_unit": "ml",
+          "dimension": "volume",
+          "tracks_lots": true,
+          "tracks_expiry": true,
+          "is_active": true,
+          "stock": {
+            "quantity": "0",
+            "unit": "ml",
+            "normalized": {
+              "quantity": "0",
+              "unit": "ml"
+            }
+          },
+          "low_stock_threshold": {
+            "quantity": "100",
+            "unit": "ml"
+          },
+          "is_low_stock": true,
+          "created_at": "2026-10-04T00:45:08.000000Z",
+          "updated_at": "2026-10-04T00:45:08.000000Z"
+        },
+        "meta": {},
+        "message": "Inventory item created."
+      }
+order: 1000

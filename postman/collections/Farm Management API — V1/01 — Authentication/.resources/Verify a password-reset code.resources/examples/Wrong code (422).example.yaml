@@ -1,0 +1,33 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/auth/password/verify-otp"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}",
+        "code": "000000"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The code is invalid or has expired.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-bd6a-722d-838a-a2d27eb57939",
+        "errors": {
+          "code": [
+            "The code is invalid or has expired."
+          ]
+        }
+      }
+order: 2000

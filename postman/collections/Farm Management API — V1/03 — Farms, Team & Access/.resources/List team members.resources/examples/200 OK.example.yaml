@@ -1,0 +1,52 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/farm/members"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045e-3d68-7120-81fe-71d691c8d2f6",
+            "role": "owner",
+            "role_label": "Owner",
+            "status": "active",
+            "joined_at": "2026-10-04T00:45:08+00:00",
+            "is_current_user": true,
+            "user": {
+              "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+              "name": null,
+              "email": "ada.okafor@example.com"
+            }
+          },
+          {
+            "id": "01a1045e-3df9-70af-8aa0-faf5feada100",
+            "role": "farm_worker",
+            "role_label": "Farm Worker",
+            "status": "active",
+            "joined_at": "2026-10-04T00:45:08+00:00",
+            "is_current_user": false,
+            "user": {
+              "id": "01a1045e-3df6-7186-8536-5b14645d5b85",
+              "name": "Farm_worker Sample",
+              "email": "bhuels@example.net"
+            }
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

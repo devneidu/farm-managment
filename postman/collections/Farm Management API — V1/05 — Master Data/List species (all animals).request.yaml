@@ -1,0 +1,40 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Same endpoint as "List species" without the `operation` filter: every animal species the farm can use (22 system species). Used to capture the Cattle and Fish species ids for the batch-creation examples.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `master_data.view` (current farm context).
+  - Captures `species_cattle_id` and `species_fish_id` by `code` (never positional).
+  - Each row carries the nested `operation` object (`id`, `code`, `category`, `tracking_model`); a livestock batch must send the species' own `operation.id` as `operation_type_id` (Fish belongs to the `fishery` operation, Cattle to `cattle`).
+
+  **WHAT TO DO NEXT**
+  `GET /master/species/{species}/batch-reference` for the selected animal.
+url: "{{base_url}}/master/species"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        [["cattle", "species_cattle_id"], ["fish", "species_fish_id"]].forEach(([code, key]) => {
+          const row = (get(json, "data") || []).find((r) => get(r, "code") === code); const v = row && get(row, "id");
+          if (v !== undefined && v !== null) pm.environment.set(key, String(v)); else console.warn("Could not capture " + key);
+        });
+      }
+    language: text/javascript
+order: 3000

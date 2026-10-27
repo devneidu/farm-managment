@@ -1,0 +1,136 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/reports/livestock_population?status=active"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: status
+      value: active
+    - key: from
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: to
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: as_of
+      value: ""
+      disabled: true
+      description: string (date)
+    - key: production_cycle_id
+      value: ""
+      disabled: true
+      description: string (uuid)
+    - key: kind
+      value: ""
+      disabled: true
+      description: "enum: livestock | crop"
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 500
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "report": {
+            "code": "livestock_population",
+            "title": "Livestock population",
+            "family": "livestock",
+            "description": "Opening head, additions, deaths, sales and adjustments per livestock cycle, reconciled to the population ledger."
+          },
+          "farm": {
+            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "name": "Okafor Integrated Farms Ltd",
+            "currency": "NGN"
+          },
+          "filters": {
+            "from": "2026-09-05",
+            "to": "2026-10-04",
+            "status": "active"
+          },
+          "timezone": "Africa/Lagos",
+          "generated_at": "2026-10-04T00:45:08.153034Z",
+          "columns": [
+            {
+              "key": "reference",
+              "label": "Reference",
+              "type": "string"
+            },
+            {
+              "key": "name",
+              "label": "Cycle",
+              "type": "string"
+            }
+          ],
+          "rows": [
+            {
+              "reference": "BAT-2026-00001",
+              "name": "October Broilers",
+              "species": "Chicken",
+              "status": "active",
+              "opening": 500,
+              "initial": 0,
+              "births": 37,
+              "deaths": -5,
+              "sold": -12,
+              "adjustments": -2,
+              "other": 0,
+              "closing": 518
+            },
+            {
+              "reference": "BAT-2026-00003",
+              "name": "Layer pilot flock",
+              "species": "Chicken",
+              "status": "active",
+              "opening": 50,
+              "initial": 0,
+              "births": 0,
+              "deaths": 0,
+              "sold": 0,
+              "adjustments": 0,
+              "other": 0,
+              "closing": 50
+            }
+          ],
+          "summary": {
+            "opening": 550,
+            "initial": 0,
+            "births": 37,
+            "deaths": -5,
+            "sold": -12,
+            "adjustments": -2,
+            "other": 0,
+            "closing": 568,
+            "cycles": 2
+          },
+          "notes": [
+            "Movements are signed (deaths and sales are negative) and net of reversals. Closing head = opening + the movements in the period."
+          ]
+        },
+        "meta": {
+          "current_page": 1,
+          "per_page": 100,
+          "last_page": 1,
+          "total": 2
+        },
+        "message": null
+      }
+order: 1000

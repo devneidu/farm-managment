@@ -1,0 +1,83 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/subscription"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-3d61-723c-a801-609bf2bd1583",
+          "status": "active",
+          "billing_interval": null,
+          "starts_at": "2026-10-04T00:45:08+00:00",
+          "current_period_start": null,
+          "current_period_end": null,
+          "cancel_at_period_end": false,
+          "cancelled_at": null,
+          "ends_at": null,
+          "subscription_inactive": false,
+          "plan": {
+            "id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+            "slug": "free",
+            "name": "Free",
+            "description": "Get started managing one farm.",
+            "currency": "NGN",
+            "is_default": true,
+            "prices": [
+              {
+                "interval": "monthly",
+                "amount_minor": 0,
+                "currency": "NGN",
+                "formatted": "₦0.00"
+              }
+            ],
+            "features": [
+              {
+                "key": "advanced_reports",
+                "label": "Advanced reports",
+                "enabled": false
+              },
+              {
+                "key": "data_export",
+                "label": "Data export",
+                "enabled": false
+              }
+            ],
+            "limits": [
+              {
+                "key": "team_members",
+                "label": "Team members",
+                "limit": 3,
+                "unlimited": false
+              },
+              {
+                "key": "active_cycles",
+                "label": "Active production cycles",
+                "limit": 3,
+                "unlimited": false
+              }
+            ]
+          },
+          "effective_plan": {
+            "id": "01a1045c-caba-72a4-9801-e99695bcb1fe",
+            "slug": "free",
+            "name": "Free"
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,97 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/species?operation=poultry"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: operation
+      value: poultry
+    - key: category
+      value: ""
+      disabled: true
+      description: "enum: livestock | aquaculture | crop"
+    - key: group
+      value: ""
+      disabled: true
+      description: "enum: poultry | small_ruminants | large_ruminants | non_ruminant_mammals | equines | micro_livestock"
+    - key: available
+      value: ""
+      disabled: true
+      description: boolean
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-d7f0-734f-8a02-23e21113b497",
+            "code": "chicken",
+            "name": "Chicken",
+            "is_active": true,
+            "livestock_group": {
+              "code": "poultry",
+              "name": "Poultry"
+            },
+            "operation": {
+              "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+              "code": "poultry",
+              "name": "Poultry",
+              "category": "livestock",
+              "tracking_model": "population"
+            },
+            "capability_codes": [
+              "produces_eggs",
+              "supports_breeding",
+              "supports_feed_records",
+              "supports_group_tracking",
+              "supports_incubation",
+              "supports_live_weight",
+              "supports_mortality"
+            ]
+          },
+          {
+            "id": "01a1045d-6ae2-7017-ac9b-d528c3513b7f",
+            "code": "turkey",
+            "name": "Turkey",
+            "is_active": true,
+            "livestock_group": {
+              "code": "poultry",
+              "name": "Poultry"
+            },
+            "operation": {
+              "id": "01a1045c-d7b1-7294-b14b-133938e3f44a",
+              "code": "poultry",
+              "name": "Poultry",
+              "category": "livestock",
+              "tracking_model": "population"
+            },
+            "capability_codes": [
+              "produces_eggs",
+              "supports_breeding",
+              "supports_feed_records",
+              "supports_group_tracking",
+              "supports_incubation",
+              "supports_live_weight",
+              "supports_mortality"
+            ]
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

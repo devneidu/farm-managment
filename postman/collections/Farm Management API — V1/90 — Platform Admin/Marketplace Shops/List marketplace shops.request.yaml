@@ -1,0 +1,24 @@
+$kind: http-request
+description: Any platform role. `status=pending_review` is the review queue (oldest first). Filters `q, status, verification_status, farm_backed`. No private contact values in lists.
+url: "{{base_url}}/platform-admin/marketplace/shops?status=pending_review"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+queryParams:
+  status: pending_review
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        if (json.data && json.data[0] && json.data[0].id) { pm.environment.set("shop_id", json.data && json.data[0] && json.data[0].id); }
+      }
+    language: text/javascript
+order: 1000

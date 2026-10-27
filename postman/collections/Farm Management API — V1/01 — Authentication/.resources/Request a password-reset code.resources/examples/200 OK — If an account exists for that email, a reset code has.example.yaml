@@ -1,0 +1,28 @@
+$kind: http-example
+name: 200 OK — If an account exists for that email, a reset code has been sent.
+request:
+  url: "{{base_url}}/auth/password/forgot"
+  method: POST
+  headers:
+    Accept: application/json
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "email": "{{invitee_email}}"
+      }
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": null,
+        "meta": {},
+        "message": "If an account exists for that email, a reset code has been sent."
+      }
+order: 1000

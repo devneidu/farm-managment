@@ -1,0 +1,30 @@
+$kind: http-request
+name: "66. Manager: a completed deal cannot be cancelled"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/deals/{{deal_id}}/cancel"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "reason": "other"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 409", function () { pm.expect(pm.response.code).to.eql(409); });
+      const json = pm.response.json();
+      pm.test("Error code deal_not_open", function () { pm.expect(json.code).to.eql("deal_not_open"); });
+    language: text/javascript
+order: 66000

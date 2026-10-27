@@ -1,0 +1,54 @@
+$kind: http-example
+name: Boolean query as "true" is rejected - send 1/0 (422)
+request:
+  url: "{{base_url}}/inventory/items?include_inactive=true"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: include_inactive
+      value: "true"
+    - key: category
+      value: ""
+      disabled: true
+      description: "enum: feed | medicine | seed_planting_material | fertilizer_agrochemical | general_supply | produce"
+    - key: search
+      value: ""
+      disabled: true
+      description: string — max 150 chars
+    - key: low_stock
+      value: ""
+      disabled: true
+      description: "true: only items with a threshold whose stock is at or below it. — boolean"
+    - key: page
+      value: ""
+      disabled: true
+      description: integer — min 1
+    - key: per_page
+      value: ""
+      disabled: true
+      description: integer — min 1, max 100
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The include inactive field must be true or false.",
+        "code": "validation_failed",
+        "request_id": "01a1045e-602b-72d4-b954-06abf00c0287",
+        "errors": {
+          "include_inactive": [
+            "The include inactive field must be true or false."
+          ]
+        }
+      }
+order: 2000

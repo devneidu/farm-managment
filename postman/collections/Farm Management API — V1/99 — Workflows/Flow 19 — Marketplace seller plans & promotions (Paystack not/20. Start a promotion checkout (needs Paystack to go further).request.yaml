@@ -1,0 +1,28 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Same as above for a listing promotion.
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}/promotions/checkout"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "package_id": "{{promotion_package_id}}"
+    }
+scripts:
+  - type: afterResponse
+    code: 'pm.test("No Paystack key here: 503 payments_unavailable (502 if unreachable; 200/201 with a real test key)", () => pm.expect(pm.response.code).to.be.oneOf([200,201,502,503]));'
+    language: text/javascript
+order: 20000

@@ -1,0 +1,122 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/records"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "type": "milk",
+        "production_cycle_id": "{{dairy_cycle_id}}",
+        "recorded_at": "{{recorded_at_3h}}",
+        "idempotency_key": "{{$guid}}",
+        "details": {
+          "components": [
+            {
+              "quantity": "50",
+              "unit": "l"
+            }
+          ],
+          "inventory": {
+            "storage_location_id": "{{store_id}}"
+          }
+        }
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1107d-aa6d-7143-8b71-1af1818710c0",
+          "production_cycle_id": "01a1107d-a800-73eb-8a7c-9df02620d307",
+          "type": "milk",
+          "details": {
+            "components": [
+              {
+                "quantity": "50",
+                "unit": "l"
+              }
+            ],
+            "inventory": {
+              "item_id": "01a1107d-aa54-70b2-9540-3b51ebca6ca9",
+              "storage_location_id": "01a1107d-a850-7029-9ec0-a78d7589cff5"
+            }
+          },
+          "measurement": {
+            "entered": [
+              {
+                "quantity": "50",
+                "unit": "l"
+              }
+            ],
+            "normalized": {
+              "quantity": "50000",
+              "unit": "ml"
+            },
+            "total": {
+              "quantity": "50",
+              "unit": "l"
+            },
+            "snapshot": {
+              "schema": 1,
+              "entered": [
+                {
+                  "quantity": "50",
+                  "unit": {
+                    "code": "l",
+                    "dimension": "volume",
+                    "family": "volume",
+                    "strategy": "linear",
+                    "factor": "1000",
+                    "integer_only": false
+                  }
+                }
+              ],
+              "packages": [],
+              "result_unit": {
+                "code": "l",
+                "dimension": "volume",
+                "family": "volume",
+                "strategy": "linear",
+                "factor": "1000",
+                "integer_only": false
+              },
+              "normalized": {
+                "quantity": "50000",
+                "unit": "ml"
+              },
+              "total": {
+                "quantity": "50",
+                "unit": "l"
+              }
+            }
+          },
+          "population_delta": 0,
+          "recorded_at": "2026-10-14T02:00:00.000000Z",
+          "notes": null,
+          "reverses_record_id": null,
+          "corrects_record_id": null,
+          "reversed_by_record_id": null,
+          "inventory_movement_id": "01a1107d-aa72-7010-8727-efa66b9c7736",
+          "created_by": "01a1107d-a666-71cf-8b3c-8c510ae5f6d0",
+          "created_at": "2026-10-14T12:00:00.000000Z",
+          "attachments": []
+        },
+        "meta": [],
+        "message": "Operational record saved."
+      }
+order: 1000

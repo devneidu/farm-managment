@@ -1,0 +1,1011 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/record-types"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "type": "feed_use",
+            "cycle_kind": "livestock",
+            "capability": "supports_feed_records",
+            "fields": {
+              "feed_name": [
+                "required",
+                "string",
+                "max:200"
+              ],
+              "inventory": [
+                "sometimes",
+                "array:item_id,storage_location_id,lot_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [
+                "inventory.use"
+              ],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "feed",
+            "inventory_direction": "out",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "weight"
+            ],
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": {
+              "mode": "optional_link",
+              "direction": "out",
+              "output": null,
+              "item_category": "feed",
+              "dimensions": [
+                "weight"
+              ],
+              "optional": true,
+              "creates_item": false,
+              "object": "details.inventory",
+              "fields": {
+                "item_id": "required",
+                "storage_location_id": "required",
+                "lot_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "egg_collection",
+            "cycle_kind": "livestock",
+            "capability": "produces_eggs",
+            "fields": {
+              "inventory": [
+                "sometimes",
+                "array:storage_location_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "count",
+              "display_unit": "piece",
+              "normalized_unit": "piece",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create",
+                "inventory.use"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "produce",
+            "inventory_direction": "in",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "count"
+            ],
+            "inventory_automatic": true,
+            "inventory_output": "eggs",
+            "inventory": {
+              "mode": "automatic_output",
+              "direction": "in",
+              "output": "eggs",
+              "item_category": "produce",
+              "dimensions": [
+                "count"
+              ],
+              "optional": false,
+              "creates_item": true,
+              "object": "details.inventory",
+              "fields": {
+                "storage_location_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "milk",
+            "cycle_kind": "livestock",
+            "capability": "produces_milk",
+            "fields": {
+              "inventory": [
+                "sometimes",
+                "array:storage_location_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "volume",
+              "display_unit": "l",
+              "normalized_unit": "ml",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create",
+                "inventory.use"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "produce",
+            "inventory_direction": "in",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "volume"
+            ],
+            "inventory_automatic": true,
+            "inventory_output": "milk",
+            "inventory": {
+              "mode": "automatic_output",
+              "direction": "in",
+              "output": "milk",
+              "item_category": "produce",
+              "dimensions": [
+                "volume"
+              ],
+              "optional": false,
+              "creates_item": true,
+              "object": "details.inventory",
+              "fields": {
+                "storage_location_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "mortality",
+            "cycle_kind": "livestock",
+            "capability": "supports_mortality",
+            "fields": {
+              "quantity": [
+                "required",
+                "positive_whole_count:1..999999999999"
+              ],
+              "cause": [
+                "required",
+                "string",
+                "max:500"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "decrease",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "weight",
+            "cycle_kind": "livestock",
+            "capability": "supports_live_weight",
+            "fields": {
+              "sample_size": [
+                "required",
+                "positive_whole_count:1..999999999999"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "temperature",
+            "cycle_kind": "livestock",
+            "capability": null,
+            "fields": [],
+            "measurement": {
+              "dimension": "temperature",
+              "display_unit": "celsius",
+              "normalized_unit": "celsius",
+              "required": true,
+              "components_max": 1
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "water",
+            "cycle_kind": "livestock",
+            "capability": null,
+            "fields": [],
+            "measurement": {
+              "dimension": "volume",
+              "display_unit": "l",
+              "normalized_unit": "ml",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "irrigation",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "method": [
+                "required",
+                "string",
+                "max:200"
+              ],
+              "duration_minutes": [
+                "sometimes",
+                "integer",
+                "min:1",
+                "max:10080"
+              ]
+            },
+            "measurement": {
+              "dimension": "volume",
+              "display_unit": "l",
+              "normalized_unit": "ml",
+              "required": false,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "weeding",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "method": [
+                "required",
+                "string",
+                "max:200"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "fertilizer_application",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "input_name": [
+                "required_without:details.inventory",
+                "string",
+                "max:200"
+              ],
+              "method": [
+                "required",
+                "string",
+                "max:200"
+              ],
+              "treated_area": [
+                "sometimes",
+                "nullable",
+                "array:quantity,unit"
+              ],
+              "concentration": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:200"
+              ],
+              "inventory": [
+                "sometimes",
+                "array:item_id,storage_location_id,lot_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [
+              "treated_area"
+            ],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [
+                "inventory.use"
+              ],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "fertilizer_agrochemical",
+            "inventory_direction": "out",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "weight",
+              "volume"
+            ],
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": {
+              "mode": "optional_link",
+              "direction": "out",
+              "output": null,
+              "item_category": "fertilizer_agrochemical",
+              "dimensions": [
+                "weight",
+                "volume"
+              ],
+              "optional": true,
+              "creates_item": false,
+              "object": "details.inventory",
+              "fields": {
+                "item_id": "required",
+                "storage_location_id": "required",
+                "lot_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "pesticide_application",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "input_name": [
+                "required_without:details.inventory",
+                "string",
+                "max:200"
+              ],
+              "product_type": [
+                "required",
+                "in:insecticide,herbicide,fungicide,other"
+              ],
+              "method": [
+                "required",
+                "string",
+                "max:200"
+              ],
+              "target": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:300"
+              ],
+              "pre_harvest_interval_days": [
+                "sometimes",
+                "nullable",
+                "integer",
+                "min:0",
+                "max:365"
+              ],
+              "treated_area": [
+                "sometimes",
+                "nullable",
+                "array:quantity,unit"
+              ],
+              "concentration": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:200"
+              ],
+              "inventory": [
+                "sometimes",
+                "array:item_id,storage_location_id,lot_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [
+              "treated_area"
+            ],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [
+                "inventory.use"
+              ],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "fertilizer_agrochemical",
+            "inventory_direction": "out",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "weight",
+              "volume"
+            ],
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": {
+              "mode": "optional_link",
+              "direction": "out",
+              "output": null,
+              "item_category": "fertilizer_agrochemical",
+              "dimensions": [
+                "weight",
+                "volume"
+              ],
+              "optional": true,
+              "creates_item": false,
+              "object": "details.inventory",
+              "fields": {
+                "item_id": "required",
+                "storage_location_id": "required",
+                "lot_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "land_preparation",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "method": [
+                "required",
+                "string",
+                "max:200"
+              ],
+              "treated_area": [
+                "sometimes",
+                "nullable",
+                "array:quantity,unit"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [
+              "treated_area"
+            ],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "planting",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "units_planted": [
+                "required",
+                "positive_whole_count:1..999999999999"
+              ],
+              "method": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:200"
+              ],
+              "inventory": [
+                "sometimes",
+                "array:item_id,storage_location_id,lot_id"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": false,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [
+                "inventory.use"
+              ],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "seed_planting_material",
+            "inventory_direction": "out",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "weight",
+              "count"
+            ],
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": {
+              "mode": "optional_link",
+              "direction": "out",
+              "output": null,
+              "item_category": "seed_planting_material",
+              "dimensions": [
+                "weight",
+                "count"
+              ],
+              "optional": true,
+              "creates_item": false,
+              "object": "details.inventory",
+              "fields": {
+                "item_id": "required",
+                "storage_location_id": "required",
+                "lot_id": "optional"
+              }
+            }
+          },
+          {
+            "type": "establishment_check",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "established_units": [
+                "required",
+                "regex:/^(0|[1-9][0-9]{0,11})$/"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "growth_stage",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "stage": [
+                "required",
+                "in:germination,seedling,vegetative,flowering,fruiting,maturity,dormant"
+              ],
+              "observation": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:2000"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "crop_loss",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "units_lost": [
+                "required",
+                "positive_whole_count:1..999999999999"
+              ],
+              "cause": [
+                "required",
+                "string",
+                "max:500"
+              ],
+              "affected_area": [
+                "sometimes",
+                "nullable",
+                "array:quantity,unit"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [
+              "affected_area"
+            ],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "crop_harvest",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "quality": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:200"
+              ],
+              "inventory": [
+                "sometimes",
+                "array:item_id,storage_location_id,lot_id,lot"
+              ]
+            },
+            "measurement": {
+              "dimension": "weight",
+              "display_unit": "kg",
+              "normalized_unit": "g",
+              "required": true,
+              "components_max": 10
+            },
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [
+                "inventory.use"
+              ],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": true,
+            "inventory_category": "produce",
+            "inventory_direction": "in",
+            "inventory_required": false,
+            "inventory_dimensions": [
+              "weight",
+              "volume",
+              "count"
+            ],
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": {
+              "mode": "optional_link",
+              "direction": "in",
+              "output": null,
+              "item_category": "produce",
+              "dimensions": [
+                "weight",
+                "volume",
+                "count"
+              ],
+              "optional": true,
+              "creates_item": false,
+              "object": "details.inventory",
+              "fields": {
+                "item_id": "required",
+                "storage_location_id": "required",
+                "lot_id": "optional",
+                "lot": "optional"
+              }
+            }
+          },
+          {
+            "type": "pest_observation",
+            "cycle_kind": "crop",
+            "capability": null,
+            "fields": {
+              "issue": [
+                "required",
+                "string",
+                "max:500"
+              ],
+              "severity": [
+                "required",
+                "in:low,moderate,high"
+              ],
+              "action": [
+                "sometimes",
+                "nullable",
+                "string",
+                "max:2000"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "general_note",
+            "cycle_kind": null,
+            "capability": null,
+            "fields": {
+              "text": [
+                "required",
+                "string",
+                "max:5000"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "none",
+            "permission": "record.create",
+            "permissions_required": {
+              "always": [
+                "record.create"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          },
+          {
+            "type": "population_adjustment",
+            "cycle_kind": "livestock",
+            "capability": null,
+            "fields": {
+              "expected_population": [
+                "required",
+                "regex:/^(0|[1-9][0-9]{0,11})$/"
+              ],
+              "actual_population": [
+                "required",
+                "regex:/^(0|[1-9][0-9]{0,11})$/"
+              ],
+              "reason": [
+                "required",
+                "string",
+                "max:2000"
+              ]
+            },
+            "measurement": null,
+            "area_fields": [],
+            "population_effect": "actual_minus_expected",
+            "permission": "record.adjust",
+            "permissions_required": {
+              "always": [
+                "record.adjust"
+              ],
+              "when_inventory_linked": [],
+              "when_correcting": [
+                "record.reverse"
+              ]
+            },
+            "inventory_effect_enabled": false,
+            "inventory_category": null,
+            "inventory_direction": null,
+            "inventory_required": false,
+            "inventory_dimensions": null,
+            "inventory_automatic": false,
+            "inventory_output": null,
+            "inventory": null
+          }
+        ],
+        "meta": {},
+        "message": null
+      }
+order: 1000

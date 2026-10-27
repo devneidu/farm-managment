@@ -1,0 +1,39 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_id}}"
+  method: PATCH
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+    - key: Content-Type
+      value: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "unit_price": "7000",
+        "version": 1
+      }
+response:
+  statusCode: 409
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The listing changed since you loaded it; reload it and try again.",
+        "code": "stale_listing",
+        "request_id": "01a118eb-e71f-7113-ade0-715a0c28e817",
+        "details": {
+          "current_version": 2
+        }
+      }
+order: 1000

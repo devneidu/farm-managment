@@ -1,0 +1,42 @@
+$kind: http-example
+name: "200 — marketplace-only seller: no farm, one shop (next_action marketplace)"
+request:
+  url: "{{base_url}}/auth/me"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "authenticated": true,
+          "email_verified": true,
+          "onboarded": false,
+          "has_active_farm": false,
+          "next_action": "marketplace",
+          "user": {
+            "id": "01a118b0-a911-739e-85f0-de01f68e4611",
+            "email": "tunde.seller@example.com",
+            "name": "Tunde Seller",
+            "email_verified_at": "2026-10-07T23:26:33+00:00",
+            "has_password": true,
+            "platform_role": null,
+            "providers": [],
+            "locale": null
+          },
+          "farm": null,
+          "farms": [],
+          "marketplace": {
+            "shop_count": 1
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 4000

@@ -1,0 +1,22 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/records/{{record_mortality_id}}/attachments/{{attachment_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/octet-stream
+  body:
+    type: text
+    content: |
+      Field note
+      Pen 2 checked, feed trough cleaned.
+order: 1000

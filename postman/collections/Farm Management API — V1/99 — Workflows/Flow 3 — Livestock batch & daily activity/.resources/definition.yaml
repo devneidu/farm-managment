@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Load master data and the batch-form options (location, purpose, growth stage, breed), start a livestock batch, record feed and mortality, reconcile the population and check the derived population and history.
+
+  **Prerequisites:** Flows 1-2 and Flow S (needs `breed_id`, `area_id`).
+
+  Steps: 13. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 4000

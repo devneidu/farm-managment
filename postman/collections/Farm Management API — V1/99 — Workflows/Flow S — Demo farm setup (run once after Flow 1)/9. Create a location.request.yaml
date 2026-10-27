@@ -1,0 +1,65 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Captures `location_id`.
+
+  **WHAT IT DOES**
+  A location is an optional site/building/field container ("Where is this?"). A farm starts with zero places and works without any.
+
+  **WHEN TO USE IT**
+  "Add location" in Farm → Places or inline in a form.
+
+  **IMPORTANT INPUTS**
+  - None (no body or query parameters are required).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `location.manage` (taken from the current farm context; never sent by the client).
+  - `type` is one of `site`, `building`, `house`, `field`, `other`. `parent_id` (another location) is optional; nesting is limited to seven ancestors.
+  - Names are unique per kind + parent after trimming and case-folding, including inactive rows (`409 duplicate_location`).
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Create a batch location (pen, house, pond or plot)**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+
+  Full reference (errors, all fields): folder **07 — Locations & Farm Structure** -> "Create a location".
+url: "{{base_url}}/locations"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "name": "Poultry House 1",
+      "type": "house"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("location_id", String(v)); else console.warn("Could not capture location_id from data.id"); }
+      }
+    language: text/javascript
+examples: ./.resources/9. Create a location.resources/examples
+order: 9000

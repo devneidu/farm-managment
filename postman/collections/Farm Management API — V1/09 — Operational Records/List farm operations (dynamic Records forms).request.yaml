@@ -1,0 +1,37 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  One entry per farm operation: `code`, `label`, `display_mode` (`normal` | `in_only` | `out_only` | `in_out`), `cycle_kind`, `capability`, `inventory_kind`. Eggs and milk are one operation each (`in_out`); `feed_use` is `out_only`; `crop_harvest` is `in_only`; `produce_out` is `out_only`; water, weight, mortality and the other record types are `normal`.
+
+  **WHEN TO USE IT**
+  Building the Records menu without hardcoding IN / OUT / both / normal.
+
+  **AUTHENTICATION / ACCESS**
+  Sanctum session; farm permission `record.view` (every role). Read-only, no new table: composed from the record type registry and the stock reason catalogue. Action-specific permissions (e.g. `inventory.use`) are listed per action in `permissions_required` and are enforced by the endpoint each action submits to.
+
+  **ERRORS**
+  `401 unauthenticated`, `403 forbidden` (no `record.view`), `404 not_found` (unknown operation code).
+url: "{{base_url}}/master/record-operations"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        pm.test("every schema states permissions_required and inventory metadata", function () { const rows = Array.isArray(json.data) ? json.data : [json.data]; rows.forEach(function (t) { pm.expect(t.permissions_required.always).to.be.an("array"); pm.expect(t).to.have.property("inventory"); pm.expect(t).to.have.property("area_fields"); }); });
+      }
+    language: text/javascript
+order: 2000

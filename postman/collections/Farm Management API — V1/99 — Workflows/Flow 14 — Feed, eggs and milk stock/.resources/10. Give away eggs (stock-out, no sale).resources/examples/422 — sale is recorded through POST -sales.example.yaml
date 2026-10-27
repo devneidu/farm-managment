@@ -1,0 +1,50 @@
+$kind: http-example
+name: 422 — sale is recorded through POST /sales
+request:
+  url: "{{base_url}}/inventory/stock-out"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "output": "eggs",
+        "storage_location_id": "{{store_id}}",
+        "reason": "donation",
+        "components": [
+          {
+            "quantity": "30",
+            "unit": "piece"
+          }
+        ],
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}",
+        "notes": "Gave away 1 crate"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "The reason \"sale\" is recorded through POST /sales so the event is entered once; it cannot be used on the manual endpoint.",
+        "code": "validation_failed",
+        "request_id": "01a1107d-acf9-703f-9e00-03d1dacd842e",
+        "errors": {
+          "reason": [
+            "The reason \"sale\" is recorded through POST /sales so the event is entered once; it cannot be used on the manual endpoint."
+          ]
+        }
+      }
+order: 2000

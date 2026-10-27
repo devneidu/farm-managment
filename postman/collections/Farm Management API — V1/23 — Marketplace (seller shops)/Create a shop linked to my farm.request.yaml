@@ -1,0 +1,39 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Same as above, with `farm_id` of a farm you actively belong to. Requires the farm permission `marketplace.manage` (Owner, Manager) -> `403` otherwise; a farm you do not belong to answers `422` exactly like a farm that does not exist. The link is immutable, a farm has at most one shop, and `farm_id` is never returned (`farm_backed: true` only).
+url: "{{base_url}}/marketplace/shops"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Green Acres Farm Shop",
+      "seller_type": "farm",
+      "farm_id": "{{farm_id}}",
+      "categories": [
+        "crops"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 3000

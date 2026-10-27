@@ -1,0 +1,19 @@
+$kind: http-request
+description: "`listing.manage`. Soft-deletes a DRAFT only (`409 invalid_listing_state` otherwise). History and audit rows stay."
+url: "{{base_url}}/marketplace/shops/{{shop_id}}/listings/{{listing_b_id}}"
+method: DELETE
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+scripts:
+  - type: afterResponse
+    code: pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+    language: text/javascript
+examples: ./.resources/48. Delete the draft.resources/examples
+order: 48000

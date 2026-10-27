@@ -1,0 +1,124 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/production-cycles"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "kind": "livestock",
+        "name": "Dairy Herd {{$timestamp}}",
+        "operation_type_id": "{{op_cattle_id}}",
+        "species_id": "{{species_cattle_id}}",
+        "breed_id": "{{breed_cattle_id}}",
+        "production_purpose": "dairy",
+        "growth_stage": "calf",
+        "acquisition_price_per_animal": "185000.50",
+        "supplier_contact_id": "{{supplier_id}}",
+        "initial_population": 12,
+        "start_date": "{{date_30d_ago}}",
+        "production_area_id": "{{area_id}}",
+        "notes": "Calves bought from a Kano trader"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a12033-fcee-72ad-8f52-b3e00e0d203f",
+          "kind": "livestock",
+          "name": "Dairy Herd 1791541640",
+          "reference": "BAT-2026-00002",
+          "status": "active",
+          "operation": {
+            "id": "01a12033-73fe-7365-8dc7-1015e6fa2c8e",
+            "code": "cattle",
+            "name": "Cattle",
+            "tracking_model": "population"
+          },
+          "production_area": {
+            "id": "01a12033-d369-7306-8ac7-11dea398cfc3",
+            "kind": "production_area",
+            "name": "Pen 1",
+            "type": "pen",
+            "type_label": "Pen",
+            "parent_id": "01a12033-d2e4-71a1-bb4c-f27481d1d8a0",
+            "path": [
+              {
+                "id": "01a12033-d2e4-71a1-bb4c-f27481d1d8a0",
+                "kind": "location",
+                "name": "Poultry House 1"
+              },
+              {
+                "id": "01a12033-d369-7306-8ac7-11dea398cfc3",
+                "kind": "production_area",
+                "name": "Pen 1"
+              }
+            ],
+            "path_label": "Poultry House 1 / Pen 1",
+            "depth": 1,
+            "is_active": true,
+            "created_at": "2026-10-09T10:27:09+00:00",
+            "updated_at": "2026-10-09T10:27:09+00:00"
+          },
+          "start_date": "2026-09-09",
+          "planting_date": null,
+          "expected_end_date": null,
+          "end_date": null,
+          "notes": "Calves bought from a Kano trader",
+          "baseline_locked": true,
+          "livestock": {
+            "species": {
+              "id": "01a12033-740a-70bd-a9b9-9cdabf744e79",
+              "code": "cattle",
+              "name": "Cattle"
+            },
+            "breed": {
+              "id": "01a12033-b37d-7182-855d-ce4a8f9d2b28",
+              "name": "White Fulani (Bunaji)",
+              "is_active": true
+            },
+            "production_purpose": {
+              "code": "dairy",
+              "name": "Dairy",
+              "is_active": true
+            },
+            "growth_stage": {
+              "code": "calf",
+              "name": "Calf",
+              "is_active": true
+            },
+            "acquisition_price_per_animal": "185000.50",
+            "acquisition_currency": "NGN",
+            "supplier_contact": {
+              "id": "01a12033-fcaf-73d3-a9ae-abba5c29b615",
+              "name": "Kano Cattle Traders",
+              "is_active": true
+            },
+            "initial_population": 12,
+            "current_population": 12,
+            "population_unit": "head",
+            "population_basis": "population_movements"
+          },
+          "crop": null,
+          "created_at": "2026-10-09T10:27:20.000000Z",
+          "updated_at": "2026-10-09T10:27:20.000000Z"
+        },
+        "meta": {},
+        "message": "Production cycle created."
+      }
+order: 1000

@@ -1,0 +1,8 @@
+$kind: collection
+description: |-
+  **Goal:** Upgrade the demo farm (platform admin), then create the places, stores, inventory items and opening stock the later flows use.
+
+  **Prerequisites:** Flow 1 completed. Needs a platform admin account for the first four requests (optional).
+
+  Steps: 22. Run in order (Collection Runner) with the Farm Management — Local environment.
+order: 3000

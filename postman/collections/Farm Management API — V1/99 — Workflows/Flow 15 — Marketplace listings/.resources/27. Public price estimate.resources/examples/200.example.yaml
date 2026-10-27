@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/public/marketplace/listings/{{listing_slug}}/price-preview?quantity=10"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  queryParams:
+    quantity: "10"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "quantity": "10.000000",
+          "unit": "head",
+          "unit_price": "8500.00",
+          "currency": "NGN",
+          "binding": false,
+          "note": "An estimate only. Nothing is reserved or agreed by this calculation.",
+          "total": "85000.00",
+          "total_minor": 8500000
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

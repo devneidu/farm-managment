@@ -1,0 +1,63 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/translations/en"
+  method: GET
+  headers:
+    Accept: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "locale": "en",
+          "fallback_locale": "en",
+          "direction": "ltr",
+          "version": "9b081f5478c3",
+          "complete": true,
+          "fallback_keys": [],
+          "messages": {
+            "a11y.close": "Close",
+            "a11y.error_prefix": "Error",
+            "a11y.menu": "Menu",
+            "a11y.skip_to_content": "Skip to main content",
+            "a11y.status_prefix": "Status",
+            "a11y.success_prefix": "Success",
+            "a11y.unread": "Unread",
+            "a11y.warning_prefix": "Warning",
+            "common.cancel": "Cancel",
+            "common.delete": "Delete",
+            "common.edit": "Edit",
+            "common.loading": "Loading",
+            "common.no": "No",
+            "common.retry": "Try again",
+            "common.save": "Save",
+            "common.search": "Search",
+            "common.yes": "Yes",
+            "form.decimal_hint": "Use a dot for decimals, for example 12.50",
+            "form.error_summary": "Please fix the highlighted fields",
+            "form.optional": "Optional",
+            "form.required": "Required",
+            "nav.dashboard": "Dashboard",
+            "nav.finance": "Finance",
+            "nav.inventory": "Inventory",
+            "nav.records": "Records",
+            "nav.reports": "Reports",
+            "nav.sales": "Sales",
+            "nav.settings": "Settings",
+            "nav.tasks": "Tasks",
+            "task_state.cancelled": "Cancelled",
+            "task_state.completed": "Completed",
+            "task_state.due_today": "Due today",
+            "task_state.overdue": "Overdue",
+            "task_state.upcoming": "Upcoming"
+          }
+        },
+        "meta": {},
+        "message": null
+      }
+order: 1000

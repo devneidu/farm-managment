@@ -1,0 +1,65 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/master/units?dimension=weight"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: dimension
+      value: weight
+    - key: family
+      value: ""
+      disabled: true
+      description: string — max 32 chars
+    - key: include_inactive
+      value: ""
+      disabled: true
+      description: boolean
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1045c-e586-73de-b335-76b36aa4dfb2",
+            "code": "mg",
+            "name": "Milligram",
+            "symbol": "mg",
+            "dimension": "weight",
+            "family": "weight",
+            "is_canonical": false,
+            "integer_only": false,
+            "decimal_places": 2,
+            "is_active": true,
+            "source": "system"
+          },
+          {
+            "id": "01a1045c-e591-7078-8876-29dd07991111",
+            "code": "g",
+            "name": "Gram",
+            "symbol": "g",
+            "dimension": "weight",
+            "family": "weight",
+            "is_canonical": true,
+            "integer_only": false,
+            "decimal_places": 2,
+            "is_active": true,
+            "source": "system"
+          }
+        ],
+        "meta": {
+          "dimension": "weight"
+        },
+        "message": null
+      }
+order: 1000

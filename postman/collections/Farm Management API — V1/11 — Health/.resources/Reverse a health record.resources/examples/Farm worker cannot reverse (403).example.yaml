@@ -1,0 +1,35 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/health-records/{{health_med2_id}}/reverse"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "reason": "x",
+        "recorded_at": "{{recorded_at}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 403
+  statusText: Forbidden
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "You are not allowed to perform this action.",
+        "code": "forbidden",
+        "request_id": "01a1045e-76c1-71b2-9dab-98cf86780f56"
+      }
+order: 3000

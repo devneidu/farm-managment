@@ -1,0 +1,42 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/expenses"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "finance_category_id": "{{cat_labour_id}}",
+        "amount": "105000.00",
+        "quantity": "12.5",
+        "occurred_on": "{{today}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 422
+  statusText: Unprocessable Entity
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Send quantity and unit_price together, or neither.",
+        "code": "validation_failed",
+        "request_id": "01a164f1-ac93-725c-9a87-16c38bcaddf2",
+        "errors": {
+          "unit_price": [
+            "Send quantity and unit_price together, or neither."
+          ]
+        }
+      }
+order: 4000

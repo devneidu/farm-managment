@@ -1,0 +1,24 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/marketplace/image-library"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [],
+        "meta": {},
+        "message": null
+      }
+order: 1000

@@ -1,0 +1,34 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/work-templates/{{template_platform_id}}/apply"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "production_cycle_id": "{{cycle_id}}",
+        "idempotency_key": "{{$guid}}"
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "This template was already applied to this target.",
+        "code": "template_already_applied",
+        "request_id": "01a1045e-81d3-7045-a7d9-c5c6f82a6dbb"
+      }
+order: 2000

@@ -1,0 +1,22 @@
+$kind: http-request
+description: |-
+  Cattle reference lists for the batch-creation form. Requires `master_data.view`; path `{{species_cattle_id}}` is captured by "List species (all animals)".
+
+  Cattle purposes: meat, dairy, dual_purpose, hide, breeding, draught, other. Stages: calf, weaner, grower, adult, unknown. Captures `breed_cattle_id` (White Fulani (Bunaji)).
+
+  See "Selected animal batch reference" (Chicken) for the full response description. See docs/api/LIVESTOCK-BATCH-CREATION.md.
+url: "{{base_url}}/master/species/{{species_cattle_id}}/batch-reference"
+method: GET
+headers:
+  Accept: application/json
+  Origin: "{{frontend_origin}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Selected animal reference is available", function () { pm.response.to.have.status(200); });
+      const d = pm.response.json().data;
+      pm.test("Species-specific creation options (cattle)", function () { pm.expect(d.species.code).to.eql("cattle"); pm.expect(d.breed_field_label).to.eql("Breed / Strain"); pm.expect(d.purposes.map(x => x.code)).to.include("dairy"); pm.expect(d.growth_stages.map(x => x.code)).to.include("calf"); pm.expect(d.breeds.length).to.be.above(0); });
+      { const b = d.breeds.find(x => x.code === "white_fulani_bunaji"); if (b) pm.environment.set("breed_cattle_id", b.id); else console.warn("Could not capture breed_cattle_id"); }
+    language: text/javascript
+examples: ./.resources/Selected animal batch reference (Cattle).resources/examples
+order: 19000

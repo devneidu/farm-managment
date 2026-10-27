@@ -1,0 +1,21 @@
+$kind: http-request
+name: "70. Buyer 2: the seller's confirmation shows the exact terms"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/my/deal-confirmations/{{confirmation_id}}"
+method: GET
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.eql(200); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      pm.test("Confirmable, product total only", function () { pm.expect(json.data.confirmable).to.eql(true); pm.expect(json.data.terms.unit_price).to.eql("8000.00"); pm.expect(json.data.terms.product_total).to.eql("96000.00"); pm.expect(json.data.terms.total_covers).to.eql("product_only"); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street","+2348055501234",pm.environment.get("deal_buyer_email"),pm.environment.get("deal_buyer2_email")].filter(Boolean).forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 70000

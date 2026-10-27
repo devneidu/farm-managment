@@ -1,0 +1,6 @@
+$kind: collection
+description: |-
+  Where on the farm: locations (sites/buildings/fields), batch locations (pens, ponds, plots; called *production areas* in the API) and storage locations (stores). All optional; a new farm has none. No DELETE: deactivate instead. IDs are UUIDs.
+
+  Typical screens: Farm → Places (locations, pens/ponds/plots, stores) and the "Where?" selectors in other forms.
+order: 9000

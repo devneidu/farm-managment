@@ -1,0 +1,34 @@
+$kind: http-request
+name: "65. Listing C: offer 3 of 3"
+description: "**IN THIS FLOW**"
+url: "{{base_url}}/marketplace/listings/{{listing_c_slug}}/offers"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "quantity": "10",
+      "unit_price": "6300"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.eql(201); });
+      const json = pm.response.json();
+      pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      { const v = json.data.id; if (v !== undefined && v !== null) { pm.environment.set("offer_c_id", v); } }
+      pm.test("Attempt 3", function () { pm.expect(json.data.attempt_no).to.eql(3); });
+      pm.test("No private contact details in the response", function () { const t = pm.response.text(); ["+2348031234567","ada.private@example.com","12 Secret Street"].forEach((s) => pm.expect(t).to.not.include(s)); });
+    language: text/javascript
+order: 65000

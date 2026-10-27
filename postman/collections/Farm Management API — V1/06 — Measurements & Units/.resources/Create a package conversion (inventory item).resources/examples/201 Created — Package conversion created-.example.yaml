@@ -1,0 +1,61 @@
+$kind: http-example
+name: 201 Created — Package conversion created.
+request:
+  url: "{{base_url}}/settings/package-conversions"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "context_type": "inventory_item",
+        "context_id": "{{item_feed_id}}",
+        "package_unit": "bag",
+        "target_unit": "kg",
+        "quantity_per_package": "25"
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1045e-56b4-7263-a671-1c2e95979ba4",
+          "context": {
+            "type": "inventory_item",
+            "id": "01a1045e-54d6-72e9-93a7-37c66168067f",
+            "label": "Layer Grower Mash"
+          },
+          "package_unit": {
+            "code": "bag",
+            "name": "Bag",
+            "symbol": "bag"
+          },
+          "target_unit": {
+            "code": "kg",
+            "name": "Kilogram",
+            "symbol": "kg",
+            "dimension": "weight"
+          },
+          "quantity_per_package": "25",
+          "version": 1,
+          "is_active": true,
+          "created_at": "2026-10-04T00:45:08+00:00",
+          "updated_at": "2026-10-04T00:45:08+00:00"
+        },
+        "meta": {},
+        "message": "Package conversion created."
+      }
+order: 1000

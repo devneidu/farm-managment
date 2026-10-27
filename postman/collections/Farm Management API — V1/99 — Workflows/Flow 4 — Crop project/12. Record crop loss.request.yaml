@@ -1,0 +1,75 @@
+$kind: http-request
+description: |-
+  **IN THIS FLOW**
+  Crops have no population ledger: this is an audit record.
+
+  **WHAT IT DOES**
+  Records planting units lost. Crops have no population ledger, so `population_delta` stays 0; the loss only feeds the crop project detail.
+
+  **WHEN TO USE IT**
+  "Record crop loss".
+
+  **IMPORTANT INPUTS**
+  - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires the farm permission `record.create` (taken from the current farm context; never sent by the client).
+  - Record only.
+  - Cumulative non-reversed losses cannot exceed the baseline. The livestock `mortality` type is not available on crops.
+
+  **WHAT TO DO NEXT**
+  Usual next request in the flow: **Record harvest (into produce stock)**.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Unit codes come from `GET /master/units?dimension=...`; do not hard-code them.
+  - Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.
+  - Derived numbers (population, stock, outstanding, totals) are authoritative on the server: refetch the affected resource and the dashboard after saving.
+
+  Full reference (errors, all fields): folder **14 — Crop Operations** -> "Record crop loss".
+url: "{{base_url}}/records"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "type": "crop_loss",
+      "production_cycle_id": "{{crop_cycle_id}}",
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "details": {
+        "units_lost": 12,
+        "cause": "Flooding after heavy rain",
+        "affected_area": {
+          "quantity": "0.1",
+          "unit": "hectare"
+        }
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/12. Record crop loss.resources/examples
+order: 12000

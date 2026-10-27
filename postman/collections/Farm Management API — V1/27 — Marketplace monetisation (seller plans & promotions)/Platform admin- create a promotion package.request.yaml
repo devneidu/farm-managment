@@ -1,0 +1,48 @@
+$kind: http-request
+name: "Platform admin: create a promotion package"
+description: |-
+  **WHAT IT DOES**
+  Role `admin`. Fixed price for a fixed number of days. Audited.
+
+  **INPUTS**
+  - `code`, `name`, `duration_days` 1-365, `amount`, `description?`, `is_active?`, `sort_order?`
+
+  **ERRORS**
+  `422`
+
+  **BOUNDARY**
+  Farmvest collects only its own service fees. No commission, escrow, wallet, payout or buyer-seller payment. Nothing is activated by a redirect: only server-side Paystack confirmation of reference, amount and currency activates a benefit.
+url: "{{base_url}}/platform-admin/marketplace/promotion-packages"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "code": "featured_week",
+      "name": "Featured for 7 days",
+      "duration_days": 7,
+      "amount": "3000.00",
+      "is_active": true
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+order: 15000
