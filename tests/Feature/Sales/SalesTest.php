@@ -21,6 +21,7 @@ use App\Models\Species;
 use App\Support\Finance\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use LogicException;
@@ -945,5 +946,26 @@ class SalesTest extends TeamTestCase
         $this->postJson('/api/v1/payments/'.$paid['id'].'/reverse', ['reason' => 'Bounced', 'idempotency_key' => $this->key()])->assertSuccessful();
         $this->assertCount(2, $this->getJson('/api/v1/finance/transactions?payment_method=mobile_money')->json('data'));
         $this->assertCount(0, $this->getJson('/api/v1/finance/transactions?payment_method=cash')->json('data'));
+    }
+    public function test_finance_references_stay_unique_across_payments_reversals_and_manual_entries(): void
+    {
+        $year = now()->format('Y');
+        [, $invoice] = $this->invoicedEggSale('600.00');
+        $payment = $this->pay($invoice['id'], '400.00')->assertCreated()->json('data'); // FIN 1
+        $this->pay($invoice['id'], '200.00')->assertCreated(); // FIN 2
+        $this->postJson('/api/v1/payments/'.$payment['id'].'/reverse', ['reason' => 'Cheque bounced', 'idempotency_key' => $this->key()])->assertOk(); // FIN 3
+        $this->assertSame(["FIN-$year-00001", "FIN-$year-00002", "FIN-$year-00003"], FinanceTransaction::orderBy('reference')->pluck('reference')->all());
+
+        // An imported or restored row with a higher number (row 5 here) leaves a hole: the next entries continue after the highest.
+        $stray = (array) DB::table('finance_transactions')->where('reference', "FIN-$year-00003")->first();
+        DB::table('finance_transactions')->insert(array_merge($stray, ['id' => (string) Str::uuid7(), 'reference' => "FIN-$year-00005", 'idempotency_key' => $this->key(), 'source_key' => null, 'source_type' => null, 'source_id' => null,
+            'entry_type' => FinanceTransaction::ENTRY, 'reverses_transaction_id' => null]));
+        $category = collect($this->getJson('/api/v1/finance/categories?direction=expense')->json('data'))->firstWhere('code', 'transport')['id'];
+        $entry = fn () => $this->postJson('/api/v1/expenses', ['finance_category_id' => $category, 'amount' => '2500.00', 'occurred_on' => $this->today(), 'idempotency_key' => $this->key()]);
+        $entry()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00006");
+        $entry()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00007");
+
+        // And the payment path numbers after the manual rows too.
+        $this->pay($invoice['id'], '400.00')->assertCreated()->assertJsonPath('data.finance_transaction_id', FinanceTransaction::where('reference', "FIN-$year-00008")->value('id'));
     }
 }

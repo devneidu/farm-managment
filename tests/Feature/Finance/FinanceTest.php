@@ -14,6 +14,7 @@ use App\Models\Species;
 use App\Support\Finance\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use LogicException;
@@ -725,5 +726,67 @@ class FinanceTest extends TeamTestCase
         $this->assertFalse(FarmRole::FarmWorker->can(Permission::ContactView));
         $this->assertTrue(FarmRole::Finance->can(Permission::InventoryView)); // can read stock the purchases created
         $this->assertFalse(FarmRole::Finance->can(Permission::InventoryManage)); // purchasing is its own permission path
+    }
+    // ------------------------------------------------------------------ reference numbering
+
+    private function references(): array
+    {
+        return FinanceTransaction::orderBy('reference')->pluck('reference')->all();
+    }
+
+    /** A ledger row as an import, a restore or another year would have left it: same shape, chosen reference, no source or idempotency link. */
+    private function strayRow(string $reference): void
+    {
+        $row = (array) DB::table('finance_transactions')->first();
+        DB::table('finance_transactions')->insert(array_merge($row, ['id' => (string) Str::uuid7(), 'reference' => $reference, 'idempotency_key' => $this->key(), 'source_key' => null, 'source_type' => null, 'source_id' => null,
+            'entry_type' => FinanceTransaction::ENTRY, 'reverses_transaction_id' => null, 'corrects_transaction_id' => null]));
+    }
+
+    public function test_references_never_repeat_across_manual_purchase_and_reversal_rows(): void
+    {
+        $year = now()->format('Y');
+        $item = $this->item();
+        $this->purchase([$this->stockLine($item, $this->store(), '10', 'kg', '5000')], ['finance_category_id' => $this->category('feed')])->assertCreated();
+        $expense = $this->expense()->assertCreated()->json('data');
+        $this->income()->assertCreated();
+        $this->postJson('/api/v1/finance/transactions/'.$expense['id'].'/reverse', ['reason' => 'Wrong amount', 'idempotency_key' => $this->key()])->assertCreated();
+        $this->assertSame(["FIN-$year-00001", "FIN-$year-00002", "FIN-$year-00003", "FIN-$year-00004"], $this->references());
+
+        $this->expense()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00005");
+    }
+
+    public function test_a_gap_in_the_existing_numbers_does_not_produce_a_duplicate(): void
+    {
+        $year = now()->format('Y');
+        foreach (range(1, 3) as $i) {
+            $this->expense()->assertCreated();
+        }
+        DB::table('finance_transactions')->where('reference', "FIN-$year-00001")->delete(); // 2 rows left, the highest number is 3
+
+        $this->expense()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00004");
+        $this->assertSame(["FIN-$year-00002", "FIN-$year-00003", "FIN-$year-00004"], $this->references());
+    }
+
+    public function test_out_of_order_numbers_continue_after_the_highest_of_that_farm_and_year(): void
+    {
+        $year = now()->format('Y');
+        $this->expense()->assertCreated();
+        $this->strayRow("FIN-$year-00007");
+        $this->strayRow('FIN-'.($year - 1).'-00050'); // another year never counts
+
+        $this->expense()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00008");
+        $this->income()->assertCreated()->assertJsonPath('data.reference', "FIN-$year-00009");
+    }
+
+    public function test_two_quick_creates_in_a_row_get_two_numbers_and_a_retry_gets_none(): void
+    {
+        $year = now()->format('Y');
+        $key = $this->key();
+        $first = $this->expense(['idempotency_key' => $key])->assertCreated()->json('data');
+        $second = $this->expense()->assertCreated()->json('data');
+        $this->assertSame(["FIN-$year-00001", "FIN-$year-00002"], [$first['reference'], $second['reference']]);
+
+        $this->expense(['idempotency_key' => $key])->assertCreated()->assertJsonPath('data.id', $first['id']);
+        $this->assertSame(2, FinanceTransaction::count());
     }
 }

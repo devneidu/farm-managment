@@ -27,6 +27,7 @@ use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
 use App\Support\Measurement\Decimal;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -131,9 +132,8 @@ class SaleService
             $payment = isset($data['payment']) ? $this->assertPayment($ctx, $data['payment'], $total, $when) : null;
             $category = isset($data['finance_category_id']) ? $this->finance->category($ctx, $data['finance_category_id'], 'income') : $this->derivedCategory($lines);
 
-            $number = Sale::where('farm_id', $ctx->farm->id)->count() + 1;
             $sale = Sale::create([
-                'farm_id' => $ctx->farm->id, 'reference' => 'SAL-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                'farm_id' => $ctx->farm->id, 'reference' => ReferenceNumber::next(Sale::class, $ctx->farm->id, 'SAL'),
                 'contact_id' => $contactId, 'customer_name' => $customerName ?: null, 'finance_category_id' => $category->id, 'recorded_at' => $when,
                 'total_amount' => $total, 'currency' => $ctx->farm->currency, 'status' => Sale::ACTIVE, 'notes' => $data['notes'] ?? null,
                 'corrects_sale_id' => $data['corrects_sale_id'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,

@@ -16,6 +16,7 @@ use App\Models\Task;
 use App\Services\Records\RecordTypeRegistry;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
@@ -109,12 +110,11 @@ class WorkSupport
     /** Creates the row; call with the farm row locked so references stay unique. */
     public function build(Farm $farm, array $attributes): Task
     {
-        $number = Task::where('farm_id', $farm->id)->count() + 1;
         $dueTime = isset($attributes['due_time']) ? substr($attributes['due_time'], 0, 5) : null;
         $attributes['due_time'] = $dueTime;
 
         return Task::create($attributes + [
-            'farm_id' => $farm->id, 'reference' => 'TSK-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+            'farm_id' => $farm->id, 'reference' => ReferenceNumber::next(Task::class, $farm->id, 'TSK'),
             'due_at' => $this->dueAt($farm, $attributes['due_date'], $dueTime), 'status' => TaskStatus::Open,
         ]);
     }

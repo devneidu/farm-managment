@@ -16,6 +16,7 @@ use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -196,7 +197,7 @@ class PaymentService
 
     private function reference(FarmContext $ctx): string
     {
-        return 'PAY-'.now()->format('Y').'-'.str_pad((string) (Payment::where('farm_id', $ctx->farm->id)->count() + 1), 5, '0', STR_PAD_LEFT);
+        return ReferenceNumber::next(Payment::class, $ctx->farm->id, 'PAY');
     }
 
     private function replay(FarmContext $ctx, string $key, string $hash): ?Payment

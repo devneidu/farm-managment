@@ -35,6 +35,7 @@ use App\Services\Subscription\EntitlementService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -117,10 +118,9 @@ class CycleService
                 $this->dates($start, $data);
                 $areaId = $this->area($ctx->farm, $data['production_area_id'] ?? null);
                 $name = $this->name($data['name']);
-                $number = ProductionCycle::ofFarm($ctx->farm)->count() + 1;
                 $cycle = ProductionCycle::create([
                     'farm_id' => $ctx->farm->id, 'kind' => $kind, 'name' => $name, 'normalized_name' => Str::lower($name),
-                    'reference' => ($kind === CycleKind::Livestock ? 'BAT' : 'CRP').'-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                    'reference' => ReferenceNumber::next(ProductionCycle::class, $ctx->farm->id, $kind === CycleKind::Livestock ? 'BAT' : 'CRP', '%-'.now()->format('Y').'-%'), // batches and crops share one sequence
                     'operation_type_id' => $operation->id, 'production_area_id' => $areaId, 'status' => CycleStatus::Active,
                     'start_date' => $start, 'expected_end_date' => $data['expected_end_date'] ?? null, 'notes' => $data['notes'] ?? null, 'created_by' => $actor->id,
                 ]);

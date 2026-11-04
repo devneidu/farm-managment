@@ -33,6 +33,7 @@ use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
 use App\Support\Entitlements\EntitlementException;
 use App\Support\Idempotency\RequestHash;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -121,9 +122,8 @@ class BreedingService
             $this->assertHeadCount($cycle, $data['females_bred'] ?? null, 'females_bred', 'females bred');
             $parents = $this->parents($ctx, $cycle, $data['parents'] ?? []);
             $title = trim((string) ($data['title'] ?? '')) ?: $this->title($cycle, $workflow, $data['start_date']);
-            $number = BreedingProject::where('farm_id', $ctx->farm->id)->count() + 1;
             $project = BreedingProject::create([
-                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'reference' => 'BRD-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT), 'title' => $title,
+                'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'reference' => ReferenceNumber::next(BreedingProject::class, $ctx->farm->id, 'BRD'), 'title' => $title,
                 'workflow' => $workflow, 'status' => BreedingStatus::Active, 'start_date' => $data['start_date'],
                 'eggs_set' => $data['eggs_set'] ?? null, 'females_bred' => $data['females_bred'] ?? null, 'expected_offspring' => $data['expected_offspring'] ?? null,
                 'reference_snapshot' => $snapshot, 'expectation_source' => $expectation['source'],

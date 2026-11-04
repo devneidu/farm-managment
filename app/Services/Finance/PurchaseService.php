@@ -18,6 +18,7 @@ use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
 use App\Support\Measurement\Decimal;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -106,9 +107,8 @@ class PurchaseService
                 ? $this->finance->category($ctx, $data['finance_category_id'], 'expense')
                 : $this->derivedCategory($lines);
 
-            $number = Purchase::where('farm_id', $ctx->farm->id)->count() + 1;
             $purchase = Purchase::create([
-                'farm_id' => $ctx->farm->id, 'reference' => 'PUR-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                'farm_id' => $ctx->farm->id, 'reference' => ReferenceNumber::next(Purchase::class, $ctx->farm->id, 'PUR'),
                 'contact_id' => $contactId, 'production_cycle_id' => $cycleId, 'finance_category_id' => $category->id,
                 'supplier_reference' => $data['supplier_reference'] ?? null, 'recorded_at' => $when, 'total_amount' => $total, 'currency' => $ctx->farm->currency,
                 'status' => Purchase::ACTIVE, 'records_expense' => $recordExpense, 'notes' => $data['notes'] ?? null,

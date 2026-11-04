@@ -20,6 +20,7 @@ use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
 use App\Support\Measurement\Decimal;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -290,10 +291,9 @@ class FinanceService
 
     private function insert(FarmContext $ctx, array $attributes): FinanceTransaction
     {
-        $number = FinanceTransaction::where('farm_id', $ctx->farm->id)->count() + 1;
         try {
             $row = FinanceTransaction::create([
-                'farm_id' => $ctx->farm->id, 'reference' => 'FIN-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                'farm_id' => $ctx->farm->id, 'reference' => ReferenceNumber::next(FinanceTransaction::class, $ctx->farm->id, 'FIN'),
                 'currency' => $ctx->farm->currency, 'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
             ] + $attributes);
         } catch (UniqueConstraintViolationException $e) {

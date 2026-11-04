@@ -17,6 +17,7 @@ use App\Support\Api\ApiHttpException;
 use App\Support\Finance\Money;
 use App\Support\Idempotency\RequestHash;
 use App\Support\Measurement\Decimal;
+use App\Support\References\ReferenceNumber;
 use Carbon\CarbonImmutable;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -135,10 +136,9 @@ class InvoiceService
         }
         $sale->loadMissing(['items.item.stockUnit', 'contact']);
         $contact = $sale->contact;
-        $number = Invoice::where('farm_id', $ctx->farm->id)->count() + 1;
         try {
             $invoice = Invoice::create([
-                'farm_id' => $ctx->farm->id, 'sale_id' => $sale->id, 'reference' => 'INV-'.now()->format('Y').'-'.str_pad((string) $number, 5, '0', STR_PAD_LEFT),
+                'farm_id' => $ctx->farm->id, 'sale_id' => $sale->id, 'reference' => ReferenceNumber::next(Invoice::class, $ctx->farm->id, 'INV'),
                 'status' => Invoice::ISSUED, 'live_sale_key' => $sale->id, 'issue_date' => $issued, 'due_date' => $due, 'contact_id' => $contact?->id,
                 'customer_name' => $contact?->name ?? $sale->customer_name, 'customer_phone' => $contact?->phone, 'customer_email' => $contact?->email, 'customer_address' => $contact?->address,
                 'seller_name' => $ctx->farm->name, 'total_amount' => $sale->total_amount, 'currency' => $sale->currency, 'notes' => $data['notes'] ?? null,
