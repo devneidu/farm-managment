@@ -13,7 +13,9 @@ class ScheduleResource extends JsonResource
             'id' => $this->id, 'status' => $this->status, 'title' => $this->title, 'category' => $this->category->value, 'instructions' => $this->instructions,
             'recurrence' => $this->recurrence->value, 'interval_value' => $this->interval_value, 'weekdays' => $this->weekdays,
             'starts_on' => $this->starts_on->toDateString(), 'ends_on' => $this->ends_on?->toDateString(), 'occurrence_limit' => $this->occurrence_limit,
-            'due_time' => $this->due_time !== null ? substr($this->due_time, 0, 5) : null, 'reminder_offsets' => $this->reminder_offsets,
+            /** How the repeat ends: batch_end (while the batch is open), date (ends_on / occurrence_limit) or never. */
+            'ends_type' => $this->ends_type ?? ($this->ends_on !== null || $this->occurrence_limit !== null ? 'date' : 'never'),
+            'due_time' => $this->due_time !== null ? substr($this->due_time, 0, 5) : null, 'reminder_offsets' => $this->reminder_offsets, 'reminders' => $this->reminder_presets,
             'production_cycle_id' => $this->production_cycle_id, 'breeding_project_id' => $this->breeding_project_id,
             'template_application_id' => $this->template_application_id,
             'assigned_user_id' => $this->assigned_user_id, 'assigned_role' => $this->assigned_role,

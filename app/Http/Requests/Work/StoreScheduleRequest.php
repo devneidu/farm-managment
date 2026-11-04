@@ -14,7 +14,9 @@ class StoreScheduleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'recurrence' => ['required', 'in:none,daily,weekly'],
+            'recurrence' => ['required', 'in:none,daily,weekly,monthly'],
+            /** batch_end = keep going while the production cycle is open (needs a cycle or breeding project; no ends_on or occurrence_limit). */
+            'ends_type' => ['sometimes', 'nullable', 'in:batch_end'],
             'starts_on' => ['required', 'date_format:Y-m-d'],
             'ends_on' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'after_or_equal:starts_on'],
             'production_cycle_id' => ['sometimes', 'nullable', 'uuid'],
@@ -26,6 +28,7 @@ class StoreScheduleRequest extends FormRequest
             /** @ignoreParam */
             'status' => ['missing'],
             ...WorkRules::work(),
+            ...WorkRules::reminders(),
             ...WorkRules::recurrence(),
         ];
     }

@@ -6,10 +6,13 @@ use App\Enums\TaskCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Work\CancelTaskRequest;
 use App\Http\Requests\Work\CompleteTaskRequest;
+use App\Http\Requests\Work\EditSeriesRequest;
 use App\Http\Requests\Work\ListTasksRequest;
 use App\Http\Requests\Work\StoreTaskRequest;
 use App\Http\Requests\Work\UpdateTaskRequest;
+use App\Http\Resources\ScheduleResource;
 use App\Http\Resources\TaskResource;
+use App\Services\Work\ScheduleService;
 use App\Services\Work\TaskService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiResponse;
@@ -19,6 +22,15 @@ use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
+    /** {schedule, tasks}: the schedule and the tasks it has generated so far. */
+    private function series($schedule, ScheduleService $schedules, Request $request, string $message, array $extra = []): JsonResponse
+    {
+        return ApiResponse::success([
+            'schedule' => (new ScheduleResource($schedule))->resolve($request),
+            'tasks' => TaskResource::collection($schedules->tasksOf($schedule->id))->resolve($request),
+        ] + $extra, message: $message, status: 201);
+    }
+
     private function task($task, Request $request): array
     {
         return (new TaskResource($task))->resolve($request);
@@ -29,11 +41,11 @@ class TaskController extends Controller
      *
      * Requires task.view. The closed category vocabulary for tasks, schedules and templates.
      *
-     * @response array{data: array<int, array{code: string, label: string}>, meta: object, message: null}
+     * @response array{data: array<int, array{code: string, label: string, description: string, color_group: 'feeding_eggs_growth'|'health_vaccines'|'breeding'|'cleaning_repairs_moves'|'crops'|'orders_records_other'}>, meta: object, message: null}
      */
     public function categories(): JsonResponse
     {
-        return ApiResponse::success(array_map(fn (TaskCategory $c) => ['code' => $c->value, 'label' => $c->label()], TaskCategory::cases()));
+        return ApiResponse::success(array_map(fn (TaskCategory $c) => ['code' => $c->value, 'label' => $c->label(), 'description' => $c->description(), 'color_group' => $c->colorGroup()], TaskCategory::cases()));
     }
 
     /**
@@ -59,11 +71,19 @@ class TaskController extends Controller
      * created on an open cycle (409 cycle_closed) and an active project (409 project_not_active). Creating a task never creates an operational
      * record. linked_record_type says which actual record will evidence it. The required idempotency_key is farm-wide: an identical retry
      * returns the original task (201), a changed payload is 409 idempotency_conflict.
+     *
+     * With a `repeat` block ({pattern: daily|weekly|monthly, every, weekdays, ends: {type: days|date|batch_end|never, days, date}}) this creates a repeating
+     * schedule instead and answers 201 {schedule, tasks}: the schedule and the tasks generated so far (today through the next 30 days). batch_end needs a
+     * production cycle or breeding project. `reminders` (on_the_day, 1_day, 2_days, 7_days) are accepted beside the older `reminder_offsets` (minutes).
      */
     #[Response(status: 201, type: 'array{data: \App\Http\Resources\TaskResource, meta: object, message:string}')]
     #[Response(status: 409, type: 'array{message:string, code:"cycle_closed"|"project_not_active"|"idempotency_conflict", request_id:string}')]
-    public function store(StoreTaskRequest $request, FarmContext $ctx, TaskService $service): JsonResponse
+    public function store(StoreTaskRequest $request, FarmContext $ctx, TaskService $service, ScheduleService $schedules): JsonResponse
     {
+        if ($request->validated('repeat') !== null) {
+            return $this->series($schedules->createFromTask($ctx, $request->validated()), $schedules, $request, 'Repeating task created.');
+        }
+
         return ApiResponse::success($this->task($service->create($ctx, $request->validated()), $request), message: 'Task created.', status: 201);
     }
 
@@ -129,5 +149,21 @@ class TaskController extends Controller
     public function recordPrefill(FarmContext $ctx, TaskService $service, string $task): JsonResponse
     {
         return ApiResponse::success($service->recordPrefill($ctx, $task));
+    }
+
+    /**
+     * Edit this and all future tasks
+     *
+     * Requires task.manage. For a task that belongs to a repeating series: ends the old schedule the day before this task's occurrence date, cancels its open
+     * tasks from this date on (completed tasks are never touched), and creates a new schedule from this date with the changes. Fields not sent carry over from
+     * this task; `repeat` not sent keeps the old rule. 201 {schedule, tasks, previous_schedule_id}. 409 task_not_in_series / task_not_open / cycle_closed /
+     * idempotency_conflict. A replay with the same idempotency_key returns the same new schedule. To change only this one task use PATCH /tasks/{id}.
+     */
+    #[Response(status: 409, type: 'array{message:string, code:"task_not_in_series"|"task_not_open"|"cycle_closed"|"project_not_active"|"idempotency_conflict", request_id:string}')]
+    public function editSeries(EditSeriesRequest $request, FarmContext $ctx, ScheduleService $schedules, string $task): JsonResponse
+    {
+        $previous = \App\Models\Task::where('farm_id', $ctx->farm->id)->whereKey($task)->value('schedule_id');
+
+        return $this->series($schedules->editSeries($ctx, $task, $request->validated()), $schedules, $request, 'Series updated.', ['previous_schedule_id' => $previous]);
     }
 }

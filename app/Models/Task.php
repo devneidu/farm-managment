@@ -22,7 +22,7 @@ class Task extends Model
     protected function casts(): array
     {
         return [
-            'status' => TaskStatus::class, 'category' => TaskCategory::class, 'requires_evidence' => 'boolean', 'reminder_offsets' => 'array',
+            'status' => TaskStatus::class, 'category' => TaskCategory::class, 'requires_evidence' => 'boolean', 'reminder_offsets' => 'array', 'reminder_presets' => 'array',
             'due_date' => 'immutable_date', 'occurrence_date' => 'immutable_date', 'due_at' => 'immutable_datetime',
             'completed_at' => 'immutable_datetime', 'cancelled_at' => 'immutable_datetime',
         ];

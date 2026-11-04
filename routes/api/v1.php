@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\Auth\SessionController;
 use App\Http\Controllers\Api\V1\BreedingProjectController;
 use App\Http\Controllers\Api\V1\CalendarController;
+use App\Http\Controllers\Api\V1\CalendarFeedController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\CropProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
@@ -95,6 +96,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', HealthController::class)->name('api.v1.health');
+
+// Phone calendar subscription: no session, the secret token in the URL is the credential (404 for anything else).
+Route::get('/calendar-feed/{token}.ics', [CalendarFeedController::class, 'ics'])->where('token', '[A-Za-z0-9]{20,100}')->middleware('throttle:calendar-feed')->name('api.v1.calendar-feed.ics');
 
 Route::get('/locales', [LocaleController::class, 'index'])->middleware('throttle:60,1')->name('api.v1.locales.index');
 Route::get('/translations/{locale}', [LocaleController::class, 'bundle'])->middleware('throttle:60,1')->name('api.v1.translations.show');
@@ -399,6 +403,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::patch('/{task}', [$c, 'update'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.update');
         Route::post('/{task}/complete', [$c, 'complete'])->middleware(['farm.permission:task.complete', 'throttle:work-write'])->name('api.v1.tasks.complete');
         Route::post('/{task}/cancel', [$c, 'cancel'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.cancel');
+        Route::post('/{task}/edit-series', [$c, 'editSeries'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.edit-series');
         Route::get('/{task}/record-prefill', [$c, 'recordPrefill'])->middleware('farm.permission:task.view')->name('api.v1.tasks.record-prefill');
     });
     Route::prefix('schedules')->middleware('farm.permission:task.manage')->group(function () {
@@ -409,6 +414,12 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::post('/{schedule}/end', [$c, 'end'])->middleware('throttle:work-write')->name('api.v1.schedules.end');
     });
     Route::get('/calendar', CalendarController::class)->middleware('farm.permission:task.view')->name('api.v1.calendar');
+    // One-way phone calendar subscription (ICS). The public feed itself is registered below, outside the session groups.
+    Route::prefix('calendar-feed')->middleware('farm.permission:task.view')->group(function () {
+        Route::get('/', [CalendarFeedController::class, 'show'])->name('api.v1.calendar-feed.show');
+        Route::post('/', [CalendarFeedController::class, 'store'])->middleware('throttle:work-write')->name('api.v1.calendar-feed.store');
+        Route::delete('/', [CalendarFeedController::class, 'destroy'])->middleware('throttle:work-write')->name('api.v1.calendar-feed.destroy');
+    });
     // Phase 16: dashboard and insights are read models for any active member; each block is gated by the viewer's own permissions.
     Route::get('/dashboard', [DashboardController::class, 'show'])->name('api.v1.dashboard');
     Route::get('/dashboard/calendar', [DashboardController::class, 'calendar'])->middleware('farm.permission:task.view')->name('api.v1.dashboard.calendar');

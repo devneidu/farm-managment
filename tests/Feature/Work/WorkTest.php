@@ -343,7 +343,7 @@ class WorkTest extends TeamTestCase
         $this->assertSame(1, $once['tasks_count']);
         $this->schedule(['recurrence' => 'none', 'ends_on' => $this->day(5)])->assertStatus(422);
         $this->schedule(['recurrence' => 'daily', 'weekdays' => [1]])->assertStatus(422)->assertJsonValidationErrors('weekdays');
-        $this->schedule(['recurrence' => 'monthly'])->assertStatus(422)->assertJsonValidationErrors('recurrence');
+        $this->schedule(['recurrence' => 'yearly'])->assertStatus(422)->assertJsonValidationErrors('recurrence');
     }
 
     public function test_past_dates_are_never_generated_as_overdue_noise(): void

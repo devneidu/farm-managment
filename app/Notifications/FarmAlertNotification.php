@@ -60,11 +60,15 @@ class FarmAlertNotification extends Notification implements ShouldQueue
         $n = FarmNotification::with('farm:id,name')->findOrFail($this->notificationId);
         $farm = $n->farm?->name ?? config('app.name');
 
-        return (new MailMessage)
-            ->subject("{$farm}: {$n->title}")
-            ->greeting('Hello,')
-            ->line($n->message)
-            ->action('Open notifications', config('identity.invitations.frontend_url').'/notifications')
-            ->line('You can choose which alerts you receive in your notification settings.');
+        $base = config('identity.invitations.frontend_url');
+        $mail = (new MailMessage)->subject("{$farm}: {$n->title}")->greeting('Hello,')->line($n->message);
+        if ($n->type === NotificationCatalogue::TASK_REMINDER && $n->subject_type === 'task' && $n->subject_id) {
+            // A task reminder links straight to the task and says what, where and when (all in the farm's timezone).
+            $mail->action('Open task', $base.'/tasks/'.$n->subject_id);
+        } else {
+            $mail->action('Open notifications', $base.'/notifications');
+        }
+
+        return $mail->line('You can choose which alerts you receive in your notification settings.');
     }
 }

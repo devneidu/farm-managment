@@ -19,7 +19,7 @@ class Schedule extends Model
     protected function casts(): array
     {
         return [
-            'recurrence' => Recurrence::class, 'category' => TaskCategory::class, 'requires_evidence' => 'boolean', 'weekdays' => 'array', 'reminder_offsets' => 'array',
+            'recurrence' => Recurrence::class, 'category' => TaskCategory::class, 'requires_evidence' => 'boolean', 'weekdays' => 'array', 'reminder_offsets' => 'array', 'reminder_presets' => 'array',
             'starts_on' => 'immutable_date', 'ends_on' => 'immutable_date',
         ];
     }

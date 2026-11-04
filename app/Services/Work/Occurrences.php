@@ -6,7 +6,7 @@ use App\Enums\Recurrence;
 use Carbon\CarbonImmutable;
 
 /**
- * The whole recurrence engine: none (one date), daily (every N days) or weekly (every N weeks on chosen ISO weekdays),
+ * The whole recurrence engine: none (one date), daily (every N days), weekly (every N weeks on chosen ISO weekdays) or monthly (every N months),
  * optionally bounded by an end date and/or an occurrence count (counted from the schedule start, including past dates).
  * Pure date arithmetic on calendar dates; time-of-day and timezone are applied later when a task is built.
  */
@@ -27,6 +27,9 @@ final class Occurrences
             return $startsOn >= $from && $startsOn <= $to ? [$startsOn] : [];
         }
         $interval = max(1, $interval);
+        if ($recurrence === Recurrence::Monthly) {
+            return self::monthly($start, $interval, $last, $limit, $from, $to);
+        }
         $days = $weekdays ?: [$start->isoWeekday()];
         $firstMonday = $start->startOfWeek();
         $out = [];
@@ -40,6 +43,24 @@ final class Occurrences
                 continue;
             }
             if ($limit !== null && ++$count > $limit) {
+                break;
+            }
+            $date = $d->toDateString();
+            if ($date >= $from && $date <= $to) {
+                $out[] = $date;
+            }
+        }
+
+        return $out;
+    }
+
+    /** Every N months from the start day; the k-th date is always computed from the START (31 Jan -> 28 Feb -> 31 Mar), so a clamp never drifts. */
+    private static function monthly(CarbonImmutable $start, int $interval, CarbonImmutable $last, ?int $limit, string $from, string $to): array
+    {
+        $out = [];
+        for ($k = 0; $k <= 3700; $k++) {
+            $d = $start->addMonthsNoOverflow($k * $interval);
+            if ($d->greaterThan($last) || ($limit !== null && $k >= $limit)) {
                 break;
             }
             $date = $d->toDateString();

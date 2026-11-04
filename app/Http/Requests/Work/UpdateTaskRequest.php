@@ -18,6 +18,8 @@ class UpdateTaskRequest extends FormRequest
             $rules[$field] = array_map(fn ($r) => $r === 'required' ? 'sometimes' : $r, $rule);
         }
 
+        $rules += WorkRules::reminders();
+
         return $rules + [
             'due_date' => ['sometimes', 'date_format:Y-m-d'],
             'assigned_user_id' => ['sometimes', 'nullable', 'uuid'],

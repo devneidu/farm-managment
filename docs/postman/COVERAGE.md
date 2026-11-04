@@ -54,7 +54,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 10 — Inventory | 32 | 19 | 32 | 12 |
 | 11 — Health | 10 | 9 | 10 | 2 |
 | 12 — Breeding | 13 | 9 | 11 | 2 |
-| 13 — Tasks, Templates & Calendar | 20 | 20 | 20 | 5 |
+| 13 — Tasks, Templates & Calendar | 26 | 25 | 26 | 8 |
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
 | 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
 | 16 — Finance | 10 | 8 | 10 | 3 |
@@ -353,3 +353,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 
 * No new route. `Record the actual outcome` (folder 12) documents `new_batch: {title, purpose}` and gains three saved examples captured from real responses: 201 with a chosen name and purpose, 422 on `new_batch.purpose`, and 409 `plan_limit_reached` whose message points to `destination: mother_batch`. Folder 12 stays at 13 requests. `docs/api/openapi.json` was not regenerated.
 * Frontend contract: `docs/api/FRONTEND-BREEDING-FLOW.md` §4.2 and §4.3.
+
+## Addendum - tasks & calendar (single form, repeats, edit series, reminders, coming repeats, phone calendar link)
+
+* New routes: `POST /tasks/{task}/edit-series`, `GET|POST|DELETE /calendar-feed`, public `GET /calendar-feed/{token}.ics`. `POST /tasks` gains an optional `repeat` block and `reminders`; `GET /calendar` gains `upcoming_repeat` items (`include_upcoming_repeats=0` hides them); `GET /master/task-categories` gains `description` and `color_group`; the schedule `recurrence` enum gains `monthly` and schedules gain `ends_type` (`batch_end`). `docs/api/openapi.json` was intentionally not regenerated in this change.
+* Folder **13 — Tasks, Templates & Calendar** gains six requests (`Create a repeating task`, `Edit this and all future tasks`, `Get my phone calendar link`, `Turn on the phone calendar link (or make a new one)`, `Turn off the phone calendar link`, `Phone calendar feed (public .ics)`), now 26 requests; the row in the table above was updated by hand (the other totals in §1 were not recomputed). The saved examples are real responses captured from the running application (feed tokens shortened). The two stale descriptions saying reminders are "stored only" were corrected.
+* The new requests were **not** executed through Newman in this change; the behaviour is covered by the feature tests `tests/Feature/Work/TasksCalendarTest.php`, `tests/Feature/Work/CalendarFeedTest.php` and `tests/Feature/Notifications/TaskReminderPresetsTest.php`. The tracked Postman-app YAML export under `postman/collections/` is not checked out in this working tree (sparse checkout) and was not regenerated: re-sync it from this collection in the Postman app.
+* Frontend contract: `docs/api/FRONTEND-TASKS-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.

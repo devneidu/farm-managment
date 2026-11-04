@@ -25,6 +25,7 @@ Re-run and commit `docs/api/openapi.json` whenever an endpoint changes.
 | Resource | Purpose |
 |---|---|
 | [`API-CONTRACT.md`](API-CONTRACT.md) | The frontend-facing contract: auth/CSRF, `next_action`, farm context, roles/permissions, identifiers, envelopes, pagination, idempotency, dates, money, measurements, master data, Platform Admin, rate limits, error codes. |
+| [`FRONTEND-TASKS-FLOW.md`](FRONTEND-TASKS-FLOW.md) | Add task form (single task, repeats, reminders), calendar day tap, colours, coming repeats, Done / Skip / Edit (this one / this and future), reminders and the phone calendar link, with real request/response examples. |
 | [`FRONTEND-INTEGRATION.md`](FRONTEND-INTEGRATION.md) | How to use the API from the React app (client setup, startup, routing, permissions, errors, idempotency, refresh-after-write, downloads, exports, notifications). |
 | [`../postman/Farm-Management-API.postman_collection.json`](../postman/Farm-Management-API.postman_collection.json) | Postman collection (v2.1): every route documented with bodies, rules, side effects and real saved responses, plus executable workflows. |
 | [`../postman/Farm-Management-Local.postman_environment.json`](../postman/Farm-Management-Local.postman_environment.json) | Local environment (placeholders only, no credentials). |

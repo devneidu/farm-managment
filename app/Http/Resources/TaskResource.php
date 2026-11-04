@@ -32,6 +32,8 @@ class TaskResource extends JsonResource
             /** UTC instant after which the open task is overdue. */
             'due_at' => $this->due_at->toISOString(), 'timezone' => $farm->timezone,
             'reminder_offsets' => $this->reminder_offsets,
+            /** Day-based reminder presets (on_the_day, 1_day, 2_days, 7_days); null when none. */
+            'reminders' => $this->reminder_presets,
             'production_cycle_id' => $this->production_cycle_id, 'breeding_project_id' => $this->breeding_project_id,
             'schedule_id' => $this->schedule_id, 'occurrence_date' => $this->occurrence_date?->toDateString(),
             'assigned_user_id' => $this->assigned_user_id, 'assigned_user_name' => $this->assignee?->name, 'assigned_role' => $this->assigned_role,

@@ -31,6 +31,7 @@ use App\Models\User;
 use App\Services\Locations\PlaceService;
 use App\Services\Measurement\QuantityNormalizer;
 use App\Services\Records\PopulationLedger;
+use App\Services\Work\ScheduleService;
 use App\Services\Subscription\EntitlementService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -288,6 +289,9 @@ class CycleService
             $cycle->status = $close ? CycleStatus::Closed : CycleStatus::Active;
             $cycle->end_date = $close ? $data['end_date'] : null;
             $cycle->save();
+            if ($close) {
+                app(ScheduleService::class)->endForClosedCycle($cycle);
+            }
             $this->record($cycle, $actor, $close ? 'closed' : 'reopened', $before, $this->snapshot($cycle), $data['reason']);
         }, 3);
 
@@ -303,6 +307,7 @@ class CycleService
         $cycle->status = CycleStatus::Closed;
         $cycle->end_date = $endDate;
         $cycle->save();
+        app(ScheduleService::class)->endForClosedCycle($cycle);
         $this->record($cycle, $actor, 'closed', $before, $this->snapshot($cycle), $reason);
     }
 

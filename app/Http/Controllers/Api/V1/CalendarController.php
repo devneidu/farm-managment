@@ -18,9 +18,10 @@ class CalendarController extends Controller
      * Requires task.view. A read model over a farm-local date range (max 92 days): the caller's visible tasks plus read-only milestones that are
      * not tasks and not records: cycle_start / cycle_expected_end (active cycles), breeding_expected (exact date) or breeding_expected_window (from-to,
      * active projects, from the stored expectation) and health_follow_up (un-reversed follow_up_on). Milestones need the matching view permission and
-     * are omitted when filtering by category or assignee. Items are ordered by date, then time. Task items carry the full task (with due_state).
+     * are omitted when filtering by category or assignee. upcoming_repeat items (title, category, schedule_id, date, time) are future occurrences of active repeating
+     * schedules that have no task yet, computed from the rule (never stored); they follow the same filters and visibility (include_upcoming_repeats=false hides them). Items are ordered by date, then time. Task items carry the full task (with due_state).
      *
-     * @response array{data: array<int, array{kind: 'task'|'milestone', date: string, end_date: string|null, time: string|null, task?: TaskResource, code?: string, title?: string, source?: array{type: string, id: string, reference: string|null}}>, meta: array{from: string, to: string, timezone: string, today: string}, message: null}
+     * @response array{data: array<int, array{kind: 'task'|'milestone'|'upcoming_repeat', date: string, schedule_id?: string, category?: string, production_cycle_id?: string|null, breeding_project_id?: string|null, end_date: string|null, time: string|null, task?: TaskResource, code?: string, title?: string, source?: array{type: string, id: string, reference: string|null}}>, meta: array{from: string, to: string, timezone: string, today: string}, message: null}
      */
     public function __invoke(CalendarRequest $request, FarmContext $ctx, CalendarService $service): JsonResponse
     {

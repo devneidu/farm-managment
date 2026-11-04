@@ -15,6 +15,9 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             ...WorkRules::work(),
+            ...WorkRules::reminders(),
+            ...WorkRules::repeat(),
+            'repeat.ends.date' => ['required_if:repeat.ends.type,date', 'date_format:Y-m-d', 'after_or_equal:due_date'],
             /** Farm-local date. Past dates are allowed (the task is simply overdue). */
             'due_date' => ['required', 'date_format:Y-m-d'],
             'production_cycle_id' => ['sometimes', 'nullable', 'uuid'],

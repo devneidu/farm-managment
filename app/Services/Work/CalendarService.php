@@ -9,6 +9,7 @@ use App\Http\Requests\Work\CalendarRequest;
 use App\Models\BreedingProject;
 use App\Models\HealthRecord;
 use App\Models\ProductionCycle;
+use App\Models\Schedule;
 use App\Models\Task;
 use App\Support\Access\FarmContext;
 use Carbon\CarbonImmutable;
@@ -31,6 +32,13 @@ class CalendarService
         if (CarbonImmutable::parse($f['from'], 'UTC')->diffInDays(CarbonImmutable::parse($f['to'], 'UTC')) >= self::MAX_DAYS) {
             $this->support->invalid('to', 'The calendar range is limited to '.self::MAX_DAYS.' days.');
         }
+
+        return $this->collect($ctx, $f);
+    }
+
+    /** The calendar for an already validated range of any length (the 92-day cap is applied by range(); the phone feed uses a longer window). */
+    public function collect(FarmContext $ctx, array $f): array
+    {
         $now = CarbonImmutable::now();
         $today = $this->support->today($ctx->farm, $now);
 
@@ -43,9 +51,56 @@ class CalendarService
         if (($f['include_milestones'] ?? true) && ! isset($f['category']) && ! isset($f['assigned_to'])) {
             array_push($items, ...$this->milestones($ctx, $f));
         }
+        if ($f['include_upcoming_repeats'] ?? true) {
+            array_push($items, ...$this->upcomingRepeats($ctx, $f, $today));
+        }
         usort($items, fn ($a, $b) => [$a['date'], $a['time'] ?? '', $a['kind']] <=> [$b['date'], $b['time'] ?? '', $b['kind']]);
 
         return ['items' => $items, 'meta' => ['from' => $f['from'], 'to' => $f['to'], 'timezone' => $ctx->farm->timezone, 'today' => $today]];
+    }
+
+    /**
+     * Future occurrences of active schedules that have no task yet (beyond the generated horizon), computed from the rule and never stored. They respect
+     * the same visibility and filters as tasks, skip dates a task already covers (including cancelled ones) and schedules whose batch is not open.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function upcomingRepeats(FarmContext $ctx, array $f, string $today): array
+    {
+        $from = max($f['from'], $today);
+        if ($from > $f['to']) {
+            return [];
+        }
+        $farm = $ctx->farm->id;
+        $q = $this->support->visible(Schedule::where('farm_id', $farm)->where('status', 'active'), $ctx)
+            ->where(fn ($w) => $w->whereNull('production_cycle_id')->orWhereIn('production_cycle_id', ProductionCycle::where('farm_id', $farm)->where('status', CycleStatus::Active->value)->select('id')))
+            ->where(fn ($w) => $w->whereNull('breeding_project_id')->orWhereIn('breeding_project_id', BreedingProject::where('farm_id', $farm)->where('status', BreedingStatus::Active->value)->select('id')));
+        foreach (['production_cycle_id', 'breeding_project_id', 'category'] as $filter) {
+            if (isset($f[$filter])) {
+                $q->where($filter, $f[$filter]);
+            }
+        }
+        if (isset($f['assigned_to'])) {
+            $q->where('assigned_user_id', $f['assigned_to'] === 'me' ? $ctx->membership->user_id : $f['assigned_to']);
+        }
+        $out = [];
+        foreach ($q->orderBy('starts_on')->orderBy('id')->get() as $schedule) {
+            $start = $schedule->starts_on->toDateString();
+            $dates = Occurrences::between($schedule->recurrence, $schedule->interval_value, $schedule->weekdays, $start, $schedule->ends_on?->toDateString(), $schedule->occurrence_limit, max($from, $start), $f['to']);
+            if ($dates === []) {
+                continue;
+            }
+            $covered = Task::where('schedule_id', $schedule->id)->whereIn('occurrence_date', $dates)->pluck('occurrence_date')->map(fn ($d) => $d->toDateString())->all();
+            foreach (array_diff($dates, $covered) as $date) {
+                $out[] = [
+                    'kind' => 'upcoming_repeat', 'date' => $date, 'end_date' => null, 'time' => $schedule->due_time !== null ? substr($schedule->due_time, 0, 5) : null,
+                    'title' => $schedule->title, 'category' => $schedule->category->value, 'schedule_id' => $schedule->id,
+                    'production_cycle_id' => $schedule->production_cycle_id, 'breeding_project_id' => $schedule->breeding_project_id,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     /** @return list<array<string, mixed>> */

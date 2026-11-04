@@ -158,7 +158,8 @@ class NotificationsTest extends TeamTestCase
 
         $this->generate();
         $this->assertSame(['task_reminder'], $this->types($worker));
-        $this->assertSame([], $this->types($this->owner), 'only the assignee is reminded');
+        $this->assertSame(['task_reminder'], $this->types($this->owner), 'only the unassigned task (no assignee, no role) falls back to its creator; the assigned ones go to the assignee');
+        $this->assertStringContainsString('Unassigned', FarmNotification::where('user_id', $this->owner->id)->value('message'));
         $n = FarmNotification::where('user_id', $worker->id)->first();
         $this->assertSame('task', $n->subject_type);
         $this->assertSame($task['id'], $n->subject_id);

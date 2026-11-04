@@ -108,7 +108,7 @@ class TaskService
             $task = $this->support->build($ctx->farm, [
                 'production_cycle_id' => $cycle?->id, 'breeding_project_id' => $project?->id, 'title' => $data['title'], 'category' => $data['category'],
                 'instructions' => $data['instructions'] ?? null, 'due_date' => $data['due_date'], 'due_time' => $data['due_time'] ?? null,
-                'reminder_offsets' => $data['reminder_offsets'] ?? null, 'assigned_user_id' => $data['assigned_user_id'] ?? null, 'assigned_role' => $data['assigned_role'] ?? null,
+                'reminder_offsets' => $data['reminder_offsets'] ?? null, 'reminder_presets' => $data['reminders'] ?? null, 'assigned_user_id' => $data['assigned_user_id'] ?? null, 'assigned_role' => $data['assigned_role'] ?? null,
                 'linked_record_type' => $data['linked_record_type'] ?? null, 'requires_evidence' => $data['requires_evidence'] ?? false,
                 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash, 'created_by' => $ctx->membership->user_id,
             ]);
@@ -128,6 +128,9 @@ class TaskService
             $this->assertOpen($task);
             $this->support->assertWritable($cycle, $project);
             $changes = array_intersect_key($data, array_flip(['title', 'category', 'instructions', 'due_date', 'due_time', 'reminder_offsets', 'assigned_user_id', 'assigned_role', 'linked_record_type', 'requires_evidence']));
+            if (array_key_exists('reminders', $data)) {
+                $changes['reminder_presets'] = $data['reminders'];
+            }
             if (array_key_exists('linked_record_type', $changes)) {
                 $this->support->assertLinked($changes['linked_record_type'], $cycle, $project);
             }

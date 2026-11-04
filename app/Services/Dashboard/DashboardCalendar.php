@@ -27,7 +27,7 @@ class DashboardCalendar
         $from ??= $clock->today;
         $days = max(1, min(self::MAX_DAYS, $days));
         $to = CarbonImmutable::parse($from, 'UTC')->addDays($days - 1)->toDateString();
-        $range = $this->calendar->range($ctx, ['from' => $from, 'to' => $to, 'include_milestones' => true]);
+        $range = $this->calendar->range($ctx, ['from' => $from, 'to' => $to, 'include_milestones' => true, 'include_upcoming_repeats' => false]);
 
         $byDay = [];
         for ($i = 0; $i < $days; $i++) {

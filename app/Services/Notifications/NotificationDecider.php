@@ -4,10 +4,12 @@ namespace App\Services\Notifications;
 
 use App\Enums\Permission;
 use App\Enums\TaskStatus;
+use App\Models\ProductionCycle;
 use App\Models\Task;
 use App\Services\Dashboard\DashboardClock;
 use App\Services\Dashboard\DashboardFacts;
 use App\Services\Dashboard\InsightService;
+use App\Services\Work\ReminderPlan;
 use App\Services\Work\WorkSupport;
 use App\Support\Access\FarmContext;
 use Carbon\CarbonImmutable;
@@ -48,8 +50,13 @@ class NotificationDecider
     }
 
     /**
-     * For each open task assigned to this member (directly or by role) with reminder offsets, the tightest reminder time that has passed
-     * while the task is not yet due. Overdue work is covered by the overdue_tasks insight instead.
+     * For each open task for this member with reminders, the tightest reminder time that has passed while the task is not yet due. A task is for
+     * this member when it is assigned to them (directly or by role) or, when it has no assignee and no role, when they created it. Overdue work is
+     * covered by the overdue_tasks insight instead.
+     *
+     * Reminder times come from ReminderPlan: day-based presets (07:00 farm-local, on_the_day never later than 1 hour before the due time) and the
+     * older minute offsets. Presets never fire for a time that was already in the past when the task was created, so a new repeating series does
+     * not announce every task of its first week at once. The dedupe key carries the due date, so a task that is moved is reminded again.
      *
      * @return list<NotificationIntent>
      */
@@ -59,26 +66,38 @@ class NotificationDecider
             return [];
         }
         $now = $clock->now;
-        $tasks = Task::where('farm_id', $ctx->farm->id)->where('status', TaskStatus::Open->value)->whereNotNull('reminder_offsets')
+        $user = $ctx->membership->user_id;
+        $tasks = Task::where('farm_id', $ctx->farm->id)->where('status', TaskStatus::Open->value)
+            ->where(fn ($q) => $q->whereNotNull('reminder_offsets')->orWhereNotNull('reminder_presets'))
             ->where('due_at', '>', $clock->nowSql())->where('due_at', '<=', $now->addMinutes(self::MAX_REMINDER_MINUTES)->format('Y-m-d H:i:s'))
-            ->where(fn ($q) => $q->where('assigned_user_id', $ctx->membership->user_id)->orWhere('assigned_role', $ctx->membership->role->value))
+            ->where(fn ($q) => $q->where('assigned_user_id', $user)->orWhere('assigned_role', $ctx->membership->role->value)
+                ->orWhere(fn ($w) => $w->whereNull('assigned_user_id')->whereNull('assigned_role')->where('created_by', $user)))
             ->orderBy('due_at')->orderBy('id')->get();
+        $batches = ProductionCycle::whereIn('id', $tasks->pluck('production_cycle_id')->filter()->unique()->all())->pluck('name', 'id');
 
         $out = [];
         foreach ($tasks as $task) {
-            $crossed = array_filter(array_map('intval', (array) $task->reminder_offsets), fn ($offset) => $task->due_at->subMinutes($offset)->lessThanOrEqualTo($now));
+            $times = ReminderPlan::fireTimes($clock->timezone, $task->due_date->toDateString(), $task->due_time, $task->reminder_presets, $task->reminder_offsets, $task->due_at);
+            $crossed = array_filter($times, fn ($at, $key) => $at->lessThanOrEqualTo($now) && (str_starts_with($key, 'm') || $at->greaterThanOrEqualTo($task->created_at)), ARRAY_FILTER_USE_BOTH);
             if ($crossed === []) {
                 continue;
             }
-            $offset = min($crossed);
-            $due = $task->due_at->setTimezone($clock->timezone)->format('D j M, H:i');
-            $out[] = new NotificationIntent(NotificationCatalogue::TASK_REMINDER, 'info', 'Task due soon', "{$task->title} is due {$due}.", 'task:'.$task->id.':remind:'.$offset,
-                ['type' => 'task', 'id' => $task->id, 'reference' => $task->reference], ['due_at' => $task->due_at->toISOString(), 'reminder_minutes_before' => $offset]);
+            uasort($crossed, fn ($a, $b) => $b <=> $a);
+            $key = array_key_first($crossed);
+            $local = $task->due_at->setTimezone($clock->timezone);
+            $when = $task->due_time !== null ? $local->format('D j M, H:i').' ('.$clock->timezone.')' : CarbonImmutable::parse($task->due_date->toDateString(), 'UTC')->format('D j M').' (all day)';
+            $batch = $task->production_cycle_id ? ($batches[$task->production_cycle_id] ?? null) : null;
+            $out[] = new NotificationIntent(
+                NotificationCatalogue::TASK_REMINDER, 'info', 'Reminder: '.$task->title, "{$task->title} is due {$when}".($batch ? ". Batch: {$batch}" : '').'.',
+                'task:'.$task->id.':'.$task->due_date->toDateString().':remind:'.$key,
+                ['type' => 'task', 'id' => $task->id, 'reference' => $task->reference],
+                ['due_at' => $task->due_at->toISOString(), 'due_date' => $task->due_date->toDateString(), 'due_time' => $task->due_time !== null ? substr($task->due_time, 0, 5) : null,
+                    'timezone' => $clock->timezone, 'batch' => $batch, 'reminder' => $key, 'reminder_minutes_before' => (int) round($crossed[$key]->diffInMinutes($task->due_at))],
+            );
         }
 
         return $out;
     }
-
     private function uuid(mixed $id): ?string
     {
         return is_string($id) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) ? $id : null;

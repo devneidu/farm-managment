@@ -25,6 +25,8 @@ class CalendarRequest extends FormRequest
             'assigned_to' => ['sometimes', 'string', 'max:36'],
             /** Set to false to list tasks only. */
             'include_milestones' => ['sometimes', 'boolean'],
+            /** Set to false to leave out the coming repeats (future occurrences of active schedules that have no task yet). */
+            'include_upcoming_repeats' => ['sometimes', 'boolean'],
         ];
     }
 }
