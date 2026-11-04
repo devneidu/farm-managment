@@ -207,11 +207,14 @@ class InvoiceService
     {
         $invoice = $this->find($ctx, $id);
         $ctx->authorize(Permission::InvoiceView);
+        $lines = self::pdfLines($invoice);
         $html = View::make('invoices.pdf', [
             'invoice' => $invoice, 'paid' => $invoice->amountPaid(), 'outstanding' => $invoice->isVoid() ? '0.00' : $invoice->outstanding(),
             'status' => $invoice->isVoid() ? 'void' : $invoice->paymentStatus(),
             'payments' => $invoice->payments->where('entry_type', Payment::PAYMENT)->filter(fn ($p) => $p->reversal === null)->values(),
             'money' => fn (string $a) => Money::format($a),
+            'lines' => $lines, 'subtotal' => Money::sum(array_column($lines, 'amount')),
+            'generatedOn' => CarbonImmutable::now($ctx->farm->timezone),
         ])->render();
         $tmp = storage_path('app/dompdf');
         if (! is_dir($tmp)) {
@@ -228,8 +231,49 @@ class InvoiceService
         $pdf->loadHtml($html, 'UTF-8');
         $pdf->setPaper('A4');
         $pdf->render();
+        self::stampPageNumbers($pdf);
 
         return ['reference' => $invoice->reference, 'content' => $pdf->output()];
+    }
+
+    /**
+     * "Page X of Y" at the right of the invoice footer on every page (the template's footer leaves room for it). The
+     * total is only known after rendering, so it is stamped on the canvas rather than written in the HTML.
+     */
+    public static function stampPageNumbers(Dompdf $pdf): void
+    {
+        $canvas = $pdf->getCanvas();
+        $metrics = $pdf->getFontMetrics();
+        $font = $metrics->getFont('DejaVu Sans');
+        $size = 7.5;
+        $right = 16 * 72 / 25.4; // the page's 16 mm side margin, in points
+        $width = $metrics->getTextWidth('Page 0 of 0', $font, $size);
+        $canvas->page_text($canvas->get_width() - $right - $width, $canvas->get_height() - 34, 'Page {PAGE_NUM} of {PAGE_COUNT}', $font, $size, [0.373, 0.416, 0.392]);
+    }
+
+    /**
+     * The invoice's lines as the PDF shows them, read from the issued snapshot only (description, quantity label,
+     * amount; never live sale or product data). The unit price is not stored: it is the amount divided by the
+     * label's quantity ("4 head" -> 4), shown only when that is an exact amount in cents that gives the saved
+     * amount back; otherwise it is left blank rather than shown rounded.
+     *
+     * @return list<array{description: string, quantity: string|null, unit_price: string|null, amount: string}>
+     */
+    public static function pdfLines(Invoice $invoice): array
+    {
+        return $invoice->items->sortBy('line_no')->values()->map(function ($line) {
+            $amount = (string) $line->amount;
+            $label = $line->quantity_label;
+            $unit = null;
+            if ($label !== null && preg_match('/^(\d+(?:\.\d+)?)\s/', $label, $m) && bccomp($m[1], '0', 6) === 1) {
+                $per = bcdiv($amount, $m[1], 6);
+                if (preg_match('/^\d+\.\d{2}0{4}$/', $per) && bccomp(bcmul($per, $m[1], 6), $amount, 6) === 0) {
+                    $unit = bcadd($per, '0', 2);
+                }
+            }
+
+            return ['description' => (string) $line->description, 'quantity' => $label, 'unit_price' => $unit, 'amount' => $amount];
+        })->all();
     }
 
     // -------------------------------------------------------------- helpers

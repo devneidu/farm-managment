@@ -10,4 +10,9 @@ export default defineConfig({
         }),
         tailwindcss(),
     ],
+    // Fixed port so `composer run dev` never takes 5173/5174, which belong to the separate React frontend.
+    server: {
+        port: 5180,
+        strictPort: true,
+    },
 });
