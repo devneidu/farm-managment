@@ -6,12 +6,14 @@ use App\Enums\CycleKind;
 use App\Enums\InventoryCategory;
 use App\Enums\Permission;
 use App\Events\Sales\SaleRecorded;
+use App\Http\Requests\Payments\RecordPaymentRequest;
 use App\Http\Requests\Sales\CancelSaleRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
 use App\Models\Contact;
 use App\Models\Farm;
 use App\Models\FinanceCategory;
 use App\Models\InventoryItem;
+use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\ProductionCycle;
 use App\Models\Sale;
@@ -160,6 +162,30 @@ class SaleService
             SaleRecorded::dispatch($sale);
 
             return $sale->load(self::RELATIONS);
+        }, 3);
+    }
+
+    /**
+     * POST /sales/{sale}/payments: receives money on a sale without the caller ever dealing with invoices. One transaction: the live invoice
+     * is issued if the sale has none, then the payment goes through the one payment writer (same balance rules, income booking and
+     * idempotency as POST /invoices/{invoice}/payments).
+     */
+    public function pay(FarmContext $ctx, string $saleId, array $input): Sale
+    {
+        $ctx->authorize(Permission::PaymentCreate);
+        $data = Validator::make($input, (new RecordPaymentRequest)->rules())->validate();
+
+        return DB::transaction(function () use ($ctx, $saleId, $data) {
+            Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
+            $hash = RequestHash::of(['operation' => 'sale_pay', 'sale_id' => $saleId] + $data);
+            if ($this->payments->replay($ctx, $data['idempotency_key'], $hash) === null) {
+                $sale = Sale::where('farm_id', $ctx->farm->id)->lockForUpdate()->with(['items.item.stockUnit', 'contact'])->findOrFail($saleId);
+                $invoice = Invoice::where('sale_id', $sale->id)->where('status', Invoice::ISSUED)->first()
+                    ?? $this->invoices->issueFor($ctx, $sale, [], null, null);
+                $this->payments->recordLocked($ctx, $invoice->id, $data, $hash);
+            }
+
+            return Sale::where('farm_id', $ctx->farm->id)->with(self::RELATIONS)->findOrFail($saleId);
         }, 3);
     }
 

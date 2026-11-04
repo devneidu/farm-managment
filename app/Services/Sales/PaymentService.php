@@ -200,7 +200,7 @@ class PaymentService
         return ReferenceNumber::next(Payment::class, $ctx->farm->id, 'PAY');
     }
 
-    private function replay(FarmContext $ctx, string $key, string $hash): ?Payment
+    public function replay(FarmContext $ctx, string $key, string $hash): ?Payment
     {
         $payment = Payment::where('farm_id', $ctx->farm->id)->where('idempotency_key', $key)->first();
         if ($payment && ! hash_equals($payment->request_hash, $hash)) {

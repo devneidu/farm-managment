@@ -37670,6 +37670,62 @@
           ]
         },
         {
+          "name": "Record a payment on a sale (invoice auto-created)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Origin", "value": "{{frontend_origin}}" },
+              { "key": "X-XSRF-TOKEN", "value": "{{xsrf_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Farm-Id", "value": "{{farm_id}}", "disabled": true }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales/{{sale_id}}/payments",
+              "host": ["{{base_url}}"],
+              "path": ["sales", "{{sale_id}}", "payments"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"4000.00\",\n  \"method\": \"cash\",\n  \"received_on\": \"{{today}}\",\n  \"idempotency_key\": \"{{$guid}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "**WHAT IT DOES**\nThe Record payment button on the sale details page. The caller never deals with invoices: in ONE transaction the sale's invoice is created if it has none, then the payment is recorded exactly like POST /invoices/{invoice}/payments (one income entry booked).\n\n**PERMISSION** payment.create (same as the invoice payment endpoint).\n\n**RULES** amount > 0 and <= the remaining balance (409 payment_exceeds_balance, details.outstanding); partial payments are normal; a cancelled sale is 409 sale_cancelled. The idempotency_key is farm-wide: an identical retry returns the original (201) with no second payment; a changed body is 409 idempotency_conflict.\n\n**RETURNS** the sale with payments[], payment_status and invoice_id. Use invoice_id for GET /invoices/{id}/pdf (Print / Share invoice)."
+          },
+          "response": [
+            {
+              "name": "201 Created — part payment on an uninvoiced sale",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{base_url}}/sales/{{sale_id}}/payments", "host": ["{{base_url}}"], "path": ["sales", "{{sale_id}}", "payments"] },
+                "body": { "mode": "raw", "raw": "{\n  \"amount\": \"4000.00\",\n  \"method\": \"cash\",\n  \"received_on\": \"2026-10-14\",\n  \"idempotency_key\": \"pay-001\"\n}", "options": { "raw": { "language": "json" } } }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"<sale id>\",\n    \"reference\": \"SAL-2026-00001\",\n    \"status\": \"active\",\n    \"total_amount\": \"10000.00\",\n    \"payment_status\": \"partially_paid\",\n    \"invoice_id\": \"<invoice id>\",\n    \"payments\": [\n      {\n        \"id\": \"<payment id>\",\n        \"reference\": \"PAY-2026-00001\",\n        \"amount\": \"4000.00\",\n        \"method\": \"cash\",\n        \"received_on\": \"2026-10-14\"\n      }\n    ]\n  },\n  \"meta\": [],\n  \"message\": \"Payment recorded.\"\n}"
+            },
+            {
+              "name": "409 — payment_exceeds_balance",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Accept", "value": "application/json" }, { "key": "Content-Type", "value": "application/json" }],
+                "url": { "raw": "{{base_url}}/sales/{{sale_id}}/payments", "host": ["{{base_url}}"], "path": ["sales", "{{sale_id}}", "payments"] },
+                "body": { "mode": "raw", "raw": "{\n  \"amount\": \"7000.00\",\n  \"method\": \"cash\",\n  \"received_on\": \"2026-10-14\",\n  \"idempotency_key\": \"pay-002\"\n}", "options": { "raw": { "language": "json" } } }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "cookie": [],
+              "body": "{\n  \"message\": \"The payment is more than the amount still owed on this invoice.\",\n  \"code\": \"payment_exceeds_balance\",\n  \"details\": {\n    \"outstanding\": \"6000.00\",\n    \"amount\": \"7000.00\"\n  }\n}"
+            }
+          ]
+        },
+        {
           "name": "Issue the invoice for a sale",
           "event": [
             {

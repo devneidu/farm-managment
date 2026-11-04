@@ -4,6 +4,14 @@ One form, one save. The farmer picks what was sold, enters quantity × price, na
 
 All paths are under `/api/v1`. Auth, CSRF and the optional `X-Farm-Id` header are as in [FRONTEND-INTEGRATION.md](FRONTEND-INTEGRATION.md). The examples below are real responses captured from the running code (Africa/Lagos farm, NGN); only long, unchanged id lists were left as returned. Reference: [PHASE-15-SALES-INVOICES.md](PHASE-15-SALES-INVOICES.md).
 
+## 0. Rules for the UI
+
+* **The frontend never asks the user about invoices.** No "create invoice" switch on the Sell form, no "generate invoice" action on the details page. Invoices are created by the API when money is received, or silently when the user taps Print / Share.
+* **The Sell form uses the payment block** (`payment` in `POST /sales`) with three choices: *Paid now* (amount = total), *Part payment* (0 < amount < total), *Not yet* (omit `payment`).
+* **The sale details page has two buttons**: **Record payment** (`POST /sales/{id}/payments`, §2) and **Print / Share invoice** (create the invoice if missing, then the PDF, §2).
+* **Store lines don't need a batch.** A `stock` line takes `inventory_item_id` (or `output`) only; its `production_cycle_id` is an optional label/revenue allocation with no effect on stock. A `livestock` line requires `production_cycle_id` because the head count leaves that batch.
+* **Prefer `GET /sales/sellables` as the picker** (§1.1) over assembling item and batch lists from other endpoints.
+
 ## 1. The form
 
 ### 1.1 "What did you sell?" — the list
@@ -724,53 +732,45 @@ Response `200`:
 
 Show: reference, date, buyer, lines (what, quantity, amount), total, paid, balance (`outstanding`), payment status badge, and the invoice reference when present.
 
-* **Collect the balance**: `POST /invoices/{invoice_id}/payments` (needs `payment.create` — managers/finance). The amount cannot exceed `outstanding` (`409 payment_exceeds_balance`).
+* **Record payment** (the only money button — the frontend never asks the user about invoices): `POST /sales/{id}/payments` (needs `payment.create`). If the sale has no invoice the API creates it first, in the same transaction, then records the payment. Works for uninvoiced, unpaid and part-paid sales alike. Show it while `outstanding` > 0. The amount must be > 0 and ≤ `outstanding` (`409 payment_exceeds_balance`, `details.outstanding`); a cancelled sale is `409 sale_cancelled`. Generate a new `idempotency_key` per tap-intent and reuse it on retry — an identical retry returns the original `201` with no second payment.
 
-`POST /invoices/01a16812-2569-7072-ae63-9a08136ea43e/payments`
+`POST /sales/01a16812-2569-7072-ae63-9a08136ea43e/payments`
 
 Request:
 
 ```json
 {
-    "amount": "10000.00",
-    "method": "mobile_money",
+    "amount": "4000.00",
+    "method": "cash",
     "received_on": "2026-10-14",
-    "idempotency_key": "pay-balance-001"
+    "idempotency_key": "pay-sale-001"
 }
 ```
 
-Response `201`:
+Response `201` — the whole sale (same shape as `GET /sales/{id}`), so refresh the page from it: `payments[]` now holds the payment, `payment_status` is `partially_paid` (or `paid`), and `invoice_id` is set (it was `null` before).
 
 ```json
 {
     "data": {
-        "id": "01a16812-3730-7278-a483-a30542eabb1f",
-        "reference": "PAY-2026-00003",
-        "entry_type": "payment",
-        "invoice_id": "01a16812-2569-7072-ae63-9a08136ea43e",
-        "invoice_reference": "INV-2026-00002",
-        "amount": "10000.00",
-        "currency": "NGN",
-        "method": "mobile_money",
-        "payment_reference": null,
-        "received_on": "2026-10-14",
-        "recorded_at": "2026-10-14T12:00:00.000000Z",
-        "notes": null,
-        "finance_transaction_id": "01a16812-3752-70e6-99a5-0ab889d6d775",
-        "reverses_payment_id": null,
-        "reversed_by_payment_id": null,
-        "is_reversed": false,
-        "reason": null,
-        "created_by": "01a16812-0a34-72cd-be51-7b39978e5aeb",
-        "created_at": "2026-10-14T12:00:00.000000Z"
+        "id": "01a16812-2569-7072-ae63-9a08136ea43e",
+        "status": "active",
+        "total_amount": "10000.00",
+        "payment_status": "partially_paid",
+        "invoice_id": "01a16812-3752-70e6-99a5-0ab889d6d775",
+        "payments": [
+            { "id": "01a16812-3730-7278-a483-a30542eabb1f", "reference": "PAY-2026-00001", "amount": "4000.00", "method": "cash", "received_on": "2026-10-14" }
+        ]
     },
     "meta": [],
     "message": "Payment recorded."
 }
 ```
 
+(abridged — the real response carries every sale field.) `POST /invoices/{invoice_id}/payments` still exists and is unchanged; the Sell UI does not need it.
 
-* **Generate the invoice** for a sale that has none (`invoice_id` is `null`): `POST /sales/{id}/invoice` (needs `invoice.create`; hide the button for roles without it). It is a snapshot of the buyer and lines at that moment.
+* **Print / Share invoice** — one button, two quiet steps. The user never sees the word "invoice" as a task, only "Print / Share". Step 1, only when `invoice_id` is `null`: `POST /sales/{id}/invoice` (needs `invoice.create`; it snapshots the buyer and lines at that moment). Step 2: `GET /invoices/{invoice_id}/pdf` (needs `invoice.view`) returns `application/pdf` — download it as a blob and hand it to the device share sheet or print dialog. Hide the button for roles without `invoice.view` (workers).
+
+Step 1 example:
 
 `POST /sales/01a16812-2952-7035-a5b9-b9f90faa3e6b/invoice`
 
@@ -832,7 +832,6 @@ Response `201`:
 ```
 
 
-* **Share / print**: `GET /invoices/{invoice_id}/pdf` (needs `invoice.view`) returns the PDF (`application/pdf`). Download it as a blob and hand it to the device share sheet or print dialog. Hide Share/Print for roles without `invoice.view` (workers).
 
 ## 3. Cancel
 
@@ -1179,7 +1178,7 @@ Response `409`:
 | Payment inside `POST /sales` | yes — no `payment.create` needed | yes |
 | Sales reports (`GET /reports/sales_summary`; the sales columns of `contact_history`) | no (`403`; they need `finance.view` as well as `sale.view`) | yes |
 | `invoice` block, `POST /sales/{id}/invoice`, invoice list/PDF | no (`403`) | yes |
-| Collect a later payment (`POST /invoices/{id}/payments`), list payments | no | yes |
+| Record a later payment (`POST /sales/{id}/payments`, or `POST /invoices/{id}/payments`), list payments | no | yes (`payment.create`) |
 | Cancel, `reverse_payments`, reverse a payment, void an invoice | no | yes (`sale.cancel`, `payment.reverse`, `invoice.void`) |
 | Contacts list / create | no (the `buyer` shortcut still works) | yes |
 | Finance (income/expense, transactions) | no | yes |
@@ -1214,5 +1213,5 @@ Use `GET /auth/me`/farm membership permissions to decide which buttons to render
 
 ## 6. Relation to the older routes
 
-* The existing three-step flow (`POST /sales`, `POST /sales/{id}/invoice`, `POST /invoices/{id}/payments`) is unchanged and still the way to invoice later or take further payments.
+* The existing three-step flow (`POST /sales`, `POST /sales/{id}/invoice`, `POST /invoices/{id}/payments`) is unchanged and still works for API clients; the UI uses `POST /sales/{id}/payments` instead, which creates the invoice when missing.
 * `POST /inventory/stock-out` with reason `sold` still works for API clients but records only the stock movement — no buyer, invoice or money. The Eggs OUT / Milk OUT **Sold** choice and the Income form's "Sold something from your farm?" should open this Sell form instead.

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Invoices\IssueInvoiceRequest;
+use App\Http\Requests\Payments\RecordPaymentRequest;
 use App\Http\Requests\Sales\CancelSaleRequest;
 use App\Http\Requests\Sales\ListSalesRequest;
 use App\Http\Requests\Sales\StoreSaleRequest;
@@ -100,6 +101,22 @@ class SaleController extends Controller
     public function cancel(CancelSaleRequest $request, FarmContext $ctx, SaleService $service, string $sale): JsonResponse
     {
         return ApiResponse::success((new SaleResource($service->cancel($ctx, $sale, $request->validated())))->resolve($request), message: 'Sale cancelled.');
+    }
+
+    /**
+     * Record a payment on a sale
+     *
+     * Requires payment.create. The caller never deals with invoices: in ONE transaction the sale's invoice is issued if it has none, then the
+     * payment is recorded exactly as POST /invoices/{invoice}/payments does (one income entry booked; amount > 0 and <= the remaining balance,
+     * 409 payment_exceeds_balance with details.outstanding). Returns the sale with payments[], payment_status and invoice_id. The required
+     * idempotency_key is farm-wide: an identical retry returns the original (201) with no second payment or income entry; a changed payload is 409.
+     * A cancelled sale is refused (409 sale_cancelled).
+     */
+    #[Response(status: 201, type: 'array{data: \App\Http\Resources\SaleResource, meta: object, message:string}')]
+    #[Response(status: 409, type: 'array{message:string, code:"payment_exceeds_balance"|"sale_cancelled"|"invoice_void"|"category_inactive"|"idempotency_conflict", request_id:string}')]
+    public function pay(RecordPaymentRequest $request, FarmContext $ctx, SaleService $service, string $sale): JsonResponse
+    {
+        return ApiResponse::success((new SaleResource($service->pay($ctx, $sale, $request->validated())))->resolve($request), message: 'Payment recorded.', status: 201);
     }
 
     /**
