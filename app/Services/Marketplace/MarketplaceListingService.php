@@ -133,10 +133,11 @@ class MarketplaceListingService
 
             $before = $listing->only(['unit_price', 'available_quantity', 'min_order_quantity', 'negotiable', 'unit_id', 'fulfilment']);
             $listing->fill($attributes);
-            if ($listing->isDirty('available_quantity')) {
+            // What the seller changed. quantity_updated_at is bookkeeping stamped below, so it is not part of the audited change list.
+            $dirty = array_keys($listing->getDirty());
+            if (in_array('available_quantity', $dirty, true)) {
                 $listing->quantity_updated_at = now();
             }
-            $dirty = array_keys($listing->getDirty());
             if ($dirty !== []) {
                 $listing->updated_by = $user->id;
                 $listing->version = $listing->version + 1;
