@@ -1,0 +1,23 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  The iCalendar feed a phone calendar subscribes to. Public: no session or CSRF, the secret token in the URL is the credential; rate limited (30/min/IP). Returns `text/calendar` with the member's visible tasks from 30 days back to 180 days ahead (including coming repeats), all-day or timed in the farm timezone, one alarm per reminder, cancelled tasks excluded and completed ones marked.
+
+  **ERRORS**
+  - `404 not_found` for an unknown, switched-off or replaced link, or when the member no longer has access.
+
+  **FRONTEND NOTES**
+  Not called by the app: it is the URL given to the phone (`webcal_url` / `https_url`). Run `Turn on the phone calendar link` first to capture `calendar_feed_url`.
+url: "{{calendar_feed_url}}"
+method: GET
+headers:
+  - key: Accept
+    value: text/calendar
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      pm.test("Is an iCalendar", function () { pm.expect(pm.response.headers.get("Content-Type")).to.include("text/calendar"); pm.expect(pm.response.text()).to.include("BEGIN:VCALENDAR"); });
+    language: text/javascript
+examples: ./.resources/Calendar feed ics.resources/examples
+order: 26000

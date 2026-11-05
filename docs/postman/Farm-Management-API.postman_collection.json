@@ -30585,7 +30585,7 @@
           ]
         },
         {
-          "name": "Create a repeating task",
+          "name": "Repeating task",
           "event": [
             {
               "listen": "prerequest",
@@ -30768,7 +30768,7 @@
           ]
         },
         {
-          "name": "Edit this and all future tasks",
+          "name": "Edit series",
           "event": [
             {
               "listen": "prerequest",
@@ -30956,7 +30956,7 @@
           ]
         },
         {
-          "name": "Get my phone calendar link",
+          "name": "Calendar link",
           "event": [
             {
               "listen": "test",
@@ -31083,7 +31083,7 @@
           ]
         },
         {
-          "name": "Turn on the phone calendar link (or make a new one)",
+          "name": "Calendar link on",
           "event": [
             {
               "listen": "test",
@@ -31256,7 +31256,7 @@
           ]
         },
         {
-          "name": "Turn off the phone calendar link",
+          "name": "Calendar link off",
           "event": [
             {
               "listen": "test",
@@ -31350,7 +31350,7 @@
           ]
         },
         {
-          "name": "Phone calendar feed (public .ics)",
+          "name": "Calendar feed ics",
           "event": [
             {
               "listen": "test",

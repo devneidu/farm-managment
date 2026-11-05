@@ -1,0 +1,39 @@
+$kind: http-example
+name: "201 Created — New link (regenerate)"
+request:
+  url: "{{base_url}}/calendar-feed"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "include_milestones": false
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "enabled": true,
+          "include_milestones": false,
+          "https_url": "https://api.farmvest.example/api/v1/calendar-feed/3f9ac1d27b4e0658a91cd2e47f03b86a15d9e2c47a0b3f61.ics",
+          "webcal_url": "webcal://api.farmvest.example/api/v1/calendar-feed/3f9ac1d27b4e0658a91cd2e47f03b86a15d9e2c47a0b3f61.ics"
+        },
+        "meta": {},
+        "message": "Calendar link created."
+      }
+order: 2000

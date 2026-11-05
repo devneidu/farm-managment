@@ -64,7 +64,7 @@ class FarmAlertNotification extends Notification implements ShouldQueue
         $mail = (new MailMessage)->subject("{$farm}: {$n->title}")->greeting('Hello,')->line($n->message);
         if ($n->type === NotificationCatalogue::TASK_REMINDER && $n->subject_type === 'task' && $n->subject_id) {
             // A task reminder links straight to the task and says what, where and when (all in the farm's timezone).
-            $mail->action('Open task', $base.'/tasks/'.$n->subject_id);
+            $mail->action('Open task', $base.config('identity.invitations.task_path').'/'.$n->subject_id);
         } else {
             $mail->action('Open notifications', $base.'/notifications');
         }

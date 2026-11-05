@@ -155,7 +155,7 @@ class CalendarFeedTest extends TeamTestCase
         $this->assertStringContainsString("X-BATCH:$batch\r\n", $e);
         $this->assertStringContainsString('Batch: '.$batch.'\\n', $e);
         $this->assertStringContainsString('Line one\\nLine two', $e, 'newlines are escaped');
-        $this->assertStringContainsString('/tasks/'.$timed['id'], $e);
+        $this->assertStringContainsString('/app/tasks/'.$timed['id'], $e);
         $this->assertStringContainsString("STATUS:CONFIRMED\r\n", $e);
         // 14:00 task: on the day 07:00 = 7 h before; 1 day before 07:00 = 31 h before.
         $this->assertStringContainsString("TRIGGER;RELATED=START:-PT7H\r\n", $e);

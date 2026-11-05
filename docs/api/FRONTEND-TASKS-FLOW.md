@@ -843,14 +843,14 @@ The in-app notification (`source` links to the task):
 }
 ```
 
-The email says what, which batch and when (in the farm timezone) and links to `{FRONTEND_URL}/tasks/{task id}`; make sure that route opens the task:
+The email says what, which batch and when (in the farm timezone) and links to `{FRONTEND_URL}/app/tasks/{task id}`; make sure that route opens the task:
 
 ```
 Subject: Green Acres: Reminder: Candle eggs
 
 Hello,
 Candle eggs is due Tue 20 Oct, 14:00 (Africa/Lagos). Batch: Layers — House 2.
-[Open task] https://app.farmvest.example/tasks/01a1a755-5d8f-73e2-b6a9-cdfa8da9b004
+[Open task] https://app.farmvest.example/app/tasks/01a1a755-5d8f-73e2-b6a9-cdfa8da9b004
 You can choose which alerts you receive in your notification settings.
 ```
 
@@ -994,9 +994,9 @@ DTSTART;TZID=Africa/Lagos:20261020T140000
 DTEND;TZID=Africa/Lagos:20261020T143000
 CATEGORIES:Feeding / watering
 DESCRIPTION:Category: Feeding / watering\nBatch: Layers — House 2\nOpen i
- n Farmvest: https://app.farmvest.example/tasks/01a1a755-5d8f-73e2-b6a9-cdf
+ n Farmvest: https://app.farmvest.example/app/tasks/01a1a755-5d8f-73e2-b6a9-cdf
  a8da9b004
-URL:https://app.farmvest.example/tasks/01a1a755-5d8f-73e2-b6a9-cdfa8da9b004
+URL:https://app.farmvest.example/app/tasks/01a1a755-5d8f-73e2-b6a9-cdfa8da9b004
 STATUS:CONFIRMED
 TRANSP:TRANSPARENT
 X-BATCH:Layers — House 2

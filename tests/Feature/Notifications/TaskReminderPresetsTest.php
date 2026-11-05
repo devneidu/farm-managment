@@ -156,7 +156,7 @@ class TaskReminderPresetsTest extends TeamTestCase
         $mail = (new FarmAlertNotification($n->id))->toMail($this->owner);
         $this->assertSame('Green Acres: Reminder: Candle eggs', $mail->subject);
         $this->assertStringContainsString('Tue 20 Oct, 14:00 (Africa/Lagos)', implode(' ', $mail->introLines));
-        $this->assertStringEndsWith('/tasks/'.$task['id'], $mail->actionUrl);
+        $this->assertStringEndsWith('/app/tasks/'.$task['id'], $mail->actionUrl);
         $this->assertSame('Open task', $mail->actionText);
         $this->assertSame('Africa/Lagos', $n->data['timezone']);
     }

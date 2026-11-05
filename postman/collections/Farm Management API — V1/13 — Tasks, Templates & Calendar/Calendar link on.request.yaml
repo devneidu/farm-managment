@@ -1,0 +1,55 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Turns the feed on (`201`, new secret link). When already on, answers `200` and keeps the link unless `regenerate` is `true` (`201`, a new link; the old one stops working at once). `include_milestones` also adds the cycle, breeding and health follow-up dates the user may see.
+
+  **WHEN TO USE IT**
+  The user taps Add to my phone calendar, or chooses New link.
+
+  **IMPORTANT INPUTS**
+  - `regenerate` (boolean, optional), `include_milestones` (boolean, optional).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `task.view`. Open `webcal_url` to subscribe a phone calendar; `https_url` is for copy / Google Calendar "From URL".
+  - The token is stored hashed; `GET /calendar-feed` shows the link again.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Full flow with examples: `docs/api/FRONTEND-TASKS-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.
+url: "{{base_url}}/calendar-feed"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin.
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script.
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+      "include_milestones": false
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+        const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
+        { const v = get(json, "data.https_url"); if (v !== undefined && v !== null) pm.environment.set("calendar_feed_url", String(v)); else console.warn("Could not capture calendar_feed_url from data.https_url"); }
+      }
+    language: text/javascript
+examples: ./.resources/Calendar link on.resources/examples
+order: 24000

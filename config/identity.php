@@ -23,6 +23,8 @@ return [
         'ttl_days' => (int) env('INVITATION_TTL_DAYS', 7),
         'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
         'accept_path' => '/invitations/accept',
+        // Frontend page of one task: {frontend_url}{task_path}/{task id} (reminder e-mail, phone calendar events).
+        'task_path' => '/'.trim((string) env('FRONTEND_TASK_PATH', 'app/tasks'), '/'),
     ],
 
     'rate_limits' => [

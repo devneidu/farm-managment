@@ -151,7 +151,7 @@ class CalendarFeedService
         $time = $task->due_time !== null ? substr($task->due_time, 0, 5) : null;
         $notes = array_filter([$task->instructions, $done ? 'Status: completed' : null]);
         $lines = $this->event($uid.'@'.$host, gmdate('Ymd\THis\Z', $task->updated_at->getTimestamp()), ($done ? "\u{2713} " : '').$task->title, $task->due_date->toDateString(), $time, $farm->timezone,
-            $task->category->label(), $batch, $notes, $base.'/tasks/'.$task->id);
+            $task->category->label(), $batch, $notes, $base.config('identity.invitations.task_path').'/'.$task->id);
         if (! $done) {
             array_push($lines, ...$this->alarms($task->title, $farm->timezone, $task->due_date->toDateString(), $time, $task->due_at, $task->reminder_presets, $task->reminder_offsets));
         }
