@@ -1,0 +1,101 @@
+$kind: http-example
+name: "201 Created — Routine created."
+request:
+  url: "{{base_url}}/work-templates"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+          "name": "Monthly farm walk",
+          "applies_to": "farm",
+          "items": [
+              {
+                  "title": "Walk the fences and gates",
+                  "category": "maintenance_repair",
+                  "repeat": {
+                      "pattern": "monthly",
+                      "every": 1,
+                      "ends": {
+                          "type": "never"
+                      }
+                  },
+                  "reminders": [
+                      "2_days"
+                  ]
+              }
+          ]
+      }
+response:
+  statusCode: 201
+  statusText: "Created"
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "id": "01a1ac3c-849e-7230-b5d1-557ea8d1a862",
+              "source": "farm",
+              "code": null,
+              "name": "Monthly farm walk",
+              "description": null,
+              "applies_to": "farm",
+              "cycle_kind": null,
+              "operation_type_id": null,
+              "species_id": null,
+              "crop_type_id": null,
+              "breeding_workflow": null,
+              "version": 1,
+              "is_active": true,
+              "cloned_from_id": null,
+              "application_id": null,
+              "step_count": 1,
+              "scope": "general",
+              "scope_label": "General (no batch)",
+              "items": [
+                  {
+                      "id": "01a1ac3c-84a4-708b-8e10-751c7c304c6c",
+                      "position": 1,
+                      "title": "Walk the fences and gates",
+                      "category": "maintenance_repair",
+                      "instructions": null,
+                      "anchor": "start_date",
+                      "offset_days": 0,
+                      "recurrence": "monthly",
+                      "interval_value": 1,
+                      "weekdays": null,
+                      "until_offset_days": null,
+                      "occurrence_limit": null,
+                      "due_time": null,
+                      "reminder_offsets": null,
+                      "reminders": [
+                          "2_days"
+                      ],
+                      "repeat": {
+                          "pattern": "monthly",
+                          "every": 1,
+                          "weekdays": null,
+                          "ends": {
+                              "type": "never"
+                          }
+                      },
+                      "assigned_role": null,
+                      "linked_record_type": null,
+                      "requires_evidence": false
+                  }
+              ]
+          },
+          "meta": [],
+          "message": "Template created."
+      }

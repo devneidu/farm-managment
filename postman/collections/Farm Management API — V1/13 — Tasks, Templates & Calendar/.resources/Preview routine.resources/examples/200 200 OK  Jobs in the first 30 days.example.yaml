@@ -1,0 +1,357 @@
+$kind: http-example
+name: "200 OK — Jobs in the first 30 days"
+request:
+  url: "{{base_url}}/work-templates/{{template_farm_id}}/preview"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+          "target": "01a1ac3c-7f21-7084-8b1d-e44228289412",
+          "start_date": "2026-10-20"
+      }
+response:
+  statusCode: 200
+  statusText: "OK"
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "template": {
+                  "id": "01a1ac3c-838e-7193-8fcd-921886e0d150",
+                  "name": "Broiler weekly care",
+                  "version": 1
+              },
+              "target": {
+                  "production_cycle_id": "01a1ac3c-7f21-7084-8b1d-e44228289412",
+                  "breeding_project_id": null,
+                  "general": false
+              },
+              "start_date": "2026-10-20",
+              "window": {
+                  "from": "2026-10-14",
+                  "to": "2026-11-13"
+              },
+              "counts": {
+                  "steps": 3,
+                  "schedules": 3,
+                  "jobs_in_window": 28,
+                  "skipped_past": 0,
+                  "skipped_no_anchor": 0,
+                  "coming_repeats": 2
+              },
+              "jobs": [
+                  {
+                      "step": 1,
+                      "title": "Check chicks and brooder heat",
+                      "category": "growth_monitoring",
+                      "due_date": "2026-10-20",
+                      "due_time": "07:00",
+                      "reminders": [
+                          "on_the_day"
+                      ],
+                      "repeats": false
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-21",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-22",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-23",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-24",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-25",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-26",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-27",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-28",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-29",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 2,
+                      "title": "Weigh a sample of 30 birds",
+                      "category": "growth_monitoring",
+                      "due_date": "2026-10-30",
+                      "due_time": null,
+                      "reminders": [
+                          "1_day",
+                          "on_the_day"
+                      ],
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-30",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-10-31",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-01",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-02",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-03",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-04",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-05",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 2,
+                      "title": "Weigh a sample of 30 birds",
+                      "category": "growth_monitoring",
+                      "due_date": "2026-11-06",
+                      "due_time": null,
+                      "reminders": [
+                          "1_day",
+                          "on_the_day"
+                      ],
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-06",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-07",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-08",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-09",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-10",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-11",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-12",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  },
+                  {
+                      "step": 2,
+                      "title": "Weigh a sample of 30 birds",
+                      "category": "growth_monitoring",
+                      "due_date": "2026-11-13",
+                      "due_time": null,
+                      "reminders": [
+                          "1_day",
+                          "on_the_day"
+                      ],
+                      "repeats": true
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "due_date": "2026-11-13",
+                      "due_time": null,
+                      "reminders": null,
+                      "repeats": true
+                  }
+              ],
+              "coming_repeats": [
+                  {
+                      "step": 2,
+                      "title": "Weigh a sample of 30 birds",
+                      "repeat": {
+                          "pattern": "weekly",
+                          "every": 1,
+                          "weekdays": [
+                              5
+                          ]
+                      },
+                      "ends": {
+                          "type": "date",
+                          "date": "2026-11-29"
+                      },
+                      "next_date": "2026-11-20",
+                      "remaining_after_window": 2
+                  },
+                  {
+                      "step": 3,
+                      "title": "Clean drinkers",
+                      "repeat": {
+                          "pattern": "daily",
+                          "every": 1,
+                          "weekdays": null
+                      },
+                      "ends": {
+                          "type": "batch_end"
+                      },
+                      "next_date": "2026-11-14",
+                      "remaining_after_window": null
+                  }
+              ],
+              "times_already_applied": 0
+          },
+          "meta": [],
+          "message": null
+      }

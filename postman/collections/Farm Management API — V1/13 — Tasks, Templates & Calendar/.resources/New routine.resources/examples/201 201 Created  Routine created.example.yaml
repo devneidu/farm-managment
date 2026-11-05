@@ -1,0 +1,191 @@
+$kind: http-example
+name: "201 Created — Routine created."
+request:
+  url: "{{base_url}}/work-templates"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+          "name": "Broiler weekly care",
+          "description": "What I do every week with a new flock.",
+          "applies_to": "production_cycle",
+          "cycle_kind": "livestock",
+          "species_id": "01a1ac3b-cde2-729c-8779-9d17487ba446",
+          "items": [
+              {
+                  "title": "Check chicks and brooder heat",
+                  "category": "growth_monitoring",
+                  "anchor": "start_date",
+                  "offset_days": 0,
+                  "due_time": "07:00",
+                  "reminders": [
+                      "on_the_day"
+                  ]
+              },
+              {
+                  "title": "Weigh a sample of 30 birds",
+                  "category": "growth_monitoring",
+                  "anchor": "start_date",
+                  "offset_days": 6,
+                  "reminders": [
+                      "1_day",
+                      "on_the_day"
+                  ],
+                  "repeat": {
+                      "pattern": "weekly",
+                      "every": 1,
+                      "weekdays": [
+                          5
+                      ],
+                      "ends": {
+                          "type": "days",
+                          "days": 35
+                      }
+                  }
+              },
+              {
+                  "title": "Clean drinkers",
+                  "category": "cleaning_sanitation",
+                  "anchor": "start_date",
+                  "offset_days": 1,
+                  "repeat": {
+                      "pattern": "daily",
+                      "every": 1,
+                      "ends": {
+                          "type": "batch_end"
+                      }
+                  }
+              }
+          ]
+      }
+response:
+  statusCode: 201
+  statusText: "Created"
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "id": "01a1ac3c-838e-7193-8fcd-921886e0d150",
+              "source": "farm",
+              "code": null,
+              "name": "Broiler weekly care",
+              "description": "What I do every week with a new flock.",
+              "applies_to": "production_cycle",
+              "cycle_kind": "livestock",
+              "operation_type_id": null,
+              "species_id": "01a1ac3b-cde2-729c-8779-9d17487ba446",
+              "crop_type_id": null,
+              "breeding_workflow": null,
+              "version": 1,
+              "is_active": true,
+              "cloned_from_id": null,
+              "application_id": null,
+              "step_count": 3,
+              "scope": "specific",
+              "scope_label": "Chicken batches",
+              "items": [
+                  {
+                      "id": "01a1ac3c-8398-7201-8e8a-cdacacbc314e",
+                      "position": 1,
+                      "title": "Check chicks and brooder heat",
+                      "category": "growth_monitoring",
+                      "instructions": null,
+                      "anchor": "start_date",
+                      "offset_days": 0,
+                      "recurrence": "none",
+                      "interval_value": 1,
+                      "weekdays": null,
+                      "until_offset_days": null,
+                      "occurrence_limit": null,
+                      "due_time": "07:00",
+                      "reminder_offsets": null,
+                      "reminders": [
+                          "on_the_day"
+                      ],
+                      "repeat": null,
+                      "assigned_role": null,
+                      "linked_record_type": null,
+                      "requires_evidence": false
+                  },
+                  {
+                      "id": "01a1ac3c-839e-736b-b629-e3852c33325f",
+                      "position": 2,
+                      "title": "Weigh a sample of 30 birds",
+                      "category": "growth_monitoring",
+                      "instructions": null,
+                      "anchor": "start_date",
+                      "offset_days": 6,
+                      "recurrence": "weekly",
+                      "interval_value": 1,
+                      "weekdays": [
+                          5
+                      ],
+                      "until_offset_days": 40,
+                      "occurrence_limit": null,
+                      "due_time": null,
+                      "reminder_offsets": null,
+                      "reminders": [
+                          "1_day",
+                          "on_the_day"
+                      ],
+                      "repeat": {
+                          "pattern": "weekly",
+                          "every": 1,
+                          "weekdays": [
+                              5
+                          ],
+                          "ends": {
+                              "type": "days",
+                              "days": 35
+                          }
+                      },
+                      "assigned_role": null,
+                      "linked_record_type": null,
+                      "requires_evidence": false
+                  },
+                  {
+                      "id": "01a1ac3c-83a4-7197-b1a1-036cde7fc768",
+                      "position": 3,
+                      "title": "Clean drinkers",
+                      "category": "cleaning_sanitation",
+                      "instructions": null,
+                      "anchor": "start_date",
+                      "offset_days": 1,
+                      "recurrence": "daily",
+                      "interval_value": 1,
+                      "weekdays": null,
+                      "until_offset_days": null,
+                      "occurrence_limit": null,
+                      "due_time": null,
+                      "reminder_offsets": null,
+                      "reminders": null,
+                      "repeat": {
+                          "pattern": "daily",
+                          "every": 1,
+                          "weekdays": null,
+                          "ends": {
+                              "type": "batch_end"
+                          }
+                      },
+                      "assigned_role": null,
+                      "linked_record_type": null,
+                      "requires_evidence": false
+                  }
+              ]
+          },
+          "meta": [],
+          "message": "Template created."
+      }

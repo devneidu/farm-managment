@@ -20,7 +20,8 @@ class StoreWorkTemplateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:150'],
             'description' => ['sometimes', 'nullable', 'string', 'max:2000'],
-            'applies_to' => ['required', 'in:production_cycle,breeding_project'],
+            /** production_cycle = for a batch (any batch, or limited by the kind/species/crop filters); breeding_project; farm = a general routine with no batch. */
+            'applies_to' => ['required', 'in:production_cycle,breeding_project,farm'],
             'cycle_kind' => ['sometimes', 'nullable', Rule::enum(CycleKind::class)],
             'operation_type_id' => ['sometimes', 'nullable', 'uuid', 'exists:operation_types,id'],
             'species_id' => ['sometimes', 'nullable', 'uuid', 'exists:species,id'],
@@ -29,7 +30,8 @@ class StoreWorkTemplateRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
             'items' => ['required', 'array', 'min:1', 'max:50'],
             'items.*' => ['array'],
-            'items.*.anchor' => ['required', Rule::enum(TemplateAnchor::class)],
+            /** Defaults to start_date (the date chosen when the routine is applied). The older anchors only fit batch / breeding routines. */
+            'items.*.anchor' => ['sometimes', Rule::enum(TemplateAnchor::class)],
             /** Days after the anchor date of the first task. */
             'items.*.offset_days' => ['sometimes', 'integer', 'min:0', 'max:3650'],
             /** Recurring items: last day, as days after the anchor. */
@@ -42,6 +44,8 @@ class StoreWorkTemplateRequest extends FormRequest
             'version' => ['missing'],
             ...WorkRules::work('items.*.'),
             ...WorkRules::recurrence('items.*.'),
+            ...WorkRules::reminders('items.*.'),
+            ...WorkRules::repeat('items.*.'),
         ];
     }
 }

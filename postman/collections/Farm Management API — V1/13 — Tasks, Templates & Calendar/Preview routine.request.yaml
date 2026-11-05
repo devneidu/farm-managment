@@ -1,0 +1,55 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Shows what applying the routine would create, without saving anything: the jobs of the first 30 days, a summary of the repeats that continue after that, and counts.
+
+  **WHEN TO USE IT**
+  After the user picked a batch (or none) and a start date, before the confirm button.
+
+  **IMPORTANT INPUTS**
+  - `target`: the batch id; leave out for a general routine. `breeding_project_id` for breeding routines.
+  - `start_date`: day 1 of the routine (default: the batch start date, or today).
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `task.manage`. Same checks as apply (404, 409 `cycle_closed`, 422 does not fit).
+  - `jobs[]` are the tasks that would be created in `window`; `coming_repeats[]` are repeats that continue later; `times_already_applied` tells whether to ask for confirmation.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Full flow with examples: `docs/api/FRONTEND-ROUTINES-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.
+url: "{{base_url}}/work-templates/{{template_farm_id}}/preview"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+body:
+  type: json
+  content: |-
+    {
+        "target": "01a1ac3c-7f21-7084-8b1d-e44228289412",
+        "start_date": "2026-10-20"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); });
+      }
+    language: text/javascript
+examples: ./.resources/Preview routine.resources/examples
+order: 27300

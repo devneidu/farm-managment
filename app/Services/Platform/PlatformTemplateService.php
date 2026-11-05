@@ -56,6 +56,7 @@ class PlatformTemplateService
     /** @param  array<string, mixed>  $data */
     public function create(User $actor, array $data): WorkTemplate
     {
+        $data['items'] = $this->templates->normalizeItems($data['items']);
         $this->templates->assertShape($data, $data['applies_to']);
 
         return DB::transaction(function () use ($actor, $data) {
@@ -75,6 +76,9 @@ class PlatformTemplateService
     /** @param  array<string, mixed>  $data */
     public function update(User $actor, string $id, array $data): WorkTemplate
     {
+        if (isset($data['items'])) {
+            $data['items'] = $this->templates->normalizeItems($data['items']);
+        }
         return DB::transaction(function () use ($actor, $id, $data) {
             $template = WorkTemplate::whereNull('farm_id')->lockForUpdate()->findOrFail($id);
             $state = self::state($template);

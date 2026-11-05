@@ -69,7 +69,7 @@ description: |-
   **SUCCESS**
   `201 Created` — message: "Template created."
 
-  `data` fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `items`.
+  `data` fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `step_count`, `scope`, `scope_label`, `suits_batch` (when a batch is given), `items`.
 
   **ERRORS**
   - `401 unauthenticated` — no valid session: show the login screen.

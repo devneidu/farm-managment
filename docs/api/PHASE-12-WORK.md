@@ -8,7 +8,7 @@ All paths have prefix `/api/v1`. Use the existing Sanctum SPA session, CSRF setu
 |---|---|---|
 | **Task** | Work that **should** happen. | `/tasks` |
 | **Schedule** | A recurrence rule that generates tasks. | `/schedules` |
-| **Work template** | A reusable plan (platform or farm) applied to a cycle or breeding project. | `/work-templates` |
+| **Work template / routine** | A reusable plan (ready-made or the farm's own) applied to a batch, a breeding project, or nothing (general). | `/work-templates`, `/template-applications` |
 | **Calendar** | A read model of tasks plus milestones. Stores and duplicates nothing. | `/calendar` |
 | **Operational record** | What **did** happen (Phases 8, 10, 11). | `/records`, `/health-records`, `/breeding-projects/...` |
 
@@ -60,15 +60,25 @@ Reminders are delivered by `notifications:generate` (hourly) through the notific
 * Only the tightest reminder that has passed (while the task is not yet due) is sent. Presets whose fire time was already in the past when the task was created are never sent, so a new series does not announce a whole week at once (minute offsets keep their old behaviour).
 * The notification title is `Reminder: {task title}`; the message names the task, the date/time in the farm timezone (or "all day") and the batch; `data` has `due_date`, `due_time`, `timezone`, `batch`, `reminder`, `reminder_minutes_before`. The e-mail links to `{FRONTEND_URL}/app/tasks/{task id}`.
 
-## Templates
+## Templates (routines)
 
 `source=platform` templates (seeded: `chicken-starter`, `crop-starter`, `chicken-incubation`) are read-only (`403 platform_template_readonly`); **clone** one to customise. Farm templates are versioned: each edit is `version + 1`; applied schedules are independent copies, so later edits never rewrite them. Template content is configuration, not veterinary or agronomic advice.
 
-Item: `title`, `category`, `anchor` + `offset_days`, optional recurrence (`recurrence` incl. `monthly`, `interval_value`, `weekdays`, `until_offset_days`, `occurrence_limit`), `due_time`, `reminder_offsets`, `assigned_role`, `linked_record_type`, `requires_evidence`, `instructions`.
+**Scope.** `applies_to` is `production_cycle` (a batch; with no filters it suits **any batch**, with `cycle_kind` / `operation_type_id` / `species_id` / `crop_type_id` it is limited to those), `breeding_project`, or the new `farm` = a **general routine with no batch** (its tasks have no `production_cycle_id`; no filters, no `linked_record_type`, no `batch_end`). Fit checks only run for filters that are set. List rows carry `source` (`platform` = ready-made, `farm` = mine), `step_count`, `scope` (`any_batch` / `specific` / `general`), `scope_label` and, with `?production_cycle_id=` (or `?breeding_project_id=`), `suits_batch`.
 
-Anchors: `cycle_start`, `cycle_expected_end` (cycle templates); `breeding_start`, `breeding_expected` (exact date or window start), `breeding_expected_to` (exact date or window end) (breeding templates). Breeding anchors read the project's **stored** expectation; the biological reference and expectation are never changed. An item whose anchor has no date (e.g. no breeding expectation) is skipped (`skipped_no_anchor`).
+Item (a step): `title`, `category`, `anchor` + `offset_days`, `due_time`, `assigned_role`, `linked_record_type`, `requires_evidence`, `instructions`, and the **task form's language**: `repeat` `{pattern: daily|weekly|monthly, every, weekdays, ends: {type: days|date|batch_end|never, days, date}}` and `reminders` (`on_the_day|1_day|2_days|7_days`). `ends.days` is stored as `until_offset_days = offset_days + days - 1`; `date` is an absolute end date; `batch_end` keeps the repeat going while the batch is open (not for general routines). Responses return the same `repeat` / `reminders` blocks (plus `ends.type = count` for older items that use `occurrence_limit`). The older flat fields (`recurrence`, `interval_value`, `weekdays`, `until_offset_days`, `occurrence_limit`, `reminder_offsets`) still work; if `repeat` is sent it wins.
 
-Flow: `GET /work-templates/recommended?production_cycle_id=` (or `breeding_project_id=`) → user chooses **Apply**, **Clone → edit → apply** (customise), or ignores it (skip). Nothing applies automatically. `POST /work-templates/{id}/apply` is once per template and target (`409 template_already_applied`), requires an open cycle / active project, and is replay-safe by `idempotency_key`.
+Anchors: **`start_date`** (new, the default: the date chosen when the routine is applied; **day 1 = `offset_days` 0**; fits every kind of routine); `cycle_start`, `cycle_expected_end` (cycle templates); `breeding_start`, `breeding_expected` (exact date or window start), `breeding_expected_to` (exact date or window end) (breeding templates). Breeding anchors read the project's **stored** expectation; the biological reference and expectation are never changed. An item whose anchor has no date (e.g. no breeding expectation) is skipped (`skipped_no_anchor`).
+
+Flow: `GET /work-templates?production_cycle_id=` (or `/recommended`) → user chooses **Apply**, **Clone → edit → apply** (customise), or ignores it (skip). Nothing applies automatically.
+
+* **Preview** `POST /work-templates/{id}/preview {target, start_date}` (`target` = batch id, or omit for a general routine; `breeding_project_id` for breeding routines) saves nothing and returns `jobs` for the first 30 days (the window apply materialises), `coming_repeats` (repeats that continue after it, with `next_date` and `remaining_after_window`, null when open-ended), `counts` and `times_already_applied`. It runs the same checks as apply.
+* **Apply** `POST /work-templates/{id}/apply {production_cycle_id | breeding_project_id | nothing, start_date?, confirm_reapply?, idempotency_key}`. `start_date` is day 1 of `start_date`-anchored steps (default: the batch start date, or today for a general routine); steps on the older anchors ignore it. The target must be open / active (`409 cycle_closed`, `project_not_active`) and the routine active (`409 template_inactive`). **Applying again** to the same target is allowed: without `confirm_reapply: true` the answer is `409 template_already_applied` with `details {times_applied, last_applied_at, applications[]}`; with it, a new application is created. The one-per-target rule is gone; replays stay safe through the farm-wide `idempotency_key`.
+* **Applied routines** `GET /template-applications?production_cycle_id=` (also `breeding_project_id`, `target=general`, `work_template_id`, `status=active|removed|all`, default active): the routine, `start_date`, `applied_at` and `task_counts {open, completed, cancelled}`.
+* **Remove** `POST /template-applications/{id}/remove`: ends every schedule the application created and cancels their open tasks due **today or later** (`cancel_reason` "Routine removed"); completed tasks and tasks already overdue are untouched. One transaction; removing twice returns the same result.
+* **Save as routine** `POST /tasks/{task}/save-as-routine {name, scope?}` creates a one-step farm routine from the task, or from its whole series when it repeats (repeat, ends, reminders, category, instructions, due time copied; `start_date` anchor, offset 0; an end date becomes a number of days). `scope`: `any_batch` (default for a batch task), `same_kind` (this species / crop), `general` (default for a task without a batch; 422 for steps that end with the batch or link a record). Creates no task.
+
+Editing a farm routine is `version + 1` and never changes existing applications. Frontend flow: [`FRONTEND-ROUTINES-FLOW.md`](FRONTEND-ROUTINES-FLOW.md).
 
 ## Completion and evidence
 
@@ -117,7 +127,11 @@ Evidence must belong to this farm, not be reversed, match the task's linked type
 | GET | `/work-templates/{template}` | task.view |
 | PATCH | `/work-templates/{template}` | task.manage |
 | POST | `/work-templates/{template}/clone` | task.manage |
+| POST | `/work-templates/{template}/preview` | task.manage |
 | POST | `/work-templates/{template}/apply` | task.manage |
+| POST | `/tasks/{task}/save-as-routine` | task.manage |
+| GET | `/template-applications` | task.view |
+| POST | `/template-applications/{application}/remove` | task.manage |
 
 `GET /tasks` filters: `status`, `due_state`, `production_cycle_id`, `breeding_project_id`, `schedule_id`, `category`, `assigned_to` (`me` or user id), `from`, `to` (due date), `page`, `per_page`.
 
@@ -171,7 +185,7 @@ Create a repeating task (single form): `POST /tasks {"title": "Clean drinkers", 
 
 Create a weekly schedule: `POST /schedules {"title": "Clean drinkers", "category": "cleaning_sanitation", "recurrence": "weekly", "weekdays": [1, 4], "starts_on": "2026-10-05", "production_cycle_id": "…", "idempotency_key": "…"}`.
 
-Apply a template: `POST /work-templates/{id}/apply {"production_cycle_id": "…", "idempotency_key": "…"}` → `{schedules_created, tasks_created, skipped_past, skipped_no_anchor, template_version}`.
+Apply a template: `POST /work-templates/{id}/apply {"production_cycle_id": "…", "start_date": "2026-10-20", "idempotency_key": "…"}` → `{id, status, start_date, schedules_created, tasks_created, skipped_past, skipped_no_anchor, template_version}`.
 
 Complete with evidence: `POST /tasks/{id}/complete {"evidence": {"type": "operational_record", "id": "…"}, "note": "Done"}`.
 
@@ -186,7 +200,8 @@ Complete with evidence: `POST /tasks/{id}/complete {"evidence": {"type": "operat
 | 409 `cycle_closed`, `project_not_active` | new work on a closed cycle / inactive project; completing on a closed cycle or cancelled project (cancel is still allowed) |
 | 409 `task_not_in_series` | `POST /tasks/{id}/edit-series` on a task that does not repeat |
 | 409 `task_not_open`, `task_already_completed`, `evidence_already_linked`, `task_has_no_linked_record` | lifecycle and evidence conflicts |
-| 409 `template_already_applied`, `template_inactive` | template application |
+| 409 `template_already_applied` | the routine is already applied to this target and `confirm_reapply` was not sent; `details` says when and how many times |
+| 409 `template_inactive` | template application |
 
 ## Not in this phase
 

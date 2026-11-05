@@ -1,0 +1,47 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Takes a routine off its batch: ends every schedule it created and cancels their open tasks due today or later (reason "Routine removed").
+
+  **WHEN TO USE IT**
+  The "Remove" action on an applied routine.
+
+  **IMPORTANT INPUTS**
+  - Nothing in the body.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `task.manage`. Completed tasks and tasks already overdue are untouched.
+  - One transaction; calling it again returns the same result (idempotent). 404 for an unknown application.
+
+  **FRONTEND NOTES**
+  - Cookie session + CSRF: send `X-XSRF-TOKEN` and a stateful `Origin` (the collection script does it; call `GET /auth/csrf-cookie` first).
+  - Full flow with examples: `docs/api/FRONTEND-ROUTINES-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.
+url: "{{base_url}}/template-applications/{{template_application_id}}/remove"
+method: POST
+headers:
+  - key: Accept
+    value: application/json
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+  - key: Content-Type
+    value: application/json
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    disabled: true
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); });
+      }
+    language: text/javascript
+examples: ./.resources/Remove routine.resources/examples
+order: 27700

@@ -12,6 +12,18 @@ use Illuminate\Validation\Rule;
 /** Rule fragments shared by tasks, schedules and template items. */
 final class WorkRules
 {
+    /**
+     * `distinct` on a wildcard path (items.*.weekdays.*) compares values across ALL items, so inside a list of items it is left out and the service
+     * removes duplicates instead.
+     *
+     * @param  list<mixed>  $rules
+     * @return list<mixed>
+     */
+    private static function distinct(string $prefix, array $rules): array
+    {
+        return str_contains($prefix, '*') ? $rules : [...$rules, 'distinct'];
+    }
+
     /** @return array<string, mixed> */
     public static function recurrence(string $prefix = ''): array
     {
@@ -21,37 +33,37 @@ final class WorkRules
             $prefix.'interval_value' => ['sometimes', 'integer', 'min:1', 'max:52'],
             /** Weekly only: ISO weekdays 1 (Monday) to 7 (Sunday). Defaults to the weekday of the start. */
             $prefix.'weekdays' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
-            $prefix.'weekdays.*' => ['integer', 'between:1,7', 'distinct'],
+            $prefix.'weekdays.*' => self::distinct($prefix, ['integer', 'between:1,7']),
             $prefix.'occurrence_limit' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:3650'],
         ];
     }
 
     /** @return array<string, mixed> */
-    public static function reminders(): array
+    public static function reminders(string $prefix = ''): array
     {
         return [
             /** Day-based reminder presets: on_the_day, 1_day, 2_days, 7_days. They fire at 07:00 farm-local (on_the_day never later than 1 hour before the due time). */
-            'reminders' => ['sometimes', 'nullable', 'array', 'max:4'],
-            'reminders.*' => ['string', Rule::in(array_keys(ReminderPlan::PRESETS)), 'distinct'],
+            $prefix.'reminders' => ['sometimes', 'nullable', 'array', 'max:4'],
+            $prefix.'reminders.*' => self::distinct($prefix, ['string', Rule::in(array_keys(ReminderPlan::PRESETS))]),
         ];
     }
 
     /** The "repeat" block of the single task form. @return array<string, mixed> */
-    public static function repeat(): array
+    public static function repeat(string $prefix = ''): array
     {
         return [
-            'repeat' => ['sometimes', 'nullable', 'array'],
+            $prefix.'repeat' => ['sometimes', 'nullable', 'array'],
             /** daily = every N days, weekly = every N weeks on the chosen weekdays, monthly = every N months. */
-            'repeat.pattern' => ['required_with:repeat', Rule::in(['daily', 'weekly', 'monthly'])],
-            'repeat.every' => ['sometimes', 'integer', 'min:1', 'max:52'],
+            $prefix.'repeat.pattern' => ['required_with:'.$prefix.'repeat', Rule::in(['daily', 'weekly', 'monthly'])],
+            $prefix.'repeat.every' => ['sometimes', 'integer', 'min:1', 'max:52'],
             /** Weekly only: ISO weekdays 1 (Monday) to 7 (Sunday). */
-            'repeat.weekdays' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
-            'repeat.weekdays.*' => ['integer', 'between:1,7', 'distinct'],
-            'repeat.ends' => ['sometimes', 'array'],
+            $prefix.'repeat.weekdays' => ['sometimes', 'nullable', 'array', 'min:1', 'max:7'],
+            $prefix.'repeat.weekdays.*' => self::distinct($prefix, ['integer', 'between:1,7']),
+            $prefix.'repeat.ends' => ['sometimes', 'array'],
             /** days (for N days), date, batch_end (while the batch is open) or never. */
-            'repeat.ends.type' => ['required_with:repeat.ends', Rule::in(['days', 'date', 'batch_end', 'never'])],
-            'repeat.ends.days' => ['required_if:repeat.ends.type,days', 'integer', 'min:1', 'max:3650'],
-            'repeat.ends.date' => ['required_if:repeat.ends.type,date', 'date_format:Y-m-d'],
+            $prefix.'repeat.ends.type' => ['required_with:'.$prefix.'repeat.ends', Rule::in(['days', 'date', 'batch_end', 'never'])],
+            $prefix.'repeat.ends.days' => ['required_if:'.$prefix.'repeat.ends.type,days', 'integer', 'min:1', 'max:3650'],
+            $prefix.'repeat.ends.date' => ['required_if:'.$prefix.'repeat.ends.type,date', 'date_format:Y-m-d'],
         ];
     }
 

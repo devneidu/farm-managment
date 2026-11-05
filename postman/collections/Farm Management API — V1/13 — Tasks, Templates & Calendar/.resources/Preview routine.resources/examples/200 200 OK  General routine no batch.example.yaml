@@ -1,0 +1,87 @@
+$kind: http-example
+name: "200 OK — General routine, no batch"
+request:
+  url: "{{base_url}}/work-templates/{{template_farm_id}}/preview"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+    - key: Content-Type
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+          "start_date": "2026-10-16"
+      }
+response:
+  statusCode: 200
+  statusText: "OK"
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "template": {
+                  "id": "01a1ac3c-849e-7230-b5d1-557ea8d1a862",
+                  "name": "Monthly farm walk",
+                  "version": 1
+              },
+              "target": {
+                  "production_cycle_id": null,
+                  "breeding_project_id": null,
+                  "general": true
+              },
+              "start_date": "2026-10-16",
+              "window": {
+                  "from": "2026-10-14",
+                  "to": "2026-11-13"
+              },
+              "counts": {
+                  "steps": 1,
+                  "schedules": 1,
+                  "jobs_in_window": 1,
+                  "skipped_past": 0,
+                  "skipped_no_anchor": 0,
+                  "coming_repeats": 1
+              },
+              "jobs": [
+                  {
+                      "step": 1,
+                      "title": "Walk the fences and gates",
+                      "category": "maintenance_repair",
+                      "due_date": "2026-10-16",
+                      "due_time": null,
+                      "reminders": [
+                          "2_days"
+                      ],
+                      "repeats": true
+                  }
+              ],
+              "coming_repeats": [
+                  {
+                      "step": 1,
+                      "title": "Walk the fences and gates",
+                      "repeat": {
+                          "pattern": "monthly",
+                          "every": 1,
+                          "weekdays": null
+                      },
+                      "ends": {
+                          "type": "never"
+                      },
+                      "next_date": "2026-11-16",
+                      "remaining_after_window": null
+                  }
+              ],
+              "times_already_applied": 0
+          },
+          "meta": [],
+          "message": null
+      }

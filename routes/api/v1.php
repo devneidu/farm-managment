@@ -78,6 +78,7 @@ use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\StorageLocationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TaskController;
+use App\Http\Controllers\Api\V1\TemplateApplicationController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
 use App\Http\Controllers\Api\V1\UserPreferenceController;
@@ -403,6 +404,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::patch('/{task}', [$c, 'update'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.update');
         Route::post('/{task}/complete', [$c, 'complete'])->middleware(['farm.permission:task.complete', 'throttle:work-write'])->name('api.v1.tasks.complete');
         Route::post('/{task}/cancel', [$c, 'cancel'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.cancel');
+        Route::post('/{task}/save-as-routine', [WorkTemplateController::class, 'saveAsRoutine'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.save-as-routine');
         Route::post('/{task}/edit-series', [$c, 'editSeries'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.tasks.edit-series');
         Route::get('/{task}/record-prefill', [$c, 'recordPrefill'])->middleware('farm.permission:task.view')->name('api.v1.tasks.record-prefill');
     });
@@ -432,7 +434,13 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/{template}', [$c, 'show'])->middleware('farm.permission:task.view')->name('api.v1.work-templates.show');
         Route::patch('/{template}', [$c, 'update'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.update');
         Route::post('/{template}/clone', [$c, 'clone'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.clone');
+        Route::post('/{template}/preview', [$c, 'preview'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.preview');
         Route::post('/{template}/apply', [$c, 'apply'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.work-templates.apply');
+    });
+    Route::prefix('template-applications')->group(function () {
+        $c = TemplateApplicationController::class;
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:task.view')->name('api.v1.template-applications.index');
+        Route::post('/{application}/remove', [$c, 'remove'])->middleware(['farm.permission:task.manage', 'throttle:work-write'])->name('api.v1.template-applications.remove');
     });
 
     Route::prefix('health')->group(function () {

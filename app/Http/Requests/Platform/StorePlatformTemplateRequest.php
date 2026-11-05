@@ -19,6 +19,8 @@ class StorePlatformTemplateRequest extends FormRequest
             ...(new StoreWorkTemplateRequest)->rules(),
             'code' => ['required', 'string', 'max:60', 'regex:/^[a-z][a-z0-9_]*$/'],
             'is_active' => ['missing'],
+            /** Ready-made routines are for batches or breeding projects; a general (no batch) routine is a farm routine. */
+            'applies_to' => ['required', 'in:production_cycle,breeding_project'],
         ];
     }
 }

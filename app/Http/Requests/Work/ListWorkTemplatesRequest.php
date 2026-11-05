@@ -15,9 +15,9 @@ class ListWorkTemplatesRequest extends FormRequest
     {
         return [
             'source' => ['sometimes', 'in:platform,farm'],
-            'applies_to' => ['sometimes', 'in:production_cycle,breeding_project'],
+            'applies_to' => ['sometimes', 'in:production_cycle,breeding_project,farm'],
             'is_active' => ['sometimes', 'boolean'],
-            /** Recommended endpoint: exactly one of these. */
+            /** Recommended endpoint: exactly one of these. On the list they add `suits_batch` to each routine. */
             'production_cycle_id' => ['sometimes', 'uuid'],
             'breeding_project_id' => ['sometimes', 'uuid'],
         ];

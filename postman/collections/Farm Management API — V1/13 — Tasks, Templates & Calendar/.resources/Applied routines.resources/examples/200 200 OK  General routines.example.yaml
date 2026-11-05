@@ -1,0 +1,57 @@
+$kind: http-example
+name: "200 OK — General routines"
+request:
+  url: "{{base_url}}/template-applications?production_cycle_id={{cycle_id}}"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  queryParams:
+    - key: production_cycle_id
+      value: "{{cycle_id}}"
+response:
+  statusCode: 200
+  statusText: "OK"
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": [
+              {
+                  "id": "01a1ac3c-9876-70a6-887a-476c33ccfd9d",
+                  "work_template_id": "01a1ac3c-849e-7230-b5d1-557ea8d1a862",
+                  "template_version": 1,
+                  "template": {
+                      "id": "01a1ac3c-849e-7230-b5d1-557ea8d1a862",
+                      "name": "Monthly farm walk",
+                      "source": "farm"
+                  },
+                  "production_cycle_id": null,
+                  "breeding_project_id": null,
+                  "status": "active",
+                  "start_date": "2026-10-16",
+                  "schedules_created": 1,
+                  "tasks_created": 1,
+                  "skipped_past": 0,
+                  "skipped_no_anchor": 0,
+                  "task_counts": {
+                      "open": 1,
+                      "completed": 0,
+                      "cancelled": 0
+                  },
+                  "removed_at": null,
+                  "tasks_cancelled": 0,
+                  "created_by": "01a1ac3c-7d9a-73a4-961e-4cc559ed1203",
+                  "applied_at": "2026-10-14T11:00:00.000000Z",
+                  "created_at": "2026-10-14T11:00:00.000000Z"
+              }
+          ],
+          "meta": [],
+          "message": null
+      }

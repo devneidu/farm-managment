@@ -54,7 +54,7 @@ Phase 20 (WhatsApp / AI parsing) and Phase 28 (Community) are deferred and have 
 | 10 — Inventory | 32 | 19 | 32 | 12 |
 | 11 — Health | 10 | 9 | 10 | 2 |
 | 12 — Breeding | 13 | 9 | 11 | 2 |
-| 13 — Tasks, Templates & Calendar | 26 | 25 | 26 | 8 |
+| 13 — Tasks, Templates & Calendar | 34 | 25 | 26 | 8 |
 | 14 — Crop Operations | 12 | 2 | 12 | 2 |
 | 15 — Contacts & Purchasing | 10 | 8 | 10 | 4 |
 | 16 — Finance | 10 | 8 | 10 | 3 |
@@ -361,3 +361,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * The six requests were added to **both** the canonical collection JSON and the Postman-app YAML export (`postman/collections/Farm Management API — V1/13 — Tasks, Templates & Calendar/`: six `*.request.yaml` files plus ten saved examples under `.resources/`, same real responses; the YAML was generated from the JSON items and parses cleanly). They were **not** executed through Newman or imported into the Postman app in this change; the behaviour is covered by the feature tests `tests/Feature/Work/TasksCalendarTest.php`, `tests/Feature/Work/CalendarFeedTest.php` and `tests/Feature/Notifications/TaskReminderPresetsTest.php`.
 * Frontend task link: the reminder e-mail and the phone calendar events open `{FRONTEND_URL}/app/tasks/{task id}`. The path is the single config value `identity.invitations.task_path` (env `FRONTEND_TASK_PATH`, default `app/tasks`).
 * Frontend contract: `docs/api/FRONTEND-TASKS-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.
+
+## Addendum - routines (any-batch and general routines, save as routine, preview, re-apply, remove)
+
+* New routes (4): `POST /work-templates/{template}/preview`, `POST /tasks/{task}/save-as-routine`, `GET /template-applications`, `POST /template-applications/{application}/remove`. `php artisan route:list --path=api/v1` now measures **362** method+path routes (the 343 in §1 is the earlier figure and was not recomputed). Changed contracts (all new fields optional): `POST /work-templates` accepts `applies_to: farm` (general, no batch), the new anchor `start_date`, and per step the task form's `repeat` block and `reminders`; `GET /work-templates` rows gain `step_count`, `scope`, `scope_label` (+ `suits_batch` with `?production_cycle_id=`); `POST /work-templates/{id}/apply` gains `start_date` and `confirm_reapply` and no longer refuses a second application outright (`409 template_already_applied` now carries `details` and is lifted by `confirm_reapply: true`). Migration `2026_11_06_100000_routines` (step columns `ends_type`, `ends_on`, `reminder_presets`; application columns `start_date`, `status`, `removed_at`, `removed_by`, `tasks_cancelled`; nullable `production_cycle_id`; the one-per-target unique index replaced by a plain index).
+* Folder **13 — Tasks, Templates & Calendar** gains eight requests (`New routine`, `New general routine`, `Save as routine`, `Preview routine`, `Apply routine`, `Apply routine again`, `Applied routines`, `Remove routine`), now 34 requests (row above updated by hand; the other totals in §1 were not recomputed). New environment variable `template_application_id` (JSON and both YAML environments). The descriptions of the existing template requests mention the new fields.
+* The saved examples are real responses captured from the running application by a throwaway feature test (not committed), so the ids in them are real and consistent with each other. The requests are in **both** the canonical collection JSON and the Postman-app YAML export (eight `*.request.yaml` files and their examples under `.resources/`, parsed cleanly). They were **not** executed through Newman or imported into the Postman app; behaviour is covered by `tests/Feature/Work/RoutinesTest.php`. `docs/api/openapi.json` was intentionally not regenerated.
+* Frontend contract: `docs/api/FRONTEND-ROUTINES-FLOW.md`; reference: `docs/api/PHASE-12-WORK.md`.

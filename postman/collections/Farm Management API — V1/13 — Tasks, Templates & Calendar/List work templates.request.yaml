@@ -31,7 +31,7 @@ description: |-
 
   **QUERY PARAMETERS** (all optional unless marked required; booleans as `1`/`0`)
   - `source` — enum. Values: `platform`, `farm`
-  - `applies_to` — enum. Values: `production_cycle`, `breeding_project`
+  - `applies_to` — enum. Values: `production_cycle`, `breeding_project`, `farm` (general, no batch)
   - `is_active` — boolean
   - `production_cycle_id` — string (uuid). Recommended endpoint: exactly one of these.
   - `breeding_project_id` — string (uuid)
@@ -39,7 +39,7 @@ description: |-
   **SUCCESS**
   `200 OK`
 
-  `data` is an array of objects with fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `items`.
+  `data` is an array of objects with fields: `id`, `source`, `code`, `name`, `description`, `applies_to`, `cycle_kind`, `operation_type_id`, `species_id`, `crop_type_id`, `breeding_workflow`, `version`, `is_active`, `cloned_from_id`, `application_id`, `step_count`, `scope`, `scope_label`, `suits_batch` (when a batch is given), `items`.
 
   **ERRORS**
   - `401 unauthenticated` — no valid session: show the login screen.

@@ -13,8 +13,16 @@ enum TemplateAnchor: string
     /** End of the expected window (falls back to the exact date). */
     case BreedingExpectedTo = 'breeding_expected_to';
 
-    public function target(): string
+    /** The date chosen when the routine is applied; day 1 is offset 0. Fits every kind of routine, including general (no batch) ones. */
+    case StartDate = 'start_date';
+
+    /** The kind of template this anchor belongs to; null = usable in any. */
+    public function target(): ?string
     {
+        if ($this === self::StartDate) {
+            return null;
+        }
+
         return in_array($this, [self::CycleStart, self::CycleExpectedEnd], true) ? 'production_cycle' : 'breeding_project';
     }
 }
