@@ -66,15 +66,33 @@ class StorageLocationController extends Controller
     }
 
     /**
+     * Make main store
+     *
+     * Marks this store as the farm's main store: where stock is received when a request names no store (stock-in, purchases, harvests, opening balances).
+     * The previous main store stops being main (a farm has exactly one). Idempotent. The store must be active with active ancestors. Requires location.manage.
+     * A farm's first store is main automatically; the first stock-in on a farm with none creates "Main Store" and marks it main.
+     * Errors: 404 unknown/foreign store; 409 location_inactive.
+     *
+     * @response array{data: PlaceResource, meta: object, message: string}
+     */
+    #[Response(status: 404, type: 'array{message: string, code: "not_found", request_id: string}')]
+    #[Response(status: 409, type: 'array{message: string, code: "location_inactive", request_id: string}')]
+    public function makeMain(Request $request, FarmContext $ctx, PlaceService $service, string $place): JsonResponse
+    {
+        return ApiResponse::success((new PlaceResource($service->makeMain($ctx, $request->user(), $place)))->resolve($request), message: 'Main store updated.');
+    }
+
+    /**
      * Edit / deactivate / reactivate storage location
      *
      * PATCH preserves omitted fields; parent_id=null moves to farm root. UUID stays unchanged. No DELETE.
      * Active descendants must be deactivated/moved first. Reparenting checks the whole subtree's depth.
-     * Inactive places remain readable and reserve their names. Requires location.manage.
+     * Inactive places remain readable and reserve their names. The main store cannot be deactivated (409 main_store_required) until another
+     * store is made main (POST /storage-locations/{id}/make-main). Requires location.manage.
      *
      * @response array{data: PlaceResource, meta: object, message: string}
      */
-    #[Response(status: 409, type: 'array{message: string, code: "duplicate_location"|"location_cycle"|"location_inactive"|"location_depth_exceeded"|"location_has_active_children", request_id: string}')]
+    #[Response(status: 409, type: 'array{message: string, code: "duplicate_location"|"location_cycle"|"location_inactive"|"location_depth_exceeded"|"location_has_active_children"|"main_store_required", request_id: string}')]
     public function update(UpdateStorageLocationRequest $request, FarmContext $ctx, PlaceService $service, string $place): JsonResponse
     {
         $updated = $service->save($ctx, $request->user(), PlaceKind::StorageLocation, $request->validated(), $place);

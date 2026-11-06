@@ -20,8 +20,8 @@ class StockOutRequest extends InventoryRequest
             'inventory_item_id' => ['required_without:output', 'uuid', 'prohibits:output'],
             /** eggs | milk: the farm's own egg / milk stock, so no item id is needed. Sales, incubation and feed use are recorded through their own workflows. */
             'output' => ['sometimes', Rule::in(['eggs', 'milk'])],
-            /** Required, except with `output`: then the only active storage location is used and several active locations need a choice (422). */
-            'storage_location_id' => ['required_without:output', 'uuid'],
+            /** Optional. Omitted: the one store that holds this item (or lot) is used; stock in several stores needs a choice (422 "Choose which store this comes from"); in none, 409 insufficient_stock. */
+            'storage_location_id' => ['sometimes', 'uuid'],
             /** Required for lot-tracked items. There is no automatic FIFO/FEFO: the caller names the lot. */
             ...InventoryRules::lotChoice(),
             'reason' => ['required', Rule::enum(StockOutReason::class), new ManualStockReason('out')],

@@ -147,7 +147,7 @@ class MedicineCatalogueTest extends TeamTestCase
         $this->create($this->body(['stock_unit' => 'piece', 'packaging' => ['unit' => 'card', 'quantity_per_package' => '10.5']]))->assertUnprocessable();
         $this->create($this->body(['packaging' => ['unit' => 'vial']]))->assertUnprocessable()->assertJsonValidationErrors('packaging.quantity_per_package');
         $this->create($this->body(['default_withdrawal_days' => 4000]))->assertUnprocessable()->assertJsonValidationErrors('default_withdrawal_days');
-        $this->create($this->body(['opening_stock' => ['components' => [['quantity' => '1', 'unit' => 'ml']]]]))->assertUnprocessable()->assertJsonValidationErrors(['opening_stock.storage_location_id', 'opening_stock.idempotency_key']);
+        $this->create($this->body(['opening_stock' => ['components' => [['quantity' => '1', 'unit' => 'ml']]]]))->assertUnprocessable()->assertJsonValidationErrors(['opening_stock.recorded_at', 'opening_stock.idempotency_key']);
         $this->create($this->body(['farm_id' => (string) Str::uuid()]))->assertUnprocessable();
         // Packages without packaging defined: nothing is guessed.
         $this->create($this->body(['opening_stock' => $this->opening($loc)]))->assertUnprocessable()->assertJsonPath('code', 'conversion_not_configured');

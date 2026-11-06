@@ -9719,6 +9719,147 @@
       "description": "Where on the farm: locations (sites/buildings/fields), batch locations (pens, ponds, plots; called *production areas* in the API) and storage locations (stores). All optional; a new farm has none. No DELETE: deactivate instead. IDs are UUIDs.\n\nTypical screens: Farm → Places (locations, pens/ponds/plots, stores) and the \"Where?\" selectors in other forms.",
       "item": [
         {
+          "name": "Make main store",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\\\"Status is success or documented error\\\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 409, 422]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}"
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/storage-locations/{{store_id}}/make-main",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "storage-locations",
+                "{{store_id}}",
+                "make-main"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nMarks the store as the farm's main store (where stock goes when no store is named). The previous main store stops being main. Idempotent. Requires `location.manage`.\n\nThe main store cannot be deactivated: `PATCH /storage-locations/{id}` with `is_active:false` is `409 main_store_required` until another store is made main. Only an active store can be main (`409 location_inactive`).\n\n`POST {{base_url}}/storage-locations/{{store_id}}/make-main`"
+          },
+          "response": [
+            {
+              "name": "200 OK — Main store updated.",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}"
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/storage-locations/{{store_id}}/make-main",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "storage-locations",
+                    "{{store_id}}",
+                    "make-main"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nMarks the store as the farm's main store (where stock goes when no store is named). The previous main store stops being main. Idempotent. Requires `location.manage`.\n\nThe main store cannot be deactivated: `PATCH /storage-locations/{id}` with `is_active:false` is `409 main_store_required` until another store is made main. Only an active store can be main (`409 location_inactive`).\n\n`POST {{base_url}}/storage-locations/{{store_id}}/make-main`"
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1b13d-ddfe-7116-9580-f67441226c6a\",\n    \"kind\": \"storage_location\",\n    \"name\": \"Cold room\",\n    \"type\": \"store\",\n    \"type_label\": \"Store\",\n    \"parent_id\": null,\n    \"path\": [\n      {\n        \"id\": \"01a1b13d-ddfe-7116-9580-f67441226c6a\",\n        \"kind\": \"storage_location\",\n        \"name\": \"Cold room\"\n      }\n    ],\n    \"path_label\": \"Cold room\",\n    \"depth\": 0,\n    \"is_active\": true,\n    \"is_main\": true,\n    \"created_at\": \"2026-11-06T14:23:04+00:00\",\n    \"updated_at\": \"2026-11-06T14:23:04+00:00\"\n  },\n  \"meta\": [],\n  \"message\": \"Main store updated.\"\n}"
+            },
+            {
+              "name": "409 — The main store cannot be deactivated",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}"
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/storage-locations/{{store_id}}/make-main",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "storage-locations",
+                    "{{store_id}}",
+                    "make-main"
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nMarks the store as the farm's main store (where stock goes when no store is named). The previous main store stops being main. Idempotent. Requires `location.manage`.\n\nThe main store cannot be deactivated: `PATCH /storage-locations/{id}` with `is_active:false` is `409 main_store_required` until another store is made main. Only an active store can be main (`409 location_inactive`).\n\n`POST {{base_url}}/storage-locations/{{store_id}}/make-main`"
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"This is the main store. Make another store the main store before deactivating it.\",\n  \"code\": \"main_store_required\",\n  \"request_id\": \"01a1b13d-de56-7377-b9dc-4beda577ccc7\"\n}"
+            }
+          ]
+        },
+        {
           "name": "List place types",
           "event": [
             {
@@ -17959,6 +18100,282 @@
       "name": "10 — Inventory",
       "description": "Items, lots, the stock ledger, feed formulas. Stock is DERIVED from movements: there is no balance to edit. Receive with stock-in, use with stock-out, reconcile with adjustments, move with transfers, correct with reversals. Every mutation requires an `idempotency_key` and `recorded_at`.\n\nTypical screens: inventory list, item detail, receive/use stock, stock count, transfers, movement history, feed formulas.",
       "item": [
+        {
+          "name": "Issue stock, store not chosen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\\\"Status is success or documented error\\\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 409, 422]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}"
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inventory/stock-out",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inventory",
+                "stock-out"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inventory_item_id\": \"{{item_feed_id}}\",\n  \"reason\": \"donation\",\n  \"components\": [\n    {\n      \"quantity\": \"2\",\n      \"unit\": \"kg\"\n    }\n  ],\n  \"recorded_at\": \"{{recorded_at_30h}}\",\n  \"idempotency_key\": \"{{stockout_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nStock-out with no `storage_location_id`: the one store holding the item is used. If the item is in several stores the answer is `422` on `storage_location_id` (\"Choose which store this comes from.\"); in none, `409 insufficient_stock`.\n\n`POST {{base_url}}/inventory/stock-out`"
+          },
+          "response": [
+            {
+              "name": "422 — Choose which store this comes from",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}"
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/inventory/stock-out",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "stock-out"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"inventory_item_id\": \"{{item_feed_id}}\",\n  \"reason\": \"donation\",\n  \"components\": [\n    {\n      \"quantity\": \"2\",\n      \"unit\": \"kg\"\n    }\n  ],\n  \"recorded_at\": \"{{recorded_at_30h}}\",\n  \"idempotency_key\": \"{{stockout_key}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**WHAT IT DOES**\nStock-out with no `storage_location_id`: the one store holding the item is used. If the item is in several stores the answer is `422` on `storage_location_id` (\"Choose which store this comes from.\"); in none, `409 insufficient_stock`.\n\n`POST {{base_url}}/inventory/stock-out`"
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"message\": \"Choose which store this comes from.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a1b13d-e161-7341-9fb4-600f4d06cde6\",\n  \"errors\": {\n    \"storage_location_id\": [\n      \"Choose which store this comes from.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add stock, new item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\\\"Status is success or documented error\\\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 201, 409, 422]); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}"
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/inventory/stock-in",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "inventory",
+                "stock-in"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_item\": {\n    \"name\": \"Starter feed\",\n    \"category\": \"feed\",\n    \"unit\": \"kg\"\n  },\n  \"reason\": \"opening_balance\",\n  \"components\": [\n    {\n      \"quantity\": \"40\",\n      \"unit\": \"kg\"\n    }\n  ],\n  \"recorded_at\": \"{{recorded_at_30h}}\",\n  \"idempotency_key\": \"{{stockin_key}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nAdds stock for something not yet in the item list, in one step: `new_item {name, category, unit}` instead of `inventory_item_id`. An ACTIVE item with the same name and category is reused (`item_reused: true`); otherwise the item is created and the stock recorded in one transaction.\n\n**IMPORTANT INPUTS**\n- Exactly one of `inventory_item_id`, `new_item`, `output`.\n- `storage_location_id` is optional: omitted, the farm's main store is used (created as \"Main Store\" on first use).\n- Requires `inventory.manage`. Idempotent by `idempotency_key`.\n\n**ERRORS**\n`409 inventory_item_exists` (same name, other category or inactive item), `422 new_item.*`, `409 idempotency_conflict`.\n\n`POST {{base_url}}/inventory/stock-in`"
+          },
+          "response": [
+            {
+              "name": "201 Created — item created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}"
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/inventory/stock-in",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "stock-in"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"new_item\": {\n    \"name\": \"Starter feed\",\n    \"category\": \"feed\",\n    \"unit\": \"kg\"\n  },\n  \"reason\": \"opening_balance\",\n  \"components\": [\n    {\n      \"quantity\": \"40\",\n      \"unit\": \"kg\"\n    }\n  ],\n  \"recorded_at\": \"{{recorded_at_30h}}\",\n  \"idempotency_key\": \"{{stockin_key}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**WHAT IT DOES**\nAdds stock for something not yet in the item list, in one step: `new_item {name, category, unit}` instead of `inventory_item_id`. An ACTIVE item with the same name and category is reused (`item_reused: true`); otherwise the item is created and the stock recorded in one transaction.\n\n**IMPORTANT INPUTS**\n- Exactly one of `inventory_item_id`, `new_item`, `output`.\n- `storage_location_id` is optional: omitted, the farm's main store is used (created as \"Main Store\" on first use).\n- Requires `inventory.manage`. Idempotent by `idempotency_key`.\n\n**ERRORS**\n`409 inventory_item_exists` (same name, other category or inactive item), `422 new_item.*`, `409 idempotency_conflict`.\n\n`POST {{base_url}}/inventory/stock-in`"
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"item_reused\": false,\n    \"id\": \"01a1b13d-dff4-70c8-9628-be7762aed4c4\",\n    \"inventory_item_id\": \"01a1b13d-dfcb-7148-a783-8cb040cda02e\",\n    \"storage_location_id\": \"01a1b13d-ddbe-718f-9fd1-bf4f6305c5ce\",\n    \"inventory_lot_id\": null,\n    \"lot\": null,\n    \"type\": \"stock_in\",\n    \"reason\": \"opening_balance\",\n    \"reason_label\": \"Opening balance\",\n    \"justification\": null,\n    \"quantity_delta\": {\n      \"quantity\": \"40000\",\n      \"unit\": \"g\"\n    },\n    \"quantity_delta_display\": {\n      \"quantity\": \"40\",\n      \"unit\": \"kg\"\n    },\n    \"measurement\": {\n      \"entered\": [\n        {\n          \"quantity\": \"40\",\n          \"unit\": \"kg\"\n        }\n      ],\n      \"normalized\": {\n        \"quantity\": \"40000\",\n        \"unit\": \"g\"\n      },\n      \"total\": {\n        \"quantity\": \"40\",\n        \"unit\": \"kg\"\n      },\n      \"snapshot\": {\n        \"schema\": 1,\n        \"entered\": [\n          {\n            \"quantity\": \"40\",\n            \"unit\": {\n              \"code\": \"kg\",\n              \"dimension\": \"weight\",\n              \"family\": \"weight\",\n              \"strategy\": \"linear\",\n              \"factor\": \"1000\",\n              \"integer_only\": false\n            }\n          }\n        ],\n        \"packages\": [],\n        \"result_unit\": {\n          \"code\": \"kg\",\n          \"dimension\": \"weight\",\n          \"family\": \"weight\",\n          \"strategy\": \"linear\",\n          \"factor\": \"1000\",\n          \"integer_only\": false\n        },\n        \"normalized\": {\n          \"quantity\": \"40000\",\n          \"unit\": \"g\"\n        },\n        \"total\": {\n          \"quantity\": \"40\",\n          \"unit\": \"kg\"\n        }\n      }\n    },\n    \"recorded_at\": \"2026-11-06T09:23:04.000000Z\",\n    \"notes\": null,\n    \"operational_record_id\": null,\n    \"health_record_id\": null,\n    \"health_record_medicine_id\": null,\n    \"purchase_id\": null,\n    \"purchase_item_id\": null,\n    \"sale_id\": null,\n    \"sale_item_id\": null,\n    \"transfer_group_id\": null,\n    \"production_cycle_id\": null,\n    \"breeding_project_id\": null,\n    \"source\": {\n      \"type\": \"manual\",\n      \"id\": null\n    },\n    \"reverses_movement_id\": null,\n    \"reversed_by_movement_id\": null,\n    \"created_by\": \"01a1b13d-dd46-73a2-9e15-1eb92e8042b1\",\n    \"created_at\": \"2026-11-06T14:23:04.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Stock received.\"\n}"
+            },
+            {
+              "name": "201 Created — existing item reused",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}"
+                  },
+                  {
+                    "key": "X-XSRF-TOKEN",
+                    "value": "{{xsrf_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/inventory/stock-in",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "inventory",
+                    "stock-in"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"new_item\": {\n    \"name\": \"Starter feed\",\n    \"category\": \"feed\",\n    \"unit\": \"kg\"\n  },\n  \"reason\": \"opening_balance\",\n  \"components\": [\n    {\n      \"quantity\": \"40\",\n      \"unit\": \"kg\"\n    }\n  ],\n  \"recorded_at\": \"{{recorded_at_30h}}\",\n  \"idempotency_key\": \"{{stockin_key}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**WHAT IT DOES**\nAdds stock for something not yet in the item list, in one step: `new_item {name, category, unit}` instead of `inventory_item_id`. An ACTIVE item with the same name and category is reused (`item_reused: true`); otherwise the item is created and the stock recorded in one transaction.\n\n**IMPORTANT INPUTS**\n- Exactly one of `inventory_item_id`, `new_item`, `output`.\n- `storage_location_id` is optional: omitted, the farm's main store is used (created as \"Main Store\" on first use).\n- Requires `inventory.manage`. Idempotent by `idempotency_key`.\n\n**ERRORS**\n`409 inventory_item_exists` (same name, other category or inactive item), `422 new_item.*`, `409 idempotency_conflict`.\n\n`POST {{base_url}}/inventory/stock-in`"
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"data\": {\n    \"item_reused\": true,\n    \"id\": \"01a1b13d-e09f-72f7-a8da-dfb4ad6df4fd\",\n    \"inventory_item_id\": \"01a1b13d-dfcb-7148-a783-8cb040cda02e\",\n    \"storage_location_id\": \"01a1b13d-ddbe-718f-9fd1-bf4f6305c5ce\",\n    \"inventory_lot_id\": null,\n    \"lot\": null,\n    \"type\": \"stock_in\",\n    \"reason\": \"opening_balance\",\n    \"reason_label\": \"Opening balance\",\n    \"justification\": null,\n    \"quantity_delta\": {\n      \"quantity\": \"10000\",\n      \"unit\": \"g\"\n    },\n    \"quantity_delta_display\": {\n      \"quantity\": \"10\",\n      \"unit\": \"kg\"\n    },\n    \"measurement\": {\n      \"entered\": [\n        {\n          \"quantity\": \"10\",\n          \"unit\": \"kg\"\n        }\n      ],\n      \"normalized\": {\n        \"quantity\": \"10000\",\n        \"unit\": \"g\"\n      },\n      \"total\": {\n        \"quantity\": \"10\",\n        \"unit\": \"kg\"\n      },\n      \"snapshot\": {\n        \"schema\": 1,\n        \"entered\": [\n          {\n            \"quantity\": \"10\",\n            \"unit\": {\n              \"code\": \"kg\",\n              \"dimension\": \"weight\",\n              \"family\": \"weight\",\n              \"strategy\": \"linear\",\n              \"factor\": \"1000\",\n              \"integer_only\": false\n            }\n          }\n        ],\n        \"packages\": [],\n        \"result_unit\": {\n          \"code\": \"kg\",\n          \"dimension\": \"weight\",\n          \"family\": \"weight\",\n          \"strategy\": \"linear\",\n          \"factor\": \"1000\",\n          \"integer_only\": false\n        },\n        \"normalized\": {\n          \"quantity\": \"10000\",\n          \"unit\": \"g\"\n        },\n        \"total\": {\n          \"quantity\": \"10\",\n          \"unit\": \"kg\"\n        }\n      }\n    },\n    \"recorded_at\": \"2026-11-06T09:23:04.000000Z\",\n    \"notes\": null,\n    \"operational_record_id\": null,\n    \"health_record_id\": null,\n    \"health_record_medicine_id\": null,\n    \"purchase_id\": null,\n    \"purchase_item_id\": null,\n    \"sale_id\": null,\n    \"sale_item_id\": null,\n    \"transfer_group_id\": null,\n    \"production_cycle_id\": null,\n    \"breeding_project_id\": null,\n    \"source\": {\n      \"type\": \"manual\",\n      \"id\": null\n    },\n    \"reverses_movement_id\": null,\n    \"reversed_by_movement_id\": null,\n    \"created_by\": \"01a1b13d-dd46-73a2-9e15-1eb92e8042b1\",\n    \"created_at\": \"2026-11-06T14:23:04.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Stock received.\"\n}"
+            }
+          ]
+        },
         {
           "name": "Inventory option catalogue",
           "event": [

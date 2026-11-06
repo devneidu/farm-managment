@@ -16,12 +16,19 @@ class StockInRequest extends InventoryRequest
     public function rules(): array
     {
         return [
-            /** The item receiving stock. Omit when `output` is used. */
-            'inventory_item_id' => ['required_without:output', 'uuid', 'prohibits:output'],
+            /** The item receiving stock. Send exactly one of `inventory_item_id`, `new_item` or `output`. */
+            'inventory_item_id' => ['required_without_all:output,new_item', 'uuid', 'prohibits:output,new_item'],
+            /**
+             * Add stock for something not yet in the item list, in one step: `{name, category, unit}` (plus the optional fields of POST /inventory/items:
+             * tracks_lots, tracks_expiry, low_stock_threshold, description). An ACTIVE item with the same name and category is reused, never duplicated
+             * (`item_reused: true` in the response); otherwise the item is created with the stock-in in one transaction. Same validation as POST /inventory/items.
+             */
+            'new_item' => ['sometimes', 'array:name,category,unit,tracks_lots,tracks_expiry,low_stock_threshold,description', 'prohibits:output'],
+            ...self::newItemRules(),
             /** eggs | milk: the farm's own egg / milk stock (created automatically on first use), so no item has to be set up. For stock that was NOT produced on this farm (purchase, donation, received, opening balance, other); produced-on-farm eggs and milk are recorded with POST /records. */
             'output' => ['sometimes', Rule::in(['eggs', 'milk'])],
-            /** Required, except with `output`: then the only active storage location is used, a farm with none gets a "Main Store", and several active locations need a choice (422). */
-            'storage_location_id' => ['required_without:output', 'uuid'],
+            /** Optional. Omitted: the farm's main store (created as "Main Store" on first use). Send it to receive into another store. */
+            'storage_location_id' => ['sometimes', 'uuid'],
             /** Existing lot of this item. Use `lot` instead to receive into a (new or existing) lot by code. */
             'lot_id' => ['sometimes', 'nullable', 'uuid', 'prohibits:lot'],
             /** Lot code (and expiry for expiry-tracked items). An existing code of the same item is reused; a different expiry is rejected. */
@@ -32,5 +39,17 @@ class StockInRequest extends InventoryRequest
             ...InventoryRules::components('components'),
             ...InventoryRules::event(),
         ];
+    }
+
+    /** The item-creation rules (StoreItemRequest), re-keyed under new_item (stock_unit is called `unit` here) and only required when new_item is sent. */
+    private static function newItemRules(): array
+    {
+        $rules = [];
+        foreach ((new StoreItemRequest)->rules() as $key => $rule) {
+            $key = $key === 'stock_unit' ? 'unit' : $key;
+            $rules['new_item.'.$key] = array_map(fn ($r) => $r === 'required' ? 'required_with:new_item' : (is_string($r) && str_starts_with($r, 'required_with:') ? 'required_with:new_item.'.substr($r, 14) : $r), $rule);
+        }
+
+        return $rules;
     }
 }

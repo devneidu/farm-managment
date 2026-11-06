@@ -35,7 +35,8 @@ class StoreHealthRecordRequest extends FormRequest
             'medicines' => ['sometimes', 'array', 'max:10'],
             'medicines.*' => ['required', 'array:inventory_item_id,storage_location_id,lot_id,components,dose_per_animal,dosage_instructions,withdrawal_days'],
             'medicines.*.inventory_item_id' => ['required', 'uuid'],
-            'medicines.*.storage_location_id' => ['required', 'uuid'],
+            /** Optional: the one store holding the medicine; several stores need a choice (422). */
+            'medicines.*.storage_location_id' => ['sometimes', 'uuid'],
             'medicines.*.lot_id' => ['sometimes', 'nullable', 'uuid'],
             ...InventoryRules::components('medicines.*.components'),
             ...InventoryRules::components('medicines.*.dose_per_animal', required: false),

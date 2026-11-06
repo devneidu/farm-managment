@@ -57,6 +57,7 @@ class InventoryService
         private readonly PlaceService $places,
         private readonly UnitCatalogue $units,
         private readonly OutputStockService $outputs,
+        private readonly StoreResolver $stores,
     ) {}
 
     // ---------------------------------------------------------------- items
@@ -149,11 +150,14 @@ class InventoryService
         $data = $this->validated(StockInRequest::class, $input);
 
         return $this->atomic($ctx, 'stock_in', $data, function (string $hash) use ($ctx, $data) {
-            $item = isset($data['output']) ? $this->outputs->resolve($ctx, $data['output']) : $this->activeItem($ctx, $data['inventory_item_id']);
+            $reused = false;
+            $item = match (true) {
+                isset($data['output']) => $this->outputs->resolve($ctx, $data['output']),
+                isset($data['new_item']) => $this->itemForNewStock($ctx, $data['new_item'], $reused),
+                default => $this->activeItem($ctx, $data['inventory_item_id']),
+            };
             $this->assertManualInReason($item, $data['reason']);
-            $location = isset($data['output'])
-                ? $this->outputs->receivingLocation($ctx, $data['storage_location_id'] ?? null, 'storage_location_id')
-                : $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+            $location = $this->stores->receiving($ctx, $data['storage_location_id'] ?? null);
             $when = $this->when($data['recorded_at']);
             $lot = $this->lot($ctx, $item, $data, create: true);
             if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
@@ -161,10 +165,44 @@ class InventoryService
             }
             $result = $this->measure($ctx, $item, $data['components']);
 
-            return [$this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, $data['reason'], $this->positive($result->normalized->value), $result->toArray(), $when, [
+            $movement = $this->insert($ctx, $item, $location->id, $lot, InventoryMovementType::StockIn, $data['reason'], $this->positive($result->normalized->value), $result->toArray(), $when, [
                 'notes' => $data['notes'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
-            ])];
-        });
+            ]);
+
+            return [isset($data['new_item']) ? $movement->setAttribute('item_reused', $reused) : $movement];
+        }, replay: fn (InventoryMovement $existing) => isset($data['new_item']) ? [$existing->setAttribute('item_reused', $this->itemPredates($existing))] : null);
+    }
+
+    /**
+     * The item a "new item" stock-in receives into: an active item of the same normalised name AND category is reused (never duplicated);
+     * otherwise it is created by the ordinary item-creation path (same validation, same name rule, so a name taken by another category or
+     * an inactive item is still the usual 409). Runs inside the stock-in transaction, under the farm lock.
+     */
+    private function itemForNewStock(FarmContext $ctx, array $new, bool &$reused): InventoryItem
+    {
+        $existing = InventoryItem::ofFarm($ctx->farm)->where('normalized_name', InventoryItem::normalizeName($new['name']))->where('is_active', true)->where('category', $new['category'])->first();
+        if ($existing !== null) {
+            $reused = true;
+
+            return $this->activeItem($ctx, $existing->id);
+        }
+        $input = array_diff_key($new, ['unit' => 1]) + ['stock_unit' => $new['unit']];
+
+        try {
+            $created = $this->createItem($ctx, $input);
+        } catch (ValidationException $e) { // report the item rules' errors where the client put the fields
+            throw ValidationException::withMessages(collect($e->errors())->mapWithKeys(fn ($messages, $key) => ['new_item.'.($key === 'stock_unit' ? 'unit' : $key) => $messages])->all());
+        }
+
+        return $this->lockItem($ctx, $created->id);
+    }
+
+    /** On an idempotent replay: was the item there before this stock-in was first recorded? (An item made by the same request is created within the same moment.) */
+    private function itemPredates(InventoryMovement $movement): bool
+    {
+        $created = InventoryItem::whereKey($movement->inventory_item_id)->value('created_at');
+
+        return $created !== null && CarbonImmutable::parse($created)->lessThan(CarbonImmutable::parse($movement->created_at)->subSeconds(5));
     }
 
     /** @return list<InventoryMovement> */
@@ -177,13 +215,13 @@ class InventoryService
             if (isset($data['output'])) {
                 // Never creates the item: a farm that never stocked eggs/milk has none to take out.
                 $item = $this->outputs->find($ctx, $data['output'], forUpdate: true);
-                $location = $item ? $this->outputs->issuingLocation($ctx, $data['storage_location_id'] ?? null, 'storage_location_id') : null;
+                $location = $item ? $this->stores->issuing($ctx, $item, $data['storage_location_id'] ?? null, $data['lot_id'] ?? null) : null;
                 if ($item === null || $location === null) {
                     throw new ApiHttpException(409, 'insufficient_stock', 'There is no '.$data['output'].' in stock.', details: ['available' => ['quantity' => '0', 'unit' => $data['output'] === 'eggs' ? 'piece' : 'l']]);
                 }
             } else {
                 $item = $this->activeItem($ctx, $data['inventory_item_id']);
-                $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+                $location = $this->stores->issuingOrInsufficient($ctx, $item, $data['storage_location_id'] ?? null, $data['lot_id'] ?? null);
             }
             $this->assertManualOutReason($item, $data['reason']);
             // Optional context only: pooled output is never attributed to a batch, so the cycle is a label, not a stock source.
@@ -211,7 +249,8 @@ class InventoryService
 
         return $this->atomic($ctx, 'adjustment', $data, function (string $hash) use ($ctx, $data) {
             $item = $this->activeItem($ctx, $data['inventory_item_id']);
-            $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $data['storage_location_id']);
+            // A count reconciles one bucket: the store holding the item, else (nothing yet, so any difference is stock found) the main store.
+            $location = $this->stores->issuing($ctx, $item, $data['storage_location_id'] ?? null, $data['lot_id'] ?? null) ?? $this->stores->receiving($ctx, null);
             $when = $this->when($data['recorded_at']);
             $lot = $this->lot($ctx, $item, $data, create: false);
             $current = $this->ledger->bucketBalance($item->id, $location->id, $lot?->id);
@@ -360,7 +399,7 @@ class InventoryService
      */
     public function receiveForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when, string $reason = 'harvest'): InventoryMovement
     {
-        $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $location = $this->stores->receiving($ctx, $link['storage_location_id'] ?? null, 'details.inventory.storage_location_id');
         $lot = $this->lot($ctx, $item, $link, create: true, field: 'details.inventory.lot_id');
         if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
             throw new ApiHttpException(409, 'lot_expired', 'Stock cannot be received into a lot that had already expired on the harvest date.');
@@ -372,7 +411,7 @@ class InventoryService
 
     public function consumeForRecord(FarmContext $ctx, OperationalRecord $record, InventoryItem $item, array $link, array $measurement, CarbonImmutable $when, string $reason = 'use'): InventoryMovement
     {
-        $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $location = $this->stores->issuingOrInsufficient($ctx, $item, $link['storage_location_id'] ?? null, $link['lot_id'] ?? null, 'details.inventory.storage_location_id');
         $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: 'details.inventory.lot_id');
         $this->assertUsable($ctx, $lot, $when);
         $qty = $this->positive($measurement['normalized']['quantity'], 'details.components');
@@ -484,7 +523,7 @@ class InventoryService
      */
     public function healthSource(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
     {
-        $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $location = $this->stores->issuingOrInsufficient($ctx, $item, $link['storage_location_id'] ?? null, $link['lot_id'] ?? null, $prefix.'.storage_location_id');
         $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: $prefix.'.lot_id');
         $this->assertUsable($ctx, $lot, $when);
 
@@ -531,11 +570,11 @@ class InventoryService
         $field = $prefix.'.storage_location_id';
         if ($purchase) {
             $item = $this->outputs->resolve($ctx, $kind);
-            $line['storage_location_id'] = $this->outputs->receivingLocation($ctx, $line['storage_location_id'] ?? null, $field)->id;
+            $line['storage_location_id'] = $this->stores->receiving($ctx, $line['storage_location_id'] ?? null, $field)->id;
         } else {
             // Unlocked here: the item row is locked later, in the caller's id order (lock order is farm, cycle, item).
             $item = $this->outputs->find($ctx, $kind);
-            $location = $item ? $this->outputs->issuingLocation($ctx, $line['storage_location_id'] ?? null, $field) : null;
+            $location = $item ? $this->stores->issuing($ctx, $item, $line['storage_location_id'] ?? null, null, $field) : null;
             if ($item === null || $location === null) {
                 throw new ApiHttpException(409, 'insufficient_stock', 'There is no '.$kind.' in stock.', details: ['available' => ['quantity' => '0', 'unit' => $kind === 'eggs' ? 'piece' : 'l']]);
             }
@@ -560,7 +599,7 @@ class InventoryService
      */
     public function purchaseDestination(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
     {
-        $location = $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $location = $this->stores->receiving($ctx, $link['storage_location_id'] ?? null, $prefix.'.storage_location_id');
         $lot = $this->lot($ctx, $item, $link, create: true, field: $prefix.'.lot_id');
         if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
             throw new ApiHttpException(409, 'lot_expired', 'Stock cannot be received into a lot that had already expired on the purchase date.');
@@ -612,7 +651,7 @@ class InventoryService
      */
     public function saleSource(FarmContext $ctx, InventoryItem $item, array $link, CarbonImmutable $when, string $prefix): array
     {
-        $location = $this->places->find($ctx->farm, PlaceKind::StorageLocation, $link['storage_location_id']);
+        $location = $this->stores->issuingOrInsufficient($ctx, $item, $link['storage_location_id'] ?? null, $link['lot_id'] ?? null, $prefix.'.storage_location_id');
         $lot = $this->lot($ctx, $item, ['lot_id' => $link['lot_id'] ?? null], create: false, field: $prefix.'.lot_id');
         if ($lot?->expires_on && $lot->expires_on->toDateString() < $this->localDate($ctx, $when)) {
             throw new ApiHttpException(409, 'lot_expired', 'Expired stock cannot be sold.');
@@ -646,9 +685,9 @@ class InventoryService
 
     // -------------------------------------------------------------- helpers
 
-    private function atomic(FarmContext $ctx, string $operation, array $data, callable $work): array
+    private function atomic(FarmContext $ctx, string $operation, array $data, callable $work, ?callable $replay = null): array
     {
-        return DB::transaction(function () use ($ctx, $operation, $data, $work) {
+        return DB::transaction(function () use ($ctx, $operation, $data, $work, $replay) {
             $this->lockFarm($ctx);
             $hash = RequestHash::of(['operation' => $operation] + $data);
             $existing = InventoryMovement::where('farm_id', $ctx->farm->id)->where('idempotency_key', $data['idempotency_key'])->first();
@@ -657,7 +696,7 @@ class InventoryService
                     throw new ApiHttpException(409, 'idempotency_conflict', 'This idempotency key was already used for a different request.');
                 }
 
-                return $this->legsOf($existing);
+                return ($replay ? $replay($existing) : null) ?? $this->legsOf($existing);
             }
 
             return $work($hash);

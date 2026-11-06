@@ -27,6 +27,8 @@ class InventoryMovementResource extends JsonResource
         $delta = Decimal::trim((string) $this->quantity_delta);
 
         return [
+            /** Stock-in with `new_item` only: true when an existing same-name item was reused, false when the item was created by this request. */
+            ...($this->resource->getAttribute('item_reused') !== null ? ['item_reused' => (bool) $this->resource->getAttribute('item_reused')] : []),
             'id' => $this->id, 'inventory_item_id' => $this->inventory_item_id, 'storage_location_id' => $this->storage_location_id,
             'inventory_lot_id' => $this->inventory_lot_id,
             'lot' => $this->lot ? ['code' => $this->lot->code, 'expires_on' => $this->lot->expires_on?->toDateString()] : null,

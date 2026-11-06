@@ -332,7 +332,7 @@ class SaleService
                 if ($quantity !== null && ! empty($line['components'])) {
                     $this->invalid($prefix.'.quantity', 'Send either quantity or components, not both.');
                 }
-                foreach (array_merge($hasOutput ? [] : ['inventory_item_id', 'storage_location_id'], $quantity === null ? ['components'] : []) as $required) {
+                foreach (array_merge($hasOutput ? [] : ['inventory_item_id'], $quantity === null ? ['components'] : []) as $required) {
                     if (empty($line[$required])) {
                         $this->invalid($prefix.'.'.$required, 'This is required for a stock line.');
                     }

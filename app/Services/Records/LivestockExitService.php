@@ -17,6 +17,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\OutputStockService;
+use App\Services\Inventory\StoreResolver;
 use App\Services\Measurement\QuantityNormalizer;
 use App\Services\Sales\SaleService;
 use App\Support\Access\FarmContext;
@@ -53,7 +54,7 @@ class LivestockExitService
     private const EXIT_RECORD_TYPES = ['mortality', 'livestock_sale', 'livestock_exit'];
 
     public function __construct(
-        private RecordService $records, private SaleService $sales, private OutputStockService $outputs, private InventoryService $inventory,
+        private RecordService $records, private SaleService $sales, private OutputStockService $outputs, private StoreResolver $stores, private InventoryService $inventory,
         private QuantityNormalizer $quantities,
     ) {}
 
@@ -153,7 +154,7 @@ class LivestockExitService
         if ($type === 'slaughtered') {
             // The meat item and its store are resolved before the record so a farm with several stores fails with a clear 422 first.
             $meatItem = $this->outputs->resolveMeat($ctx, $from->livestock->species);
-            $location = $this->outputs->receivingLocation($ctx, $data['storage_location_id'] ?? null, 'storage_location_id');
+            $location = $this->stores->receiving($ctx, $data['storage_location_id'] ?? null, 'storage_location_id');
             $details['inventory'] = ['item_id' => $meatItem->id, 'storage_location_id' => $location->id];
         }
 

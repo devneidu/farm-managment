@@ -166,7 +166,7 @@ class HealthService
     {
         $seen = [];
         foreach (array_values($medicines) as $index => $line) {
-            $key = $line['inventory_item_id'].'|'.$line['storage_location_id'].'|'.($line['lot_id'] ?? '');
+            $key = $line['inventory_item_id'].'|'.($line['storage_location_id'] ?? '').'|'.($line['lot_id'] ?? '');
             if (isset($seen[$key])) {
                 $this->invalid('medicines.'.$index, 'Combine repeated item, location and lot into one medicine line.');
             }

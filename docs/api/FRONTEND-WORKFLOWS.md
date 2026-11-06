@@ -23,6 +23,7 @@ All paths are relative to `/api/v1`. Never send `farm_id`. Never send a permissi
 16. Work: [tasks](#39-tasks) · [calendar](#40-calendar) · [completion → records](#41-task-completion-that-creates-or-links-operational-records)
 17. Money: [purchases](#42-purchases) · [expenses/income](#43-expenses-and-income) · [sales](#44-sales) · [invoices](#45-invoices) · [payments](#46-payments)
 18. [Reports/exports](#47-reportsexports) · [Notifications](#48-notifications) · [Dashboard](#49-dashboard) · [Settings](#50-settings) · [Team/roles](#51-team-roles-permissions) · [Subscription](#52-subscription-and-entitlements) · [Platform Admin](#53-platform-admin-separation)
+19. [Stores and adding stock](#stores-and-adding-stock) (main store, "What are you adding?")
 
 ---
 
@@ -71,7 +72,7 @@ Offer a type when the member holds every code in `always`; additionally require 
 
 `GET /storage-locations` (active by default, `location.view`). Rules for stock paths:
 
-* Required explicitly for items; **optional** with `output: eggs|milk` and for `egg_collection`/`milk`/incubation: one active store → used; none → "Main Store" created on IN paths only; several → `422` on the location field → **show the picker**. OUT with several stores also needs a choice. Take store ids with stock from `GET /inventory/output-balances` → `by_storage_location`.
+* **Optional everywhere** (transfers excepted: from/to stay required). Do not ask for a store by default. See [Stores and adding stock](#stores-and-adding-stock) below: IN → the main store; OUT → the one store holding the item; `422 "Choose which store this comes from."` only when it is in several stores. Take store ids with stock from `GET /inventory/output-balances` → `by_storage_location` or `GET /inventory/items/{id}` → `balances`.
 
 ### 0.6 Item kind of a stock item (decides which `inventory-options` list to render)
 
@@ -984,3 +985,22 @@ Contract: `PHASE-26-MARKETPLACE-MONETISATION.md`. No farm context needed. Farmve
 See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing shop approval, verification, suspension and listing restriction are reused. New participant APIs file shop/listing complaints and list/read owned content or deal reports. New platform APIs provide `/platform-admin/marketplace/summary`, read-only `/offers[/{offer}]`, and `/reports[/{type}/{report}[/transition]]`. Report states are `open -> in_review -> dismissed|resolved`; every handling action requires a reason. A report never enforces automatically. Only explicit `enforcement_action` plus the related target UUID can invoke existing suspension/restriction. All report counts are available by status, including zeros. Read permissions remain platform admin/support, writes admin only.
 
 **Frontend contract changes:** reinstatement and lifting listing restrictions now require `{reason}`. Active duplicate reports use reporter + target + issue; a closed case permits a new report. Intake throttling is shared across content/deal reports, 20/hour/user. Show own complaint/outcome privately; internal history and reporter identities belong only in the platform administration area. Existing deals, stock and financial records are preserved; paid periods are not extended or refunded by enforcement.
+
+## Stores and adding stock
+
+Wording: always say **store** ("Main Store", "Choose a store"), never "container", "location" or "bucket". Contract: [PHASE-09-INVENTORY.md](PHASE-09-INVENTORY.md) ("Main store and omitting storage_location_id", "Add stock in one step").
+
+**A. "Add stock" is one search box.**
+1. **Intent:** "What are you adding?". 2. **Fetch:** `GET /inventory/items?search=<typed text>&per_page=8` on each keystroke (debounced). 3. **Read:** suggest existing items with their quantity, e.g. "Feed A · 10 bags" (`name`, `stock.quantity`, `stock.unit`); below them always offer **Create "<typed text>"**. 4. **Pick an existing item:** `POST /inventory/stock-in {inventory_item_id, reason, components, recorded_at, idempotency_key}`. 5. **Pick Create:** ask only for `category` and `unit`, then `POST /inventory/stock-in {new_item: {name, category, unit}, reason, components, recorded_at, idempotency_key}` - one call, no separate "create item" step. 6. **Backend does:** one transaction (item + movement); an active item with the same name and category is reused and `data.item_reused` is `true` (you can say "Added to your existing Feed A"). 7. **DO NOT:** call `POST /inventory/items` first; send both `inventory_item_id` and `new_item` (422); generate a new `idempotency_key` on a retry. 8. **Refetch:** `GET /inventory/items`, the item. 9. **Needs:** `inventory.manage`. 10. **States:** `409 inventory_item_exists` (same name, other category or inactive item), `422 new_item.*`, `409 idempotency_conflict`.
+
+**B. No store question by default.**
+Leave `storage_location_id` out of stock-in, stock-out, sales, purchases, feed use and health lines. Stock goes into the main store (created as "Main Store" the first time) and comes out of the store that holds it.
+
+**C. Show the store picker only when the farm has 2+ stores.**
+`GET /storage-locations` -> if `meta.total >= 2` show a picker **pre-filled with the store where `is_main` is true** for stock coming in. For stock going out pre-fill the store that holds the item (`GET /inventory/items/{id}` -> `balances`). With 0 or 1 store, hide it. Always send the chosen id when the picker is shown.
+
+**D. The "choose which store" error.**
+Stock going out of an item that is in several stores answers `422` with the message "Choose which store this comes from." on `storage_location_id` (sale lines: `items.N.storage_location_id`; feed use: `details.inventory.storage_location_id`; health: `medicines.N.storage_location_id`). Show the picker (only the stores in the item's `balances`), then resend the same request **with the same `idempotency_key`**. No stock anywhere is the ordinary `409 insufficient_stock`.
+
+**E. Make a store the main store.**
+`POST /storage-locations/{id}/make-main` (`location.manage`, no body, idempotent) -> refetch `GET /storage-locations` (`is_main` moves). The main store cannot be deactivated: `PATCH {is_active:false}` answers `409 main_store_required` - tell the user to make another store the main store first. Only an active store can be made main (`409 location_inactive`).

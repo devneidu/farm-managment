@@ -104,19 +104,20 @@ Eggs and milk are each **one inventory item per farm**, created automatically th
 
 ### Storage location
 
-`inventory_movements.storage_location_id` is mandatory, but the farmer never has to understand it:
+`inventory_movements.storage_location_id` is mandatory, but the farmer never has to understand it. Every stock path (eggs, milk, feed, medicine, produce, purchases, sales) uses one resolver:
 
-1. an explicit `details.inventory.storage_location_id` / `storage_location_id` / `egg_storage_location_id` is used (must be an active store of this farm — foreign ids are 404);
-2. else, if the farm has **exactly one** active storage location, it is used;
-3. else, if the farm has **none**, a root storage location **"Main Store"** (`type: store`) is created once (a taken name becomes "Main Store 2"…; an inactive store is never reactivated). Only IN paths create it — taking stock out never does;
-4. else (several active stores, none named) → `422` on the location field: **choose one**. The backend never guesses.
+1. an explicit `details.inventory.storage_location_id` / `storage_location_id` / `egg_storage_location_id` always wins (must be an active store of this farm for stock **in** — foreign ids are 404);
+2. **stock coming in** (stock-in, opening balance, purchases, harvests, collections, slaughter meat, positive adjustments): the farm's **main store** (`is_main: true` on `GET /storage-locations`). A farm with no main store gets a root store **"Main Store"** (`type: store`) created and marked main, once, under the farm lock (a taken name becomes "Main Store 2"…; an inactive store is never reactivated). A farm's **first** store is main automatically;
+3. **stock going out** (stock-out, sale stock lines, feed use, fertilizer/pesticide/planting links, health medicines, incubation, negative adjustments): the item is taken from the **one store that holds it**. In several stores → `422` on the location field, "Choose which store this comes from."; in none → the ordinary `409 insufficient_stock`. Taking stock out never creates a store.
+
+Make another store the main one with `POST /storage-locations/{id}/make-main`; the main store cannot be deactivated (`409 main_store_required`) until another is made main. The backend never guesses between stores that both hold the item.
 
 ### Meat (slaughter) — one automatic item per species
 
 Slaughtering animals (`POST /livestock-exits`, `type: "slaughtered"`, see [FRONTEND-HARVEST-FLOW.md](FRONTEND-HARVEST-FLOW.md)) follows the same pattern as eggs and milk, but per species:
 
 * On the first slaughter of a species the API creates the farm's meat item: `"{Species} meat"` (for example **Chicken meat**, **Goat meat**), category `produce`, stock unit **kg**, `system_key` = `output:meat:{species code}` (so it shows as system managed). It is resolved under the farm lock inside the same transaction, so two simultaneous first slaughters cannot create two. A name already taken by a farmer's own item gets a "(farm output)" suffix; a farmer's item is never adopted or changed.
-* Each slaughter writes one **stock-in, reason `production`**, `meat_weight_kg` into the chosen store (`storage_location_id`; optional when the farm has exactly one active store, a "Main Store" is created when it has none, 422 when several are active and none is chosen), linked to the slaughter record and the batch. The head count and the meat succeed or fail together.
+* Each slaughter writes one **stock-in, reason `production`**, `meat_weight_kg` into the chosen store (`storage_location_id`; optional: the main store is used, and a "Main Store" is created when the farm has none), linked to the slaughter record and the batch. The head count and the meat succeed or fail together.
 * Meat is stock like any produce: it appears in `GET /sales/sellables` (`in_store`) and is sold with a normal stock line, or leaves with `POST /inventory/stock-out` (`sold`, `donation`, `internal_use`, ...). A manual stock-in with reason `production` is refused for it, as for eggs and milk.
 * Undoing the slaughter (`POST /livestock-exits/{record}/reverse`) takes the same meat back out of stock; if it has since been sold or used the undo is `409 insufficient_stock` and nothing changes.
 * Meat sold through `POST /sales` is booked to the `livestock_sales` income category when every stock line is farm meat; a mixed sale (meat with eggs, crops, ...) keeps the previous rule (`crop_sales` for produce). An explicit `finance_category_id` always wins.
@@ -152,7 +153,7 @@ Slaughtering animals (`POST /livestock-exits`, `type: "slaughtered"`, see [FRONT
 
 ### `POST /inventory/stock-in` (permission `inventory.manage`)
 
-New: `output: eggs|milk` instead of `inventory_item_id`; `storage_location_id` optional with `output`; new reasons `aid`, `received`, `production` (not for produce). A donation/purchase/received/other IN never creates a production record. `reason: production` on eggs, milk or any `produce` item → `422` pointing to `POST /records`.
+New: `output: eggs|milk` instead of `inventory_item_id`; `storage_location_id` is optional everywhere (main store in, the holding store out); new reasons `aid`, `received`, `production` (not for produce). A donation/purchase/received/other IN never creates a production record. `reason: production` on eggs, milk or any `produce` item → `422` pointing to `POST /records`.
 
 ### `POST /inventory/stock-out` (permission `inventory.use`)
 
@@ -189,8 +190,8 @@ The project resource gains `egg_stock: { consumed, returned, net_out, movements[
 
 A stock line names its stock with **exactly one** of `inventory_item_id` (always supported) or `output: "eggs" | "milk"` (both or neither → `422`; `output` on a non-stock line → `422`).
 
-* **Purchase** (`purchase.create`): the farm's output item is resolved — or created — exactly as `stock-in {output}` does; `storage_location_id` is optional (only active store; none → "Main Store" is created; several → `422 items.N.storage_location_id`). One `purchase` stock-in per line + the expense; identical retries replay the same purchase.
-* **Sale** (`sale.create`): the EXISTING output item only. A sale never creates the item, a store or stock: a farm that never stocked the output gets `409 insufficient_stock` (`details.available` = 0) and nothing is written. `storage_location_id` optional (only active store; several → `422`). Insufficient stock is the normal `409`.
+* **Purchase** (`purchase.create`): the farm's output item is resolved — or created — exactly as `stock-in {output}` does; `storage_location_id` is optional (the main store; none → "Main Store" is created and marked main). One `purchase` stock-in per line + the expense; identical retries replay the same purchase.
+* **Sale** (`sale.create`): the EXISTING output item only. A sale never creates the item, a store or stock: a farm that never stocked the output gets `409 insufficient_stock` (`details.available` = 0) and nothing is written. `storage_location_id` optional (the one store holding the output; several → `422 items.N.storage_location_id`). Insufficient stock is the normal `409`.
 * The resolved `inventory_item_id` / `storage_location_id` appear on the saved lines; the request hash for idempotency is computed over what the client sent.
 
 ### `POST /sales` — feed is sellable; `/sales` stays authoritative

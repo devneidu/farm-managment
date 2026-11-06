@@ -53,9 +53,9 @@ class StoreSaleRequest extends FormRequest
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:190'],
             /** stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise). */
             'items.*.inventory_item_id' => ['sometimes', 'uuid'],
-            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Sale takes the existing item only - a farm that never stocked it gets 409 insufficient_stock, nothing is created. With no storage_location_id the only active store is used (several = 422). */
+            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Sale takes the existing item only - a farm that never stocked it gets 409 insufficient_stock, nothing is created. storage_location_id is optional on every stock line: the one store holding the item is used (several stores hold it = 422 "Choose which store this comes from.", none = 409 insufficient_stock). */
             'items.*.output' => ['sometimes', Rule::in(['eggs', 'milk']), 'prohibits:items.*.inventory_item_id'],
-            /** Required with inventory_item_id; optional with output. */
+            /** Optional: omitted, the one store holding the item is used. */
             'items.*.storage_location_id' => ['sometimes', 'uuid'],
             'items.*.lot_id' => ['sometimes', 'nullable', 'uuid'],
             ...InventoryRules::components('items.*.components', required: false),

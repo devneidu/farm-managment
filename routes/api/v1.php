@@ -336,6 +336,8 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::patch('/'.$path.'/{place}', [$controller, 'update'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.'.$path.'.update');
     }
 
+    Route::post('/storage-locations/{place}/make-main', [StorageLocationController::class, 'makeMain'])->middleware(['farm.permission:location.manage', 'throttle:location-write'])->name('api.v1.storage-locations.make-main');
+
     Route::prefix('production-cycles')->group(function () {
         $controller = ProductionCycleController::class;
         Route::get('/', [$controller, 'index'])->middleware('farm.permission:production_cycle.view')->name('api.v1.production-cycles.index');

@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Place;
+use App\Models\StorageLocation;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -11,7 +12,7 @@ class PlaceResource extends JsonResource
 {
     public static $wrap = null;
 
-    /** @return array{id: string, kind: string, name: string, type: string, type_label: string, parent_id: string|null, path: list<array{id: string, kind: string, name: string}>, path_label: string, depth: int, is_active: bool, created_at: string|null, updated_at: string|null} */
+    /** @return array{id: string, kind: string, name: string, type: string, type_label: string, parent_id: string|null, path: list<array{id: string, kind: string, name: string}>, path_label: string, depth: int, is_active: bool, is_main?: bool, created_at: string|null, updated_at: string|null} */
     public function toArray(Request $request): array
     {
         $path = [];
@@ -30,6 +31,8 @@ class PlaceResource extends JsonResource
             'path_label' => implode(' / ', array_column($path, 'name')),
             'depth' => count($path) - 1,
             'is_active' => $this->is_active,
+            /** Storage locations only: true for the farm's main store (where stock goes when no store is named). */
+            ...($this->resource instanceof StorageLocation ? ['is_main' => (bool) $this->is_default] : []),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

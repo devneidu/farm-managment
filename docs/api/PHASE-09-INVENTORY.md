@@ -82,7 +82,34 @@ Without it: `422 conversion_not_configured`. The item must be an active item of 
 
 ## Storage locations
 
-`storage_location_id` is a Phase 6 storage location of the current farm (foreign/unknown → 404). Receiving into, or transferring to, a location requires it to be active with active ancestors (`409 location_inactive`). Stock can always **leave** an inactive location (stock-out, transfer-out, adjustment, reversal). Stock is tracked per (item, storage location, lot); there is no physical capacity.
+`storage_location_id` is a Phase 6 storage location of the current farm (foreign/unknown → 404). Receiving into, or transferring to, a location requires it to be active with active ancestors (`409 location_inactive`). Stock can always **leave** an inactive location (stock-out, transfer-out, adjustment, reversal). Stock is tracked per (item, storage location, lot); there is no physical capacity. Every movement still stores a store (`inventory_movements.storage_location_id` is NOT NULL, there is no "no store" bucket).
+
+### Main store and omitting `storage_location_id`
+
+`storage_location_id` is **optional** on stock-in, stock-out and adjustments (and on purchase / sale stock lines, health medicine lines and `details.inventory` of record links). **Transfers keep `from_storage_location_id` / `to_storage_location_id` required.**
+
+* **Stock in** (stock-in, opening balance, purchase lines, harvests, medicine `opening_stock`): the farm's **main store**. No main store → a root store "Main Store" is created and marked main, once, under the farm lock. A farm's first store is main automatically.
+* **Stock out** (stock-out, sale lines, feed/fertilizer/pesticide/planting links, health medicines): the **one store holding the item** (or the named lot). Several stores hold it → `422` on `storage_location_id` ("Choose which store this comes from."); none → `409 insufficient_stock`.
+* **Adjustments**: the store holding the item (several → 422); an item with no stock yet is counted into the main store.
+* An explicit `storage_location_id` always wins and is validated exactly as before.
+* `GET /storage-locations` and `GET /storage-locations/{id}` show `is_main`. `POST /storage-locations/{id}/make-main` (`location.manage`, idempotent) moves the flag; deactivating the main store is `409 main_store_required` until another store is made main. Existing farms were migrated: an active store named "Main Store" is main, else the only active store; otherwise none is set until the first stock-in creates one.
+
+## Add stock in one step (`new_item`)
+
+`POST /inventory/stock-in` takes exactly one of `inventory_item_id`, `new_item` or `output`. `new_item` is `{name, category, unit}` (plus the optional `tracks_lots`, `tracks_expiry`, `low_stock_threshold`, `description` of `POST /inventory/items`; `unit` is that endpoint's `stock_unit`). It uses the same validation and name rule as item creation:
+
+* An **active item with the same normalised name and category** is **reused** (never duplicated) and the response carries `item_reused: true`.
+* Otherwise the item is created and the stock-in recorded in **one transaction** (`item_reused: false`). A failure leaves no item behind.
+* The same name in another category, or an inactive item with that name, is the usual `409 inventory_item_exists`.
+* Idempotent by `idempotency_key`: a retry returns the original movement (and the same `item_reused`); a changed payload is `409 idempotency_conflict`. On a replay `item_reused` is derived (the item is "reused" when it was created more than five seconds before the movement).
+
+```json
+POST /inventory/stock-in
+{"new_item": {"name": "Starter feed", "category": "feed", "unit": "kg"}, "reason": "opening_balance",
+ "components": [{"quantity": "40", "unit": "kg"}], "recorded_at": "2026-10-01T08:30:00+01:00", "idempotency_key": "device-a:stockin:0008"}
+```
+
+For suggestions while typing, `GET /inventory/items?search=feed` returns each item with its current `stock` (`{quantity, unit, normalized}`), e.g. "Feed A · 10 bags".
 
 ## Lots and expiry
 
@@ -97,7 +124,7 @@ Lots are per item and immutable (code and expiry never change). Rules:
 
 ## Writing movements
 
-Common body fields: `inventory_item_id`, `storage_location_id`, `components`, `recorded_at` (ISO with seconds and explicit `Z`/`±HH:MM`, not in the future; stored in UTC separately from `created_at`), `idempotency_key` (≤80 chars `[A-Za-z0-9._:-]`), optional `notes`.
+Common body fields: `inventory_item_id` (or `new_item` on stock-in), `storage_location_id` (optional; see "Main store" below), `components`, `recorded_at` (ISO with seconds and explicit `Z`/`±HH:MM`, not in the future; stored in UTC separately from `created_at`), `idempotency_key` (≤80 chars `[A-Za-z0-9._:-]`), optional `notes`.
 
 ```json
 POST /inventory/stock-in

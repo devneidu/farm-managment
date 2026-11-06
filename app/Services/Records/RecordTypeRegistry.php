@@ -76,7 +76,7 @@ class RecordTypeRegistry
         if ($type === 'feed_use' || isset($d['stock'])) {
             $rules += [
                 'details.inventory.item_id' => ['required_with:details.inventory', 'uuid'],
-                'details.inventory.storage_location_id' => ['required_with:details.inventory', 'uuid'],
+                'details.inventory.storage_location_id' => ['sometimes', 'uuid'],
                 'details.inventory.lot_id' => ['sometimes', 'nullable', 'uuid'],
             ];
             if (($d['stock']['direction'] ?? null) === 'in') {
@@ -89,7 +89,7 @@ class RecordTypeRegistry
             }
         }
         if (isset($d['output'])) {
-            $rules += ['details.inventory.storage_location_id' => ['required_with:details.inventory', 'uuid']];
+            $rules += ['details.inventory.storage_location_id' => ['sometimes', 'uuid']];
         }
         if (isset($d['dimension'])) {
             $rules += [
@@ -185,7 +185,7 @@ class RecordTypeRegistry
 
         return ['mode' => 'optional_link', 'direction' => $in ? 'in' : 'out', 'output' => null, 'item_category' => $type === 'feed_use' ? 'feed' : $d['stock']['category'],
             'dimensions' => $type === 'feed_use' ? ['weight'] : $d['stock']['dimensions'], 'optional' => true, 'creates_item' => false, 'object' => 'details.inventory',
-            'fields' => ['item_id' => 'required', 'storage_location_id' => 'required', 'lot_id' => 'optional'] + ($in ? ['lot' => 'optional'] : [])];
+            'fields' => ['item_id' => 'required', 'storage_location_id' => 'optional', 'lot_id' => 'optional'] + ($in ? ['lot' => 'optional'] : [])];
     }
 
     // ------------------------------------------------- applicability to a cycle

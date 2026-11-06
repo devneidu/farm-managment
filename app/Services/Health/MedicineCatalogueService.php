@@ -109,9 +109,9 @@ class MedicineCatalogueService
             }
             if ($stock !== null) {
                 $this->inventory->stockIn($ctx, [
-                    'inventory_item_id' => $item->id, 'storage_location_id' => $stock['storage_location_id'], 'reason' => 'opening_balance',
+                    'inventory_item_id' => $item->id, 'reason' => 'opening_balance',
                     'components' => $stock['components'], 'recorded_at' => $stock['recorded_at'], 'idempotency_key' => $stock['idempotency_key'],
-                ] + array_filter(['lot' => $lot, 'notes' => $stock['notes'] ?? null], fn ($v) => $v !== null));
+                ] + array_filter(['lot' => $lot, 'notes' => $stock['notes'] ?? null, 'storage_location_id' => $stock['storage_location_id'] ?? null], fn ($v) => $v !== null));
             }
             $itemId = $item->id;
 
@@ -144,7 +144,7 @@ class MedicineCatalogueService
         }
         $item = InventoryItem::ofFarm($ctx->farm)->find($movement->inventory_item_id);
         if ($item === null || $item->category !== InventoryCategory::Medicine || $movement->reason !== 'opening_balance'
-            || $item->normalized_name !== InventoryItem::normalizeName($data['name']) || $movement->storage_location_id !== $stock['storage_location_id']) {
+            || $item->normalized_name !== InventoryItem::normalizeName($data['name']) || (isset($stock['storage_location_id']) && $movement->storage_location_id !== $stock['storage_location_id'])) {
             throw new ApiHttpException(409, 'idempotency_conflict', 'This idempotency key was already used for a different request.');
         }
 

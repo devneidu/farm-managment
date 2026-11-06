@@ -26,6 +26,7 @@ use App\Models\ProductionCycle;
 use App\Models\User;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\OutputStockService;
+use App\Services\Inventory\StoreResolver;
 use App\Services\Inventory\StockReasonCatalogue;
 use App\Services\Production\CycleService;
 use App\Services\Records\RecordService;
@@ -55,7 +56,7 @@ class BreedingService
 
     private const RELATIONS = ['parents', 'checks', 'outcomes.reversal', 'stockMovements'];
 
-    public function __construct(private BreedingReference $reference, private RecordService $records, private InventoryService $inventory, private OutputStockService $outputs, private CycleService $cycles) {}
+    public function __construct(private BreedingReference $reference, private RecordService $records, private InventoryService $inventory, private OutputStockService $outputs, private StoreResolver $stores, private CycleService $cycles) {}
 
     public function find(FarmContext $ctx, string $id): BreedingProject
     {
@@ -397,7 +398,7 @@ class BreedingService
     private function takeEggs(FarmContext $ctx, BreedingProject $project, ProductionCycle $cycle, int $eggs, ?string $locationId, CarbonImmutable $when): void
     {
         $item = $this->outputs->find($ctx, StockReasonCatalogue::KIND_EGGS, forUpdate: true);
-        $location = $item ? $this->outputs->issuingLocation($ctx, $locationId, 'egg_storage_location_id') : null;
+        $location = $item ? $this->stores->issuing($ctx, $item, $locationId, null, 'egg_storage_location_id') : null;
         if ($item === null || $location === null) {
             throw new ApiHttpException(409, 'insufficient_stock', 'There are no eggs in stock to put into incubation.', details: ['available' => ['quantity' => '0', 'unit' => 'piece'], 'requested' => ['quantity' => (string) $eggs, 'unit' => 'piece']]);
         }

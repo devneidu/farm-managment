@@ -4,12 +4,10 @@ namespace App\Services\Inventory;
 
 use App\Enums\InventoryCategory;
 use App\Enums\PlaceKind;
-use App\Events\Locations\PlaceChanged;
 use App\Models\Farm;
 use App\Models\InventoryItem;
 use App\Models\Species;
 use App\Models\StorageLocation;
-use App\Models\User;
 use App\Services\Locations\PlaceService;
 use App\Services\Measurement\UnitCatalogue;
 use App\Support\Access\FarmContext;
@@ -33,7 +31,7 @@ use LogicException;
  */
 class OutputStockService
 {
-    public const DEFAULT_STORE = 'Main Store';
+    public const DEFAULT_STORE = StoreResolver::DEFAULT_STORE;
 
     /** kind => [system_key, name, stock unit family unit, dimension] */
     private const OUTPUTS = [
@@ -114,43 +112,6 @@ class OutputStockService
         return $item;
     }
 
-    /**
-     * Where a stock-IN lands. Explicit location wins; a farm with exactly one active storage location uses it; a farm with
-     * none gets "Main Store" (created once, under the farm lock); several active locations need an explicit choice.
-     */
-    public function receivingLocation(FarmContext $ctx, ?string $locationId, string $field): StorageLocation
-    {
-        if ($locationId !== null) {
-            return $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $locationId);
-        }
-        $active = $this->activeLocations($ctx);
-        if ($active->count() === 1) {
-            return $this->places->selectable($ctx->farm, PlaceKind::StorageLocation, $active->first()->id);
-        }
-        if ($active->count() > 1) {
-            $this->mustChoose($field);
-        }
-
-        return $this->createMainStore($ctx);
-    }
-
-    /**
-     * Where a stock-OUT leaves from when the caller named no location: the only active storage location. Never creates a
-     * store (there would be nothing to take); several active locations need an explicit choice.
-     */
-    public function issuingLocation(FarmContext $ctx, ?string $locationId, string $field): ?StorageLocation
-    {
-        if ($locationId !== null) {
-            return $this->places->find($ctx->farm, PlaceKind::StorageLocation, $locationId);
-        }
-        $active = $this->activeLocations($ctx);
-        if ($active->count() > 1) {
-            $this->mustChoose($field);
-        }
-
-        return $active->count() === 1 ? $this->places->find($ctx->farm, PlaceKind::StorageLocation, $active->first()->id) : null;
-    }
-
     /** Where returned eggs go: the named store, else where they were taken from. */
     public function returnLocation(FarmContext $ctx, ?string $locationId, ?string $originalLocationId): StorageLocation
     {
@@ -158,37 +119,6 @@ class OutputStockService
     }
 
     // ------------------------------------------------------------ internals
-
-    private function activeLocations(FarmContext $ctx)
-    {
-        return StorageLocation::ofFarm($ctx->farm)->where('is_active', true)->orderBy('id')->get();
-    }
-
-    private function mustChoose(string $field): never
-    {
-        throw ValidationException::withMessages([$field => 'This farm has more than one active storage location; choose which one.']);
-    }
-
-    /** Root storage location, created under the farm lock the caller already holds; a taken name gets a numeric suffix. */
-    private function createMainStore(FarmContext $ctx): StorageLocation
-    {
-        Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
-        $existing = StorageLocation::ofFarm($ctx->farm)->where('is_active', true)->orderBy('id')->first();
-        if ($existing) { // another request created it while this one waited for the farm lock
-            return $existing;
-        }
-        $name = self::DEFAULT_STORE;
-        for ($n = 2; StorageLocation::ofFarm($ctx->farm)->whereNull('location_id')->where('normalized_name', mb_strtolower($name))->exists(); $n++) {
-            $name = self::DEFAULT_STORE.' '.$n;
-        }
-        $store = new StorageLocation(['name' => $name, 'type' => 'store', 'is_active' => true]);
-        $store->farm_id = $ctx->farm->id;
-        $store->location_id = null;
-        $store->save();
-        PlaceChanged::dispatch('created', $store, User::findOrFail($ctx->membership->user_id), ['name' => ['old' => null, 'new' => $name], 'type' => ['old' => null, 'new' => 'store'], 'parent_id' => ['old' => null, 'new' => null], 'is_active' => ['old' => null, 'new' => true]]);
-
-        return $store;
-    }
 
     /** A farmer's own item named like the output, only when it is a plain produce item in the right unit family. */
     private function adopt(FarmContext $ctx, string $kind): ?InventoryItem

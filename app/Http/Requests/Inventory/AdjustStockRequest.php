@@ -13,7 +13,8 @@ class AdjustStockRequest extends InventoryRequest
     {
         return [
             'inventory_item_id' => ['required', 'uuid'],
-            'storage_location_id' => ['required', 'uuid'],
+            /** Optional. Omitted: the one store holding this item (or lot), else the main store when it has no stock yet; several stores need a choice (422). */
+            'storage_location_id' => ['sometimes', 'uuid'],
             ...InventoryRules::lotChoice(),
             /** The ledger balance the client believes exists; a stale value is rejected (409 stock_changed). */
             ...InventoryRules::components('expected'),

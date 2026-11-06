@@ -44,7 +44,8 @@ class StoreMedicineRequest extends FormRequest
             'tracks_expiry' => ['sometimes', 'boolean'],
             /** Optional opening balance, written through the inventory ledger as a stock-in with reason opening_balance. No expense, supplier or purchase is created. */
             'opening_stock' => ['sometimes', 'nullable', 'array:storage_location_id,components,lot,recorded_at,idempotency_key,notes'],
-            'opening_stock.storage_location_id' => ['required_with:opening_stock', 'uuid'],
+            /** Optional: the farm's main store (created as "Main Store" on first use). */
+            'opening_stock.storage_location_id' => ['sometimes', 'uuid'],
             /** Quantity parts in the stock unit or the medicine's packaging unit (e.g. 5 bottle). */
             'opening_stock.components' => ['required_with:opening_stock', 'array', 'min:1', 'max:10'],
             'opening_stock.components.*' => ['required', 'array:quantity,unit'],

@@ -14,6 +14,7 @@ use App\Models\PopulationMovement;
 use App\Models\ProductionCycle;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\OutputStockService;
+use App\Services\Inventory\StoreResolver;
 use App\Services\Measurement\PackageConversionService;
 use App\Services\Measurement\QuantityNormalizer;
 use App\Support\Access\FarmContext;
@@ -26,7 +27,7 @@ use Illuminate\Validation\ValidationException;
 
 class RecordService
 {
-    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory, private OutputStockService $outputs) {}
+    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory, private OutputStockService $outputs, private StoreResolver $stores) {}
 
     public function find(FarmContext $ctx, string $id): OperationalRecord
     {
@@ -100,6 +101,10 @@ class RecordService
                         $this->invalid('details.context', 'Stock linked to inventory is measured against the inventory item; omit context.');
                     }
                     $context = new ConversionContext(ConversionContextType::InventoryItem, $stockItem->id);
+                    // No store named: the main store (harvest in) or the only store holding the item (use out). The record keeps where the stock went.
+                    $details['inventory']['storage_location_id'] = (($definition['stock']['direction'] ?? 'out') === 'in'
+                        ? $this->stores->receiving($ctx, $details['inventory']['storage_location_id'] ?? null, 'details.inventory.storage_location_id')
+                        : $this->stores->issuingOrInsufficient($ctx, $stockItem, $details['inventory']['storage_location_id'] ?? null, $details['inventory']['lot_id'] ?? null, 'details.inventory.storage_location_id'))->id;
                     if ($stock !== null) {
                         // The item decides the dimension (a liquid is measured by volume, seed may be counted); quantity is never area or planting units.
                         $definition['dimension'] = $stockItem->dimension();
@@ -114,7 +119,7 @@ class RecordService
                     // An explicit measurement context still wins; otherwise packages (crates, ...) resolve through the output item.
                     $ctx->authorize(Permission::InventoryUse);
                     $outputItem = $this->outputs->resolve($ctx, $definition['output']);
-                    $outputLocation = $this->outputs->receivingLocation($ctx, $details['inventory']['storage_location_id'] ?? null, 'details.inventory.storage_location_id');
+                    $outputLocation = $this->stores->receiving($ctx, $details['inventory']['storage_location_id'] ?? null, 'details.inventory.storage_location_id');
                     $context ??= new ConversionContext(ConversionContextType::InventoryItem, $outputItem->id);
                     $details['inventory'] = ['item_id' => $outputItem->id, 'storage_location_id' => $outputLocation->id]; // where the stock went, kept on the record
                 }

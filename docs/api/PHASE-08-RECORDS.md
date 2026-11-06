@@ -38,11 +38,13 @@ Required common fields: `type` from the catalogue, `production_cycle_id` UUID, `
 
 ## Type-specific details
 
+**Stores on linked stock.** `details.inventory.storage_location_id` is optional on every stock link (`feed_use`, fertilizer/pesticide/planting, harvest) and on egg/milk collections. Omitted: stock **in** (harvest, collection) goes to the farm's main store ("Main Store" is created and marked main when there is none); stock **out** (feed/crop inputs) is taken from the one store holding the item — in several stores it is `422 details.inventory.storage_location_id` ("Choose which store this comes from."), in none `409 insufficient_stock`. The resolved store is saved on the record's `details.inventory`. A named store always wins.
+
 All fields listed as required below are required within `details`. Text names identify the observed input; they are not inventory-item IDs. Only `feed_use` and the Phase 13 crop types (fertilizer, pesticide, planting, harvest) may carry an optional `details.inventory` link that consumes stock (Phase 9).
 
 | Type | Kind/capability | Required details | Optional details | Effect |
 |---|---|---|---|---|
-| `feed_use` | Livestock/fish, `supports_feed_records` | `feed_name` ≤200; weight `components` | `context` (not allowed with `inventory`), `inventory` {item_id, storage_location_id, lot_id} | Feed-use history; with `details.inventory` also one stock-out movement (Phase 9) |
+| `feed_use` | Livestock/fish, `supports_feed_records` | `feed_name` ≤200; weight `components` | `context` (not allowed with `inventory`), `inventory` {item_id, storage_location_id?, lot_id} | Feed-use history; with `details.inventory` also one stock-out movement (Phase 9) |
 | `egg_collection` | Livestock, `produces_eggs` | Count `components` convertible to `piece` | `context`, `inventory` {storage_location_id} | Output history **and** one automatic stock-in (+quantity, reason `production`) on the farm's Eggs item, in the same transaction — see [Feed, eggs and milk stock](FEED-EGGS-MILK-STOCK.md) |
 | `milk` | Livestock, `produces_milk` | Volume `components` | `context`, `inventory` {storage_location_id} | Output history **and** one automatic stock-in on the farm's Milk item (same rules as `egg_collection`) |
 | `mortality` | Livestock/fish, `supports_mortality` | Positive whole `quantity`; `cause` ≤500 | — | Negative head movement |

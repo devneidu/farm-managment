@@ -39,9 +39,9 @@ class StorePurchaseRequest extends FormRequest
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:190'],
             /** stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise). */
             'items.*.inventory_item_id' => ['sometimes', 'uuid'],
-            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Purchase resolves (or creates) the item and, with no storage_location_id, uses the stock-in store rules (only active store, else Main Store; several = 422). Never needs the item id. */
+            /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Purchase resolves (or creates) the item and, with no storage_location_id, uses the farm's main store (created as "Main Store" when there is none). storage_location_id is optional on every stock line. Never needs the item id. */
             'items.*.output' => ['sometimes', Rule::in(['eggs', 'milk']), 'prohibits:items.*.inventory_item_id'],
-            /** Required with inventory_item_id; optional with output. */
+            /** Optional: omitted, the farm main store is used. */
             'items.*.storage_location_id' => ['sometimes', 'uuid'],
             'items.*.lot_id' => ['sometimes', 'nullable', 'uuid', 'prohibits:items.*.lot'],
             'items.*.lot' => ['sometimes', 'array:code,expires_on'],

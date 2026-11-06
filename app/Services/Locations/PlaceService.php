@@ -8,6 +8,7 @@ use App\Events\Locations\PlaceChanged;
 use App\Models\Farm;
 use App\Models\Location;
 use App\Models\Place;
+use App\Models\StorageLocation;
 use App\Models\User;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -113,6 +114,15 @@ class PlaceService
                     throw $this->duplicate();
                 }
 
+                if ($kind === PlaceKind::StorageLocation) {
+                    if (! $place->exists && ! StorageLocation::ofFarm($ctx->farm)->exists()) {
+                        $place->is_default = true; // a farm's first store is its main store
+                    }
+                    if ($place->exists && $place->is_default && ! $place->is_active && ($before["is_active"] ?? false)) {
+                        throw new ApiHttpException(409, 'main_store_required', 'This is the main store. Make another store the main store before deactivating it.');
+                    }
+                }
+
                 $after = $this->snapshot($place);
                 $changes = [];
                 foreach ($after as $key => $value) {
@@ -193,6 +203,29 @@ class PlaceService
                 }
             }
         }
+    }
+
+    /**
+     * Makes an active store the farm's main store (where stock goes when a request names no store). Idempotent; takes the same farm
+     * lock as every other place write, and clears the previous main flag first so the one-main-per-farm unique index holds.
+     */
+    public function makeMain(FarmContext $ctx, User $actor, string $id): StorageLocation
+    {
+        $ctx->authorize(Permission::LocationManage);
+        $place = DB::transaction(function () use ($ctx, $actor, $id) {
+            Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
+            $place = $this->selectable($ctx->farm, PlaceKind::StorageLocation, $id);
+            if (! $place->is_default) {
+                StorageLocation::ofFarm($ctx->farm)->where('is_default', true)->update(['is_default' => false]);
+                $place->is_default = true;
+                $place->save();
+                PlaceChanged::dispatch('updated', $place, $actor, ['is_main' => ['old' => false, 'new' => true]]);
+            }
+
+            return $place;
+        }, 3);
+
+        return $place->load(self::ancestryRelation());
     }
 
     private function snapshot(Place $place): array

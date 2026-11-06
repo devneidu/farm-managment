@@ -449,11 +449,13 @@ class InventoryTest extends TeamTestCase
         $this->postJson('/api/v1/inventory/transfers', ['inventory_item_id' => $item, 'from_storage_location_id' => $loc, 'to_storage_location_id' => $foreignLoc,
             'components' => [['quantity' => '1', 'unit' => 'kg']], 'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid()])->assertNotFound();
         $this->assertSame(1, InventoryMovement::count());
-        // Inactive stores cannot receive but stock can still leave them.
+        // The main store cannot be deactivated; once another store is main, an inactive store cannot receive but stock can still leave it.
+        $active = $this->store('Active');
+        $this->patchJson('/api/v1/storage-locations/'.$loc, ['is_active' => false])->assertStatus(409)->assertJsonPath('code', 'main_store_required');
+        $this->postJson('/api/v1/storage-locations/'.$active.'/make-main')->assertOk()->assertJsonPath('data.is_main', true);
         $this->patchJson('/api/v1/storage-locations/'.$loc, ['is_active' => false])->assertOk();
         $this->postJson('/api/v1/inventory/stock-in', $this->inPayload($item, $loc))->assertStatus(409)->assertJsonPath('code', 'location_inactive');
         $this->issue($item, $loc, '4')->assertCreated();
-        $active = $this->store('Active');
         $this->postJson('/api/v1/inventory/transfers', ['inventory_item_id' => $item, 'from_storage_location_id' => $loc, 'to_storage_location_id' => $active,
             'components' => [['quantity' => '6', 'unit' => 'kg']], 'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid()])->assertCreated();
         $this->assertSame('6', $this->stock($item));
@@ -608,8 +610,10 @@ class InventoryTest extends TeamTestCase
         $this->feedRecord($cycle, $item, $loc, '1', extra: ['details' => ['context' => ['type' => 'crop_type', 'id' => (string) Str::uuid()]]])->assertStatus(422);
         $this->feedRecord($cycle, (string) Str::uuid(), $loc)->assertNotFound();
         $this->feedRecord($cycle, $item, (string) Str::uuid())->assertNotFound();
-        $this->postJson('/api/v1/records', ['details' => ['feed_name' => 'x', 'components' => [['quantity' => '1', 'unit' => 'kg']], 'inventory' => ['item_id' => $item]], 'production_cycle_id' => $cycle, 'type' => 'feed_use',
-            'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid()])->assertStatus(422);
+        // No store named: the one store holding the item is used, and an item with no stock anywhere is the ordinary insufficient-stock error.
+        $empty = $this->item(['name' => 'Empty feed', 'category' => 'feed']);
+        $this->postJson('/api/v1/records', ['details' => ['feed_name' => 'x', 'components' => [['quantity' => '1', 'unit' => 'kg']], 'inventory' => ['item_id' => $empty]], 'production_cycle_id' => $cycle, 'type' => 'feed_use',
+            'recorded_at' => $this->at(2), 'idempotency_key' => (string) Str::uuid()])->assertStatus(409)->assertJsonPath('code', 'insufficient_stock');
         $this->assertSame(0, OperationalRecord::count());
         $this->assertSame(1, InventoryMovement::count());
         $this->postJson('/api/v1/production-cycles/'.$cycle.'/close', ['end_date' => now()->toDateString(), 'reason' => 'Done'])->assertOk();

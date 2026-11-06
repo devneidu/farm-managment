@@ -286,10 +286,12 @@ class OutputStockTest extends TeamTestCase
         $a = $this->store('Store A');
         $b = $this->store('Store B');
         $this->stockIn(['output' => 'eggs', 'storage_location_id' => $a], 'donation', '60', 'piece')->assertCreated();
-        $this->incubate($hens, 10)->assertUnprocessable()->assertJsonValidationErrors('egg_storage_location_id'); // two stores: choose
-        $this->incubate($hens, 10, ['egg_storage_location_id' => $b])->assertStatus(409)->assertJsonPath('code', 'insufficient_stock'); // nothing in B
+        $this->incubate($hens, 10)->assertCreated(); // eggs are in one store only: that one is used
+        $this->stockIn(['output' => 'eggs', 'storage_location_id' => $b], 'donation', '5', 'piece')->assertCreated();
+        $this->incubate($hens, 10)->assertUnprocessable()->assertJsonValidationErrors('egg_storage_location_id'); // eggs in two stores: choose
+        $this->incubate($hens, 10, ['egg_storage_location_id' => $b])->assertStatus(409)->assertJsonPath('code', 'insufficient_stock'); // only 5 in B
         $this->incubate($hens, 10, ['egg_storage_location_id' => $a])->assertCreated();
-        $this->assertSame('50', $this->available('eggs')['quantity']);
+        $this->assertSame('45', $this->available('eggs')['quantity']);
     }
 
     public function test_cancelling_an_incubation_returns_eggs_only_when_the_farmer_says_so(): void
@@ -572,32 +574,30 @@ class OutputStockTest extends TeamTestCase
 
     public function test_main_store_name_clash_gets_a_numbered_name_and_an_inactive_store_is_not_reused(): void
     {
-        $old = $this->store('Main Store');
-        $this->patchJson('/api/v1/storage-locations/'.$old, ['is_active' => false])->assertOk();
+        $this->store('Main Store');
+        StorageLocation::query()->update(['is_active' => false, 'is_default' => false]); // as if it were deactivated before main stores existed
         $this->eggs($this->cycle(), [['quantity' => 10, 'unit' => 'piece']])->assertCreated();
         $this->assertSame(['Main Store', 'Main Store 2'], StorageLocation::orderBy('name')->pluck('name')->all());
         $this->assertSame('Main Store 2', StorageLocation::findOrFail(InventoryMovement::sole()->storage_location_id)->name);
     }
 
-    public function test_the_single_active_store_is_used_and_several_require_a_choice(): void
+    public function test_the_main_store_receives_by_default_and_stock_out_needs_a_choice_only_when_it_is_in_several_stores(): void
     {
         $only = $this->store('Egg room');
         $cycle = $this->cycle();
         $this->eggs($cycle, [['quantity' => 10, 'unit' => 'piece']])->assertCreated();
         $this->assertSame([$only], InventoryMovement::pluck('storage_location_id')->unique()->values()->all());
-        $this->assertSame(1, StorageLocation::count()); // no Main Store when a store exists
+        $this->assertSame(1, StorageLocation::count()); // no Main Store when a store exists (the first store is main)
 
         $second = $this->store('Cold room');
-        $this->eggs($cycle, [['quantity' => 10, 'unit' => 'piece']])->assertUnprocessable()->assertJsonValidationErrors('details.inventory.storage_location_id');
-        $this->assertSame(1, OperationalRecord::where('type', 'egg_collection')->count()); // refused: no half-written record
-        $this->eggs($cycle, [['quantity' => 10, 'unit' => 'piece']], ['inventory' => ['storage_location_id' => $second]])->assertCreated();
-        $this->stockIn(['output' => 'eggs'], 'donation', '1', 'piece')->assertUnprocessable()->assertJsonValidationErrors('storage_location_id');
-        $this->assertSame(['10', '10'], collect([$only, $second])->map(fn ($id) => (string) (InventoryMovement::where('storage_location_id', $id)->sum('quantity_delta') + 0))->all());
+        $this->eggs($cycle, [['quantity' => 10, 'unit' => 'piece']])->assertCreated(); // no store named: the main store, even with two stores
+        $this->eggs($cycle, [['quantity' => 10, 'unit' => 'piece']], ['inventory' => ['storage_location_id' => $second]])->assertCreated(); // explicit wins
+        $this->assertSame(['20', '10'], collect([$only, $second])->map(fn ($id) => (string) (InventoryMovement::where('storage_location_id', $id)->sum('quantity_delta') + 0))->all());
 
         $balances = $this->getJson('/api/v1/inventory/output-balances')->json('data.eggs.by_storage_location');
         $this->assertEqualsCanonicalizing([$only, $second], array_column($balances, 'storage_location_id'));
-        // Taking out also needs the choice once there are several stores.
-        $this->stockOut(['output' => 'eggs'], 'donation', '1', 'piece')->assertUnprocessable();
+        // Taking out needs the choice once the eggs are in several stores.
+        $this->stockOut(['output' => 'eggs'], 'donation', '1', 'piece')->assertUnprocessable()->assertJsonValidationErrors('storage_location_id');
         $this->stockOut(['output' => 'eggs', 'storage_location_id' => $second], 'donation', '1', 'piece')->assertCreated();
     }
 
