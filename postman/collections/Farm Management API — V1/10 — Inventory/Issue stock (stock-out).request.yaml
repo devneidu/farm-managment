@@ -1,13 +1,13 @@
 $kind: http-request
 description: |-
   **WHAT IT DOES**
-  Issues stock for a manual reason (`donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`; legacy `use`, `expired`, `wasted`). `sale`, `production_use` and `incubation` are owned by `POST /sales`, `POST /records` (feed_use) and `POST /breeding-projects` and are `422` here. Send `output: "eggs"|"milk"` instead of `inventory_item_id` for the farm's own egg / milk stock (no item setup; `storage_location_id` optional when the farm has one active store). Stock may never go negative - not even at a past `recorded_at`.
+  Issues stock for a manual reason (`donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`; legacy `use`, `expired`, `wasted`). `sale`, `production_use` and `incubation` are owned by `POST /sales`, `POST /records` (feed_use) and `POST /breeding-projects` and are `422` here. Send `output: "eggs"|"milk"` instead of `inventory_item_id` for the farm's own egg / milk stock (no item setup; `storage_location_id` is optional: the one store holding the stock is used, 422 when it is in several). Stock may never go negative - not even at a past `recorded_at`.
 
   **WHEN TO USE IT**
   "Use / write off stock" for non-batch usage, damage or expiry.
 
   **IMPORTANT INPUTS**
-  - Required body fields: `inventory_item_id`, `storage_location_id`, `reason`, `components`, `recorded_at`, `idempotency_key`.
+  - Required body fields: `inventory_item_id` (stock-in also accepts `new_item`; `output` replaces it for eggs/milk), `reason`, `components`, `recorded_at`, `idempotency_key`.
   - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
 
   **IMPORTANT BEHAVIOR**
@@ -41,7 +41,7 @@ description: |-
   **REQUEST BODY** (`application/json`)
   - `inventory_item_id` — string (uuid), **required unless `output` is sent**
   - `output` — `eggs` | `milk`, optional (instead of `inventory_item_id`)
-  - `storage_location_id` — string (uuid), **required unless `output` is sent**
+  - `storage_location_id` — string (uuid), **optional**: omitted, the one store holding the item is used; in several stores it is `422` ("Choose which store this comes from."), in none `409 insufficient_stock`. A named store always wins
   - `lot_id` — string (uuid), optional, nullable
   - `reason` — enum, **required**. Values: `donation`, `internal_use`, `damaged`, `spoiled`, `lost`, `disposal`, `other`, `use`, `expired`, `wasted` (system-only: `sale`, `production_use`, `incubation` → 422)
   - `components` — array, **required**, min 1 items, max 10 items

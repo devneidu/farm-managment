@@ -250,8 +250,12 @@ class CropOperationsTest extends TeamTestCase
         $crop = $this->crop();
         $loc = $this->store();
         $produce = $this->item();
-        // The link is optional, but a half-specified link is not.
-        $this->record($crop, 'crop_harvest', ['components' => [['quantity' => '1', 'unit' => 'kg']], 'inventory' => ['item_id' => $produce]])->assertStatus(422);
+        // The link is optional, but a half-specified link (a store with no produce item) is not.
+        $this->record($crop, 'crop_harvest', ['components' => [['quantity' => '1', 'unit' => 'kg']], 'inventory' => ['storage_location_id' => $loc]])->assertStatus(422);
+        // The store is optional: a produce item alone lands in the farm's main store.
+        $mainItem = $this->item();
+        $r = $this->record($crop, 'crop_harvest', ['components' => [['quantity' => '1', 'unit' => 'kg']], 'inventory' => ['item_id' => $mainItem]])->assertCreated()->json('data');
+        $this->assertSame($loc, InventoryMovement::findOrFail($r['inventory_movement_id'])->storage_location_id);
         foreach (['feed', 'medicine', 'seed_planting_material', 'fertilizer_agrochemical', 'general_supply'] as $category) {
             $this->harvest($crop, $this->item($category), $loc, '1')->assertStatus(422)->assertJsonValidationErrors('details.inventory.item_id');
         }

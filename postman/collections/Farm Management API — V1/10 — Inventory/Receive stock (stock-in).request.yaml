@@ -7,7 +7,7 @@ description: |-
   "Receive stock" (opening balance, donation, manual intake).
 
   **IMPORTANT INPUTS**
-  - Required body fields: `inventory_item_id`, `storage_location_id`, `reason`, `components`, `recorded_at`, `idempotency_key`.
+  - Required body fields: `inventory_item_id` (stock-in also accepts `new_item`; `output` replaces it for eggs/milk), `reason`, `components`, `recorded_at`, `idempotency_key`.
   - `recorded_at` = when it really happened (UTC, no milliseconds); `idempotency_key` = one UUID per user action.
 
   **IMPORTANT BEHAVIOR**
@@ -43,7 +43,7 @@ description: |-
   **REQUEST BODY** (`application/json`)
   - `inventory_item_id` — string (uuid), **required unless `output` is sent**
   - `output` — `eggs` | `milk`, optional: stock the farm's own egg / milk item without any item setup (donated / purchased / received - never produced; produced eggs and milk are recorded with `POST /records`)
-  - `storage_location_id` — string (uuid), **required unless `output` is sent** (then: the only active store, a "Main Store" created on first use, or 422 when several stores exist)
+  - `storage_location_id` — string (uuid), **optional**: omitted, the farm's main store is used (a "Main Store" is created and marked main on first use). A named store always wins
   - `lot_id` — string (uuid), optional, nullable. Existing lot of this item. Use `lot` instead to receive into a (new or existing) lot by code.
   - `lot` — object, optional. Lot code (and expiry for expiry-tracked items). An existing code of the same item is reused; a different expiry is rejected.
   - `lot.code` — string, **required**, max 100 chars

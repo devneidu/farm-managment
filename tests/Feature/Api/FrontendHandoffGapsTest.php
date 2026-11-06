@@ -139,7 +139,7 @@ class FrontendHandoffGapsTest extends TeamTestCase
 
         $feed = $types['feed_use']['inventory'];
         $this->assertSame(['optional_link', 'out', null, 'feed', true], [$feed['mode'], $feed['direction'], $feed['output'], $feed['item_category'], $feed['optional']]);
-        $this->assertSame(['item_id' => 'required', 'storage_location_id' => 'required', 'lot_id' => 'optional'], $feed['fields']);
+        $this->assertSame(['item_id' => 'required', 'storage_location_id' => 'optional', 'lot_id' => 'optional'], $feed['fields']);
 
         $harvest = $types['crop_harvest']['inventory'];
         $this->assertSame(['in', 'produce'], [$harvest['direction'], $harvest['item_category']]);
@@ -420,16 +420,14 @@ class FrontendHandoffGapsTest extends TeamTestCase
         $this->assertSame('10', $this->balance('milk')['available']['quantity']);
     }
 
-    public function test_purchase_with_several_stores_needs_a_choice_and_honours_an_explicit_one(): void
+    public function test_purchase_with_several_stores_goes_to_the_main_store_and_honours_an_explicit_one(): void
     {
-        $one = $this->postJson('/api/v1/storage-locations', ['name' => 'Egg room', 'type' => 'store'])->assertCreated()->json('data.id');
-        $this->postJson('/api/v1/storage-locations', ['name' => 'Cold room', 'type' => 'store'])->assertCreated();
+        $one = $this->postJson('/api/v1/storage-locations', ['name' => 'Egg room', 'type' => 'store'])->assertCreated()->json('data.id'); // the first store is main
+        $two = $this->postJson('/api/v1/storage-locations', ['name' => 'Cold room', 'type' => 'store'])->assertCreated()->json('data.id');
 
-        $this->purchase([$this->line(['output' => 'eggs'], '3', 'piece', '900.00')])->assertUnprocessable()->assertJsonValidationErrors('items.0.storage_location_id');
-        $this->assertSame(0, Purchase::count());
-        $this->assertSame(0, InventoryItem::where('system_key', 'output:eggs')->count()); // the failed purchase left nothing behind
-
-        $this->purchase([$this->line(['output' => 'eggs', 'storage_location_id' => $one], '3', 'piece', '900.00')])->assertCreated()->assertJsonPath('data.items.0.storage_location_id', $one);
+        $this->purchase([$this->line(['output' => 'eggs'], '3', 'piece', '900.00')])->assertCreated()->assertJsonPath('data.items.0.storage_location_id', $one);
+        $this->assertSame(1, StorageLocation::where('name', 'Main Store')->count() + 1); // no extra "Main Store" was created
+        $this->purchase([$this->line(['output' => 'eggs', 'storage_location_id' => $two], '3', 'piece', '900.00')])->assertCreated()->assertJsonPath('data.items.0.storage_location_id', $two);
     }
 
     public function test_sale_line_by_output_takes_existing_stock_and_never_creates_any(): void
@@ -458,7 +456,7 @@ class FrontendHandoffGapsTest extends TeamTestCase
         $this->assertSame('40', $this->balance('eggs')['available']['quantity']);
     }
 
-    public function test_sale_line_by_output_is_idempotent_and_needs_a_store_choice_when_several_are_active(): void
+    public function test_sale_line_by_output_is_idempotent_and_needs_a_store_choice_only_when_the_eggs_are_in_several_stores(): void
     {
         $this->eggsRecord($this->livestock(), 40)->assertCreated();
         $payload = ['recorded_at' => $this->at(3), 'idempotency_key' => $this->key(), 'items' => [$this->line(['output' => 'eggs'], '5', 'piece', '1500.00')]];
@@ -467,10 +465,15 @@ class FrontendHandoffGapsTest extends TeamTestCase
         $this->assertSame('35', $this->balance('eggs')['available']['quantity']);
 
         $main = StorageLocation::sole();
-        $this->postJson('/api/v1/storage-locations', ['name' => 'Cold room', 'type' => 'store'])->assertCreated();
+        $cold = $this->postJson('/api/v1/storage-locations', ['name' => 'Cold room', 'type' => 'store'])->assertCreated()->json('data.id');
+        // A second store exists but the eggs are in one store only: that store is used.
+        $this->sale([$this->line(['output' => 'eggs'], '1', 'piece', '300.00')])->assertCreated();
+        $this->assertSame('34', $this->balance('eggs')['available']['quantity']);
+        // Eggs in two stores: the seller must choose, and an explicit store wins.
+        $this->purchase([$this->line(['output' => 'eggs', 'storage_location_id' => $cold], '2', 'piece', '600.00')])->assertCreated();
         $this->sale([$this->line(['output' => 'eggs'], '1', 'piece', '300.00')])->assertUnprocessable()->assertJsonValidationErrors('items.0.storage_location_id');
         $this->sale([$this->line(['output' => 'eggs', 'storage_location_id' => $main->id], '1', 'piece', '300.00')])->assertCreated();
-        $this->assertSame('34', $this->balance('eggs')['available']['quantity']);
+        $this->assertSame('35', $this->balance('eggs')['available']['quantity']);
     }
 
     public function test_exactly_one_semantic_stock_target_is_required_and_the_item_id_keeps_working(): void
@@ -493,8 +496,12 @@ class FrontendHandoffGapsTest extends TeamTestCase
         $nonStock = ['kind' => 'non_stock', 'description' => 'Transport', 'output' => 'eggs', 'amount' => '100.00'];
         $this->purchase([$nonStock])->assertUnprocessable()->assertJsonValidationErrors('items.0.output');
         $this->sale([['kind' => 'other', 'description' => 'Crates', 'output' => 'eggs', 'amount' => '100.00']])->assertUnprocessable()->assertJsonValidationErrors('items.0.output');
-        // id-based stock lines still need their store.
-        $this->sale([$this->line(['inventory_item_id' => $balance['inventory_item_id']], '1', 'piece', '100.00')])->assertUnprocessable()->assertJsonValidationErrors('items.0.storage_location_id');
+        // Neither / both targets are still refused when no store is named either.
+        $this->sale([$this->line([], '1', 'piece', '100.00')])->assertUnprocessable()->assertJsonValidationErrors('items.0.inventory_item_id');
+        $this->sale([$this->line(['output' => 'eggs', 'inventory_item_id' => $balance['inventory_item_id']], '1', 'piece', '100.00')])->assertUnprocessable()->assertJsonValidationErrors('items.0.output');
+        // An id-based stock line needs no store: the one store holding the item is used.
+        $this->sale([$this->line(['inventory_item_id' => $balance['inventory_item_id']], '1', 'piece', '100.00')])->assertCreated();
+        $this->assertSame('39', $this->balance('eggs')['available']['quantity']);
     }
 
     public function test_output_lines_are_tenant_scoped_and_respect_permissions(): void

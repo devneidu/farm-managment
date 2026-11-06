@@ -42,6 +42,17 @@ class PlacesTest extends TeamTestCase
             ->assertCreated()->json('data');
     }
 
+    /** Deactivates a place. A farm's main store cannot be deactivated, so for stores another store is made main first (and the 409 is asserted). */
+    private function deactivate(string $path, string $id): void
+    {
+        if ($path === 'storage-locations') {
+            $spare = $this->createPlace($path, 'Spare '.Str::random(6), 'store');
+            $this->patchJson('/api/v1/'.$path.'/'.$id, ['is_active' => false])->assertConflict()->assertJsonPath('code', 'main_store_required');
+            $this->postJson('/api/v1/'.$path.'/'.$spare['id'].'/make-main')->assertOk();
+        }
+        $this->patchJson('/api/v1/'.$path.'/'.$id, ['is_active' => false])->assertOk()->assertJsonPath('data.is_active', false);
+    }
+
     private function context(): FarmContext
     {
         return new FarmContext($this->farm, $this->membershipOf($this->owner));
@@ -61,9 +72,10 @@ class PlacesTest extends TeamTestCase
         $this->assertSame('Pen 1', $place['path_label']);
         $url = '/api/v1/'.$path.'/'.$place['id'];
         $this->patchJson($url, ['name' => 'House A'])->assertOk()->assertJsonPath('data.id', $place['id']);
-        $this->patchJson($url, ['is_active' => false])->assertOk()->assertJsonPath('data.is_active', false);
-        $this->getJson('/api/v1/'.$path)->assertOk()->assertJsonCount(0, 'data');
-        $this->getJson('/api/v1/'.$path.'?include_inactive=1')->assertOk()->assertJsonCount(1, 'data');
+        $this->deactivate($path, $place['id']);
+        $spare = $path === 'storage-locations' ? 1 : 0; // stores: the spare store that took over as main stays active
+        $this->getJson('/api/v1/'.$path)->assertOk()->assertJsonCount($spare, 'data');
+        $this->getJson('/api/v1/'.$path.'?include_inactive=1')->assertOk()->assertJsonCount(1 + $spare, 'data');
         $this->getJson($url)->assertOk()->assertJsonPath('data.name', 'House A');
         $this->patchJson($url, ['is_active' => true])->assertOk()->assertJsonPath('data.is_active', true);
         $this->deleteJson($url)->assertStatus(405);
@@ -90,7 +102,7 @@ class PlacesTest extends TeamTestCase
     {
         $root = $this->createPlace($path, 'Pen One', $type);
         $this->postJson('/api/v1/'.$path, ['name' => " PEN\t one ", 'type' => $type])->assertConflict()->assertJsonPath('code', 'duplicate_location');
-        $this->patchJson('/api/v1/'.$path.'/'.$root['id'], ['is_active' => false])->assertOk();
+        $this->deactivate($path, $root['id']);
         $this->postJson('/api/v1/'.$path, ['name' => 'pen one', 'type' => $type])->assertConflict();
         $a = $this->createPlace('locations', 'Site A');
         $b = $this->createPlace('locations', 'Site B');
@@ -106,7 +118,8 @@ class PlacesTest extends TeamTestCase
     {
         $place = $this->createPlace($path, 'A', $type);
         $row = (array) DB::table((new ($kind->model()))->getTable())->find($place['id']);
-        unset($row['parent_scope']);
+        unset($row['parent_scope'], $row['main_scope']); // generated columns cannot be written
+        isset($row['is_default']) && $row['is_default'] = 0; // a copy of the main store is not a second main store; the clash tested here is the name
         $row['id'] = (string) Str::uuid7();
         $this->expectException(UniqueConstraintViolationException::class);
         DB::table((new ($kind->model()))->getTable())->insert($row);
@@ -194,7 +207,7 @@ class PlacesTest extends TeamTestCase
         $parentUrl = '/api/v1/locations/'.$parent['id'];
         $childUrl = '/api/v1/'.$path.'/'.$child['id'];
         $this->patchJson($parentUrl, ['is_active' => false])->assertConflict()->assertJsonPath('code', 'location_has_active_children');
-        $this->patchJson($childUrl, ['is_active' => false])->assertOk();
+        $this->deactivate($path, $child['id']);
         $this->patchJson($parentUrl, ['is_active' => false])->assertOk();
         $this->getJson($childUrl)->assertOk()->assertJsonPath('data.path_label', 'Main Site / Child');
         $this->patchJson($childUrl, ['name' => 'Historical'])->assertOk();

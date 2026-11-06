@@ -15,6 +15,16 @@ class StorageLocation extends Place
         return PlaceKind::StorageLocation;
     }
 
+    /**
+     * A copy is never a second main store and must never write the generated main_scope column (MySQL error 3105).
+     *
+     * @param  array<int, string>|null  $except
+     */
+    public function replicate(?array $except = null)
+    {
+        return parent::replicate(array_values(array_unique(array_merge($except ?? [], ['main_scope', 'is_default']))));
+    }
+
     protected function casts(): array
     {
         return parent::casts() + ['is_default' => 'boolean'];
