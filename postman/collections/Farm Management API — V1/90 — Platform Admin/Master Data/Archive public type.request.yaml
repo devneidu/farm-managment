@@ -1,0 +1,36 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Archives a PUBLIC record type: no farm can record with it any more; records already made stay readable and farm copies keep working. `/unarchive` restores it.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform role `admin`. `409 type_already_archived` / `type_not_archived`; farm-made types are `404`.
+
+  ---
+  **REFERENCE (detail)**
+
+  **URL**
+  `POST {{base_url}}/platform-admin/custom-record-types/{{public_record_type_id}}/archive`
+url: "{{base_url}}\/platform-admin\/custom-record-types\/{{public_record_type_id}}\/archive"
+method: POST
+headers:
+  - key: Accept
+    value: "application\/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200 or 409", function () { pm.expect(pm.response.code).to.be.oneOf([200, 409]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Archive public type.resources/examples
+order: 44000

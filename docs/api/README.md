@@ -25,6 +25,7 @@ Re-run and commit `docs/api/openapi.json` whenever an endpoint changes.
 | Resource | Purpose |
 |---|---|
 | [`API-CONTRACT.md`](API-CONTRACT.md) | The frontend-facing contract: auth/CSRF, `next_action`, farm context, roles/permissions, identifiers, envelopes, pagination, idempotency, dates, money, measurements, master data, Platform Admin, rate limits, error codes. |
+| [`FRONTEND-CUSTOM-RECORDS-FLOW.md`](FRONTEND-CUSTOM-RECORDS-FLOW.md) | Record types settings page, new-type builder (field kinds), editing rules once a type is used, recording with a custom type (form built from the field list), copy from public types, the "Farm-made records" report and CSV, the platform-admin make-public page and errors, with real request/response examples. |
 | [`FRONTEND-ROUTINES-FLOW.md`](FRONTEND-ROUTINES-FLOW.md) | Routines page (mine / ready-made), new routine with steps, save a task as a routine, use a routine (batch or none → start date → preview → confirm), the re-apply confirmation, remove from a batch and errors, with real request/response examples. |
 | [`FRONTEND-TASKS-FLOW.md`](FRONTEND-TASKS-FLOW.md) | Add task form (single task, repeats, reminders), calendar day tap, colours, coming repeats, Done / Skip / Edit (this one / this and future), reminders and the phone calendar link, with real request/response examples. |
 | [`FRONTEND-INTEGRATION.md`](FRONTEND-INTEGRATION.md) | How to use the API from the React app (client setup, startup, routing, permissions, errors, idempotency, refresh-after-write, downloads, exports, notifications). |

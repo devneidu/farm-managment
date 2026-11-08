@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\HasUuidV7;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use LogicException;
@@ -23,6 +24,12 @@ class OperationalRecord extends Model
     {
         static::updating(fn () => throw new LogicException('Operational records are append-only; reverse and replace instead.'));
         static::deleting(fn () => throw new LogicException('Operational records are append-only.'));
+    }
+
+    /** The farm-made (or public) record type of a type = 'custom' record. */
+    public function customType(): BelongsTo
+    {
+        return $this->belongsTo(CustomRecordType::class, 'custom_record_type_id');
     }
 
     public function reversal(): HasOne

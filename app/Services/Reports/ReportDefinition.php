@@ -15,7 +15,7 @@ final class ReportDefinition
     /**
      * @param  list<Permission>  $permissions
      * @param  list<Permission>  $anyOf
-     * @param  list<string>  $filters  of: from, to, as_of, production_cycle_id, kind, status
+     * @param  list<string>  $filters  of: from, to, as_of, production_cycle_id, kind, status, custom_record_type_id
      */
     public function __construct(
         public readonly string $code,

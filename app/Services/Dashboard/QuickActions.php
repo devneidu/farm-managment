@@ -5,6 +5,7 @@ namespace App\Services\Dashboard;
 use App\Enums\Capability;
 use App\Enums\CycleKind;
 use App\Enums\Permission;
+use App\Services\Records\CustomRecordTypeService;
 use App\Services\Records\RecordTypeRegistry;
 use App\Support\Api\ApiRoute;
 use Illuminate\Support\Str;
@@ -21,15 +22,25 @@ class QuickActions
     /** Record types that are corrections or belong to another module's flow, never a quick record. */
     private const EXCLUDED_RECORD_TYPES = ['reversal', 'livestock_sale', 'breeding_outcome', 'population_adjustment'];
 
-    public function __construct(private RecordTypeRegistry $types) {}
+    /** Farm-made record types are things the farmer set up on purpose, so they take the first slots (at most this many). */
+    public const QUICK_RECORD_CUSTOM_LIMIT = 2;
 
-    /** @return list<array{type: string, label: string, kind: string|null, applies_to_cycles: int}> */
+    public function __construct(private RecordTypeRegistry $types, private CustomRecordTypeService $custom) {}
+
+    /** @return list<array{type: string, label: string, kind: string|null, applies_to_cycles: int, custom_record_type_id?: string}> */
     public function quickRecord(DashboardFacts $f): array
     {
         if (! $f->ctx->can(Permission::RecordCreate)) {
             return [];
         }
         $cycles = $f->activeCycles();
+        $custom = [];
+        foreach ($this->custom->recordable($f->ctx->farm->id) as $customType) {
+            $applicable = $cycles->filter(fn ($c) => $this->custom->inapplicableReason($customType, $c) === null);
+            if ($applicable->isNotEmpty()) {
+                $custom[] = ['type' => 'custom', 'custom_record_type_id' => $customType->id, 'label' => $customType->name, 'kind' => $customType->applies_to === 'both' ? null : $customType->applies_to, 'applies_to_cycles' => $applicable->count()];
+            }
+        }
         $out = [];
         foreach ($this->types->definitions() as $type => $definition) {
             if (in_array($type, self::EXCLUDED_RECORD_TYPES, true)) {
@@ -47,7 +58,7 @@ class QuickActions
             $out[] = ['type' => $type, 'label' => Str::headline($type), 'kind' => $kind, 'applies_to_cycles' => $applicable->count()];
         }
 
-        return array_slice($out, 0, self::QUICK_RECORD_LIMIT);
+        return array_slice([...array_slice($custom, 0, self::QUICK_RECORD_CUSTOM_LIMIT), ...$out], 0, self::QUICK_RECORD_LIMIT);
     }
 
     /** @return list<array{code: string, label: string, permission: string, method: string, endpoint: string, url: string, path: string}> */

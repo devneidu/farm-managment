@@ -1,0 +1,98 @@
+$kind: http-example
+name: "201 Created - public copy"
+request:
+  url: "{{base_url}}\/platform-admin\/custom-record-types\/{{custom_record_type_id}}\/make-public"
+  method: POST
+  headers:
+    - key: Accept
+      value: "application\/json"
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": {
+          "id": "01a1bcc2-4d41-724a-a2a0-0f25c8041640",
+          "name": "Egg check",
+          "description": "Quick daily check of the egg room",
+          "source": "public",
+          "status": "active",
+          "applies_to": "livestock",
+          "species": null,
+          "crop_type": null,
+          "fields": [
+            {
+              "key": "crates_collected",
+              "max": "500",
+              "min": "0",
+              "kind": "number",
+              "unit": "crates",
+              "label": "Crates",
+              "hidden": false,
+              "required": true
+            },
+            {
+              "key": "cracked_eggs",
+              "kind": "whole_number",
+              "label": "Cracked eggs",
+              "hidden": false,
+              "required": false
+            },
+            {
+              "key": "shell_colour",
+              "kind": "choose_one",
+              "label": "Shell colour",
+              "hidden": false,
+              "options": [
+                "White",
+                "Brown",
+                "Mixed",
+                "Cream"
+              ],
+              "required": false
+            },
+            {
+              "key": "checked_on",
+              "kind": "date",
+              "label": "Checked on",
+              "hidden": false,
+              "required": false
+            },
+            {
+              "key": "house_clean",
+              "kind": "yes_no",
+              "label": "House clean",
+              "hidden": false,
+              "required": false
+            },
+            {
+              "key": "collected_by",
+              "kind": "short_text",
+              "label": "Collected by",
+              "hidden": false,
+              "required": false
+            }
+          ],
+          "version": 1,
+          "farm": null,
+          "copied_from_id": "01a1bcc2-22b7-716c-b5a0-879d07200cbb",
+          "records_count": 0,
+          "farms_using": 0,
+          "copies_count": 0,
+          "public_copy_id": null,
+          "created_at": "2026-11-08T20:03:32.000000Z",
+          "updated_at": "2026-11-08T20:03:32.000000Z"
+        },
+        "meta": [],
+        "message": null
+      }

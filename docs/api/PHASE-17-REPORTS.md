@@ -60,6 +60,7 @@ Reports marked **advanced** also need the `advanced_reports` plan entitlement (`
 | `receivables` | sales | `invoice.view`, `payment.view` | advanced | one per customer | invoiced, received (net of reversed payments), outstanding, overdue; void invoices excluded |
 | `task_compliance` | work | `task.view` | – | task category | only tasks the viewer may see; on time / late / overdue / upcoming; completion rate |
 | `contact_history` | contacts | `contact.view` + (`purchase.view` or `sale.view`) | advanced | one per contact | money columns appear only for the permissions the viewer holds (sales totals need `sale.view` and `finance.view`) |
+| `custom_records` | records | `record.view`, `production_cycle.view` | – | record type × batch × number field | records of farm-made record types; filters `from`, `to`, `production_cycle_id`, `custom_record_type_id` (another farm's type is `422`); `records` = records of that type in that batch (repeats on its field rows), `sum` = exact total of a `number` / `whole_number` field; reversed records excluded; CSV/XLSX/PDF export like any report. See [`FRONTEND-CUSTOM-RECORDS-FLOW.md`](FRONTEND-CUSTOM-RECORDS-FLOW.md) |
 
 ### Run — `GET /reports/{report}`
 

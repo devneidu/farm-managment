@@ -3,6 +3,7 @@
 namespace App\Services\Records;
 
 use App\Enums\Permission;
+use App\Models\CustomRecordType;
 use App\Models\Farm;
 use App\Services\Inventory\StockReasonCatalogue;
 use App\Support\Api\ApiRoute;
@@ -35,7 +36,7 @@ class OperationCatalogue
 
     private const PRODUCE_OUT = 'produce_out';
 
-    private const LABELS = [
+    public const LABELS = [
         'feed_use' => 'Feed usage', 'mortality' => 'Mortality', 'weight' => 'Live weight', 'temperature' => 'Temperature', 'water' => 'Water consumption',
         'irrigation' => 'Irrigation', 'weeding' => 'Weeding', 'fertilizer_application' => 'Fertilizer application', 'pesticide_application' => 'Pesticide application',
         'land_preparation' => 'Land preparation', 'planting' => 'Planting', 'establishment_check' => 'Establishment check', 'growth_stage' => 'Growth stage',
@@ -46,7 +47,7 @@ class OperationCatalogue
     /** The farm the catalogue is being read for: record actions report `inventory_required` per its use_stock_for_usage setting. */
     private ?Farm $farm = null;
 
-    public function __construct(private readonly RecordTypeRegistry $types, private readonly StockReasonCatalogue $reasons) {}
+    public function __construct(private readonly RecordTypeRegistry $types, private readonly StockReasonCatalogue $reasons, private readonly CustomRecordTypeService $custom) {}
 
     /** @return list<array<string, mixed>> one summary per operation */
     public function all(?Farm $farm = null): array
@@ -91,7 +92,18 @@ class OperationCatalogue
             }
         }
 
+        // Farm-made and public record types are plain records (display mode normal): one operation each, code custom:{id}.
+        foreach ($this->farm !== null ? $this->custom->recordable($this->farm->id) : [] as $type) {
+            $ops[] = ['code' => 'custom:'.$type->id, 'label' => $type->name, 'record_type' => 'custom', 'custom' => $type, 'inventory_kind' => null, 'actions' => [$this->customAction($type)]];
+        }
+
         return $ops;
+    }
+
+    /** @param array<string, mixed> $op */
+    private function schemaOf(array $op): ?array
+    {
+        return isset($op['custom']) ? $this->custom->schemaEntry($op['custom']) : ($op['record_type'] !== null ? $this->types->schema($op['record_type']) : null);
     }
 
     private function label(string $type): string
@@ -104,7 +116,7 @@ class OperationCatalogue
     /** @param array<string, mixed> $op */
     private function summary(array $op): array
     {
-        $schema = $op['record_type'] !== null ? $this->types->schema($op['record_type']) : null;
+        $schema = $this->schemaOf($op);
 
         return ['code' => $op['code'], 'label' => $op['label'], 'display_mode' => $this->displayMode($op['actions']),
             'cycle_kind' => $schema['cycle_kind'] ?? null, 'capability' => $schema['capability'] ?? null, 'inventory_kind' => $op['inventory_kind']];
@@ -113,7 +125,7 @@ class OperationCatalogue
     /** @param array<string, mixed> $op */
     private function detail(array $op): array
     {
-        $schema = $op['record_type'] !== null ? $this->types->schema($op['record_type']) : null;
+        $schema = $this->schemaOf($op);
         $actions = ['in' => [], 'out' => [], 'record' => []];
         $redirects = [];
         foreach ($op['actions'] as $action) {
@@ -125,7 +137,7 @@ class OperationCatalogue
             $actions[$action['direction'] ?? 'record'][] = $action;
         }
 
-        return $this->summary($op) + [
+        return $this->summary($op) + (isset($op['custom']) ? ['custom_record_type_id' => $op['custom']->id, 'custom_fields' => $schema['custom_fields'], 'version' => $op['custom']->version] : []) + [
             'record_type' => $op['record_type'],
             'measurement' => $schema['measurement'] ?? ($op['code'] === self::PRODUCE_OUT ? ['dimension' => 'weight|volume|count', 'display_unit' => null, 'normalized_unit' => null, 'required' => true, 'components_max' => 10] : null),
             'units_endpoint' => ($dimension = $schema['measurement']['dimension'] ?? null) ? ApiRoute::url('/master/units?dimension='.$dimension) : ApiRoute::url('/master/units'),
@@ -204,6 +216,24 @@ class OperationCatalogue
         }
 
         return $actions;
+    }
+
+    /** The record form of a farm-made or public type: its visible fields; no stock, measurement or commercial effect. */
+    private function customAction(CustomRecordType $type): array
+    {
+        $required = ['production_cycle_id', 'recorded_at', 'idempotency_key'];
+        $optional = ['notes', 'corrects_record_id'];
+        foreach ($this->custom->visibleFields($type) as $field) {
+            $field['required'] ? $required[] = 'details.'.$field['key'] : $optional[] = 'details.'.$field['key'];
+        }
+
+        return [
+            'code' => 'record', 'label' => 'Record '.strtolower($type->name), 'direction' => null, 'reason' => null, 'creates_operational_record' => true,
+            'submission' => ['kind' => 'record', 'method' => 'POST', 'path' => '/records', 'url' => ApiRoute::url('/records'), 'record_type' => 'custom', 'body_defaults' => ['type' => 'custom', 'custom_record_type_id' => $type->id]],
+            'production_cycle' => 'required', 'fields' => ['required' => $required, 'optional' => $optional],
+            'permissions_required' => $this->custom->permissionsRequired(), 'inventory_effect' => null, 'commercial_effects' => null,
+            'reversal' => ['method' => 'POST', 'url' => ApiRoute::url('/records/{id}/reverse'), 'permission' => Permission::RecordReverse->value, 'note' => 'Appends a reversal; the original stays readable.'],
+        ];
     }
 
     /** A record-type submission (POST /records). `$directional` marks the record as the stock event itself. */

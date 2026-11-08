@@ -16,7 +16,9 @@ class StoreRecordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => ['required', Rule::in(array_keys(app(RecordTypeRegistry::class)->definitions()))],
+            'type' => ['required', Rule::in([...array_keys(app(RecordTypeRegistry::class)->definitions()), 'custom'])],
+            /** Required (and only allowed) when type is `custom`: a farm-made or public type from GET /custom-record-types. */
+            'custom_record_type_id' => ['nullable', 'required_if:type,custom', 'prohibited_unless:type,custom', 'uuid'],
             'production_cycle_id' => ['required', 'uuid'],
             'recorded_at' => ['required', 'date', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/'],
             'idempotency_key' => ['required', 'string', 'max:80', 'regex:/^[A-Za-z0-9._:-]+$/'],

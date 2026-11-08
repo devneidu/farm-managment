@@ -13,6 +13,7 @@ use App\Http\Resources\RecordAttachmentResource;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
 use App\Services\Locations\PlaceService;
+use App\Services\Records\CustomRecordTypeService;
 use App\Services\Records\OperationCatalogue;
 use App\Services\Records\RecordAttachmentService;
 use App\Services\Records\RecordService;
@@ -38,7 +39,7 @@ class OperationalRecordController extends Controller
     public function index(ListRecordsRequest $request, FarmContext $ctx): JsonResponse
     {
         $data = $request->validated();
-        $q = OperationalRecord::where('farm_id', $ctx->farm->id)->with(['reversal', 'attachments', 'inventoryMovement']);
+        $q = OperationalRecord::where('farm_id', $ctx->farm->id)->with(['reversal', 'attachments', 'inventoryMovement', 'customType']);
         if (isset($data['production_cycle_id'])) {
             ProductionCycle::ofFarm($ctx->farm)->findOrFail($data['production_cycle_id']);
             $q->where('production_cycle_id', $data['production_cycle_id']);
@@ -50,6 +51,9 @@ class OperationalRecordController extends Controller
         }
         if (isset($data['type'])) {
             $q->where('type', $data['type']);
+        }
+        if (isset($data['custom_record_type_id'])) {
+            $q->where('custom_record_type_id', $data['custom_record_type_id']);
         }
         if (isset($data['recorded_from'])) {
             $q->where('recorded_at', '>=', CarbonImmutable::parse($data['recorded_from'], $ctx->farm->timezone)->startOfDay()->utc());
@@ -66,6 +70,8 @@ class OperationalRecordController extends Controller
      * Record a real farm event
      *
      * Requires record.create; population_adjustment additionally record.adjust, correction links record.reverse.
+     * `type: "custom"` + `custom_record_type_id` records against a farm-made or public type (see GET /custom-record-types): `details` are exactly its visible fields,
+     * the type must be active and fit the batch/crop (422 on `custom_record_type_id`), and the record has no measurement, population, stock or money effect.
      * See /record-types/{type}/schema for strictly allowed details; unknown detail keys fail 422.
      * recorded_at requires an explicit offset, cycle start <= event <= now. Closed cycles reject new records.
      * Required idempotency_key is farm-wide: exact validated payload replay returns the original record (201), changed payload 409.
@@ -107,11 +113,15 @@ class OperationalRecordController extends Controller
     }
 
     /** List implemented record types and their executable field schemas. Requires record.view.
+     *
+     * Built-in types first, then the farm-made and public types this farm can record with (`type: "custom"`, with `custom_record_type_id`, `name`, `version` and
+     * `custom_fields` - the visible fields the form is built from). Archived types and public types the farm has copied are left out.
+     *
      * @response array{data: array<int,array<string,mixed>>,meta:object,message:null}
      */
-    public function types(RecordTypeRegistry $types, FarmContext $ctx): JsonResponse
+    public function types(RecordTypeRegistry $types, CustomRecordTypeService $custom, FarmContext $ctx): JsonResponse
     {
-        return ApiResponse::success(array_map(fn ($type) => $types->schema($type, $ctx->farm), array_keys($types->definitions())));
+        return ApiResponse::success([...array_map(fn ($type) => $types->schema($type, $ctx->farm), array_keys($types->definitions())), ...$custom->recordable($ctx->farm->id)->map(fn ($t) => $custom->schemaEntry($t))->all()]);
     }
 
     /** Get the type-specific detail contract. Requires record.view. Unknown types return 404.

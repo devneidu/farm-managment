@@ -1,0 +1,30 @@
+$kind: http-example
+name: "409 - already public"
+request:
+  url: "{{base_url}}\/platform-admin\/custom-record-types\/{{custom_record_type_id}}\/make-public"
+  method: POST
+  headers:
+    - key: Accept
+      value: "application\/json"
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A public copy of this record type already exists.",
+        "code": "already_public",
+        "request_id": "01a1bcc2-4da9-7192-9463-418730cd5eb5",
+        "details": {
+          "existing_id": "01a1bcc2-4d41-724a-a2a0-0f25c8041640"
+        }
+      }

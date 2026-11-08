@@ -1,0 +1,81 @@
+$kind: http-example
+name: "409 - duplicate name"
+request:
+  url: "{{base_url}}\/custom-record-types"
+  method: POST
+  headers:
+    - key: Accept
+      value: "application\/json"
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+    - key: Content-Type
+      value: "application\/json"
+    - key: X-XSRF-TOKEN
+      value: "{{xsrf_token}}"
+      description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+  body:
+    type: json
+    content: |-
+      {
+        "name": "Egg check",
+        "description": "Quick daily check of the egg room",
+        "applies_to": "livestock",
+        "fields": [
+          {
+            "label": "Crates collected",
+            "kind": "number",
+            "unit": "crates",
+            "min": "0",
+            "max": "500",
+            "required": true
+          },
+          {
+            "label": "Cracked eggs",
+            "kind": "whole_number"
+          },
+          {
+            "label": "Shell colour",
+            "kind": "choose_one",
+            "options": [
+              "White",
+              "Brown",
+              "Mixed"
+            ]
+          },
+          {
+            "label": "Checked on",
+            "kind": "date"
+          },
+          {
+            "label": "House clean",
+            "kind": "yes_no"
+          },
+          {
+            "label": "Remark",
+            "kind": "short_text"
+          }
+        ]
+      }
+response:
+  statusCode: 409
+  statusText: Conflict
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "A record type with this name already exists.",
+        "code": "duplicate_name",
+        "request_id": "01a1bcc2-251d-7108-a422-b47f1d74eb43",
+        "details": {
+          "existing_id": "01a1bcc2-22b7-716c-b5a0-879d07200cbb",
+          "source": "farm",
+          "status": "active"
+        }
+      }

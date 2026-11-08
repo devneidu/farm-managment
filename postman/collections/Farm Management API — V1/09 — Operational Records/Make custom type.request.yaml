@@ -1,0 +1,97 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Makes a record type for this farm: a name, who it applies to and up to 15 fields. Each field has a `label`, a `kind` (`number` with optional `unit`/`min`/`max`, `whole_number`, `short_text`, `long_text`, `date`, `yes_no`, `choose_one` with `options`), `required` and `hidden`. The `key` is made from the label.
+
+  **WHEN TO USE IT**
+  The new-type builder.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `master_data.manage` (Owner, Manager) - the permission custom breeds already use.
+  - Name: 2-80 characters, unique on the farm (case/space-insensitive) and never a built-in record type's name or code (`422 name`).
+  - `species_id` only with `applies_to: livestock`, `crop_type_id` only with `crop`.
+  - Clients can never send rules, `farm_id`, `source` or `version`.
+
+  ---
+  **REFERENCE (detail)**
+
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **URL**
+  `POST {{base_url}}/custom-record-types`
+
+  **SUCCESS**
+  `201 Created` - the type (`id`, `fields[]`, `version: 1`, `in_use: false`).
+
+  **ERRORS**
+  - `403 forbidden`, `409 duplicate_name` (`details.existing_id`), `422 validation_failed` (`fields.N.label`, `name`, ...).
+url: "{{base_url}}\/custom-record-types"
+method: POST
+headers:
+  - key: Accept
+    value: "application\/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: Content-Type
+    value: "application\/json"
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    disabled: true
+body:
+  type: json
+  content: |-
+    {
+      "name": "Egg check",
+      "description": "Quick daily check of the egg room",
+      "applies_to": "livestock",
+      "fields": [
+        {
+          "label": "Crates collected",
+          "kind": "number",
+          "unit": "crates",
+          "min": "0",
+          "max": "500",
+          "required": true
+        },
+        {
+          "label": "Cracked eggs",
+          "kind": "whole_number"
+        },
+        {
+          "label": "Shell colour",
+          "kind": "choose_one",
+          "options": [
+            "White",
+            "Brown",
+            "Mixed"
+          ]
+        },
+        {
+          "label": "Checked on",
+          "kind": "date"
+        },
+        {
+          "label": "House clean",
+          "kind": "yes_no"
+        },
+        {
+          "label": "Remark",
+          "kind": "short_text"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      if (pm.response.code === 201) { pm.environment.set("custom_record_type_id", pm.response.json().data.id); }
+    language: text/javascript
+examples: ./.resources/Make custom type.resources/examples
+order: 43000

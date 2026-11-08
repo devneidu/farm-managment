@@ -210,6 +210,10 @@ values:
     value: ''
   - key: template_farm_id
     value: ''
+  - key: custom_record_type_id
+    value: ''
+  - key: public_record_type_id
+    value: ''
   - key: template_application_id
     value: ''
   - key: template_platform_id

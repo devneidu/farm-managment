@@ -29,13 +29,13 @@ use Illuminate\Validation\ValidationException;
 
 class RecordService
 {
-    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory, private OutputStockService $outputs, private StoreResolver $stores) {}
+    public function __construct(private RecordTypeRegistry $types, private QuantityNormalizer $quantities, private PopulationLedger $ledger, private InventoryService $inventory, private OutputStockService $outputs, private StoreResolver $stores, private CustomRecordTypeService $customTypes, private CustomRecordSchema $customSchema) {}
 
     public function find(FarmContext $ctx, string $id): OperationalRecord
     {
         $ctx->authorize(Permission::RecordView);
 
-        return OperationalRecord::where('farm_id', $ctx->farm->id)->with(['reversal', 'attachments', 'inventoryMovement'])->findOrFail($id);
+        return OperationalRecord::where('farm_id', $ctx->farm->id)->with(['reversal', 'attachments', 'inventoryMovement', 'customType'])->findOrFail($id);
     }
 
     public function create(FarmContext $ctx, array $input): OperationalRecord
@@ -57,6 +57,9 @@ class RecordService
             }
             $cycle = ProductionCycle::ofFarm($ctx->farm)->lockForUpdate()->findOrFail($data['production_cycle_id']);
             $this->active($cycle);
+            if ($data['type'] === 'custom') {
+                return $this->createCustom($ctx, $cycle, $data, $hash);
+            }
             $definition = $this->types->definition($data['type']);
             if ($reason = $this->types->inapplicableReason($cycle, $data['type'])) {
                 $this->invalid('type', $reason);
@@ -67,12 +70,7 @@ class RecordService
             }
             $details = Validator::make(['details' => $this->withItemUnit($ctx, $data['details'])], $this->types->detailRules($data['type']))->validate()['details'];
             $when = $this->when($ctx, $cycle, $data['recorded_at']);
-            if (isset($data['corrects_record_id'])) {
-                $original = OperationalRecord::where('farm_id', $ctx->farm->id)->where('production_cycle_id', $cycle->id)->findOrFail($data['corrects_record_id']);
-                if (! $original->reversal()->exists() || $original->type !== $data['type'] || OperationalRecord::where('corrects_record_id', $original->id)->exists()) {
-                    throw new ApiHttpException(409, 'invalid_correction', 'Replace a reversed record once, using the same record type and cycle.');
-                }
-            }
+            $this->assertCorrection($ctx, $cycle, $data);
             $details = $this->cropEvent($cycle, $data['type'], $details);
             if (! isset($details['inventory']) && filled($details['item_name'] ?? null)) {
                 // Typed name, no stock link: the record says what was used; the existing name fields follow it. No stock effect.
@@ -176,8 +174,37 @@ class RecordService
             $this->ledger->reconcile($cycle);
             RecordCreated::dispatch($record);
 
-            return $record->load(['reversal', 'attachments', 'inventoryMovement']);
+            return $record->load(['reversal', 'attachments', 'inventoryMovement', 'customType']);
         }, 3);
+    }
+
+    /** A replacement for a reversed record: once, same type (and same farm-made type), same cycle (409 invalid_correction otherwise). */
+    private function assertCorrection(FarmContext $ctx, ProductionCycle $cycle, array $data): void
+    {
+        if (! isset($data['corrects_record_id'])) {
+            return;
+        }
+        $original = OperationalRecord::where('farm_id', $ctx->farm->id)->where('production_cycle_id', $cycle->id)->findOrFail($data['corrects_record_id']);
+        if (! $original->reversal()->exists() || $original->type !== $data['type'] || $original->custom_record_type_id !== ($data['custom_record_type_id'] ?? null) || OperationalRecord::where('corrects_record_id', $original->id)->exists()) {
+            throw new ApiHttpException(409, 'invalid_correction', 'Replace a reversed record once, using the same record type and cycle.');
+        }
+    }
+
+    /**
+     * A record of a farm-made type: the details are the type's visible fields (validated by the safe rule set of CustomRecordSchema) and nothing
+     * else - no measurement, population, stock or money effect. The record keeps the schema version it was captured with.
+     */
+    private function createCustom(FarmContext $ctx, ProductionCycle $cycle, array $data, string $hash): OperationalRecord
+    {
+        $type = $this->customTypes->forRecording($ctx->farm->id, $cycle, $data['custom_record_type_id']);
+        $details = Validator::make(['details' => $data['details']], $this->customSchema->detailRules($type->fields))->validate()['details'];
+        $details = $this->customSchema->normalizeDetails($type->fields, $details);
+        $when = $this->when($ctx, $cycle, $data['recorded_at']);
+        $this->assertCorrection($ctx, $cycle, $data);
+        $record = $this->insert($ctx, $cycle, $data + ['custom_schema_version' => $type->version], $details, null, 0, $when, $hash);
+        RecordCreated::dispatch($record);
+
+        return $record->load(['reversal', 'attachments', 'inventoryMovement', 'customType']);
     }
 
     /** 422 text when a farm that takes everything used from the store gets a record without an item. */
@@ -249,12 +276,12 @@ class RecordService
             $this->invalid('recorded_at', 'A reversal cannot precede its original event.');
         }
         $this->ledger->reconcile($cycle);
-        $record = $this->insert($ctx, $cycle, ['type' => 'reversal', 'reverses_record_id' => $original->id, ...$data], ['reason' => $data['reason']], $original->measurement, -$original->population_delta, $when, $hash);
+        $record = $this->insert($ctx, $cycle, ['type' => 'reversal', 'reverses_record_id' => $original->id, 'custom_record_type_id' => $original->custom_record_type_id, 'custom_schema_version' => $original->custom_schema_version, ...$data], ['reason' => $data['reason']], $original->measurement, -$original->population_delta, $when, $hash);
         $this->inventory->reverseForRecord($ctx, $original, $record);
         $this->ledger->reconcile($cycle);
         RecordCreated::dispatch($record);
 
-        return $record->load(['reversal', 'attachments', 'inventoryMovement']);
+        return $record->load(['reversal', 'attachments', 'inventoryMovement', 'customType']);
     }
 
     /**
@@ -376,7 +403,7 @@ class RecordService
     private function insert(FarmContext $ctx, ProductionCycle $cycle, array $data, array $details, ?array $measurement, int $delta, CarbonImmutable $when, string $hash): OperationalRecord
     {
         $record = OperationalRecord::create([
-            'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'type' => $data['type'], 'details' => $details, 'measurement' => $measurement,
+            'farm_id' => $ctx->farm->id, 'production_cycle_id' => $cycle->id, 'type' => $data['type'], 'custom_record_type_id' => $data['custom_record_type_id'] ?? null, 'custom_schema_version' => $data['custom_schema_version'] ?? null, 'details' => $details, 'measurement' => $measurement,
             'population_delta' => $delta, 'recorded_at' => $when, 'notes' => $data['notes'] ?? null, 'reverses_record_id' => $data['reverses_record_id'] ?? null,
             'corrects_record_id' => $data['corrects_record_id'] ?? null, 'linked_record_id' => $data['linked_record_id'] ?? null, 'idempotency_key' => $data['idempotency_key'], 'request_hash' => $hash,
             'created_by' => $ctx->membership->user_id, 'request_id' => request()->attributes->get('request_id'),
@@ -396,7 +423,7 @@ class RecordService
             throw new ApiHttpException(409, 'idempotency_conflict', 'This idempotency key was already used for a different request.');
         }
 
-        return $record?->load(['reversal', 'attachments', 'inventoryMovement']);
+        return $record?->load(['reversal', 'attachments', 'inventoryMovement', 'customType']);
     }
 
     private function hash(array $data): string

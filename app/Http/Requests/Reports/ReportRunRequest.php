@@ -24,6 +24,8 @@ class ReportRunRequest extends FormRequest
             /** Balance date for point-in-time reports (stock on hand). Default: today. */
             $prefix.'as_of' => ['sometimes', 'date_format:Y-m-d'],
             $prefix.'production_cycle_id' => ['sometimes', 'uuid'],
+            /** Only for custom_records: one farm-made or public record type. */
+            $prefix.'custom_record_type_id' => ['sometimes', 'uuid'],
             $prefix.'kind' => ['sometimes', Rule::in(array_map(fn ($c) => $c->value, CycleKind::cases()))],
             $prefix.'status' => ['sometimes', Rule::in(['active', 'closed', 'completed', 'cancelled'])],
         ];

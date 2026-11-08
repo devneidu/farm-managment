@@ -106,3 +106,23 @@ mirror `inventory.add`. Purchases (`POST /purchases`, which also book money) kee
 
 Every permission remains backend enforced and can be refined without
 changing role names.
+
+## Farm-made record types
+
+No new permission. Managing a farm's own record types reuses
+`master_data.manage` (Owner and Manager), the permission that already guards
+custom breeds and varieties; reading them needs `master_data.view` (every
+role). Recording with a custom type needs `record.create` (Owner, Manager,
+Farm Worker); reversing it `record.reverse` (Owner, Manager). The report
+`custom_records` needs `report.view`, `record.view` and
+`production_cycle.view`; exporting it also `report.export`. Platform
+administration of these types (`/platform-admin/custom-record-types`) is
+separate from farm roles: any platform role reads, only the `admin` role makes
+a type public or archives a public type.
+
+| Action | Owner | Manager | Farm Worker | Finance | Vet |
+|---|---|---|---|---|---|
+| list / read types (`master_data.view`) | yes | yes | yes | yes | yes |
+| create / edit / archive / copy types (`master_data.manage`) | yes | yes | no | no | no |
+| record with a type (`record.create`) | yes | yes | yes | no | no |
+| reverse such a record (`record.reverse`) | yes | yes | no | no | no |

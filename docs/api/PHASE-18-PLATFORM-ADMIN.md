@@ -89,3 +89,16 @@ Settings are a closed registry (`GET /settings`): `support_email`, `support_what
 Platform actions are written to the Phase 17 `audit_logs` table with `farm_id = NULL`, so a farm's `/audit` never returns them. `GET /audit-logs` filters: `from`/`to` (UTC days), `actor_id`, `action`, `resource_type`, `resource_id`, `request_id`. Each entry: `action` (`platform.*`), `resource {type,id,label}`, `actor`, `performed_at`, `request_id`, `ip_address`, and `changes` holding only the safe `before`/`after` of fields that actually changed (plus a `reason` where required). Credential-like keys are dropped; secrets are never recorded. The entry is written in the same transaction as the change, so a failed change leaves no entry.
 
 Actions: `platform.plan_created|plan_updated|plan_default_changed|plan_prices_updated|plan_entitlements_updated|farm_plan_changed`, `platform.master_created|master_updated|species_capability_updated`, `platform.template_created|template_updated|template_published|template_archived`, `platform.setting_updated`, `platform.flag_created|flag_updated`, `platform.user_suspended|user_restored`, `platform.admin_granted|admin_revoked` (console).
+
+## Farm-made record types
+
+Farms can define their own record types (see [`PHASE-08-RECORDS.md`](PHASE-08-RECORDS.md) and [`FRONTEND-CUSTOM-RECORDS-FLOW.md`](FRONTEND-CUSTOM-RECORDS-FLOW.md)). The platform sees definitions and usage **counts**, never a farm's records.
+
+| Method + URL | Role | Purpose |
+|---|---|---|
+| `GET /custom-record-types` | any | farm-made types (`source=farm`, default) or public ones (`source=public`): name, `fields`, making `farm`, `records_count`, `farms_using`, `copies_count`, `public_copy_id`. Filters `status`, `applies_to`, `q`, `page`, `per_page` |
+| `GET /custom-record-types/{id}` | any | one type |
+| `POST /custom-record-types/{id}/make-public` | admin | creates a PUBLIC copy (version 1, hidden fields dropped); the farm's original stays private. `409 type_archived`, `409 already_public`, `409 duplicate_name`, `422 fields` |
+| `POST /custom-record-types/{id}/archive`, `.../unarchive` | admin | public types only (farm-made types are `404`); archived = no new records on any farm, old records readable, farm copies unaffected |
+
+Audit actions: `platform.custom_record_type_made_public`, `platform.custom_record_type_archived`, `platform.custom_record_type_unarchived`. Farm-side changes are audited on the farm (`custom_record_type.created|updated|archived|unarchived|copied`).

@@ -20,7 +20,7 @@ final class LinkedRecords
     /** @return list<string> */
     public static function types(): array
     {
-        return [...array_keys((new RecordTypeRegistry)->definitions()), self::HEALTH, self::BREEDING_CHECK, self::BREEDING_OUTCOME];
+        return [...array_keys(app(RecordTypeRegistry::class)->definitions()), self::HEALTH, self::BREEDING_CHECK, self::BREEDING_OUTCOME];
     }
 
     public static function evidenceType(string $linked): EvidenceType

@@ -22,6 +22,7 @@ final class ReportFilters
         public readonly ?string $productionCycleId = null,
         public readonly ?string $kind = null,
         public readonly ?string $status = null,
+        public readonly ?string $customRecordTypeId = null,
     ) {}
 
     /** @param  array<string, mixed>  $input validated input (already shaped by ReportRequest) */
@@ -30,7 +31,7 @@ final class ReportFilters
         $to = $input['to'] ?? $clock->today;
         $from = $input['from'] ?? CarbonImmutable::parse($to, 'UTC')->subDays(self::DEFAULT_DAYS - 1)->toDateString();
 
-        return new self($clock, $from, $to, $input['as_of'] ?? $clock->today, $input['production_cycle_id'] ?? null, $input['kind'] ?? null, $input['status'] ?? null);
+        return new self($clock, $from, $to, $input['as_of'] ?? $clock->today, $input['production_cycle_id'] ?? null, $input['kind'] ?? null, $input['status'] ?? null, $input['custom_record_type_id'] ?? null);
     }
 
     /** UTC database text of the start of the first day of the period. */
@@ -62,7 +63,7 @@ final class ReportFilters
         foreach ($d->filters as $name) {
             $value = match ($name) {
                 'from' => $this->from, 'to' => $this->to, 'as_of' => $this->asOf, 'production_cycle_id' => $this->productionCycleId,
-                'kind' => $this->kind, 'status' => $this->status, default => null,
+                'kind' => $this->kind, 'status' => $this->status, 'custom_record_type_id' => $this->customRecordTypeId, default => null,
             };
             if ($value !== null) {
                 $out[$name] = $value;

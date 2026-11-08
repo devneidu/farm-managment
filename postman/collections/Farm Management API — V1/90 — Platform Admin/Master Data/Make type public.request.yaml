@@ -1,0 +1,37 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Makes a farm's record type public: creates a PUBLIC copy (version 1, hidden fields dropped) that every farm sees and can use or copy. The farm's original stays private and unchanged.
+
+  **IMPORTANT BEHAVIOR**
+  - Platform role `admin`. `409 type_archived`, `409 already_public` (`details.existing_id`), `409 duplicate_name`, `422 fields` (all fields hidden), `404` for a public id. Audited as `platform.custom_record_type_made_public`.
+
+  ---
+  **REFERENCE (detail)**
+
+  **URL**
+  `POST {{base_url}}/platform-admin/custom-record-types/{{custom_record_type_id}}/make-public`
+url: "{{base_url}}\/platform-admin\/custom-record-types\/{{custom_record_type_id}}\/make-public"
+method: POST
+headers:
+  - key: Accept
+    value: "application\/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201 or 409", function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+      if (pm.response.code === 201) { pm.environment.set("public_record_type_id", pm.response.json().data.id); }
+    language: text/javascript
+examples: ./.resources/Make type public.resources/examples
+order: 43000

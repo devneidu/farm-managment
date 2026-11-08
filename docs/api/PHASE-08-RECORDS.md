@@ -217,3 +217,23 @@ The farm setting `settings.use_stock_for_usage` (`PATCH /farm`, `farm.update`; r
 * **Item snapshot.** A linked usage record now also stores `details.item_name` (the item's name at that moment).
 * **Schemas follow the current farm.** `GET /record-types/{type}/schema`, `GET /master/record-types` and `GET /master/record-operations[/{code}]` report `inventory_required` (true only for the four types above and only when the setting is ON); `inventory.optional` flips with it, and the operation's `fields.required` then lists `details.inventory`. `item_name` is listed in `fields` for all four types.
 * **Reversal** is unchanged: a stock-linked record gives its stock back; a typed record has no stock to return.
+
+## Farm-made record types (`type: "custom"`)
+
+A farm can define its own record types (up to 15 fields) and record against a batch or crop project with them. Built-in types are unchanged. Full frontend flow with real examples: [`FRONTEND-CUSTOM-RECORDS-FLOW.md`](FRONTEND-CUSTOM-RECORDS-FLOW.md).
+
+| Method | Path | Permission | Success |
+|---|---|---|---|
+| GET | `/custom-record-types` | `master_data.view` | 200, the farm's own (`source: farm`) and public (`source: public`) types; `include_archived`, `source`, `applies_to` |
+| POST | `/custom-record-types` | `master_data.manage` | 201; `409 duplicate_name`; `422` (built-in name, >15 fields, invalid field) |
+| GET | `/custom-record-types/{type}` | `master_data.view` | 200; another farm's type 404 |
+| PATCH | `/custom-record-types/{type}` | `master_data.manage` | 200 with the full `fields` list; `409 custom_type_in_use` once records exist (delete field, change kind, remove option, optional -> required, change unit, narrow limits, change who it applies to); public types 404 |
+| POST | `/custom-record-types/{type}/archive`, `/unarchive` | `master_data.manage` | 200; `409 type_already_archived` / `type_not_archived` |
+| POST | `/custom-record-types/{type}/copy` | `master_data.manage` | 201, a private copy of a public active type (optional `name`) |
+
+* **Permission.** `master_data.manage` (Owner, Manager) is reused: it is the permission custom breeds and varieties already use for "things the farm adds to its own catalogue", so no new permission or role change was needed. Reading needs `master_data.view` (every role).
+* **Field kinds.** `number` (`unit`, `min`, `max`), `whole_number`, `short_text` (200), `long_text` (2000), `date`, `yes_no`, `choose_one` (`options`); plus `required`, `hidden`. Keys are made from labels and never change. A fixed server-side converter maps each kind to Laravel rules; clients cannot send rules. `details` is exactly the visible field keys.
+* **Storage.** `custom_record_types` (farm_id NULL = public; unique name per farm and among public types; not a built-in code/label). `operational_records` gains nullable `custom_record_type_id` and `custom_schema_version`; the record's `type` is the fixed string `custom`.
+* **Recording.** `POST /records` with `type: "custom"` + `custom_record_type_id` + `details`. The type must be visible to the farm, active and fit the cycle (`applies_to`, optional species / crop filter): otherwise `422` on `custom_record_type_id` (an unknown type and another farm's private type give the same answer). No measurement, population, stock or money effect (`measurement: null`, `population_delta: 0`). Permission `record.create`; reversal and correction (`corrects_record_id`, same custom type) as for other records.
+* **Catalogues.** `GET /master/record-types`, `GET /master/record-operations[/custom:{id}]` (display mode `normal`), the cycle's `available_record_types` and the dashboard `quick_record` include recordable custom types (active, fitting the batch; a public type the farm has copied is replaced by the copy). Archived types leave them; old records stay readable.
+* **Records.** `GET /records` accepts `type=custom` and `custom_record_type_id`. Every record now also returns `type_name`, `custom_record_type_id`, `custom_schema_version`; custom records add `custom` (`type`, labelled `fields`). Report: `custom_records` (see the report table in `PHASE-17-REPORTS.md`), CSV/XLSX/PDF through the normal exports.

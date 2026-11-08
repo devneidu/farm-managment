@@ -6,6 +6,7 @@ use App\Enums\CycleKind;
 use App\Enums\Feature;
 use App\Enums\OperationCategory;
 use App\Enums\Permission;
+use App\Models\CustomRecordType;
 use App\Models\FarmOperation;
 use App\Models\OperationType;
 use App\Models\ProductionCycle;
@@ -39,6 +40,7 @@ class ReportService
         Reports\ReceivablesReport::class,
         Reports\TaskComplianceReport::class,
         Reports\ContactHistoryReport::class,
+        Reports\CustomRecordsReport::class,
     ];
 
     public function __construct(private EntitlementService $entitlements) {}
@@ -139,6 +141,9 @@ class ReportService
         if (isset($input['production_cycle_id']) && ! ProductionCycle::ofFarm($ctx->farm)->whereKey($input['production_cycle_id'])->exists()) {
             // Same answer for "does not exist" and "belongs to another farm".
             throw ValidationException::withMessages(['production_cycle_id' => 'The selected production cycle is invalid.']);
+        }
+        if (isset($input['custom_record_type_id']) && ! CustomRecordType::query()->visibleTo($ctx->farm->id)->whereKey($input['custom_record_type_id'])->exists()) {
+            throw ValidationException::withMessages(['custom_record_type_id' => 'The selected record type is invalid.']);
         }
         if (isset($input['from'], $input['to']) && $input['from'] > $input['to']) {
             throw ValidationException::withMessages(['to' => 'The end date must be on or after the start date.']);

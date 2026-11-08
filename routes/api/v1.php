@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\CalendarFeedController;
 use App\Http\Controllers\Api\V1\ContactController;
 use App\Http\Controllers\Api\V1\CropProjectController;
 use App\Http\Controllers\Api\V1\CustomBreedController;
+use App\Http\Controllers\Api\V1\CustomRecordTypeController;
 use App\Http\Controllers\Api\V1\CustomVarietyController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\FarmController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAdminController;
 use App\Http\Controllers\Api\V1\Platform\PlatformConfigController;
+use App\Http\Controllers\Api\V1\Platform\PlatformCustomRecordTypeController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceDealController;
 use App\Http\Controllers\Api\V1\Platform\PlatformMarketplaceListingController;
@@ -305,6 +307,19 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     Route::get('/custom-varieties', [CustomVarietyController::class, 'index'])->middleware('farm.permission:master_data.view')->name('api.v1.custom-varieties.index');
     Route::post('/custom-varieties', [CustomVarietyController::class, 'store'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-varieties.store');
     Route::patch('/custom-varieties/{variety}', [CustomVarietyController::class, 'update'])->middleware(['farm.permission:master_data.manage', 'throttle:master-data-write'])->name('api.v1.custom-varieties.update');
+
+    // farm-made record types (same permissions as custom breeds): master_data.view to read, master_data.manage to change; recording with one is POST /records type=custom.
+    Route::prefix('custom-record-types')->group(function () {
+        $c = CustomRecordTypeController::class;
+        $manage = ['farm.permission:master_data.manage', 'throttle:master-data-write'];
+        Route::get('/', [$c, 'index'])->middleware('farm.permission:master_data.view')->name('api.v1.custom-record-types.index');
+        Route::post('/', [$c, 'store'])->middleware($manage)->name('api.v1.custom-record-types.store');
+        Route::get('/{type}', [$c, 'show'])->whereUuid('type')->middleware('farm.permission:master_data.view')->name('api.v1.custom-record-types.show');
+        Route::patch('/{type}', [$c, 'update'])->whereUuid('type')->middleware($manage)->name('api.v1.custom-record-types.update');
+        Route::post('/{type}/archive', [$c, 'archive'])->whereUuid('type')->middleware($manage)->name('api.v1.custom-record-types.archive');
+        Route::post('/{type}/unarchive', [$c, 'unarchive'])->whereUuid('type')->middleware($manage)->name('api.v1.custom-record-types.unarchive');
+        Route::post('/{type}/copy', [$c, 'copy'])->whereUuid('type')->middleware($manage)->name('api.v1.custom-record-types.copy');
+    });
 
     Route::get('/farm/operations', [FarmOperationController::class, 'show'])->middleware('farm.permission:farm.view')->name('api.v1.farm.operations.show');
     Route::put('/farm/operations', [FarmOperationController::class, 'update'])->middleware('farm.permission:farm.update')->name('api.v1.farm.operations.update');
@@ -639,6 +654,13 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
     });
 
     // Platform work templates
+    // farm-made record types: definitions and usage counts, make-public (a copy), archive a public type
+    Route::get('/custom-record-types', [PlatformCustomRecordTypeController::class, 'index'])->name('api.v1.platform.custom-record-types.index');
+    Route::get('/custom-record-types/{type}', [PlatformCustomRecordTypeController::class, 'show'])->whereUuid('type')->name('api.v1.platform.custom-record-types.show');
+    Route::post('/custom-record-types/{type}/make-public', [PlatformCustomRecordTypeController::class, 'makePublic'])->whereUuid('type')->middleware($write)->name('api.v1.platform.custom-record-types.make-public');
+    Route::post('/custom-record-types/{type}/archive', [PlatformCustomRecordTypeController::class, 'archive'])->whereUuid('type')->middleware($write)->name('api.v1.platform.custom-record-types.archive');
+    Route::post('/custom-record-types/{type}/unarchive', [PlatformCustomRecordTypeController::class, 'unarchive'])->whereUuid('type')->middleware($write)->name('api.v1.platform.custom-record-types.unarchive');
+
     Route::get('/work-templates', [PlatformTemplateController::class, 'index'])->name('api.v1.platform.templates.index');
     Route::get('/work-templates/{template}', [PlatformTemplateController::class, 'show'])->whereUuid('template')->name('api.v1.platform.templates.show');
     Route::post('/work-templates', [PlatformTemplateController::class, 'store'])->middleware($write)->name('api.v1.platform.templates.store');

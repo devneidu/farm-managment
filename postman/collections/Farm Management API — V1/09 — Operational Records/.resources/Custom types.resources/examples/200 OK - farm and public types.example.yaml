@@ -1,0 +1,139 @@
+$kind: http-example
+name: "200 OK - farm and public types"
+request:
+  url: "{{base_url}}\/custom-record-types"
+  method: GET
+  headers:
+    - key: Accept
+      value: "application\/json"
+    - key: Origin
+      value: "{{frontend_origin}}"
+      description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      disabled: true
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "id": "01a1bcc2-28c0-7031-9d2a-126ce85f68dc",
+            "name": "Biosecurity visit",
+            "description": "Who came onto the farm",
+            "source": "public",
+            "status": "active",
+            "applies_to": "both",
+            "species": null,
+            "crop_type": null,
+            "fields": [
+              {
+                "key": "visitor",
+                "kind": "short_text",
+                "label": "Visitor",
+                "hidden": false,
+                "required": true,
+                "locked": false
+              },
+              {
+                "key": "boots_washed",
+                "kind": "yes_no",
+                "label": "Boots washed",
+                "hidden": false,
+                "required": false,
+                "locked": false
+              }
+            ],
+            "version": 1,
+            "copied_from_id": null,
+            "in_use": false,
+            "records_count": 0,
+            "can_edit": false,
+            "created_at": "2026-11-08T20:03:23.000000Z",
+            "updated_at": "2026-11-08T20:03:23.000000Z"
+          },
+          {
+            "id": "01a1bcc2-22b7-716c-b5a0-879d07200cbb",
+            "name": "Egg check",
+            "description": "Quick daily check of the egg room",
+            "source": "farm",
+            "status": "active",
+            "applies_to": "livestock",
+            "species": null,
+            "crop_type": null,
+            "fields": [
+              {
+                "key": "crates_collected",
+                "max": "500",
+                "min": "0",
+                "kind": "number",
+                "unit": "crates",
+                "label": "Crates collected",
+                "hidden": false,
+                "required": true,
+                "locked": false
+              },
+              {
+                "key": "cracked_eggs",
+                "kind": "whole_number",
+                "label": "Cracked eggs",
+                "hidden": false,
+                "required": false,
+                "locked": false
+              },
+              {
+                "key": "shell_colour",
+                "kind": "choose_one",
+                "label": "Shell colour",
+                "hidden": false,
+                "options": [
+                  "White",
+                  "Brown",
+                  "Mixed"
+                ],
+                "required": false,
+                "locked": false
+              },
+              {
+                "key": "checked_on",
+                "kind": "date",
+                "label": "Checked on",
+                "hidden": false,
+                "required": false,
+                "locked": false
+              },
+              {
+                "key": "house_clean",
+                "kind": "yes_no",
+                "label": "House clean",
+                "hidden": false,
+                "required": false,
+                "locked": false
+              },
+              {
+                "key": "remark",
+                "kind": "short_text",
+                "label": "Remark",
+                "hidden": false,
+                "required": false,
+                "locked": false
+              }
+            ],
+            "version": 1,
+            "copied_from_id": null,
+            "in_use": false,
+            "records_count": 0,
+            "can_edit": true,
+            "created_at": "2026-11-08T20:03:21.000000Z",
+            "updated_at": "2026-11-08T20:03:21.000000Z"
+          }
+        ],
+        "meta": [],
+        "message": null
+      }

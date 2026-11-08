@@ -1,0 +1,108 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Edits a record type. Send the COMPLETE `fields` list: existing fields carry their `key`, a new field has none. `name` / `description` can be changed alone.
+
+  **IMPORTANT BEHAVIOR**
+  - Before any record exists everything can change. Once records exist: allowed = add fields, rename labels, add choices, required -> optional, reorder, hide, widen min/max. Refused with `409 custom_type_in_use` (`details.field_key`, `details.rule`) = delete a field, change its kind, remove a choice, optional -> required, change a unit, narrow limits, change who it applies to.
+  - `version` goes up when the fields change; records keep the `custom_schema_version` they were captured with.
+  - Requires `master_data.manage`. Public types and other farms' types are `404`.
+
+  ---
+  **REFERENCE (detail)**
+
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **URL**
+  `PATCH {{base_url}}/custom-record-types/{{custom_record_type_id}}`
+
+  **ERRORS**
+  - `403`, `404 not_found`, `409 custom_type_in_use` / `duplicate_name`, `422 validation_failed`.
+url: "{{base_url}}\/custom-record-types\/{{custom_record_type_id}}"
+method: PATCH
+headers:
+  - key: Accept
+    value: "application\/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: Content-Type
+    value: "application\/json"
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    disabled: true
+body:
+  type: json
+  content: |-
+    {
+      "fields": [
+        {
+          "key": "crates_collected",
+          "max": "500",
+          "min": "0",
+          "kind": "number",
+          "unit": "crates",
+          "label": "Crates",
+          "hidden": false,
+          "required": true
+        },
+        {
+          "key": "cracked_eggs",
+          "kind": "whole_number",
+          "label": "Cracked eggs",
+          "hidden": false,
+          "required": false
+        },
+        {
+          "key": "shell_colour",
+          "kind": "choose_one",
+          "label": "Shell colour",
+          "hidden": false,
+          "options": [
+            "White",
+            "Brown",
+            "Mixed",
+            "Cream"
+          ],
+          "required": false
+        },
+        {
+          "key": "checked_on",
+          "kind": "date",
+          "label": "Checked on",
+          "hidden": false,
+          "required": false
+        },
+        {
+          "key": "house_clean",
+          "kind": "yes_no",
+          "label": "House clean",
+          "hidden": false,
+          "required": false
+        },
+        {
+          "key": "remark",
+          "kind": "short_text",
+          "label": "Remark",
+          "hidden": true,
+          "required": false
+        },
+        {
+          "label": "Collected by",
+          "kind": "short_text"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+    language: text/javascript
+examples: ./.resources/Edit custom type.resources/examples
+order: 44000

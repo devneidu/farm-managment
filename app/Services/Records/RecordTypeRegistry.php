@@ -230,7 +230,9 @@ class RecordTypeRegistry
      * The record types that can be created for this cycle right now, by exactly the rules record creation applies (cycle kind, species capability,
      * active cycle). Permissions are not filtered: intersect `permissions_required` with the member's permissions (GET /farm).
      *
-     * @return list<array{type: string, permissions_required: array<string, list<string>>}>
+     * Farm-made and public record types come last as `type: "custom"` entries with `custom_record_type_id` and `name`.
+     *
+     * @return list<array{type: string, permissions_required: array<string, list<string>>, custom_record_type_id?: string, name?: string}>
      */
     public function availableFor(ProductionCycle $cycle): array
     {
@@ -243,6 +245,11 @@ class RecordTypeRegistry
             if ($this->inapplicableReason($cycle, $type, $codes) === null) {
                 $out[] = ['type' => $type, 'permissions_required' => $this->permissionsRequired($type)];
             }
+        }
+
+        // Farm-made and public types that fit this cycle (record.create; no stock, measurement or population effect).
+        foreach (app(CustomRecordTypeService::class)->recordable($cycle->farm_id, $cycle) as $custom) {
+            $out[] = ['type' => 'custom', 'custom_record_type_id' => $custom->id, 'name' => $custom->name, 'permissions_required' => app(CustomRecordTypeService::class)->permissionsRequired()];
         }
 
         return $out;

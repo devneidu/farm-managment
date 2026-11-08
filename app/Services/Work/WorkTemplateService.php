@@ -634,7 +634,7 @@ class WorkTemplateService
                 $this->support->invalid('items.'.$i.'.linked_record_type', 'A general routine has no batch, so its steps cannot link a record.');
             }
             if ($linked !== null && ($data['cycle_kind'] ?? null) !== null && LinkedRecords::evidenceType($linked)->value === 'operational_record') {
-                $kind = (new RecordTypeRegistry)->definitions()[$linked]['kind'] ?? null;
+                $kind = app(RecordTypeRegistry::class)->definitions()[$linked]['kind'] ?? null;
                 if ($kind !== null && $kind !== $data['cycle_kind']) {
                     $this->support->invalid('items.'.$i.'.linked_record_type', 'This record type does not apply to the template\'s cycle kind.');
                 }
