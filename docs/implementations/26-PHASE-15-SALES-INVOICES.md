@@ -49,3 +49,13 @@ yet); the sale details page offers *Record payment* (this endpoint) and
 lines need no batch (a stock line's `production_cycle_id` is only an optional
 allocation, a livestock line's is required because its head count comes from
 it); `GET /sales/sellables` is the preferred picker.
+
+## Addendum --- Income page (sales into money in)
+
+Every sale returns `total`, `amount_received`, `balance`, `money_status`
+(paid / part_paid / not_paid / cancelled), also while uninvoiced. `other` lines
+may be typed products (`product_type`) when the farm does not sell from the
+store; the income category follows the type, no stock moves; with
+`use_stock_for_usage` ON they are 422. Payment booking and the manual-income
+category block are unchanged. The combined list is `GET /finance/income`
+(sales + other income, one SQL UNION). See `docs/api/FRONTEND-INCOME-FLOW.md`.

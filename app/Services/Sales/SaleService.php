@@ -19,6 +19,7 @@ use App\Models\ProductionCycle;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Services\Finance\ContactService;
+use App\Services\Farm\FarmSettings;
 use App\Services\Finance\FinanceService;
 use App\Services\Inventory\InventoryService;
 use App\Services\Inventory\StockLedger;
@@ -50,6 +51,9 @@ use Illuminate\Validation\ValidationException;
  */
 class SaleService
 {
+    /** product_type of a typed line -> income category code (same outcome as picking the matching store item). */
+    public const PRODUCT_CATEGORY = ['eggs' => 'egg_sales', 'milk' => 'milk_sales', 'meat' => 'livestock_sales', 'crops' => 'crop_sales', 'other_produce' => 'crop_sales'];
+
     private const RELATIONS = ['contact', 'category', 'items.item.stockUnit', 'items.lot', 'items.movement.reversal', 'items.record.reversal', 'invoice.payments.reversal'];
 
     public function __construct(
@@ -314,6 +318,9 @@ class SaleService
         $lines = [];
         foreach (array_values($items) as $index => $line) {
             $prefix = 'items.'.$index;
+            if (isset($line['product_type']) && $line['kind'] !== 'other') {
+                $this->invalid($prefix.'.product_type', 'A product type applies to "something else" lines only.');
+            }
             $stockFields = ['inventory_item_id', 'output', 'storage_location_id', 'lot_id', 'components'];
             $kind = $line['kind'];
             $quantity = isset($line['quantity']) ? Decimal::parse($line['quantity']) : null;
@@ -387,11 +394,17 @@ class SaleService
                     if (trim((string) ($line['description'] ?? '')) === '') {
                         $this->invalid($prefix.'.description', 'Describe what was sold.');
                     }
+                    if (isset($line['product_type']) && FarmSettings::usesStockForUsage($ctx->farm)) {
+                        $this->invalid($prefix.'.product_type', 'Your farm sells from the store. Pick the item from your store.');
+                    }
                     if ($price !== null || $quantity !== null) {
                         if ($price === null || $quantity === null) {
                             $this->invalid($prefix.($price === null ? '.unit_price' : '.quantity'), 'Send quantity and unit_price together, or only the amount.');
                         }
                         $computed = $this->priced($quantity, $price, $prefix);
+                    }
+                    if ($quantity !== null) {
+                        $line['entered_quantity'] = Decimal::trim($quantity);
                     }
                 }
             }
@@ -439,7 +452,10 @@ class SaleService
         $base = ['farm_id' => $ctx->farm->id, 'sale_id' => $sale->id, 'line_no' => $index + 1, 'kind' => $line['kind'], 'amount' => $line['amount'], 'production_cycle_id' => $line['production_cycle_id'] ?? null];
         $prefix = 'items.'.$index;
         if ($line['kind'] === 'other') {
-            return SaleItem::create($base + ['description' => trim(preg_replace('/\s+/u', ' ', $line['description']))]);
+            return SaleItem::create($base + [
+                'description' => trim(preg_replace('/\s+/u', ' ', $line['description'])),
+                'product_type' => $line['product_type'] ?? null, 'quantity' => $line['entered_quantity'] ?? null,
+            ]);
         }
         if ($line['kind'] === 'livestock') {
             $label = trim(preg_replace('/\s+/u', ' ', (string) ($line['description'] ?? '')));
@@ -477,6 +493,12 @@ class SaleService
     private function derivedCategory(array $lines): FinanceCategory
     {
         $kinds = collect($lines)->pluck('kind')->unique();
+        // Typed product lines (farm sells without the store): same mapping as picked items. Mixed products follow the produce default (crop_sales).
+        if ($kinds->values()->all() === ['other'] && collect($lines)->every(fn ($line) => ! empty($line['product_type']))) {
+            $codes = collect($lines)->map(fn ($line) => self::PRODUCT_CATEGORY[$line['product_type']])->unique();
+
+            return $this->finance->platformCategory($codes->count() === 1 ? $codes->first() : 'crop_sales', 'income');
+        }
         $onlyProduce = $kinds->first() !== 'stock' || ! InventoryItem::whereIn('id', collect($lines)->where('kind', 'stock')->pluck('inventory_item_id')->all())->where('category', '!=', InventoryCategory::Produce->value)->exists();
         $code = $kinds->count() === 1 ? match ($kinds->first()) {
             'livestock' => 'livestock_sales', 'stock' => $onlyProduce ? $this->produceCategory($lines) : 'other_income', default => 'other_income',

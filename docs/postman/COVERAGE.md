@@ -381,3 +381,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * 3 new Postman requests: `Use stock setting` (03 - Farms, Team & Access), `Feed use, typed name` (09 - Operational Records), `Vaccination, typed medicine` (11 - Health), in the collection JSON and as Postman-app YAML (request + one example each under `.resources/`). The examples were derived from the neighbouring requests' saved responses and edited by hand to the new shapes; they are **not** captured responses. The requests were not executed through Newman or imported into the Postman app; behaviour is covered by `tests/Feature/Team/FarmSettingsTest.php`, `tests/Feature/Records/UseStockSettingTest.php` and `tests/Feature/Health/TypedMedicineTest.php`. `docs/api/openapi.json` was intentionally not regenerated.
 * Permissions follow-up: `inventory.add` (Owner, Manager, Farm Worker) now guards `POST /inventory/stock-in` (incl. `new_item`); `can_add_stock` mirrors it. Stock-in request descriptions in the collection and YAML were updated (no operation or example added/removed).
 * Frontend contract: `docs/api/FRONTEND-WORKFLOWS.md` ("Use stock setting"); reference: `docs/api/PHASE-08-RECORDS.md`, `docs/api/PHASE-10-HEALTH.md`, `docs/api/README.md`.
+
+## Addendum - Income page (sales into money in)
+
+* New route `GET /finance/income` (345 `/api/v1` routes; `docs/api/openapi.json` intentionally not regenerated).
+* Folder **16 — Finance** gains `Income list` (2 saved examples: owner with totals, Farm Worker sale rows only). Folder **17 — Sales, Invoices & Payments** gains `Sell: typed product` (201 and the 422 "sells from the store"). Both added to the JSON collection and the Postman YAML tree. Examples are real responses captured from the code; Newman was not re-run.
+* Sale responses gain `total`, `amount_received`, `balance`, `money_status`; sale lines gain `product_type`, `entered_quantity`. Totals in §1 were not recomputed.
+* Frontend contract: `docs/api/FRONTEND-INCOME-FLOW.md`.

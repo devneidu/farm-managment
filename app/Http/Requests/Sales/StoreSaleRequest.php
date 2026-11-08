@@ -46,9 +46,11 @@ class StoreSaleRequest extends FormRequest
             'invoice.notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
             /** 1-30 lines. Total = exact sum of line amounts. */
             'items' => ['required', 'array', 'min:1', 'max:30'],
-            'items.*' => ['required', 'array:kind,description,inventory_item_id,output,storage_location_id,lot_id,components,production_cycle_id,head_count,quantity,unit_price,amount'],
+            'items.*' => ['required', 'array:kind,product_type,description,inventory_item_id,output,storage_location_id,lot_id,components,production_cycle_id,head_count,quantity,unit_price,amount'],
             /** stock = produce leaving inventory through a Phase 9 stock-out; livestock = animals leaving a livestock cycle through the population ledger; other = no physical effect. */
             'items.*.kind' => ['required', Rule::in(['stock', 'livestock', 'other'])],
+            /** other lines only, farms that do NOT sell from the store (settings.use_stock_for_usage false): what kind of product was sold. No stock is touched. The income category follows it (eggs -> egg_sales, milk -> milk_sales, meat -> livestock_sales, crops / other_produce -> crop_sales). On a farm that sells from the store this is 422 "Your farm sells from the store. Pick the item from your store." */
+            'items.*.product_type' => ['sometimes', Rule::in(['eggs', 'milk', 'meat', 'crops', 'other_produce'])],
             /** Required for other lines; stock and livestock lines are named from the item/cycle (an optional label is kept for livestock). */
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:190'],
             /** stock only. The item sold/bought, by id. Exactly one of inventory_item_id or output (422 otherwise). */

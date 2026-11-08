@@ -21,6 +21,12 @@ class SaleResource extends JsonResource
             'contact_id' => $this->contact_id, 'customer_name' => $this->customer_name,
             'recorded_at' => $this->recorded_at->toISOString(),
             'total_amount' => (string) $this->total_amount, 'currency' => $this->currency,
+            /** The money picture, always present (also before any invoice exists): total = total_amount; amount_received = live payments (0.00 when none); balance = total - received (0.00 for a cancelled sale). */
+            'total' => (string) $this->total_amount,
+            'amount_received' => $this->amountReceived(),
+            'balance' => $this->balance(),
+            /** @var 'paid'|'part_paid'|'not_paid'|'cancelled' */
+            'money_status' => $this->moneyStatus(),
             'finance_category' => $this->category ? ['id' => $this->category->id, 'code' => $this->category->code, 'name' => $this->category->name] : null,
             /**
              * Receivable state, derived from the live invoice: uninvoiced (no invoice), unpaid, partially_paid, paid. A sale is not paid
@@ -35,12 +41,14 @@ class SaleResource extends JsonResource
             'payments' => $invoice ? $invoice->payments->where('entry_type', 'payment')->filter(fn ($p) => $p->reversal === null)->map(fn ($p) => ['id' => $p->id, 'reference' => $p->reference, 'amount' => (string) $p->amount, 'method' => $p->method, 'received_on' => $p->received_on->toDateString()])->values()->all() : [],
             'notes' => $this->notes, 'corrects_sale_id' => $this->corrects_sale_id,
             'cancelled_at' => $this->cancelled_at?->toISOString(), 'cancel_reason' => $this->cancel_reason,
-            /** @var array<int, array{id: string, line_no: int, kind: 'stock'|'livestock'|'other', description: string, inventory_item_id: string|null, storage_location_id: string|null, inventory_lot_id: string|null, lot: array{code: string, expires_on: string|null}|null, production_cycle_id: string|null, head_count: int|null, quantity: array{quantity: string, unit: string, normalized: array{quantity: string, unit: string}}|null, measurement: object|null, amount: string, inventory_movement_id: string|null, inventory_reversal_movement_id: string|null, operational_record_id: string|null, reversal_record_id: string|null}> */
+            /** @var array<int, array{id: string, line_no: int, kind: 'stock'|'livestock'|'other', description: string, product_type: 'eggs'|'milk'|'meat'|'crops'|'other_produce'|null, entered_quantity: string|null, inventory_item_id: string|null, storage_location_id: string|null, inventory_lot_id: string|null, lot: array{code: string, expires_on: string|null}|null, production_cycle_id: string|null, head_count: int|null, quantity: array{quantity: string, unit: string, normalized: array{quantity: string, unit: string}}|null, measurement: object|null, amount: string, inventory_movement_id: string|null, inventory_reversal_movement_id: string|null, operational_record_id: string|null, reversal_record_id: string|null}> */
             'items' => $this->items->map(function ($line) use ($ledger) {
-                $canonical = $line->quantity === null ? null : Decimal::trim((string) $line->quantity);
+                $canonical = $line->quantity === null || $line->item === null ? null : Decimal::trim((string) $line->quantity);
 
                 return [
                     'id' => $line->id, 'line_no' => $line->line_no, 'kind' => $line->kind, 'description' => $line->description,
+                    /** Typed product (kind other, farm not selling from the store): eggs | milk | meat | crops | other_produce, else null. entered_quantity is the quantity typed with it (no stock effect). */
+                    'product_type' => $line->product_type, 'entered_quantity' => $line->kind === 'other' && $line->quantity !== null ? Decimal::trim((string) $line->quantity) : null,
                     'inventory_item_id' => $line->inventory_item_id, 'storage_location_id' => $line->storage_location_id, 'inventory_lot_id' => $line->inventory_lot_id,
                     'lot' => $line->lot ? ['code' => $line->lot->code, 'expires_on' => $line->lot->expires_on?->toDateString()] : null,
                     'production_cycle_id' => $line->production_cycle_id, 'head_count' => $line->head_count,

@@ -29,3 +29,11 @@ profitability allocation; finance role permissions.
 Do not proceed to the next phase until migrations are reversible,
 automated tests pass, tenant/farm isolation is verified, and this
 phase's acceptance criteria are met.
+
+## Addendum --- Income list
+
+`GET /finance/income`: one row per sale plus manual income rows (reversed ones
+hidden), SQL UNION, filters, `meta.totals.money_received` (ledger, equals
+`/finance/summary` income for the range) and `still_owed` (open balances of
+non-cancelled sales, un-invoiced included). `finance.view` sees all; `sale.view`
+alone sees sale rows only and no totals.

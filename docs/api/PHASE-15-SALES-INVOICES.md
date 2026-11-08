@@ -141,3 +141,11 @@ Farm Worker has only `sale.view` and `sale.create` (a worker can sell, including
 | 409 `idempotency_conflict` | same key, different payload |
 | 422 | validation (including `farm_id`, `total_amount`, `status`, `currency`, `reference` sent by the client) |
 | 403 | missing permission |
+
+## Addendum — Income page (sales merged into money in)
+
+- **Money status on every sale.** `SaleResource` (show, list, create, pay, cancel) always returns `total`, `amount_received`, `balance` and `money_status` (`paid` | `part_paid` | `not_paid` | `cancelled`), also before any invoice exists (received `0.00`, balance = total, `not_paid`). A cancelled sale is `cancelled` with balance `0.00`. `payment_status`, `amount_paid` and `outstanding` are unchanged for old clients.
+- **Typed product lines (stock switch OFF only).** An `other` line may carry `product_type` (`eggs` | `milk` | `meat` | `crops` | `other_produce`) with `description` and `quantity` + `unit_price` (or `amount`). No stock effect. Income category follows the type exactly as picked items do (eggs → `egg_sales`, milk → `milk_sales`, meat → `livestock_sales`, crops / other_produce → `crop_sales`); typed lines of different products → `crop_sales`; a typed line mixed with a plain line (or other kinds) → `other_income`. Lines expose `product_type` and `entered_quantity`.
+- With `settings.use_stock_for_usage` ON, a `product_type` line is `422` on `items.N.product_type`: "Your farm sells from the store. Pick the item from your store." Plain "something else" lines stay allowed; livestock lines are unchanged.
+- Migration: `sale_items.product_type` (nullable).
+- The Income list is `GET /finance/income` (see `PHASE-14-FINANCE.md` and `FRONTEND-INCOME-FLOW.md`).

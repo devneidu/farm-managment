@@ -106,3 +106,7 @@ mirror `inventory.add`. Purchases (`POST /purchases`, which also book money) kee
 
 Every permission remains backend enforced and can be refined without
 changing role names.
+
+`GET /finance/income` (Income tab): `finance.view` sees sale rows, other-income
+rows and the money totals; a user with only `sale.view` (Farm Worker) gets sale
+rows only and `meta.totals: null`. No other permission is added; Vet gets 403.

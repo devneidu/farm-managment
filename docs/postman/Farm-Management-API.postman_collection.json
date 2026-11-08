@@ -37800,6 +37800,331 @@
           ]
         },
         {
+          "name": "Income list",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/income?per_page=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "income"
+              ],
+              "query": [
+                {
+                  "key": "money_status",
+                  "value": "",
+                  "description": "enum: paid | part_paid | not_paid | received",
+                  "disabled": true
+                },
+                {
+                  "key": "from",
+                  "value": "",
+                  "description": "string (date)",
+                  "disabled": true
+                },
+                {
+                  "key": "to",
+                  "value": "",
+                  "description": "string (date)",
+                  "disabled": true
+                },
+                {
+                  "key": "contact_id",
+                  "value": "",
+                  "description": "string (uuid)",
+                  "disabled": true
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "reference, buyer name or buyer phone",
+                  "disabled": true
+                },
+                {
+                  "key": "finance_category_id",
+                  "value": "",
+                  "description": "string (uuid)",
+                  "disabled": true
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "",
+                  "description": "string (uuid)",
+                  "disabled": true
+                },
+                {
+                  "key": "include_cancelled",
+                  "value": "",
+                  "description": "boolean (1/0), default 0",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "integer — min 1",
+                  "disabled": true
+                },
+                {
+                  "key": "per_page",
+                  "value": "10",
+                  "description": "integer — min 1, max 100"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nThe Income tab list: ONE row per sale plus one row per other money in (other income, services, grants/loans/support). A sale's individual payments are never listed; reversed manual entries and their reversals are hidden.\n\n**WHEN TO USE IT**\nThe Income tab (there is no separate Sales page). Rows with `kind: sale` open the sale; `kind: other_income` open the transaction.\n\n**IMPORTANT INPUTS**\n- `money_status` (paid | part_paid | not_paid | received), `from`/`to` (farm-local days), `contact_id`, `search` (reference, buyer name, buyer phone), `finance_category_id`, `production_cycle_id`, `include_cancelled` (1/0, default 0), `page`, `per_page` (max 100).\n\n**IMPORTANT BEHAVIOR**\n- Newest date first, then created_at. One SQL UNION, paginated.\n- `meta.totals.money_received` = ledger income received in the from/to range, reversals subtracted (equals `GET /finance/summary` `totals.income` for the same range). `meta.totals.still_owed` = balances of ALL non-cancelled sales as of now, un-invoiced sales included (not date filtered).\n- `finance.view` sees everything. A user with only `sale.view` (Farm Worker) gets sale rows only and `meta.totals: null`. Neither permission: 403.\n\n**FRONTEND NOTES**\n- See `docs/api/FRONTEND-INCOME-FLOW.md`.\n- Boolean query values: send `1`/`0`.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**ACCESS**\n`finance.view` (everything) or `sale.view` (sale rows only).\n\n**URL**\n`GET {{base_url}}/finance/income`\n\n**SUCCESS**\n`200 OK` — `data` rows: `kind`, `id`, `reference`, `date`, `contact_id`, `contact_name`, `contact_phone`, `summary`, `category`, `total`, `amount_received`, `balance`, `money_status`, `links {sale, transaction}`. `meta`: `current_page`, `per_page`, `last_page`, `total`, `totals {currency, from, to, money_received, still_owed}|null`.\n\n**ERRORS**\n- `401 unauthenticated`, `403 forbidden` (neither finance.view nor sale.view), `422 validation_failed`."
+          },
+          "response": [
+            {
+              "name": "200 OK — sales and other income, with totals",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/finance/income?per_page=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "finance",
+                    "income"
+                  ],
+                  "query": [
+                    {
+                      "key": "money_status",
+                      "value": "",
+                      "description": "enum: paid | part_paid | not_paid | received",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "",
+                      "description": "string (date)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "",
+                      "description": "string (date)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "contact_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "reference, buyer name or buyer phone",
+                      "disabled": true
+                    },
+                    {
+                      "key": "finance_category_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "include_cancelled",
+                      "value": "",
+                      "description": "boolean (1/0), default 0",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "integer — min 1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "10",
+                      "description": "integer — min 1, max 100"
+                    }
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nThe Income tab list: ONE row per sale plus one row per other money in (other income, services, grants/loans/support). A sale's individual payments are never listed; reversed manual entries and their reversals are hidden.\n\n**WHEN TO USE IT**\nThe Income tab (there is no separate Sales page). Rows with `kind: sale` open the sale; `kind: other_income` open the transaction.\n\n**IMPORTANT INPUTS**\n- `money_status` (paid | part_paid | not_paid | received), `from`/`to` (farm-local days), `contact_id`, `search` (reference, buyer name, buyer phone), `finance_category_id`, `production_cycle_id`, `include_cancelled` (1/0, default 0), `page`, `per_page` (max 100).\n\n**IMPORTANT BEHAVIOR**\n- Newest date first, then created_at. One SQL UNION, paginated.\n- `meta.totals.money_received` = ledger income received in the from/to range, reversals subtracted (equals `GET /finance/summary` `totals.income` for the same range). `meta.totals.still_owed` = balances of ALL non-cancelled sales as of now, un-invoiced sales included (not date filtered).\n- `finance.view` sees everything. A user with only `sale.view` (Farm Worker) gets sale rows only and `meta.totals: null`. Neither permission: 403.\n\n**FRONTEND NOTES**\n- See `docs/api/FRONTEND-INCOME-FLOW.md`.\n- Boolean query values: send `1`/`0`.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**ACCESS**\n`finance.view` (everything) or `sale.view` (sale rows only).\n\n**URL**\n`GET {{base_url}}/finance/income`\n\n**SUCCESS**\n`200 OK` — `data` rows: `kind`, `id`, `reference`, `date`, `contact_id`, `contact_name`, `contact_phone`, `summary`, `category`, `total`, `amount_received`, `balance`, `money_status`, `links {sale, transaction}`. `meta`: `current_page`, `per_page`, `last_page`, `total`, `totals {currency, from, to, money_received, still_owed}|null`.\n\n**ERRORS**\n- `401 unauthenticated`, `403 forbidden` (neither finance.view nor sale.view), `422 validation_failed`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    {\n      \"kind\": \"other_income\",\n      \"id\": \"01a1bc30-9fba-7151-8894-0188cfaa23ab\",\n      \"reference\": \"FIN-2026-00002\",\n      \"date\": \"2026-10-14\",\n      \"contact_id\": null,\n      \"contact_name\": null,\n      \"contact_phone\": null,\n      \"summary\": \"Ploughing for a neighbour\",\n      \"category\": {\n        \"id\": \"01a1bc2f-31dd-7104-af11-83bbdd7c5323\",\n        \"code\": \"services\",\n        \"name\": \"Services\"\n      },\n      \"total\": \"7000.00\",\n      \"amount_received\": \"7000.00\",\n      \"balance\": \"0.00\",\n      \"money_status\": \"received\",\n      \"links\": {\n        \"sale\": null,\n        \"transaction\": \"/api/v1/finance/transactions/01a1bc30-9fba-7151-8894-0188cfaa23ab\"\n      }\n    },\n    {\n      \"kind\": \"sale\",\n      \"id\": \"01a1bc30-9f27-7211-80b1-3be5608fc325\",\n      \"reference\": \"SAL-2026-00002\",\n      \"date\": \"2026-10-14\",\n      \"contact_id\": null,\n      \"contact_name\": \"Walk-in\",\n      \"contact_phone\": null,\n      \"summary\": \"Manure\",\n      \"category\": {\n        \"id\": \"01a1bc2f-31d5-710c-afde-8efb28af65cc\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"total\": \"8000.00\",\n      \"amount_received\": \"0.00\",\n      \"balance\": \"8000.00\",\n      \"money_status\": \"not_paid\",\n      \"links\": {\n        \"sale\": \"/api/v1/sales/01a1bc30-9f27-7211-80b1-3be5608fc325\",\n        \"transaction\": null\n      }\n    },\n    {\n      \"kind\": \"sale\",\n      \"id\": \"01a1bc30-9d5c-7010-8486-d0ab6342669b\",\n      \"reference\": \"SAL-2026-00001\",\n      \"date\": \"2026-10-12\",\n      \"contact_id\": \"01a1bc30-9d41-72bf-9146-ab71287edb0b\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"contact_phone\": \"08031112222\",\n      \"summary\": \"Eggs (crates) × 10, Delivery\",\n      \"category\": {\n        \"id\": \"01a1bc2f-31d5-710c-afde-8efb28af65cc\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"total\": \"32000.00\",\n      \"amount_received\": \"12000.00\",\n      \"balance\": \"20000.00\",\n      \"money_status\": \"part_paid\",\n      \"links\": {\n        \"sale\": \"/api/v1/sales/01a1bc30-9d5c-7010-8486-d0ab6342669b\",\n        \"transaction\": null\n      }\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 10,\n    \"last_page\": 1,\n    \"total\": 3,\n    \"totals\": {\n      \"currency\": \"NGN\",\n      \"from\": null,\n      \"to\": null,\n      \"money_received\": \"19000.00\",\n      \"still_owed\": \"28000.00\"\n    }\n  },\n  \"message\": null\n}"
+            },
+            {
+              "name": "200 OK — Farm Worker (sale rows only, totals null)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/finance/income?per_page=10",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "finance",
+                    "income"
+                  ],
+                  "query": [
+                    {
+                      "key": "money_status",
+                      "value": "",
+                      "description": "enum: paid | part_paid | not_paid | received",
+                      "disabled": true
+                    },
+                    {
+                      "key": "from",
+                      "value": "",
+                      "description": "string (date)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "to",
+                      "value": "",
+                      "description": "string (date)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "contact_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "search",
+                      "value": "",
+                      "description": "reference, buyer name or buyer phone",
+                      "disabled": true
+                    },
+                    {
+                      "key": "finance_category_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "include_cancelled",
+                      "value": "",
+                      "description": "boolean (1/0), default 0",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "integer — min 1",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "10",
+                      "description": "integer — min 1, max 100"
+                    }
+                  ]
+                },
+                "description": "**WHAT IT DOES**\nThe Income tab list: ONE row per sale plus one row per other money in (other income, services, grants/loans/support). A sale's individual payments are never listed; reversed manual entries and their reversals are hidden.\n\n**WHEN TO USE IT**\nThe Income tab (there is no separate Sales page). Rows with `kind: sale` open the sale; `kind: other_income` open the transaction.\n\n**IMPORTANT INPUTS**\n- `money_status` (paid | part_paid | not_paid | received), `from`/`to` (farm-local days), `contact_id`, `search` (reference, buyer name, buyer phone), `finance_category_id`, `production_cycle_id`, `include_cancelled` (1/0, default 0), `page`, `per_page` (max 100).\n\n**IMPORTANT BEHAVIOR**\n- Newest date first, then created_at. One SQL UNION, paginated.\n- `meta.totals.money_received` = ledger income received in the from/to range, reversals subtracted (equals `GET /finance/summary` `totals.income` for the same range). `meta.totals.still_owed` = balances of ALL non-cancelled sales as of now, un-invoiced sales included (not date filtered).\n- `finance.view` sees everything. A user with only `sale.view` (Farm Worker) gets sale rows only and `meta.totals: null`. Neither permission: 403.\n\n**FRONTEND NOTES**\n- See `docs/api/FRONTEND-INCOME-FLOW.md`.\n- Boolean query values: send `1`/`0`.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**ACCESS**\n`finance.view` (everything) or `sale.view` (sale rows only).\n\n**URL**\n`GET {{base_url}}/finance/income`\n\n**SUCCESS**\n`200 OK` — `data` rows: `kind`, `id`, `reference`, `date`, `contact_id`, `contact_name`, `contact_phone`, `summary`, `category`, `total`, `amount_received`, `balance`, `money_status`, `links {sale, transaction}`. `meta`: `current_page`, `per_page`, `last_page`, `total`, `totals {currency, from, to, money_received, still_owed}|null`.\n\n**ERRORS**\n- `401 unauthenticated`, `403 forbidden` (neither finance.view nor sale.view), `422 validation_failed`."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": [\n    {\n      \"kind\": \"sale\",\n      \"id\": \"01a1bc30-9f27-7211-80b1-3be5608fc325\",\n      \"reference\": \"SAL-2026-00002\",\n      \"date\": \"2026-10-14\",\n      \"contact_id\": null,\n      \"contact_name\": \"Walk-in\",\n      \"contact_phone\": null,\n      \"summary\": \"Manure\",\n      \"category\": {\n        \"id\": \"01a1bc2f-31d5-710c-afde-8efb28af65cc\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"total\": \"8000.00\",\n      \"amount_received\": \"0.00\",\n      \"balance\": \"8000.00\",\n      \"money_status\": \"not_paid\",\n      \"links\": {\n        \"sale\": \"/api/v1/sales/01a1bc30-9f27-7211-80b1-3be5608fc325\",\n        \"transaction\": null\n      }\n    },\n    {\n      \"kind\": \"sale\",\n      \"id\": \"01a1bc30-9d5c-7010-8486-d0ab6342669b\",\n      \"reference\": \"SAL-2026-00001\",\n      \"date\": \"2026-10-12\",\n      \"contact_id\": \"01a1bc30-9d41-72bf-9146-ab71287edb0b\",\n      \"contact_name\": \"Mama Put Restaurant\",\n      \"contact_phone\": \"08031112222\",\n      \"summary\": \"Eggs (crates) × 10, Delivery\",\n      \"category\": {\n        \"id\": \"01a1bc2f-31d5-710c-afde-8efb28af65cc\",\n        \"code\": \"other_income\",\n        \"name\": \"Other income\"\n      },\n      \"total\": \"32000.00\",\n      \"amount_received\": \"12000.00\",\n      \"balance\": \"20000.00\",\n      \"money_status\": \"part_paid\",\n      \"links\": {\n        \"sale\": \"/api/v1/sales/01a1bc30-9d5c-7010-8486-d0ab6342669b\",\n        \"transaction\": null\n      }\n    }\n  ],\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 50,\n    \"last_page\": 1,\n    \"total\": 2,\n    \"totals\": null\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
           "name": "List finance transactions",
           "event": [
             {
@@ -40422,6 +40747,184 @@
               ],
               "cookie": [],
               "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-9570-7251-9064-968900b60660\",\n    \"reference\": \"SAL-2026-00001\",\n    \"status\": \"active\",\n    \"contact_id\": \"01a1045e-8d77-7352-865c-f90431a3d690\",\n    \"customer_name\": \"Mama Put Restaurant\",\n    \"recorded_at\": \"2026-10-03T22:44:06.000000Z\",\n    \"total_amount\": \"87000.00\",\n    \"currency\": \"NGN\",\n    \"finance_category\": {\n      \"id\": \"01a1045d-dfab-7152-885d-fa92588cb01c\",\n      \"code\": \"other_income\",\n      \"name\": \"Other income\"\n    },\n    \"payment_status\": \"uninvoiced\",\n    \"amount_paid\": null,\n    \"outstanding\": null,\n    \"invoice\": null,\n    \"notes\": \"Weekly delivery to the restaurant\",\n    \"corrects_sale_id\": null,\n    \"cancelled_at\": null,\n    \"cancel_reason\": null,\n    \"items\": [\n      {\n        \"id\": \"01a1045e-959f-7124-b2d7-390d4e14954e\",\n        \"line_no\": 1,\n        \"kind\": \"stock\",\n        \"description\": \"Table Eggs\",\n        \"inventory_item_id\": \"01a1045e-55ef-73d7-943b-020b53f4214c\",\n        \"storage_location_id\": \"01a1045e-4d12-721b-ab5f-1d8d23ae91e2\",\n        \"inventory_lot_id\": null,\n        \"lot\": null,\n        \"production_cycle_id\": null,\n        \"head_count\": null,\n        \"quantity\": {\n          \"quantity\": \"90\",\n          \"unit\": \"piece\",\n          \"normalized\": {\n            \"quantity\": \"90\",\n            \"unit\": \"piece\"\n          }\n        },\n        \"measurement\": {\n          \"total\": {\n            \"unit\": \"piece\",\n            \"quantity\": \"90\"\n          },\n          \"entered\": [\n            {\n              \"unit\": \"piece\",\n              \"quantity\": \"90\"\n            }\n          ],\n          \"snapshot\": {\n            \"total\": {\n              \"unit\": \"piece\",\n              \"quantity\": \"90\"\n            },\n            \"schema\": 1,\n            \"entered\": [\n              {\n                \"unit\": {\n                  \"code\": \"piece\",\n                  \"factor\": \"1\",\n                  \"family\": \"piece\",\n                  \"strategy\": \"linear\",\n                  \"dimension\": \"count\",\n                  \"integer_only\": true\n                },\n                \"quantity\": \"90\"\n              }\n            ],\n            \"packages\": [],\n            \"normalized\": {\n              \"unit\": \"piece\",\n              \"quantity\": \"90\"\n            },\n            \"result_unit\": {\n              \"code\": \"piece\",\n              \"factor\": \"1\",\n              \"family\": \"piece\",\n              \"strategy\": \"linear\",\n              \"dimension\": \"count\",\n              \"integer_only\": true\n            }\n          },\n          \"normalized\": {\n            \"unit\": \"piece\",\n            \"quantity\": \"90\"\n          }\n        },\n        \"amount\": \"27000.00\",\n        \"inventory_movement_id\": \"01a1045e-9602-72a3-99ce-a952219520c6\",\n        \"inventory_reversal_movement_id\": null,\n        \"operational_record_id\": null,\n        \"reversal_record_id\": null\n      },\n      {\n        \"id\": \"01a1045e-95ab-7001-aab7-d1e52b0119ee\",\n        \"line_no\": 2,\n        \"kind\": \"livestock\",\n        \"description\": \"Spent layers\",\n        \"inventory_item_id\": null,\n        \"storage_location_id\": null,\n        \"inventory_lot_id\": null,\n        \"lot\": null,\n        \"production_cycle_id\": \"01a1045e-4eb5-7020-85dc-ac87e0bd8aef\",\n        \"head_count\": 12,\n        \"quantity\": null,\n        \"measurement\": null,\n        \"amount\": \"60000.00\",\n        \"inventory_movement_id\": null,\n        \"inventory_reversal_movement_id\": null,\n        \"operational_record_id\": \"01a1045e-95cb-70dc-ab23-9876ab5cfdcf\",\n        \"reversal_record_id\": null\n      }\n    ],\n    \"created_by\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n    \"created_at\": \"2026-10-04T00:45:08.000000Z\"\n  },\n  \"meta\": {},\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sell: typed product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/sales",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "sales"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recorded_at\": \"{{recorded_at_2h}}\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"buyer\": {\n    \"name\": \"Mama Put Restaurant\",\n    \"phone\": \"08031112222\"\n  },\n  \"notes\": \"Deliver Friday\",\n  \"items\": [\n    {\n      \"kind\": \"other\",\n      \"product_type\": \"eggs\",\n      \"description\": \"Eggs (crates)\",\n      \"quantity\": \"10\",\n      \"unit_price\": \"3000.00\"\n    },\n    {\n      \"kind\": \"other\",\n      \"description\": \"Delivery\",\n      \"amount\": \"2000.00\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nRecords a sale whose line is a typed product (\"something else\" line with a `product_type`): no stock is touched.\n\n**WHEN TO USE IT**\nFarms that do NOT sell from the store (`settings.use_stock_for_usage` false). On a farm that sells from the store, pick the item from the store instead.\n\n**IMPORTANT BEHAVIOR**\n- Requires `sale.create`. `product_type`: eggs | milk | meat | crops | other_produce, only on `kind: other` lines.\n- Income category follows the product type (eggs → egg_sales, milk → milk_sales, meat → livestock_sales, crops / other_produce → crop_sales); a mixed sale keeps the existing rule.\n- `use_stock_for_usage` ON: `422` \"Your farm sells from the store. Pick the item from your store.\" on `items.N.product_type`.\n- The response carries `total`, `amount_received`, `balance`, `money_status` (paid | part_paid | not_paid | cancelled) on every sale.\n\n**URL**\n`POST {{base_url}}/sales`\n\n**ERRORS**\n- `401`, `403 forbidden`, `422 validation_failed`, `409` as for any sale."
+          },
+          "response": [
+            {
+              "name": "201 Created — Sale recorded.",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/sales",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "sales"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recorded_at\": \"{{recorded_at_2h}}\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"buyer\": {\n    \"name\": \"Mama Put Restaurant\",\n    \"phone\": \"08031112222\"\n  },\n  \"notes\": \"Deliver Friday\",\n  \"items\": [\n    {\n      \"kind\": \"other\",\n      \"product_type\": \"eggs\",\n      \"description\": \"Eggs (crates)\",\n      \"quantity\": \"10\",\n      \"unit_price\": \"3000.00\"\n    },\n    {\n      \"kind\": \"other\",\n      \"description\": \"Delivery\",\n      \"amount\": \"2000.00\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**WHAT IT DOES**\nRecords a sale whose line is a typed product (\"something else\" line with a `product_type`): no stock is touched.\n\n**WHEN TO USE IT**\nFarms that do NOT sell from the store (`settings.use_stock_for_usage` false). On a farm that sells from the store, pick the item from the store instead.\n\n**IMPORTANT BEHAVIOR**\n- Requires `sale.create`. `product_type`: eggs | milk | meat | crops | other_produce, only on `kind: other` lines.\n- Income category follows the product type (eggs → egg_sales, milk → milk_sales, meat → livestock_sales, crops / other_produce → crop_sales); a mixed sale keeps the existing rule.\n- `use_stock_for_usage` ON: `422` \"Your farm sells from the store. Pick the item from your store.\" on `items.N.product_type`.\n- The response carries `total`, `amount_received`, `balance`, `money_status` (paid | part_paid | not_paid | cancelled) on every sale.\n\n**URL**\n`POST {{base_url}}/sales`\n\n**ERRORS**\n- `401`, `403 forbidden`, `422 validation_failed`, `409` as for any sale."
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a1bc30-9d5c-7010-8486-d0ab6342669b\",\n    \"reference\": \"SAL-2026-00001\",\n    \"status\": \"active\",\n    \"contact_id\": \"01a1bc30-9d41-72bf-9146-ab71287edb0b\",\n    \"customer_name\": \"Mama Put Restaurant\",\n    \"recorded_at\": \"2026-10-12T10:00:00.000000Z\",\n    \"total_amount\": \"32000.00\",\n    \"currency\": \"NGN\",\n    \"total\": \"32000.00\",\n    \"amount_received\": \"0.00\",\n    \"balance\": \"32000.00\",\n    \"money_status\": \"not_paid\",\n    \"finance_category\": {\n      \"id\": \"01a1bc2f-31d5-710c-afde-8efb28af65cc\",\n      \"code\": \"other_income\",\n      \"name\": \"Other income\"\n    },\n    \"payment_status\": \"uninvoiced\",\n    \"amount_paid\": null,\n    \"outstanding\": null,\n    \"invoice\": null,\n    \"invoice_id\": null,\n    \"payments\": [],\n    \"notes\": \"Deliver Friday\",\n    \"corrects_sale_id\": null,\n    \"cancelled_at\": null,\n    \"cancel_reason\": null,\n    \"items\": [\n      {\n        \"id\": \"01a1bc30-9d6a-700f-91a7-23b382353b2f\",\n        \"line_no\": 1,\n        \"kind\": \"other\",\n        \"description\": \"Eggs (crates)\",\n        \"product_type\": \"eggs\",\n        \"entered_quantity\": \"10\",\n        \"inventory_item_id\": null,\n        \"storage_location_id\": null,\n        \"inventory_lot_id\": null,\n        \"lot\": null,\n        \"production_cycle_id\": null,\n        \"head_count\": null,\n        \"quantity\": null,\n        \"measurement\": null,\n        \"amount\": \"30000.00\",\n        \"inventory_movement_id\": null,\n        \"inventory_reversal_movement_id\": null,\n        \"operational_record_id\": null,\n        \"reversal_record_id\": null\n      },\n      {\n        \"id\": \"01a1bc30-9d6e-729a-9a4c-f702c9e9929d\",\n        \"line_no\": 2,\n        \"kind\": \"other\",\n        \"description\": \"Delivery\",\n        \"product_type\": null,\n        \"entered_quantity\": null,\n        \"inventory_item_id\": null,\n        \"storage_location_id\": null,\n        \"inventory_lot_id\": null,\n        \"lot\": null,\n        \"production_cycle_id\": null,\n        \"head_count\": null,\n        \"quantity\": null,\n        \"measurement\": null,\n        \"amount\": \"2000.00\",\n        \"inventory_movement_id\": null,\n        \"inventory_reversal_movement_id\": null,\n        \"operational_record_id\": null,\n        \"reversal_record_id\": null\n      }\n    ],\n    \"created_by\": \"01a1bc30-9bc1-70ec-95c0-512f7befc2a2\",\n    \"created_at\": \"2026-10-14T12:00:00.000000Z\"\n  },\n  \"meta\": [],\n  \"message\": \"Sale recorded.\"\n}"
+            },
+            {
+              "name": "422 — farm sells from the store",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Origin",
+                    "value": "{{frontend_origin}}",
+                    "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/sales",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "sales"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"recorded_at\": \"{{recorded_at_2h}}\",\n  \"idempotency_key\": \"{{$guid}}\",\n  \"buyer\": {\n    \"name\": \"Mama Put Restaurant\",\n    \"phone\": \"08031112222\"\n  },\n  \"notes\": \"Deliver Friday\",\n  \"items\": [\n    {\n      \"kind\": \"other\",\n      \"product_type\": \"eggs\",\n      \"description\": \"Eggs (crates)\",\n      \"quantity\": \"10\",\n      \"unit_price\": \"3000.00\"\n    },\n    {\n      \"kind\": \"other\",\n      \"description\": \"Delivery\",\n      \"amount\": \"2000.00\"\n    }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "**WHAT IT DOES**\nRecords a sale whose line is a typed product (\"something else\" line with a `product_type`): no stock is touched.\n\n**WHEN TO USE IT**\nFarms that do NOT sell from the store (`settings.use_stock_for_usage` false). On a farm that sells from the store, pick the item from the store instead.\n\n**IMPORTANT BEHAVIOR**\n- Requires `sale.create`. `product_type`: eggs | milk | meat | crops | other_produce, only on `kind: other` lines.\n- Income category follows the product type (eggs → egg_sales, milk → milk_sales, meat → livestock_sales, crops / other_produce → crop_sales); a mixed sale keeps the existing rule.\n- `use_stock_for_usage` ON: `422` \"Your farm sells from the store. Pick the item from your store.\" on `items.N.product_type`.\n- The response carries `total`, `amount_received`, `balance`, `money_status` (paid | part_paid | not_paid | cancelled) on every sale.\n\n**URL**\n`POST {{base_url}}/sales`\n\n**ERRORS**\n- `401`, `403 forbidden`, `422 validation_failed`, `409` as for any sale."
+              },
+              "status": "Unprocessable Content",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Your farm sells from the store. Pick the item from your store.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a1bc30-a0bd-73b5-acc1-60b743814fb2\",\n  \"errors\": {\n    \"items.0.product_type\": [\n      \"Your farm sells from the store. Pick the item from your store.\"\n    ]\n  }\n}"
             }
           ]
         },
