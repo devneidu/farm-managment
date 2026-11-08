@@ -596,7 +596,8 @@ class DashboardTest extends TeamTestCase
         $this->assertContains('health_record', $add);
         $this->assertContains('breeding_project', $add);
         $this->assertContains('sale', $add, 'a Farm Worker can sell (sale.create)');
-        foreach (['purchase', 'expense', 'income', 'stock_in', 'task', 'production_cycle', 'contact'] as $code) {
+        $this->assertContains('stock_in', $add, 'a Farm Worker can receive stock (inventory.add)');
+        foreach (['purchase', 'expense', 'income', 'task', 'production_cycle', 'contact'] as $code) {
             $this->assertNotContains($code, $add, "a Farm Worker cannot $code");
         }
         $this->assertContains('mortality', array_column($this->dash()['quick_record'], 'type'));
