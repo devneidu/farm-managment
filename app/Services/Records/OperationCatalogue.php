@@ -3,6 +3,7 @@
 namespace App\Services\Records;
 
 use App\Enums\Permission;
+use App\Models\Farm;
 use App\Services\Inventory\StockReasonCatalogue;
 use App\Support\Api\ApiRoute;
 
@@ -42,17 +43,23 @@ class OperationCatalogue
         'population_adjustment' => 'Population adjustment', self::PRODUCE_OUT => 'Crop produce out',
     ];
 
+    /** The farm the catalogue is being read for: record actions report `inventory_required` per its use_stock_for_usage setting. */
+    private ?Farm $farm = null;
+
     public function __construct(private readonly RecordTypeRegistry $types, private readonly StockReasonCatalogue $reasons) {}
 
     /** @return list<array<string, mixed>> one summary per operation */
-    public function all(): array
+    public function all(?Farm $farm = null): array
     {
+        $this->farm = $farm;
+
         return array_map(fn (array $op) => $this->summary($op), $this->operations());
     }
 
     /** @return array<string, mixed>|null */
-    public function find(string $code): ?array
+    public function find(string $code, ?Farm $farm = null): ?array
     {
+        $this->farm = $farm;
         foreach ($this->operations() as $op) {
             if ($op['code'] === $code) {
                 return $this->detail($op);
@@ -202,7 +209,7 @@ class OperationCatalogue
     /** A record-type submission (POST /records). `$directional` marks the record as the stock event itself. */
     private function recordAction(string $type, ?array $directional, ?string $op = null): array
     {
-        $schema = $this->types->schema($type);
+        $schema = $this->types->schema($type, $this->farm);
         $required = ['production_cycle_id', 'recorded_at', 'idempotency_key'];
         $optional = ['notes', 'corrects_record_id'];
         foreach ($schema['fields'] as $key => $rules) {
@@ -211,6 +218,11 @@ class OperationCatalogue
             } else {
                 $optional[] = 'details.'.$key;
             }
+        }
+        if ($schema['inventory_required']) {
+            // The farm takes everything used from the store: the item is part of the form, not an extra.
+            $required[] = 'details.inventory';
+            $optional = array_values(array_diff($optional, ['details.inventory']));
         }
         if ($schema['measurement'] !== null) {
             $schema['measurement']['required'] ? $required[] = 'details.components' : $optional[] = 'details.components';

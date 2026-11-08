@@ -33,12 +33,16 @@ class StoreHealthRecordRequest extends FormRequest
             'corrects_record_id' => ['sometimes', 'nullable', 'uuid'],
             /** One entry per medicine used. Each consumes linked stock exactly once. */
             'medicines' => ['sometimes', 'array', 'max:10'],
-            'medicines.*' => ['required', 'array:inventory_item_id,storage_location_id,lot_id,components,dose_per_animal,dosage_instructions,withdrawal_days'],
-            'medicines.*.inventory_item_id' => ['required', 'uuid'],
+            'medicines.*' => ['required', 'array:inventory_item_id,medicine_name,storage_location_id,lot_id,components,dose_per_animal,dosage_instructions,withdrawal_days'],
+            /** A stock line names the store item (`inventory_item_id`) OR, on a farm with use_stock_for_usage OFF, a typed medicine (`medicine_name`): never both. */
+            'medicines.*.inventory_item_id' => ['required_without:medicines.*.medicine_name', 'nullable', 'uuid'],
+            /** Typed medicine (use_stock_for_usage OFF only): no stock is taken and no movement is created. Its dose, instructions and withdrawal_days are kept on the line. */
+            'medicines.*.medicine_name' => ['sometimes', 'string', 'min:1', 'max:150'],
             /** Optional: the one store holding the medicine; several stores need a choice (422). */
             'medicines.*.storage_location_id' => ['sometimes', 'uuid'],
             'medicines.*.lot_id' => ['sometimes', 'nullable', 'uuid'],
             ...InventoryRules::components('medicines.*.components'),
+            'medicines.*.components' => ['required_with:medicines.*.inventory_item_id', 'array', 'min:1', 'max:10'],
             ...InventoryRules::components('medicines.*.dose_per_animal', required: false),
             'medicines.*.dosage_instructions' => ['sometimes', 'nullable', 'string', 'max:500'],
             /** Overrides the medicine's default withdrawal period. 0 = none. */

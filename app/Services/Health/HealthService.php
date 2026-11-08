@@ -14,6 +14,7 @@ use App\Models\InventoryItem;
 use App\Models\MedicineProfile;
 use App\Models\OperationalRecord;
 use App\Models\ProductionCycle;
+use App\Services\Farm\FarmSettings;
 use App\Services\Inventory\InventoryService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiHttpException;
@@ -31,6 +32,9 @@ use Illuminate\Validation\ValidationException;
  */
 class HealthService
 {
+    /** 422 text when a farm that takes everything used from the store gets a typed medicine (or a line without a store item). */
+    public const PICK_MEDICINE = 'Your farm takes medicine from the store. Pick the medicine you used.';
+
     private const RELATIONS = ['reversal', 'medicines.item.stockUnit', 'medicines.lot', 'medicines.movement'];
 
     public function __construct(private HealthTypeRegistry $types, private InventoryService $inventory) {}
@@ -75,6 +79,7 @@ class HealthService
             $when = $this->when($ctx, $cycle, $data['recorded_at']);
             $this->assertCommonFields($ctx, $cycle, $data, $when);
             $this->assertCorrection($ctx, $cycle, $data);
+            $this->assertLineKinds($ctx, $medicines);
             $this->assertUniqueLines($medicines);
 
             $record = HealthRecord::create([
@@ -132,6 +137,11 @@ class HealthService
     private function addLine(FarmContext $ctx, HealthRecord $record, int $index, array $line, CarbonImmutable $when): void
     {
         $prefix = 'medicines.'.$index;
+        if (isset($line['medicine_name'])) {
+            $this->addTypedLine($ctx, $record, $index, $line, $when);
+
+            return;
+        }
         $item = $this->inventory->medicineItemForHealth($ctx, $line['inventory_item_id'], $prefix);
         $result = $this->inventory->measureForItem($ctx, $item, $line['components'], $prefix.'.components');
         $quantity = $result->normalized->value;
@@ -151,6 +161,43 @@ class HealthService
         $this->inventory->consumeForHealth($ctx, $record->id, $row->id, $item, $location, $lot, $result->toArray(), $when, $prefix);
     }
 
+    /**
+     * A medicine written by name (farm with use_stock_for_usage OFF): kept as a snapshot on the line with its dose and withdrawal, but with no item,
+     * store, lot, quantity or movement. Withdrawal tracking is the same as for a stock line; only the explicit days apply (there is no item default).
+     */
+    private function addTypedLine(FarmContext $ctx, HealthRecord $record, int $index, array $line, CarbonImmutable $when): void
+    {
+        $days = isset($line['withdrawal_days']) ? (int) $line['withdrawal_days'] : null;
+        HealthRecordMedicine::create([
+            'farm_id' => $ctx->farm->id, 'health_record_id' => $record->id, 'line_no' => $index + 1, 'inventory_item_id' => null, 'item_name' => trim($line['medicine_name']),
+            'storage_location_id' => null, 'inventory_lot_id' => null, 'quantity_used' => null, 'measurement' => null,
+            'dose' => empty($line['dose_per_animal']) ? null : ['components' => $line['dose_per_animal'], 'normalized' => null],
+            'dosage_instructions' => $line['dosage_instructions'] ?? null, 'withdrawal_days' => $days, 'withdrawal_source' => $days === null ? null : 'explicit',
+            'withdrawal_ends_at' => $days === null || $days === 0 ? null : $when->addDays($days),
+        ]);
+    }
+
+    /** Stock line or typed line, never both; typed lines only when the farm does not take medicine from the store. */
+    private function assertLineKinds(FarmContext $ctx, array $medicines): void
+    {
+        $storeOnly = FarmSettings::usesStockForUsage($ctx->farm);
+        foreach (array_values($medicines) as $index => $line) {
+            $prefix = 'medicines.'.$index;
+            if (isset($line['medicine_name'])) {
+                if ($storeOnly) {
+                    $this->invalid($prefix.'.medicine_name', self::PICK_MEDICINE);
+                }
+                foreach (['inventory_item_id' => 'a store item', 'storage_location_id' => 'a store', 'lot_id' => 'a lot', 'components' => 'a stock quantity'] as $key => $what) {
+                    if (isset($line[$key])) {
+                        $this->invalid($prefix.'.'.$key, 'A typed medicine is not taken from the store, so it has no '.$what.'. Pick the medicine from the store or remove it.');
+                    }
+                }
+            } elseif (empty($line['inventory_item_id'])) {
+                $this->invalid($prefix.'.inventory_item_id', $storeOnly ? self::PICK_MEDICINE : 'Pick the medicine from the store or type its name.');
+            }
+        }
+    }
+
     /** @return array{0: int|null, 1: string|null} effective withdrawal days and where they came from (explicit line value or the item default). */
     private function withdrawal(InventoryItem $item, array $line): array
     {
@@ -166,6 +213,9 @@ class HealthService
     {
         $seen = [];
         foreach (array_values($medicines) as $index => $line) {
+            if (isset($line['medicine_name'])) {
+                continue; // typed lines are plain notes of what was given; the same name twice is the farmer's call
+            }
             $key = $line['inventory_item_id'].'|'.($line['storage_location_id'] ?? '').'|'.($line['lot_id'] ?? '');
             if (isset($seen[$key])) {
                 $this->invalid('medicines.'.$index, 'Combine repeated item, location and lot into one medicine line.');

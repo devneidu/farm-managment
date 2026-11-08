@@ -28,15 +28,17 @@ class HealthRecordResource extends JsonResource
             'recorded_at' => $this->recorded_at->toISOString(), 'notes' => $this->notes,
             'reverses_record_id' => $this->reverses_record_id, 'corrects_record_id' => $this->corrects_record_id,
             'reversed_by_record_id' => $this->reversal?->id,
-            /** @var array<int, array{id: string, line_no: int, inventory_item_id: string, item_name: string, storage_location_id: string, inventory_lot_id: string|null, lot: array{code: string, expires_on: string|null}|null, quantity_used: array{quantity: string, unit: string, normalized: array{quantity: string, unit: string}}, measurement: object, dose_per_animal: object|null, dosage_instructions: string|null, withdrawal: array{days: int|null, source: string|null, started_at: string, ends_at: string|null, is_active: bool}, inventory_movement_id: string|null}> */
+            /** @var array<int, array{id: string, line_no: int, is_typed: bool, inventory_item_id: string|null, item_name: string, storage_location_id: string|null, inventory_lot_id: string|null, lot: array{code: string, expires_on: string|null}|null, quantity_used: array{quantity: string, unit: string, normalized: array{quantity: string, unit: string}}|null, measurement: object|null, dose_per_animal: object|null, dosage_instructions: string|null, withdrawal: array{days: int|null, source: string|null, started_at: string, ends_at: string|null, is_active: bool}, inventory_movement_id: string|null}> */
             'medicines' => $this->medicines->map(function ($line) use ($ledger, $reversed) {
-                $canonical = Decimal::trim((string) $line->quantity_used);
+                $typed = $line->inventory_item_id === null; // a medicine written by name: no item, store or stock quantity
+                $canonical = $typed ? null : Decimal::trim((string) $line->quantity_used);
 
                 return [
                     'id' => $line->id, 'line_no' => $line->line_no, 'inventory_item_id' => $line->inventory_item_id, 'item_name' => $line->item_name,
                     'storage_location_id' => $line->storage_location_id, 'inventory_lot_id' => $line->inventory_lot_id,
                     'lot' => $line->lot ? ['code' => $line->lot->code, 'expires_on' => $line->lot->expires_on?->toDateString()] : null,
-                    'quantity_used' => $ledger->display($line->item, $canonical) + ['normalized' => $ledger->canonical($line->item, $canonical)],
+                    'is_typed' => $typed,
+                    'quantity_used' => $typed ? null : $ledger->display($line->item, $canonical) + ['normalized' => $ledger->canonical($line->item, $canonical)],
                     'measurement' => $line->measurement, 'dose_per_animal' => $line->dose, 'dosage_instructions' => $line->dosage_instructions,
                     'withdrawal' => [
                         'days' => $line->withdrawal_days, 'source' => $line->withdrawal_source, 'started_at' => $this->recorded_at->toISOString(),

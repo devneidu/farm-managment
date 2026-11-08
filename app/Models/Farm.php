@@ -16,6 +16,11 @@ class Farm extends Model
 
     protected $fillable = ['name'];
 
+    protected function casts(): array
+    {
+        return ['settings' => 'array'];
+    }
+
     protected static function booted(): void
     {
         // Every farm has a deterministic subscription state from the moment it exists (same transaction as creation).

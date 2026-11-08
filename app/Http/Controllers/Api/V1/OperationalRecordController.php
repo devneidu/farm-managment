@@ -109,17 +109,17 @@ class OperationalRecordController extends Controller
     /** List implemented record types and their executable field schemas. Requires record.view.
      * @response array{data: array<int,array<string,mixed>>,meta:object,message:null}
      */
-    public function types(RecordTypeRegistry $types): JsonResponse
+    public function types(RecordTypeRegistry $types, FarmContext $ctx): JsonResponse
     {
-        return ApiResponse::success(array_map(fn ($type) => $types->schema($type), array_keys($types->definitions())));
+        return ApiResponse::success(array_map(fn ($type) => $types->schema($type, $ctx->farm), array_keys($types->definitions())));
     }
 
     /** Get the type-specific detail contract. Requires record.view. Unknown types return 404.
      * @response array{data:array<string,mixed>,meta:object,message:null}
      */
-    public function schema(RecordTypeRegistry $types, string $type): JsonResponse
+    public function schema(RecordTypeRegistry $types, FarmContext $ctx, string $type): JsonResponse
     {
-        return ApiResponse::success($types->schema($type));
+        return ApiResponse::success($types->schema($type, $ctx->farm));
     }
 
     /** Upload private evidence (multipart file). Requires record.create, active cycle.
@@ -154,9 +154,9 @@ class OperationalRecordController extends Controller
      *
      * @response array{data: array<int, array{code: string, label: string, display_mode: 'normal'|'in_only'|'out_only'|'in_out', cycle_kind: string|null, capability: string|null, inventory_kind: string|null}>, meta: object, message: null}
      */
-    public function operations(OperationCatalogue $catalogue): JsonResponse
+    public function operations(OperationCatalogue $catalogue, FarmContext $ctx): JsonResponse
     {
-        return ApiResponse::success($catalogue->all());
+        return ApiResponse::success($catalogue->all($ctx->farm));
     }
 
     /**
@@ -170,8 +170,8 @@ class OperationalRecordController extends Controller
      *
      * @response array{data: array<string, mixed>, meta: object, message: null}
      */
-    public function operation(OperationCatalogue $catalogue, string $code): JsonResponse
+    public function operation(OperationCatalogue $catalogue, FarmContext $ctx, string $code): JsonResponse
     {
-        return ApiResponse::success($catalogue->find($code) ?? abort(404));
+        return ApiResponse::success($catalogue->find($code, $ctx->farm) ?? abort(404));
     }
 }

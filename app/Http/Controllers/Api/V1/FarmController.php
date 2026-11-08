@@ -29,7 +29,7 @@ class FarmController extends Controller
     /**
      * Update farm settings
      *
-     * Only the farm name is editable. Country, currency, timezone and language keep the platform
+     * The farm name and `settings.use_stock_for_usage` (items used must come from the store) are editable. Country, currency, timezone and language keep the platform
      * defaults; any other field is ignored.
      *
      * Errors: `403 forbidden` (missing `farm.update`), `422`.

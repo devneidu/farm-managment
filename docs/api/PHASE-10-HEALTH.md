@@ -209,3 +209,20 @@ Stock movements created by health cannot be reversed through `POST /inventory/mo
 ## Not in this phase
 
 Crop health/treatment and agrochemical workflows (Phase 13), individual-animal identity, withdrawal-driven blocking of sales/harvest (reporting of active windows only), tasks created from `follow_up_on`, vet contacts/costs/purchasing, health reports, notifications, and a species health capability flag (health follows cycle kind).
+
+## "Use stock" setting: typed medicines
+
+With the farm setting `settings.use_stock_for_usage` **OFF** (default), a medicine line in `medicines[]` is EITHER a stock line (unchanged) OR a typed medicine:
+
+```json
+{ "medicine_name": "Local herbal mix", "dose_per_animal": [{"quantity": "0.5", "unit": "ml"}], "dosage_instructions": "In drinking water", "withdrawal_days": 7 }
+```
+
+* `medicine_name` required, max 150. `dose_per_animal` (components), `dosage_instructions` (max 500) and `withdrawal_days` (0-3650) optional. A typed line takes **no** stock: `inventory_item_id`, `storage_location_id`, `lot_id` and `components` are refused (`422` on that line), and no inventory movement is created.
+* The response line has `is_typed: true`, `item_name` (the typed name), `inventory_item_id`, `storage_location_id`, `quantity_used` and `inventory_movement_id` all `null`, and `dose_per_animal = {components, normalized: null}` (what was typed; not converted).
+* **Withdrawal works the same:** `withdrawal_ends_at = recorded_at + withdrawal_days` (only the explicit days apply; a typed line has no item default). Typed lines appear in `GET /health/withdrawals` (`inventory_item_id: null`), in the record's `withdrawal` block and in the dashboard "medicine withdrawal" insight.
+* Stock and typed lines may be mixed in one record. Typed lines are not checked for duplicates.
+* **ON:** a typed line is refused with `422` on `medicines.N.medicine_name`: "Your farm takes medicine from the store. Pick the medicine you used." Stock lines behave exactly as before.
+* **Reversal** returns the stock of stock lines only; typed lines reverse nothing in stock (their withdrawal stops counting because the record is reversed).
+* `GET /master/health-record-types` reports per type, for the current farm: `medicine_from_store_required`, `medicine_line_modes` (`["store","typed"]` when OFF, `["store"]` when ON, `[]` for types without medicines) and `typed_medicine_fields`.
+* Migration `2026_11_08_100000`: `health_record_medicines.inventory_item_id`, `storage_location_id`, `quantity_used` and `measurement` became nullable (typed lines). Existing rows are untouched; the ledger reconciler's health check skips typed lines.

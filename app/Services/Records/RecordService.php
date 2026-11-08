@@ -9,6 +9,7 @@ use App\Events\Production\RecordCreated;
 use App\Http\Requests\Records\ReverseRecordRequest;
 use App\Http\Requests\Records\StoreRecordRequest;
 use App\Models\Farm;
+use App\Models\InventoryItem;
 use App\Models\OperationalRecord;
 use App\Models\PopulationMovement;
 use App\Models\ProductionCycle;
@@ -23,6 +24,7 @@ use App\Support\Measurement\ConversionContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class RecordService
@@ -59,7 +61,11 @@ class RecordService
             if ($reason = $this->types->inapplicableReason($cycle, $data['type'])) {
                 $this->invalid('type', $reason);
             }
-            $details = Validator::make(['details' => $data['details']], $this->types->detailRules($data['type']))->validate()['details'];
+            if ($this->types->requiresInventory($ctx->farm, $data['type']) && ! filled(data_get($data['details'], 'inventory.item_id'))) {
+                // The farm takes everything used from the store: a typed name is not enough.
+                $this->invalid('details.inventory', self::PICK_ITEM);
+            }
+            $details = Validator::make(['details' => $this->withItemUnit($ctx, $data['details'])], $this->types->detailRules($data['type']))->validate()['details'];
             $when = $this->when($ctx, $cycle, $data['recorded_at']);
             if (isset($data['corrects_record_id'])) {
                 $original = OperationalRecord::where('farm_id', $ctx->farm->id)->where('production_cycle_id', $cycle->id)->findOrFail($data['corrects_record_id']);
@@ -68,6 +74,13 @@ class RecordService
                 }
             }
             $details = $this->cropEvent($cycle, $data['type'], $details);
+            if (! isset($details['inventory']) && filled($details['item_name'] ?? null)) {
+                // Typed name, no stock link: the record says what was used; the existing name fields follow it. No stock effect.
+                $nameField = $data['type'] === 'feed_use' ? 'feed_name' : (isset($definition['fields']['input_name']) ? 'input_name' : null);
+                if ($nameField !== null) {
+                    $details[$nameField] ??= $details['item_name'];
+                }
+            }
             $current = $this->ledger->reconcile($cycle);
             $delta = 0;
             $measurement = null;
@@ -97,6 +110,12 @@ class RecordService
                     // Linked stock: the quantity is measured against the inventory item, so its packages (and only its packages) apply.
                     $ctx->authorize(Permission::InventoryUse);
                     $stockItem = $stock !== null ? $this->inventory->cropStockItemForRecord($ctx, $details['inventory'], $stock) : $this->inventory->feedItemForRecord($ctx, $details['inventory']);
+                    if (in_array($data['type'], RecordTypeRegistry::STOCK_USAGE_TYPES, true)) {
+                        $details['item_name'] = $stockItem->name; // the name of what was used, kept on the record
+                        if ($data['type'] === 'feed_use') {
+                            $details['feed_name'] ??= $stockItem->name;
+                        }
+                    }
                     if ($context !== null) {
                         $this->invalid('details.context', 'Stock linked to inventory is measured against the inventory item; omit context.');
                     }
@@ -159,6 +178,29 @@ class RecordService
 
             return $record->load(['reversal', 'attachments', 'inventoryMovement']);
         }, 3);
+    }
+
+    /** 422 text when a farm that takes everything used from the store gets a record without an item. */
+    public const PICK_ITEM = 'Your farm takes items from the store. Pick the item you used.';
+
+    /**
+     * The quantity's unit comes from the item: a component sent without a unit takes the linked item's stock unit (only when the item exists on
+     * this farm; anything else falls through to the ordinary validation and item errors).
+     */
+    private function withItemUnit(FarmContext $ctx, mixed $details): mixed
+    {
+        $itemId = data_get($details, 'inventory.item_id');
+        if (! is_array($details) || ! is_string($itemId) || ! Str::isUuid($itemId) || ! is_array($details['components'] ?? null)) {
+            return $details;
+        }
+        $unit = InventoryItem::ofFarm($ctx->farm)->with('stockUnit')->find($itemId)?->stockUnit?->code;
+        foreach ($unit === null ? [] : $details['components'] as $i => $component) {
+            if (is_array($component) && ! filled($component['unit'] ?? null)) {
+                $details['components'][$i]['unit'] = $unit;
+            }
+        }
+
+        return $details;
     }
 
     public function reverse(FarmContext $ctx, string $id, array $input): OperationalRecord

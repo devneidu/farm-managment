@@ -3,6 +3,8 @@
 namespace App\Services\Health;
 
 use App\Enums\HealthProblemType;
+use App\Models\Farm;
+use App\Services\Farm\FarmSettings;
 
 /**
  * Executable, bounded health record types. Types drive the labels and required fields; there is no client-defined type
@@ -69,9 +71,11 @@ class HealthTypeRegistry
         return ['details.'.$field.'.required_if' => 'Describe the problem in "'.self::TEXT_FIELD_LABEL.'" when the problem type is Other.'];
     }
 
-    public function schema(string $type): array
+    /** @param Farm|null $farm the current farm: whether a medicine may be typed follows its use_stock_for_usage setting */
+    public function schema(string $type, ?Farm $farm = null): array
     {
         $d = $this->definition($type);
+        $storeOnly = $farm !== null && FarmSettings::usesStockForUsage($farm);
 
         return [
             'type' => $type, 'label' => $d['label'], 'cycle_kinds' => $d['kinds'],
@@ -81,6 +85,11 @@ class HealthTypeRegistry
             'question' => $d['question'], 'default_problem_type' => $d['default_problem_type'],
             'text_field' => ['key' => $d['text_field'], 'label' => self::TEXT_FIELD_LABEL, 'required_when_problem_type' => HealthProblemType::Other->value],
             'medicines' => $d['medicines'],
+            /** true (farm setting use_stock_for_usage ON): every medicine line must be a store item; a typed `medicine_name` line is refused with 422. */
+            'medicine_from_store_required' => $d['medicines'] !== 'forbidden' && $storeOnly,
+            /** The line shapes a medicine may take on this farm: `store` (inventory_item_id + components) and, when the setting is OFF, `typed` (medicine_name, no stock). */
+            'medicine_line_modes' => $d['medicines'] === 'forbidden' ? [] : ($storeOnly ? ['store'] : ['store', 'typed']),
+            'typed_medicine_fields' => $d['medicines'] === 'forbidden' || $storeOnly ? null : ['medicine_name' => 'required, max 150', 'dose_per_animal' => 'optional, components [{quantity, unit}]', 'dosage_instructions' => 'optional, max 500', 'withdrawal_days' => 'optional, 0-3650'],
             'medicine_category' => $d['medicines'] === 'forbidden' ? null : 'medicine',
             'common_fields' => ['animals_affected' => 'livestock only, whole count <= current population', 'follow_up_on' => 'Y-m-d, not before the event day', 'mortality_record_id' => 'livestock only, an existing Phase 8 mortality record of the same cycle', 'notes' => 'string'],
             'population_effect' => 'none', 'stock_effect' => $d['medicines'] === 'forbidden' ? 'none' : 'one stock_out per medicine line',

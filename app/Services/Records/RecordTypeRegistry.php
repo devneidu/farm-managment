@@ -5,8 +5,10 @@ namespace App\Services\Records;
 use App\Enums\ConversionContextType;
 use App\Enums\CycleStatus;
 use App\Enums\Permission;
+use App\Models\Farm;
 use App\Models\ProductionCycle;
 use App\Rules\PositiveWholeCount;
+use App\Services\Farm\FarmSettings;
 use Illuminate\Validation\Rule;
 
 /** Executable, bounded type schemas. There is no client-defined record type or arbitrary detail bag. */
@@ -18,10 +20,16 @@ class RecordTypeRegistry
     /** Egg / milk production lands in the farm's automatic output stock; the farmer may only choose WHICH store (optional). */
     private const OUTPUT_INVENTORY = ['sometimes', 'array:storage_location_id'];
 
+    /** Types whose "what was used" follows the farm's use_stock_for_usage setting: ON = an inventory item is required, OFF = a typed item_name may stand in. */
+    public const STOCK_USAGE_TYPES = ['feed_use', 'fertilizer_application', 'pesticide_application', 'planting'];
+
+    /** What was used, written by the farmer when no inventory item is linked (never creates stock effects). With a linked item the item's name replaces it. */
+    private const ITEM_NAME = 'sometimes|nullable|string|max:150';
+
     public function definitions(): array
     {
         return [
-            'feed_use' => ['kind' => 'livestock', 'capability' => 'supports_feed_records', 'dimension' => 'weight', 'unit' => 'kg', 'fields' => ['feed_name' => 'required|string|max:200', 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
+            'feed_use' => ['kind' => 'livestock', 'capability' => 'supports_feed_records', 'dimension' => 'weight', 'unit' => 'kg', 'fields' => ['feed_name' => 'required_without_all:details.inventory,details.item_name|string|max:200', 'item_name' => self::ITEM_NAME, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
             'egg_collection' => ['kind' => 'livestock', 'capability' => 'produces_eggs', 'dimension' => 'count', 'unit' => 'piece', 'output' => 'eggs', 'fields' => ['inventory' => self::OUTPUT_INVENTORY]],
             'milk' => ['kind' => 'livestock', 'capability' => 'produces_milk', 'dimension' => 'volume', 'unit' => 'l', 'output' => 'milk', 'fields' => ['inventory' => self::OUTPUT_INVENTORY]],
             'mortality' => ['kind' => 'livestock', 'capability' => 'supports_mortality', 'fields' => ['quantity' => ['required', new PositiveWholeCount], 'cause' => 'required|string|max:500']],
@@ -30,11 +38,11 @@ class RecordTypeRegistry
             'water' => ['kind' => 'livestock', 'dimension' => 'volume', 'unit' => 'l', 'fields' => []],
             'irrigation' => ['kind' => 'crop', 'dimension' => 'volume', 'unit' => 'l', 'optional_measurement' => true, 'fields' => ['method' => 'required|string|max:200', 'duration_minutes' => 'sometimes|integer|min:1|max:10080']],
             'weeding' => ['kind' => 'crop', 'fields' => ['method' => 'required|string|max:200']],
-            'fertilizer_application' => ['kind' => 'crop', 'dimension' => 'weight', 'unit' => 'kg', 'area_fields' => ['treated_area'], 'stock' => ['category' => 'fertilizer_agrochemical', 'dimensions' => ['weight', 'volume'], 'direction' => 'out'], 'fields' => ['input_name' => 'required_without:details.inventory|string|max:200', 'method' => 'required|string|max:200', ...self::CROP_INPUT_FIELDS, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
-            'pesticide_application' => ['kind' => 'crop', 'dimension' => 'weight', 'unit' => 'kg', 'area_fields' => ['treated_area'], 'stock' => ['category' => 'fertilizer_agrochemical', 'dimensions' => ['weight', 'volume'], 'direction' => 'out'], 'fields' => ['input_name' => 'required_without:details.inventory|string|max:200', 'product_type' => 'required|in:insecticide,herbicide,fungicide,other', 'method' => 'required|string|max:200', 'target' => 'sometimes|nullable|string|max:300', 'pre_harvest_interval_days' => 'sometimes|nullable|integer|min:0|max:365', ...self::CROP_INPUT_FIELDS, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
+            'fertilizer_application' => ['kind' => 'crop', 'dimension' => 'weight', 'unit' => 'kg', 'area_fields' => ['treated_area'], 'stock' => ['category' => 'fertilizer_agrochemical', 'dimensions' => ['weight', 'volume'], 'direction' => 'out'], 'fields' => ['input_name' => 'required_without_all:details.inventory,details.item_name|string|max:200', 'item_name' => self::ITEM_NAME, 'method' => 'required|string|max:200', ...self::CROP_INPUT_FIELDS, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
+            'pesticide_application' => ['kind' => 'crop', 'dimension' => 'weight', 'unit' => 'kg', 'area_fields' => ['treated_area'], 'stock' => ['category' => 'fertilizer_agrochemical', 'dimensions' => ['weight', 'volume'], 'direction' => 'out'], 'fields' => ['input_name' => 'required_without_all:details.inventory,details.item_name|string|max:200', 'item_name' => self::ITEM_NAME, 'product_type' => 'required|in:insecticide,herbicide,fungicide,other', 'method' => 'required|string|max:200', 'target' => 'sometimes|nullable|string|max:300', 'pre_harvest_interval_days' => 'sometimes|nullable|integer|min:0|max:365', ...self::CROP_INPUT_FIELDS, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
             'land_preparation' => ['kind' => 'crop', 'area_fields' => ['treated_area'], 'fields' => ['method' => 'required|string|max:200', 'treated_area' => ['sometimes', 'nullable', 'array:quantity,unit']]],
             'planting' => ['kind' => 'crop', 'dimension' => 'weight', 'unit' => 'kg', 'optional_measurement' => true, 'stock' => ['category' => 'seed_planting_material', 'dimensions' => ['weight', 'count'], 'direction' => 'out'],
-                'fields' => ['units_planted' => ['required', new PositiveWholeCount], 'method' => 'sometimes|nullable|string|max:200', 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
+                'fields' => ['units_planted' => ['required', new PositiveWholeCount], 'method' => 'sometimes|nullable|string|max:200', 'item_name' => self::ITEM_NAME, 'inventory' => ['sometimes', 'array:item_id,storage_location_id,lot_id']]],
             'establishment_check' => ['kind' => 'crop', 'fields' => ['established_units' => ['required', 'regex:/^(0|[1-9][0-9]{0,11})$/']]],
             'growth_stage' => ['kind' => 'crop', 'fields' => ['stage' => 'required|in:germination,seedling,vegetative,flowering,fruiting,maturity,dormant', 'observation' => 'sometimes|nullable|string|max:2000']],
             'crop_loss' => ['kind' => 'crop', 'area_fields' => ['affected_area'], 'fields' => ['units_lost' => ['required', new PositiveWholeCount], 'cause' => 'required|string|max:500', 'affected_area' => ['sometimes', 'nullable', 'array:quantity,unit']]],
@@ -110,9 +118,17 @@ class RecordTypeRegistry
         return $rules;
     }
 
-    public function schema(string $type): array
+    /** Does this farm require the item used to be picked from the store for this record type? */
+    public function requiresInventory(?Farm $farm, string $type): bool
+    {
+        return $farm !== null && in_array($type, self::STOCK_USAGE_TYPES, true) && FarmSettings::usesStockForUsage($farm);
+    }
+
+    /** @param Farm|null $farm the current farm: `inventory_required` follows its use_stock_for_usage setting (false without one) */
+    public function schema(string $type, ?Farm $farm = null): array
     {
         $d = $this->definition($type);
+        $required = $this->requiresInventory($farm, $type);
         $fields = [];
         foreach ($d['fields'] as $key => $rules) {
             $fields[$key] = is_string($rules) ? explode('|', $rules) : array_map(fn ($r) => is_string($r) ? $r : 'positive_whole_count:1..999999999999', $rules);
@@ -133,12 +149,12 @@ class RecordTypeRegistry
             'inventory_effect_enabled' => $type === 'feed_use' || isset($d['stock']) || isset($d['output']),
             'inventory_category' => $type === 'feed_use' ? 'feed' : (isset($d['output']) ? 'produce' : ($d['stock']['category'] ?? null)),
             'inventory_direction' => $type === 'feed_use' ? 'out' : (isset($d['output']) ? 'in' : ($d['stock']['direction'] ?? null)),
-            /** Always false: stock is never mandatory for a record. Whether a type has a stock effect at all, and how, is `inventory`. */
-            'inventory_required' => ($d['stock']['required'] ?? false) === true,
+            /** true when the current farm's use_stock_for_usage setting is ON and this is a feed / fertilizer / pesticide / planting record: details.inventory.item_id is then required. Otherwise stock stays optional. */
+            'inventory_required' => $required || ($d['stock']['required'] ?? false) === true,
             'inventory_dimensions' => $type === 'feed_use' ? ['weight'] : (isset($d['output']) ? [$d['dimension']] : ($d['stock']['dimensions'] ?? null)),
             /** Eggs and milk: the stock-in is automatic (the farm's own Eggs / Milk output item); details.inventory only picks the store. */
             'inventory_automatic' => isset($d['output']), 'inventory_output' => $d['output'] ?? null,
-            'inventory' => $this->inventoryMetadata($type, $d)];
+            'inventory' => $this->inventoryMetadata($type, $d, $required)];
     }
 
     /**
@@ -172,7 +188,7 @@ class RecordTypeRegistry
      *
      * @return array<string, mixed>|null
      */
-    private function inventoryMetadata(string $type, array $d): ?array
+    private function inventoryMetadata(string $type, array $d, bool $required = false): ?array
     {
         if (isset($d['output'])) {
             return ['mode' => 'automatic_output', 'direction' => 'in', 'output' => $d['output'], 'item_category' => 'produce', 'dimensions' => [$d['dimension']],
@@ -184,7 +200,7 @@ class RecordTypeRegistry
         $in = ($d['stock']['direction'] ?? 'out') === 'in';
 
         return ['mode' => 'optional_link', 'direction' => $in ? 'in' : 'out', 'output' => null, 'item_category' => $type === 'feed_use' ? 'feed' : $d['stock']['category'],
-            'dimensions' => $type === 'feed_use' ? ['weight'] : $d['stock']['dimensions'], 'optional' => true, 'creates_item' => false, 'object' => 'details.inventory',
+            'dimensions' => $type === 'feed_use' ? ['weight'] : $d['stock']['dimensions'], 'optional' => ! $required, 'creates_item' => false, 'object' => 'details.inventory',
             'fields' => ['item_id' => 'required', 'storage_location_id' => 'optional', 'lot_id' => 'optional'] + ($in ? ['lot' => 'optional'] : [])];
     }
 

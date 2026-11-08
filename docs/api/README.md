@@ -206,7 +206,7 @@ last owner (`409 last_owner`). Insufficient hierarchy is `403 insufficient_role`
 | Method & path | Permission | Notes |
 |---|---|---|
 | `GET /farm` | farm.view | farm + my role/permissions |
-| `PATCH /farm` `{name}` | farm.update | only the name is editable |
+| `PATCH /farm` `{name?, settings?}` | farm.update | name and `settings.use_stock_for_usage` are editable |
 | `GET /roles` | team.view | role presets |
 | `GET /farm/members`, `GET /farm/members/{membership}` | team.view | `{membership}` = membership id (not user id) |
 | `PATCH /farm/members/{membership}` `{role}` | team.update_role | |
@@ -909,3 +909,7 @@ See [the complete Phase 27 contract](PHASE-27-MARKETPLACE-SAFETY.md). Existing s
 ## Livestock batch creation update (2026-10-09)
 
 New livestock/fish creation requires `production_purpose`; optional growth stage, NGN acquisition unit price and supplier contact are supported. Use `GET /master/species/{species}/batch-reference` for all dependent selectors and the backend breed/type label. Existing null metadata stays readable. See [full contract and approved catalogue](LIVESTOCK-BATCH-CREATION.md) for validation, responses, immutable metadata, no automatic financial effects and deployment.
+
+### Farm settings (`PATCH /farm`)
+
+`PATCH /farm` now accepts `settings` as well as `name` (send either or both; at least one). `settings` is a small per-farm preference object stored as JSON on the farm (`farms.settings`; missing keys read as their default). First key: `use_stock_for_usage` (boolean, default `false`): ON = feed / fertilizer / pesticide / planting records and health medicine lines must come from the store; OFF = a typed name is accepted and no stock moves. Permission `farm.update` (Owner, Manager); each change is audited (`farm.settings_updated`, field `settings.use_stock_for_usage` with from/to) and dispatches `FarmSettingsUpdated`. `GET /farm`, `PATCH /farm` and `GET /auth/me` return `settings`; `GET /farm` also returns `membership.can_add_stock` (and `/auth/me` `farm.can_add_stock`): true when the caller holds `inventory.manage` (Owner, Manager). Details: `PHASE-08-RECORDS.md`, `PHASE-10-HEALTH.md`, `FRONTEND-WORKFLOWS.md` ("Use stock setting").

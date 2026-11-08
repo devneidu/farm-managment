@@ -20,9 +20,13 @@ class UpdateFarmRequest extends FormRequest
 
     public function rules(): array
     {
-        // Only the farm name is editable; country/currency/timezone/language keep platform defaults.
+        // The farm name and the farm settings are editable; country/currency/timezone/language keep platform defaults.
         return [
-            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'name' => ['required_without:settings', 'string', 'min:2', 'max:120'],
+            /** Per-farm preferences; send only the keys you change. */
+            'settings' => ['sometimes', 'array:use_stock_for_usage', 'min:1'],
+            /** true: every record of feed, fertilizer, pesticide or planting use, and every medicine line, must be picked from the store and takes it out of stock. false (default): a typed name is accepted and no stock moves. */
+            'settings.use_stock_for_usage' => ['sometimes', 'boolean:strict'],
         ];
     }
 }

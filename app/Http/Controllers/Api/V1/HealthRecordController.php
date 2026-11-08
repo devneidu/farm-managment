@@ -38,9 +38,9 @@ class HealthRecordController extends Controller
      *
      * @response array{data: array<int,array<string,mixed>>, meta: object, message: null}
      */
-    public function types(HealthTypeRegistry $types): JsonResponse
+    public function types(HealthTypeRegistry $types, FarmContext $ctx): JsonResponse
     {
-        return ApiResponse::success(array_map(fn ($type) => $types->schema($type), array_keys($types->definitions())));
+        return ApiResponse::success(array_map(fn ($type) => $types->schema($type, $ctx->farm), array_keys($types->definitions())));
     }
 
     /**

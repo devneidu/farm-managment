@@ -2,7 +2,10 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\FarmRole;
+use App\Enums\Permission;
 use App\Models\User;
+use App\Services\Farm\FarmSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -24,7 +27,7 @@ class AuthStateResource extends JsonResource
      *     has_active_farm: bool,
      *     next_action: 'verify_email'|'marketplace'|'complete_farm_setup'|'no_active_farm'|'none',
      *     user: array{id: string, email: string, name: string|null, email_verified_at: string|null, has_password: bool, platform_role: 'admin'|'support'|null, providers: string[], locale: string|null},
-     *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string}|null,
+     *     farm: array{id: string, name: string, country_code: string, currency: string, timezone: string, locale: string, role: string, settings: array{use_stock_for_usage: bool}, can_add_stock: bool}|null,
      *     farms: list<array{id: string, name: string, role: string}>,
      *     marketplace: array{shop_count: int}
      * }
@@ -67,6 +70,10 @@ class AuthStateResource extends JsonResource
                 'timezone' => $farm->timezone,
                 'locale' => $farm->locale,
                 'role' => $farm->pivot->role,
+                /** Farm preferences; `use_stock_for_usage` true = items used must be picked from the store. */
+                'settings' => FarmSettings::all($farm),
+                /** Whether the caller may add stock (inventory.manage); false = show "Ask your manager to add it to the store". */
+                'can_add_stock' => in_array(Permission::InventoryManage, FarmRole::from($farm->pivot->role)->permissions(), true),
             ] : null,
             /**
              * Every farm the user ACTIVELY belongs to (oldest membership first - membership ids are time-ordered UUIDv7, strictly increasing - the same order the default farm is chosen by). Send a farm's `id` as the

@@ -201,3 +201,19 @@ A read-only catalogue so the frontend renders operation forms without hardcoding
 `display_mode` is derived from the actions an operation really has. Events another workflow owns are listed under `workflow_redirects` (never as forms): a sale -> `POST /sales`, incubation -> `POST /breeding-projects` (eggs only). `production_cycle` per action is `required` (records), `optional` (egg / milk / produce OUT: context only, pooled output is never attributed to a batch) or `not_applicable` (manual IN). Every action lists `submission` (method, `url`, `body_defaults`), `fields.required|optional`, `permissions_required`, `inventory_effect`, `commercial_effects` and `reversal`.
 
 **Records-only sold.** Reason `sold` ("Sold (not invoiced)") reduces stock and writes an auditable manual movement; it creates **no** sale, invoice, customer transaction or payment, carries no `sale_id`, and is reversible through `POST /inventory/movements/{id}/reverse`. The system-only `sale` reason (Sales) is unchanged. Stock never goes negative (409 `insufficient_stock`), the farm-wide `idempotency_key` makes a retry the same event, and a changed payload under the same key is 409 `idempotency_conflict`. `POST /inventory/stock-out` additionally accepts an optional `production_cycle_id` (farm-scoped, 404 otherwise) as context.
+
+## "Use stock" setting for feed, fertilizer, pesticide and planting
+
+The farm setting `settings.use_stock_for_usage` (`PATCH /farm`, `farm.update`; read from `GET /farm` and `GET /auth/me`) decides how `feed_use`, `fertilizer_application`, `pesticide_application` and `planting` say what was used. No other record type (including `crop_harvest`, `egg_collection`, `milk`) is affected, and records already saved are never changed by switching it.
+
+| Setting | `details.inventory.item_id` | `details.item_name` | Stock |
+|---|---|---|---|
+| **ON** | **Required.** Missing -> `422` on `details.inventory`: "Your farm takes items from the store. Pick the item you used." (a typed `item_name` does not satisfy it) | Ignored: replaced by the picked item's name | One stock-out, exactly as before |
+| **OFF** (default) | Optional (unchanged) | Optional text, max 150 ("New Feed"). Used when no item is linked; the record says what was used | None. No inventory movement |
+
+* **Unit from the item.** When an item is linked, a `components` entry may omit `unit`; it then takes the item's stock unit, so the form only asks for the quantity. A unit that is sent is still honoured (packages, other weight units).
+* **Store.** `details.inventory.storage_location_id` stays optional (the only store holding the item; several -> `422`).
+* **Names.** `feed_name` (feed use) and `input_name` (fertilizer, pesticide) are no longer required when `inventory` or `item_name` is sent; they default to the item's name / `item_name`. Old clients that send them keep working.
+* **Item snapshot.** A linked usage record now also stores `details.item_name` (the item's name at that moment).
+* **Schemas follow the current farm.** `GET /record-types/{type}/schema`, `GET /master/record-types` and `GET /master/record-operations[/{code}]` report `inventory_required` (true only for the four types above and only when the setting is ON); `inventory.optional` flips with it, and the operation's `fields.required` then lists `details.inventory`. `item_name` is listed in `fields` for all four types.
+* **Reversal** is unchanged: a stock-linked record gives its stock back; a typed record has no stock to return.

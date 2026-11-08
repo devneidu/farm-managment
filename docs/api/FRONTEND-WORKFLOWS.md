@@ -24,6 +24,7 @@ All paths are relative to `/api/v1`. Never send `farm_id`. Never send a permissi
 17. Money: [purchases](#42-purchases) · [expenses/income](#43-expenses-and-income) · [sales](#44-sales) · [invoices](#45-invoices) · [payments](#46-payments)
 18. [Reports/exports](#47-reportsexports) · [Notifications](#48-notifications) · [Dashboard](#49-dashboard) · [Settings](#50-settings) · [Team/roles](#51-team-roles-permissions) · [Subscription](#52-subscription-and-entitlements) · [Platform Admin](#53-platform-admin-separation)
 19. [Stores and adding stock](#stores-and-adding-stock) (main store, "What are you adding?")
+20. [Use stock setting](#use-stock-setting) (take everything used from my store: records and medicines)
 
 ---
 
@@ -142,7 +143,7 @@ Replace local state with the response resource and refetch per workflow ("Refetc
 4. **Effect:** `available` = usable now (everything while nothing is selected). **Hint only:** the backend does not reject a cycle for an unselected operation (verified in `CycleService`); use `selected`/`available` to order and de-emphasise options, never to block.
 5. **Dependent:** species picker uses `GET /master/species?operation=<code>&available=1`; crops `GET /master/crops?available=1`.
 6. **Conditional:** show edit only when `can('farm.update')`.
-7. **Final mutations:** `PATCH /farm {name}` (only name editable); `PUT /farm/operations {operation_ids: [uuid…]}` (empty array clears).
+7. **Final mutations:** `PATCH /farm {name?, settings?}` (name and `settings.use_stock_for_usage` editable); `PUT /farm/operations {operation_ids: [uuid…]}` (empty array clears).
 8. **Payload:** Postman `03 — Farms, Team & Access`, `05 — Master Data → Set the farm's operations`.
 9. **Backend does:** nothing else; never deletes data.
 10. **DO NOT:** send country/currency/timezone/language (ignored/rejected); make operations part of onboarding.
@@ -1004,3 +1005,53 @@ Stock going out of an item that is in several stores answers `422` with the mess
 
 **E. Make a store the main store.**
 `POST /storage-locations/{id}/make-main` (`location.manage`, no body, idempotent) -> refetch `GET /storage-locations` (`is_main` moves). The main store cannot be deactivated: `PATCH {is_active:false}` answers `409 main_store_required` - tell the user to make another store the main store first. Only an active store can be made main (`409 location_inactive`).
+
+
+## Use stock setting
+
+One switch on the farm decides whether the items a farmer *uses* (feed, fertilizer, pesticide, planting material, medicines) must come from the store.
+
+**The switch** (Farm settings screen, `farm.update` = Owner, Manager only; hide it for other roles):
+
+> **Take everything used from my store** — *When this is on, you pick the item from your store every time you record feed, fertilizer, pesticide, planting or medicine, and it is taken out of stock automatically. When it is off, you can just type what you used.*
+
+* Read: `GET /farm` → `data.settings.use_stock_for_usage` (also `GET /auth/me` → `data.farm.settings.use_stock_for_usage`). Default `false`.
+* Write: `PATCH /farm {"settings": {"use_stock_for_usage": true}}` (a JSON boolean, not `"true"`/`1`). Switching never changes saved records.
+* Re-read the record-type schemas after switching: they depend on it (below).
+
+**Which forms it affects:** Feed use, Fertilizer application, Pesticide application, Planting (`POST /records`) and the medicine lines of Vaccination, Medication, Deworming, Treatment (`POST /health-records`). Eggs, milk and harvest are not affected.
+
+### Setting ON — pick from the store
+
+1. The item field is **required** (`GET /record-types/{type}/schema` → `inventory_required: true`; or `fields.required` contains `details.inventory` in `GET /master/record-operations/{code}`). Show an item picker (`GET /inventory/items?category=…`, with the category the type needs: feed, fertilizer/agrochemical, seed/planting material, medicine).
+2. After an item is picked, ask for the **quantity only**; show the item's unit (`stock_unit`) as a fixed label. Send `components: [{"quantity": "4"}]`: the `unit` may be omitted and the item's unit is used (send it if the farmer chose another unit or a package).
+3. Do not ask for a store: it is optional (the only store holding the item). Only on `422 "Choose which store this comes from."` show a store picker.
+4. Body (feed): `{"type":"feed_use","details":{"inventory":{"item_id":"…"},"components":[{"quantity":"4"}]}, …}`. The saved record has `details.item_name` (the item's name).
+5. Medicine (health): `medicines: [{"inventory_item_id":"…","components":[{"quantity":"10","unit":"ml"}]}]`.
+
+**"+ Add to store" popup** (inside the item picker, when the farmer's item is not in the store yet): call `POST /inventory/stock-in` with `new_item` (`{name, category, unit}`), `reason`, `components`, `recorded_at`, `idempotency_key` — no store needed. The response `data.inventory_item_id` is the id to **auto-select** in the picker (`data.item_reused: true` means an item with that name already existed and was used). Then continue the original form.
+
+**If `can_add_stock` is false** (`GET /farm` → `data.membership.can_add_stock`, `GET /auth/me` → `data.farm.can_add_stock`; false for Farm Worker, Finance and Vet because stock-in needs `inventory.manage`), do not show the popup; show the text **"Ask your manager to add it to the store"** instead.
+
+**Error** (`422`): `details.inventory` → *"Your farm takes items from the store. Pick the item you used."* (records) · `medicines.N.medicine_name` → *"Your farm takes medicine from the store. Pick the medicine you used."* (health). Show it on the item field.
+
+### Setting OFF — type it (default)
+
+1. Show **name**, **quantity** and **unit** fields. Send the name as `details.item_name` (max 150, optional) with `components: [{"quantity":"4","unit":"kg"}]`. No stock moves and no inventory movement is created. The record shows `details.item_name`.
+2. Offer an optional link **"pick from my store instead"** that switches the form to the ON layout above for that one record: send `details.inventory.item_id` and the stock is taken out as usual (the item's name replaces the typed name).
+3. Old fields still work: `feed_name` (feed) and `input_name` (fertilizer, pesticide) are accepted; they default to the item name.
+
+### Health: typed medicine
+
+With the setting OFF, each medicine line is either a store item (as before) **or** a typed medicine:
+
+```json
+{"medicine_name": "Local herbal mix", "dose_per_animal": [{"quantity": "0.5", "unit": "ml"}], "dosage_instructions": "In drinking water", "withdrawal_days": 7}
+```
+
+* Required: `medicine_name` (max 150). Optional: `dose_per_animal`, `dosage_instructions` (max 500), **`withdrawal_days`** (0–3650; show it as "Days before eggs, milk or meat can be sold").
+* A typed line takes no store, lot or quantity (sending them is `422`) and creates no stock movement. A record may mix store lines and typed lines.
+* Its withdrawal is tracked like any other: `GET /health/withdrawals`, the record's `medicines[].withdrawal` and the dashboard "medicine withdrawal" insight. The line has `is_typed: true`, `inventory_item_id: null`, `quantity_used: null`.
+* `GET /master/health-record-types` → `medicine_line_modes` (`["store","typed"]` when OFF, `["store"]` when ON) tells you whether to offer "type the medicine name".
+* With the setting ON a typed line is `422` — *"Your farm takes medicine from the store. Pick the medicine you used."*
+* Reversing a record reverses the stock of its store lines only; typed lines have no stock to give back.
