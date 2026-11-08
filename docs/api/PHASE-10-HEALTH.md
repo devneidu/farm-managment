@@ -58,7 +58,7 @@ Health is the **livestock/fish** domain only. Every type is refused on a crop cy
 |---|---|---|---|
 | GET | `/master/health-record-types` | `health.view` | 200 |
 | GET | `/health-records` | `health.view` | 200 paginated |
-| POST | `/health-records` | `health.create` (+ `health.reverse` when `corrects_record_id` is sent) | 201 |
+| POST | `/health-records` | `health.create` (+ `health.reverse` when `corrects_record_id` is sent). Stock medicine lines are covered by `health.create` alone: no `inventory.*` permission is needed, the stock-out is part of the health record (Vet and Farm Worker included) | 201 |
 | GET | `/health-records/{record}` | `health.view` | 200 |
 | POST | `/health-records/{record}/reverse` | `health.reverse` | 201 reversal record |
 | GET | `/health/withdrawals` | `health.view` | 200 paginated |
@@ -68,7 +68,7 @@ Health is the **livestock/fish** domain only. Every type is refused on a crop cy
 | GET | `/health/medicines/{item}` | `health.view` | 200 with `balances` and `lots` |
 | PUT | `/health/medicines/{item}/profile` | `health.manage` | 200 |
 
-Role presets: **Owner/Manager** all four (`view`, `create`, `reverse`, `manage`); **Farm Worker** `view` + `create` (cannot correct or edit medicine metadata); **Vet** (new role id `vet`, assignable by Owner and Manager) all four health permissions plus read-only farm, cycle, location, measurement, record and inventory access — no `inventory.use` and no `record.create`; **Finance** has no health access (403). Writes share a 120/hour/user limit (429). Not subscription gated.
+Role presets: **Owner/Manager** all four (`view`, `create`, `reverse`, `manage`); **Farm Worker** `view` + `create` (cannot correct or edit medicine metadata); **Vet** (new role id `vet`, assignable by Owner and Manager) all four health permissions plus read-only farm, cycle, location, measurement, record and inventory access — no `inventory.use`, no `inventory.add` and no `record.create` (a Vet still records a health event with a store medicine: the stock-out belongs to the health record and needs `health.create` only; a plain `POST /inventory/stock-out` is 403); **Finance** has no health access (403). Writes share a 120/hour/user limit (429). Not subscription gated.
 
 ## Create a health record
 

@@ -34,7 +34,7 @@ class RolePermissionTest extends TestCase
     public function test_manager_permissions(): void
     {
         $this->assertSame([
-            'audit.view', 'breeding.create', 'breeding.reverse', 'breeding.view', 'contact.manage', 'contact.view', 'farm.update', 'farm.view', 'finance.create', 'finance.reverse', 'finance.view', 'health.create', 'health.manage', 'health.reverse', 'health.view', 'inventory.adjust', 'inventory.manage', 'inventory.use', 'inventory.view', 'invoice.create', 'invoice.view', 'invoice.void', 'livestock.batch.create',
+            'audit.view', 'breeding.create', 'breeding.reverse', 'breeding.view', 'contact.manage', 'contact.view', 'farm.update', 'farm.view', 'finance.create', 'finance.reverse', 'finance.view', 'health.create', 'health.manage', 'health.reverse', 'health.view', 'inventory.add', 'inventory.adjust', 'inventory.manage', 'inventory.use', 'inventory.view', 'invoice.create', 'invoice.view', 'invoice.void', 'livestock.batch.create',
             'location.manage', 'location.view',
             'marketplace.manage', 'master_data.manage', 'master_data.view', 'measurement.manage', 'measurement.view', 'payment.create', 'payment.reverse', 'payment.view', 'production_cycle.close', 'production_cycle.create', 'production_cycle.reopen', 'production_cycle.update', 'production_cycle.view', 'purchase.cancel', 'purchase.create', 'purchase.view', 'record.adjust', 'record.create', 'record.reverse', 'record.view', 'report.export', 'report.view', 'sale.cancel', 'sale.create', 'sale.view', 'subscription.view', 'task.complete', 'task.manage', 'task.view', 'team.invite', 'team.remove', 'team.update_role', 'team.view',
         ], $this->values(FarmRole::Manager));
@@ -43,7 +43,7 @@ class RolePermissionTest extends TestCase
 
     public function test_farm_worker_gets_field_work_permissions_and_may_sell(): void
     {
-        $this->assertSame(['breeding.create', 'breeding.view', 'farm.view', 'health.create', 'health.view', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view', 'report.view', 'sale.create', 'sale.view', 'task.complete', 'task.view'], $this->values(FarmRole::FarmWorker));
+        $this->assertSame(['breeding.create', 'breeding.view', 'farm.view', 'health.create', 'health.view', 'inventory.add', 'inventory.use', 'inventory.view', 'location.view', 'master_data.view', 'measurement.view', 'production_cycle.view', 'record.create', 'record.view', 'report.view', 'sale.create', 'sale.view', 'task.complete', 'task.view'], $this->values(FarmRole::FarmWorker));
     }
 
     public function test_finance_permissions(): void

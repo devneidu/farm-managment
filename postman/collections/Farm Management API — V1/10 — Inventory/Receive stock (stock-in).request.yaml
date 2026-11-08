@@ -34,7 +34,7 @@ description: |-
   **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
 
   **ACCESS**
-  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Required backend farm permission: **`inventory.add`** — granted to: `owner`, `manager`, `farm_worker`. (Documentation only: the request never contains a permission string.)
   Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
 
   **URL**
@@ -66,7 +66,7 @@ description: |-
   - Lot-tracked items need `lot_id` or `lot {code, expires_on}`. The location must be active with active ancestors.
   - `recorded_at` is when it really happened (UTC, `YYYY-MM-DDTHH:MM:SSZ`, no milliseconds); the server keeps `created_at` separately.
   - `idempotency_key` is required and farm-wide: same key + same payload returns the original movement; same key + different payload is `409 idempotency_conflict`.
-  - Requires `inventory.manage` (Owner, Manager). Rate limited.
+  - Requires `inventory.add` (Owner, Manager, Farm Worker). Rate limited.
 
   **SUCCESS**
   `201 Created` — message: "Stock received."

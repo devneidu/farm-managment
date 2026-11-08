@@ -7,7 +7,7 @@ description: |-
   "Eggs In" with source Received, Purchased or Other. The cost of a purchase is booked with `POST /purchases` (an `output: eggs` line), not here.
 
   **IMPORTANT BEHAVIOR**
-  - Requires `inventory.manage`. One `stock_in`; no production record.
+  - Requires `inventory.add`. One `stock_in`; no production record.
   - `production` is refused for eggs/milk (422): use `POST /records`.
 
   **WHAT TO DO NEXT**

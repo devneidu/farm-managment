@@ -261,7 +261,7 @@ class OperationCatalogue
             'submission' => ['kind' => 'inventory', 'method' => 'POST', 'path' => '/inventory/stock-'.$direction, 'url' => ApiRoute::url('/inventory/stock-'.$direction), 'body_defaults' => $defaults + ['reason' => $entry['code']]],
             'production_cycle' => $cycle,
             'fields' => ['required' => $required, 'optional' => $optional],
-            'permissions_required' => ['always' => [($in ? Permission::InventoryManage : Permission::InventoryUse)->value], 'when_inventory_linked' => [], 'when_correcting' => []],
+            'permissions_required' => ['always' => [($in ? Permission::InventoryAdd : Permission::InventoryUse)->value], 'when_inventory_linked' => [], 'when_correcting' => []],
             'inventory_effect' => ['mode' => 'automatic', 'direction' => $direction, 'output' => $output, 'item_category' => $output !== null ? 'produce' : $category, 'optional' => false, 'creates_item' => false],
             /** A Records / Inventory movement never creates a sale, invoice, customer transaction or payment. */
             'commercial_effects' => ['sale' => false, 'invoice' => false, 'payment' => false],

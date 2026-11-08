@@ -12,7 +12,7 @@ description: |-
   - `reason`: `donation`, `purchase`, `received`, `aid`, `opening_balance`, `other`. `production` is refused for eggs/milk (422).
 
   **IMPORTANT BEHAVIOR**
-  - Requires `inventory.manage`.
+  - Requires `inventory.add`.
   - One `stock_in` movement; the item is created automatically on first use.
 
   **WHAT TO DO NEXT**

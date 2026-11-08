@@ -61,7 +61,7 @@ class QuickActions
             ['purchase', 'Record a purchase', Permission::PurchaseCreate, '/api/v1/purchases', true],
             ['expense', 'Record an expense', Permission::FinanceCreate, '/api/v1/expenses', true],
             ['income', 'Record income', Permission::FinanceCreate, '/api/v1/income', true],
-            ['stock_in', 'Receive stock', Permission::InventoryManage, '/api/v1/inventory/stock-in', true],
+            ['stock_in', 'Receive stock', Permission::InventoryAdd, '/api/v1/inventory/stock-in', true],
             ['health_record', 'Record a health event', Permission::HealthCreate, '/api/v1/health-records', $livestock],
             ['breeding_project', 'Start a breeding project', Permission::BreedingCreate, '/api/v1/breeding-projects', $f->anyCycleHas(Capability::SupportsBreeding->value)],
             ['contact', 'Add a customer or supplier', Permission::ContactManage, '/api/v1/contacts', true],

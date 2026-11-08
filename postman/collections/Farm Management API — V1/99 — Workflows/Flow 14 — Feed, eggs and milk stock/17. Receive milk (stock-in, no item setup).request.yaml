@@ -7,7 +7,7 @@ description: |-
   "Milk In" with source Opening balance, Gift / Donation, Purchased, Received or Other. For "Produced on farm" use `POST /records` (`milk`).
 
   **IMPORTANT BEHAVIOR**
-  - Requires `inventory.manage`. One `stock_in`; no production record.
+  - Requires `inventory.add`. One `stock_in`; no production record.
   - Milk is measured by volume (`l`, `ml`); `production` is refused (422).
 
   **WHAT TO DO NEXT**

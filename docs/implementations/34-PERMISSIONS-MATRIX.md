@@ -87,5 +87,22 @@ as well for slaughtered (the meat is received into stock). Listing needs
 `record.reverse`, so Owner and Manager only; a Farm Worker can record but not
 undo, and a Vet can do none of it.
 
+Stock permissions are split so that anyone allowed to record something can finish
+recording it without waiting for the owner:
+
+| Permission | Owner | Manager | Farm Worker | Finance | Vet |
+|---|---|---|---|---|---|
+| `inventory.view` | yes | yes | yes | yes | yes |
+| `inventory.use` (plain stock-out, stock-linked operational records) | yes | yes | yes | no | no |
+| `inventory.add` (stock-in incl. `new_item` popup, opening balance) | yes | yes | yes | no | no |
+| `inventory.manage` (items create/edit/deactivate, transfers, feed formulas) | yes | yes | no | no | no |
+| `inventory.adjust` (adjustments, movement reversal) | yes | yes | no | no | no |
+
+`GET /farm` → `membership.can_add_stock` and `GET /auth/me` → `farm.can_add_stock`
+mirror `inventory.add`. Purchases (`POST /purchases`, which also book money) keep
+`purchase.create`. A medicine line in a health record is authorised by
+`health.create` alone (the stock-out is part of the health record); reversal stays
+`health.reverse`. No role gets general inventory permissions for this.
+
 Every permission remains backend enforced and can be refined without
 changing role names.

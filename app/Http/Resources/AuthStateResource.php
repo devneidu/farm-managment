@@ -72,8 +72,8 @@ class AuthStateResource extends JsonResource
                 'role' => $farm->pivot->role,
                 /** Farm preferences; `use_stock_for_usage` true = items used must be picked from the store. */
                 'settings' => FarmSettings::all($farm),
-                /** Whether the caller may add stock (inventory.manage); false = show "Ask your manager to add it to the store". */
-                'can_add_stock' => in_array(Permission::InventoryManage, FarmRole::from($farm->pivot->role)->permissions(), true),
+                /** Whether the caller may add stock (inventory.add); false = show "Ask your manager to add it to the store". */
+                'can_add_stock' => in_array(Permission::InventoryAdd, FarmRole::from($farm->pivot->role)->permissions(), true),
             ] : null,
             /**
              * Every farm the user ACTIVELY belongs to (oldest membership first - membership ids are time-ordered UUIDv7, strictly increasing - the same order the default farm is chosen by). Send a farm's `id` as the

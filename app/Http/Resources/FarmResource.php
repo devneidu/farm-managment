@@ -40,8 +40,8 @@ class FarmResource extends JsonResource
                 'role' => $membership->role->value,
                 'role_label' => $membership->role->label(),
                 'permissions' => array_map(fn ($p) => $p->value, $membership->role->permissions()),
-                /** Whether the caller may add stock (POST /inventory/stock-in needs inventory.manage). false: show "Ask your manager to add it to the store" instead of the "+ Add to store" popup. */
-                'can_add_stock' => in_array(Permission::InventoryManage, $membership->role->permissions(), true),
+                /** Whether the caller may add stock (POST /inventory/stock-in needs inventory.add). false: show "Ask your manager to add it to the store" instead of the "+ Add to store" popup. */
+                'can_add_stock' => in_array(Permission::InventoryAdd, $membership->role->permissions(), true),
             ],
         ];
     }

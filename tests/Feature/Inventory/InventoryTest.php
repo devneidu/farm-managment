@@ -526,7 +526,9 @@ class InventoryTest extends TeamTestCase
         $this->getJson('/api/v1/feed-formulas')->assertOk();
         $this->issue($item, $loc, '1')->assertCreated();
         foreach ($writes() as [$method, $url, $body]) {
-            $this->{$method.'Json'}($url, $body)->assertForbidden();
+            if ($url !== '/api/v1/inventory/stock-in') { // a worker may add stock (inventory.add); everything else here stays manager-only
+                $this->{$method.'Json'}($url, $body)->assertForbidden();
+            }
         }
         $this->signInAs($finance);
         $this->getJson('/api/v1/inventory/items')->assertOk();
@@ -734,8 +736,8 @@ class InventoryTest extends TeamTestCase
         $worker = $this->member(FarmRole::FarmWorker);
         $ctx = new FarmContext($this->farm, $this->membershipOf($worker));
         try {
-            app(InventoryService::class)->stockIn($ctx, $this->inPayload($item, $loc));
-            $this->fail('Worker must not receive stock.');
+            app(InventoryService::class)->stockIn(new FarmContext($this->farm, $this->membershipOf($this->member(FarmRole::Finance))), $this->inPayload($item, $loc));
+            $this->fail('Finance must not receive stock.');
         } catch (ApiHttpException $e) {
             $this->assertSame(403, $e->getStatusCode());
         }

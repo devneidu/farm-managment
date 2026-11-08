@@ -47,6 +47,7 @@ enum Permission: string
     // Phase 9 - inventory: view (all roles) / use stock / manage items, stock-in, transfers, formulas / adjust and reverse
     case InventoryView = 'inventory.view';
     case InventoryUse = 'inventory.use';
+    case InventoryAdd = 'inventory.add'; // stock-in (incl. new item from the popup) and opening balance - deliberately separate from manage
     case InventoryManage = 'inventory.manage';
     case InventoryAdjust = 'inventory.adjust';
 

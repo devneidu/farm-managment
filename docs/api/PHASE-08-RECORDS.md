@@ -191,7 +191,7 @@ A read-only catalogue so the frontend renders operation forms without hardcoding
 
 | `code` | `display_mode` | Actions |
 |---|---|---|
-| `eggs` | `in_out` | IN `collected` (`POST /records` `egg_collection`, always writes stock) + manual IN (purchase, donation, received, opening_balance, other: `POST /inventory/stock-in` `output: eggs`, `inventory.manage`); OUT manual reasons incl. `sold` (`POST /inventory/stock-out` `output: eggs`, `inventory.use`) |
+| `eggs` | `in_out` | IN `collected` (`POST /records` `egg_collection`, always writes stock) + manual IN (purchase, donation, received, opening_balance, other: `POST /inventory/stock-in` `output: eggs`, `inventory.add`); OUT manual reasons incl. `sold` (`POST /inventory/stock-out` `output: eggs`, `inventory.use`) |
 | `milk` | `in_out` | same with `milk`, litres; no incubation |
 | `feed_use` | `out_only` | OUT `used_for_livestock` (`POST /records` `feed_use`, optional stock link) |
 | `crop_harvest` | `in_only` | IN `harvested` (`POST /records` `crop_harvest`, optional stock link) |

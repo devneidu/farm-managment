@@ -7,7 +7,7 @@ description: |-
   "Feed In" with source Aid / Support, Donation, Produced on farm, Received, Opening balance or Other.
 
   **IMPORTANT BEHAVIOR**
-  - Requires `inventory.manage`. One `stock_in`.
+  - Requires `inventory.add`. One `stock_in`.
   - Feed is the only kind where `production` (home-made feed) is a manual reason: `by_item_kind.feed.in` says so, the flat list alone does not (GAP-05).
 
   **WHAT TO DO NEXT**

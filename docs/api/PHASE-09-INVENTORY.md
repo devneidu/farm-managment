@@ -23,7 +23,7 @@ An inventory item has **no quantity field**. Current stock is always `SUM(invent
 Every inventory item resource carries `kind` (`feed` \| `eggs` \| `milk` \| `general`) and `is_system_managed` (true for the farm's automatic Eggs / Milk items).
 | GET | `/inventory/output-balances` | `inventory.view` | 200 read-only available eggs / milk (never creates items) |
 | GET | `/inventory/items` | `inventory.view` | 200 paginated items with derived stock |
-| POST | `/inventory/items` | `inventory.manage` | 201 |
+| POST | `/inventory/items` | `inventory.manage` (the stock-in `new_item` popup creates its item under `inventory.add`) | 201 |
 | GET | `/inventory/items/{item}` | `inventory.view` | 200 with `balances` by location and lot |
 | PATCH | `/inventory/items/{item}` | `inventory.manage` | 200 |
 | GET | `/inventory/items/{item}/movements` | `inventory.view` | 200 paginated ledger of one item |
@@ -31,7 +31,7 @@ Every inventory item resource carries `kind` (`feed` \| `eggs` \| `milk` \| `gen
 | GET | `/inventory/movements/{movement}` | `inventory.view` | 200 |
 | POST | `/inventory/movements/{movement}/reverse` | `inventory.adjust` | 201 array of reversal movement(s) |
 | GET | `/inventory/lots` | `inventory.view` | 200 paginated lots with stock |
-| POST | `/inventory/stock-in` | `inventory.manage` | 201 movement |
+| POST | `/inventory/stock-in` | `inventory.add` (Owner, Manager, Farm Worker; includes `new_item` and `opening_balance`) | 201 movement |
 | POST | `/inventory/stock-out` | `inventory.use` | 201 movement |
 | POST | `/inventory/adjustments` | `inventory.adjust` | 201 movement |
 | POST | `/inventory/transfers` | `inventory.manage` | 201 `{transfer_group_id, movements:[out,in]}` |

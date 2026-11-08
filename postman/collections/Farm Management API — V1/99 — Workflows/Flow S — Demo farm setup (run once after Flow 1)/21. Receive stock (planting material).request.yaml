@@ -25,7 +25,7 @@ description: |-
   **REFERENCE (detail)**
 
   **ACCESS**
-  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Required backend farm permission: **`inventory.add`** — granted to: `owner`, `manager`, `farm_worker`. (Documentation only: the request never contains a permission string.)
 
   **URL**
   `POST {{base_url}}/inventory/stock-in`

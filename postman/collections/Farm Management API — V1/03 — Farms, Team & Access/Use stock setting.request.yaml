@@ -8,7 +8,7 @@ description: |-
 
   **IMPORTANT INPUTS**
   - Body: `settings.use_stock_for_usage` (JSON boolean).
-  - Read the current value from `GET /farm` -> `data.settings` (also `GET /auth/me` -> `data.farm.settings`). `GET /farm` -> `data.membership.can_add_stock` tells whether the caller may add stock (inventory.manage).
+  - Read the current value from `GET /farm` -> `data.settings` (also `GET /auth/me` -> `data.farm.settings`). `GET /farm` -> `data.membership.can_add_stock` tells whether the caller may add stock (inventory.add: Owner, Manager, Farm Worker).
 
   **IMPORTANT BEHAVIOR**
   - Requires the farm permission `farm.update` (Owner, Manager). The change is audited (`farm.settings_updated`).

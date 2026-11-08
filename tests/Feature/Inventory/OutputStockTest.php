@@ -749,12 +749,12 @@ class OutputStockTest extends TeamTestCase
         $this->signInAs($worker);
         $this->eggs($cycle, [['quantity' => 5, 'unit' => 'piece']])->assertCreated();
         $this->stockOut(['output' => 'eggs'], 'damaged', '1', 'piece')->assertCreated();
-        $this->stockIn(['output' => 'eggs'], 'donation', '1', 'piece')->assertForbidden(); // stock-in is inventory.manage
         $this->incubate($cycle, 10)->assertCreated();
 
         $this->signInAs($finance);
         $this->getJson('/api/v1/inventory/output-balances')->assertOk();
         $this->stockOut(['output' => 'eggs'], 'damaged', '1', 'piece')->assertForbidden();
+        $this->stockIn(['output' => 'eggs'], 'donation', '1', 'piece')->assertForbidden(); // stock-in is inventory.add (not Finance)
         $this->eggs($cycle, [['quantity' => 1, 'unit' => 'piece']])->assertForbidden();
         $this->sell($this->item('eggs')->id, StorageLocation::sole()->id, '4', 'piece', '200.00')->assertCreated(); // the sale stays its own permission
         $this->assertSame('40', $this->available('eggs')['quantity']); // 50 + 5 - 1 - 10 (incubation) - 4 (sale)

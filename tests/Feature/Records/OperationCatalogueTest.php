@@ -129,7 +129,7 @@ class OperationCatalogueTest extends TeamTestCase
         $this->assertSame('/api/v1/inventory/movements/{id}/reverse', $sold['reversal']['url']);
 
         $purchased = $this->action($eggs, 'in', 'purchase');
-        $this->assertSame(['inventory.manage'], $purchased['permissions_required']['always']); // stock-in is inventory.manage
+        $this->assertSame(['inventory.add'], $purchased['permissions_required']['always']); // stock-in is inventory.add
         $this->assertSame('not_applicable', $purchased['production_cycle']);
 
         // System-owned events are pointers, never manual forms.

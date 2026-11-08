@@ -185,7 +185,7 @@ class InventoryController extends Controller
     /**
      * Receive stock (stock-in)
      *
-     * Requires inventory.manage. Appends a stock_in movement. Reasons accepted here: opening_balance, purchase, donation, aid, received, other, and production
+     * Requires inventory.add (Owner, Manager, Farm Worker; `new_item` also creates the item under this permission). Appends a stock_in movement. Reasons accepted here: opening_balance, purchase, donation, aid, received, other, and production
      * ("produced on farm") for stock no record explains, such as home-mixed feed. Produced eggs, milk and crops are NOT stocked here: record the production
      * (POST /records egg_collection | milk | crop_harvest) and the stock-in is written with it, so stock and production cannot disagree (422 on reason production
      * for produce). `returned` is written only by the breeding workflow. This endpoint has no supplier/expense effect (use POST /purchases for that).

@@ -151,7 +151,7 @@ Slaughtering animals (`POST /livestock-exits`, `type: "slaughtered"`, see [FRONT
 
 `details.inventory { item_id, storage_location_id, lot_id? }` + `production_cycle_id` = one entry that writes the `feed_use` record **and** the `stock_out` (now reason **`production_use`**, linked to the record and the cycle). Retrying the same `idempotency_key` never decrements twice. Without `details.inventory` it is still a pure record with no stock effect. Feed "used for livestock" is never a manual stock-out.
 
-### `POST /inventory/stock-in` (permission `inventory.manage`)
+### `POST /inventory/stock-in` (permission `inventory.add`: Owner, Manager, Farm Worker)
 
 New: `output: eggs|milk` instead of `inventory_item_id`; `storage_location_id` is optional everywhere (main store in, the holding store out); new reasons `aid`, `received`, `production` (not for produce). A donation/purchase/received/other IN never creates a production record. `reason: production` on eggs, milk or any `produce` item → `422` pointing to `POST /records`.
 

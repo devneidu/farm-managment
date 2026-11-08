@@ -65,6 +65,13 @@ class InventoryService
     public function createItem(FarmContext $ctx, array $input): InventoryItem
     {
         $ctx->authorize(Permission::InventoryManage);
+
+        return $this->makeItem($ctx, $input);
+    }
+
+    /** Item creation without a permission check: the public path checks inventory.manage; the stock-in popup (new_item) runs under inventory.add. */
+    private function makeItem(FarmContext $ctx, array $input): InventoryItem
+    {
         $data = $this->validated(StoreItemRequest::class, $input);
         $unit = $this->stockUnit($data['stock_unit']);
         $tracksLots = (bool) ($data['tracks_lots'] ?? false);
@@ -146,7 +153,7 @@ class InventoryService
     /** @return list<InventoryMovement> */
     public function stockIn(FarmContext $ctx, array $input): array
     {
-        $ctx->authorize(Permission::InventoryManage);
+        $ctx->authorize(Permission::InventoryAdd);
         $data = $this->validated(StockInRequest::class, $input);
 
         return $this->atomic($ctx, 'stock_in', $data, function (string $hash) use ($ctx, $data) {
@@ -189,7 +196,7 @@ class InventoryService
         $input = array_diff_key($new, ['unit' => 1]) + ['stock_unit' => $new['unit']];
 
         try {
-            $created = $this->createItem($ctx, $input);
+            $created = $this->makeItem($ctx, $input); // the popup is covered by inventory.add (checked in stockIn)
         } catch (ValidationException $e) { // report the item rules' errors where the client put the fields
             throw ValidationException::withMessages(collect($e->errors())->mapWithKeys(fn ($messages, $key) => ['new_item.'.($key === 'stock_unit' ? 'unit' : $key) => $messages])->all());
         }

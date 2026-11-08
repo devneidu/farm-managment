@@ -29,7 +29,7 @@ description: |-
   **Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`). State-changing: needs the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).
 
   **ACCESS**
-  Required backend farm permission: **`inventory.manage`** — granted to: `owner`, `manager`. (Documentation only: the request never contains a permission string.)
+  Required backend farm permission: **`inventory.add`** — granted to: `owner`, `manager`, `farm_worker`. (Documentation only: the request never contains a permission string.)
   Rate limited by limiter `inventory-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
 
   **URL**
@@ -57,7 +57,7 @@ description: |-
   **BUSINESS RULES**
   - Medicine items are normally lot-tracked: `lot {code, expires_on}` opens the lot (or joins the existing lot with the same code; a different expiry for an existing code is rejected).
   - The quantity is in the item's unit dimension (`ml` here); packages resolve only through the item's own conversion.
-  - Requires `inventory.manage`. Same idempotency rules as every stock-in.
+  - Requires `inventory.add`. Same idempotency rules as every stock-in.
 
   **SUCCESS**
   `201 Created` — message: "Stock received."

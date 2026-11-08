@@ -344,7 +344,7 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 9. **Backend does:** one `stock_in` movement (+ lot if given). No operational record, no expense.
 10. **DO NOT:** also call `POST /purchases` for the same delivery (that writes its own stock-in); do not create an item with a quantity (`POST /inventory/items` has none).
 11. **Refetch:** `GET /inventory/items/{id}`, `/inventory/items/{id}/movements`, items list (`stock`, `is_low_stock`), dashboard `low_stock`.
-12. **Needs:** `inventory.manage`. (Farm worker has `inventory.use` only → hide IN.)
+12. **Needs:** `inventory.add` (Owner, Manager, Farm Worker). Vet and Finance → hide IN.
 13. **States:** `409 item_inactive`, `422 conversion_not_configured`, `422 reason` (system-owned), `409 idempotency_conflict`.
 14. **Postman:** `Receive stock (stock-in)` (opening balance), `Receive feed from other sources (stock-in reasons)` (`aid`, `production`, `donation`, `received`); purchase is `Record a purchase (stock + expense)`; Flow 14 request 21.
 
@@ -449,7 +449,7 @@ The "Record activity" button is a three-step discovery, not a fixed menu.
 9. **Backend does:** one `stock_in` movement; creates the Eggs item/Main Store if missing. **No** `egg_collection` record, ever.
 10. **DO NOT:** call `POST /records`; do not combine stock-in and purchase for the same delivery.
 11. **Refetch:** output-balances, movements.
-12. **Needs:** `inventory.manage`.
+12. **Needs:** `inventory.add`.
 13. **States:** `422 reason` for `production`/`returned`.
 14. **Postman:** `Receive donated eggs…`, `Receive eggs from other sources (stock-in reasons)` (`received`, `purchase`, `other`, `production` → 422), `Record a purchase of eggs (by output)`; Flow 14 requests 7, 8 and 16.
 
@@ -580,7 +580,7 @@ Sale: as §21 with `output: "milk"` and a volume `components` (`l`). Spoilage/in
 9. **Backend does:** one signed movement per event; balances derived.
 10. **DO NOT:** show or send a quantity on items; do not use `adjustment` for normal use.
 11. **Refetch:** item, movements, lots, medicines (if medicine), dashboard.
-12. **Needs:** `inventory.manage` (create/IN), `inventory.use` (OUT), `inventory.view`.
+12. **Needs:** `inventory.manage` (create item), `inventory.add` (IN), `inventory.use` (OUT), `inventory.view`.
 13. **States:** `409 insufficient_stock`, `item_inactive`, `lot_expired` (`use` of an expired lot: write off with `expired`/`wasted`).
 14. **Postman:** Flow 5.
 
@@ -1031,7 +1031,7 @@ One switch on the farm decides whether the items a farmer *uses* (feed, fertiliz
 
 **"+ Add to store" popup** (inside the item picker, when the farmer's item is not in the store yet): call `POST /inventory/stock-in` with `new_item` (`{name, category, unit}`), `reason`, `components`, `recorded_at`, `idempotency_key` — no store needed. The response `data.inventory_item_id` is the id to **auto-select** in the picker (`data.item_reused: true` means an item with that name already existed and was used). Then continue the original form.
 
-**If `can_add_stock` is false** (`GET /farm` → `data.membership.can_add_stock`, `GET /auth/me` → `data.farm.can_add_stock`; false for Farm Worker, Finance and Vet because stock-in needs `inventory.manage`), do not show the popup; show the text **"Ask your manager to add it to the store"** instead.
+**If `can_add_stock` is false** (`GET /farm` → `data.membership.can_add_stock`, `GET /auth/me` → `data.farm.can_add_stock`; `true` for Owner, Manager and Farm Worker (`inventory.add`); false only for Vet and Finance), do not show the popup; show the text **"Ask your manager to add it to the store"** instead (only Vet and Finance ever see it). Workers can use the popup. Health records with a store medicine need only `health.create` (Vet and Worker can finish them without any inventory permission).
 
 **Error** (`422`): `details.inventory` → *"Your farm takes items from the store. Pick the item you used."* (records) · `medicines.N.medicine_name` → *"Your farm takes medicine from the store. Pick the medicine you used."* (health). Show it on the item field.
 

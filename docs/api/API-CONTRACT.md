@@ -201,6 +201,7 @@ Show an action when `membership.permissions` contains the permission the endpoin
 | `record.adjust` | ✔ | ✔ |  |  |  |
 | `inventory.view` | ✔ | ✔ | ✔ | ✔ | ✔ |
 | `inventory.use` | ✔ | ✔ | ✔ |  |  |
+| `inventory.add` | ✔ | ✔ | ✔ |  |  |
 | `inventory.manage` | ✔ | ✔ |  |  |  |
 | `inventory.adjust` | ✔ | ✔ |  |  |  |
 | `health.view` | ✔ | ✔ | ✔ |  | ✔ |

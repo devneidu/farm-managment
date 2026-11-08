@@ -191,6 +191,7 @@ Roles: `owner`, `manager`, `farm_worker`, `finance` (labels: Owner, Manager, Far
 | `team.view` / `team.invite` / `team.update_role` / `team.remove` | x | x | | |
 | `inventory.view` | x | x | x | x |
 | `inventory.use` | x | x | x | |
+| `inventory.add` (stock-in, new item from the popup, opening balance) | x | x | x | |
 | `inventory.manage`, `inventory.adjust` | x | x | | |
 | `livestock.batch.create` (reserved) | x | x | | |
 | `finance.expense.create` (reserved) | x | | | x |

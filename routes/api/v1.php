@@ -78,8 +78,8 @@ use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\StorageLocationController;
 use App\Http\Controllers\Api\V1\SubscriptionController;
 use App\Http\Controllers\Api\V1\TaskController;
-use App\Http\Controllers\Api\V1\TemplateApplicationController;
 use App\Http\Controllers\Api\V1\TeamMemberController;
+use App\Http\Controllers\Api\V1\TemplateApplicationController;
 use App\Http\Controllers\Api\V1\UnitPreferenceController;
 use App\Http\Controllers\Api\V1\UserPreferenceController;
 use App\Http\Controllers\Api\V1\WorkTemplateController;
@@ -467,7 +467,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
         Route::get('/movements/{movement}', [$c, 'showMovement'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.movements.show');
         Route::post('/movements/{movement}/reverse', [$c, 'reverse'])->middleware(['farm.permission:inventory.adjust', 'throttle:inventory-write'])->name('api.v1.inventory.movements.reverse');
         Route::get('/lots', [$c, 'lots'])->middleware('farm.permission:inventory.view')->name('api.v1.inventory.lots.index');
-        Route::post('/stock-in', [$c, 'stockIn'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.stock-in');
+        Route::post('/stock-in', [$c, 'stockIn'])->middleware(['farm.permission:inventory.add', 'throttle:inventory-write'])->name('api.v1.inventory.stock-in');
         Route::post('/stock-out', [$c, 'stockOut'])->middleware(['farm.permission:inventory.use', 'throttle:inventory-write'])->name('api.v1.inventory.stock-out');
         Route::post('/adjustments', [$c, 'adjust'])->middleware(['farm.permission:inventory.adjust', 'throttle:inventory-write'])->name('api.v1.inventory.adjustments');
         Route::post('/transfers', [$c, 'transfer'])->middleware(['farm.permission:inventory.manage', 'throttle:inventory-write'])->name('api.v1.inventory.transfers');

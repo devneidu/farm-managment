@@ -77,10 +77,10 @@ class FarmSettingsTest extends TeamTestCase
         $this->signInAs($otherOwner)->getJson('/api/v1/farm')->assertJsonPath('data.settings.use_stock_for_usage', false);
     }
 
-    /** Role matrix for the "+ Add to store" popup: only roles that hold inventory.manage can add stock. */
+    /** Role matrix for the "+ Add to store" popup: exactly the roles that hold inventory.add can add stock. */
     public function test_can_add_stock_flag_per_role(): void
     {
-        $expected = ['owner' => true, 'manager' => true, 'farm_worker' => false, 'finance' => false, 'vet' => false];
+        $expected = ['owner' => true, 'manager' => true, 'farm_worker' => true, 'finance' => false, 'vet' => false];
         foreach (FarmRole::cases() as $role) {
             $user = $role === FarmRole::Owner ? $this->owner : $this->member($role);
             $this->signInAs($user);
