@@ -1,0 +1,25 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/sales"
+  method: POST
+  headers:
+    - key: Accept
+      value: application/json
+response:
+  statusCode: 422
+  statusText: Unprocessable Content
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "message": "Your farm sells from the store. Pick the item from your store.",
+        "code": "validation_failed",
+        "request_id": "01a1bc30-a0bd-73b5-acc1-60b743814fb2",
+        "errors": {
+          "items.0.product_type": [
+            "Your farm sells from the store. Pick the item from your store."
+          ]
+        }
+      }

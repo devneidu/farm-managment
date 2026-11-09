@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasUuidV7;
+use App\Support\Finance\Money;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -55,6 +56,29 @@ class Sale extends Model
     public function invoice(): HasOne
     {
         return $this->hasOne(Invoice::class)->where('status', Invoice::ISSUED);
+    }
+
+    /** Money received on this sale: live payments on its live invoice (a payment and its reversal both drop out). "0.00" while uninvoiced. */
+    public function amountReceived(): string
+    {
+        return $this->invoice?->amountPaid() ?? '0.00';
+    }
+
+    /** What the buyer still owes. A cancelled sale owes nothing. */
+    public function balance(): string
+    {
+        return $this->isCancelled() ? '0.00' : Money::sub((string) $this->total_amount, $this->amountReceived());
+    }
+
+    /** @return 'paid'|'part_paid'|'not_paid'|'cancelled' - the same rule the Income list applies in SQL (see IncomeQueries). */
+    public function moneyStatus(): string
+    {
+        if ($this->isCancelled()) {
+            return 'cancelled';
+        }
+        $received = $this->amountReceived();
+
+        return Money::isZero($received) ? 'not_paid' : (Money::cmp($received, (string) $this->total_amount) >= 0 ? 'paid' : 'part_paid');
     }
 
     public function isCancelled(): bool

@@ -1,0 +1,71 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records a sale whose line is a typed product ("something else" line with a `product_type`): no stock is touched.
+
+  **WHEN TO USE IT**
+  Farms that do NOT sell from the store (`settings.use_stock_for_usage` false). On a farm that sells from the store, pick the item from the store instead.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `sale.create`. `product_type`: eggs | milk | meat | crops | other_produce, only on `kind: other` lines.
+  - Income category follows the product type (eggs → egg_sales, milk → milk_sales, meat → livestock_sales, crops / other_produce → crop_sales); a mixed sale keeps the existing rule.
+  - `use_stock_for_usage` ON: `422` "Your farm sells from the store. Pick the item from your store." on `items.N.product_type`.
+  - The response carries `total`, `amount_received`, `balance`, `money_status` (paid | part_paid | not_paid | cancelled) on every sale.
+
+  **URL**
+  `POST {{base_url}}/sales`
+
+  **ERRORS**
+  - `401`, `403 forbidden`, `422 validation_failed`, `409` as for any sale.
+url: "{{base_url}}/sales"
+method: POST
+headers:
+  - key: Accept
+    value: "application\/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: Content-Type
+    value: "application\/json"
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    disabled: true
+body:
+  type: json
+  content: |-
+    {
+      "recorded_at": "{{recorded_at_2h}}",
+      "idempotency_key": "{{$guid}}",
+      "buyer": {
+        "name": "Mama Put Restaurant",
+        "phone": "08031112222"
+      },
+      "notes": "Deliver Friday",
+      "items": [
+        {
+          "kind": "other",
+          "product_type": "eggs",
+          "description": "Eggs (crates)",
+          "quantity": "10",
+          "unit_price": "3000.00"
+        },
+        {
+          "kind": "other",
+          "description": "Delivery",
+          "amount": "2000.00"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Sell- typed product.resources/examples
+order: 30000

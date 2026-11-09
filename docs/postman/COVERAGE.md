@@ -389,3 +389,9 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * The saved examples are real responses captured from the running application by a throwaway feature test (deleted), so the ids in them are consistent with each other; the request bodies of the refused-edit examples show the real bodies that were sent. The requests were not executed through Newman or imported into the Postman app; behaviour is covered by `tests/Feature/Records/CustomRecordTypesTest.php`, `tests/Feature/Reports/CustomRecordsReportTest.php` and `tests/Feature/Platform/PlatformCustomRecordTypesTest.php`. `docs/api/openapi.json` was intentionally not regenerated.
 * Permissions: no new permission. Farm-side management reuses `master_data.manage` (read: `master_data.view`); recording needs `record.create`; platform writes need the `admin` platform role.
 * Frontend contract: `docs/api/FRONTEND-CUSTOM-RECORDS-FLOW.md`; reference: `docs/api/PHASE-08-RECORDS.md`, `docs/api/PHASE-18-PLATFORM-ADMIN.md`, `docs/api/PHASE-17-REPORTS.md`.
+## Addendum - Income page (sales into money in)
+
+* New route `GET /finance/income` (345 `/api/v1` routes; `docs/api/openapi.json` intentionally not regenerated).
+* Folder **16 — Finance** gains `Income list` (2 saved examples: owner with totals, Farm Worker sale rows only). Folder **17 — Sales, Invoices & Payments** gains `Sell: typed product` (201 and the 422 "sells from the store"). Both added to the JSON collection and the Postman YAML tree. Examples are real responses captured from the code; Newman was not re-run.
+* Sale responses gain `total`, `amount_received`, `balance`, `money_status`; sale lines gain `product_type`, `entered_quantity`. Totals in §1 were not recomputed.
+* Frontend contract: `docs/api/FRONTEND-INCOME-FLOW.md`.

@@ -147,3 +147,19 @@ Roles: **Owner** all; **Manager** and **Finance** all of the above (the matrix c
 ## Deliberately not in Phase 14
 
 Payables/receivables and payments (`expense/payable` is Phase 15's invoice/payment domain), sales/invoices, custom farm categories, per-line allocation or cost splitting across several cycles, stock valuation / unit-cost (`FIFO`), taxes/discounts, multi-currency, bank reconciliation, and auto-booking of expenses by operational records (a record only *offers* the explicit `source` link).
+
+## Addendum — Income list (`GET /finance/income`)
+
+Auth: session. Permission: `finance.view` (everything) **or** `sale.view` (sale rows only, `meta.totals: null`); neither → 403.
+
+One row per **sale** (`kind: sale`) plus one row per manual income ledger entry (`kind: other_income`: other_income, services, grants_loans_support, any non-sale income). A sale's payment rows are never listed; reversed manual entries and their reversals are hidden. One SQL `UNION`, paginated, ordered by `date` desc, then `created_at` desc.
+
+Query: `money_status` (`paid`|`part_paid`|`not_paid`|`received`), `from`, `to` (farm-local days), `contact_id`, `search` (reference, buyer name, buyer phone), `finance_category_id`, `production_cycle_id`, `include_cancelled` (default 0), `page`, `per_page` (≤100).
+
+Row: `kind, id, reference, date, contact_id, contact_name, contact_phone, summary, category{id,code,name}, total, amount_received, balance, money_status, links{sale, transaction}`. Other income: `money_status: received`, balance `0.00`. `summary` e.g. `Eggs × 10 crate, Goats × 2` (first 3 lines then `+ N more`).
+
+`meta.totals` (finance.view only):
+- `money_received` — `SUM` of the money ledger's income by `occurred_on` inside `from`/`to`, reversal rows subtracted. Equals `GET /finance/summary` `totals.income` for the same range (sale payments + manual income, net of reversals).
+- `still_owed` — sum of `total − live payments` over every non-cancelled sale, un-invoiced sales included, as of now. Not date filtered (summary has no equivalent).
+
+Date note: a sale's date is its `recorded_at` in the farm's current UTC offset.

@@ -1,0 +1,73 @@
+$kind: http-example
+request:
+  url: "{{base_url}}/finance/income?per_page=10"
+  method: GET
+  headers:
+    - key: Accept
+      value: application/json
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+        "data": [
+          {
+            "kind": "sale",
+            "id": "01a1bc30-9f27-7211-80b1-3be5608fc325",
+            "reference": "SAL-2026-00002",
+            "date": "2026-10-14",
+            "contact_id": null,
+            "contact_name": "Walk-in",
+            "contact_phone": null,
+            "summary": "Manure",
+            "category": {
+              "id": "01a1bc2f-31d5-710c-afde-8efb28af65cc",
+              "code": "other_income",
+              "name": "Other income"
+            },
+            "total": "8000.00",
+            "amount_received": "0.00",
+            "balance": "8000.00",
+            "money_status": "not_paid",
+            "links": {
+              "sale": "/api/v1/sales/01a1bc30-9f27-7211-80b1-3be5608fc325",
+              "transaction": null
+            }
+          },
+          {
+            "kind": "sale",
+            "id": "01a1bc30-9d5c-7010-8486-d0ab6342669b",
+            "reference": "SAL-2026-00001",
+            "date": "2026-10-12",
+            "contact_id": "01a1bc30-9d41-72bf-9146-ab71287edb0b",
+            "contact_name": "Mama Put Restaurant",
+            "contact_phone": "08031112222",
+            "summary": "Eggs (crates) × 10, Delivery",
+            "category": {
+              "id": "01a1bc2f-31d5-710c-afde-8efb28af65cc",
+              "code": "other_income",
+              "name": "Other income"
+            },
+            "total": "32000.00",
+            "amount_received": "12000.00",
+            "balance": "20000.00",
+            "money_status": "part_paid",
+            "links": {
+              "sale": "/api/v1/sales/01a1bc30-9d5c-7010-8486-d0ab6342669b",
+              "transaction": null
+            }
+          }
+        ],
+        "meta": {
+          "current_page": 1,
+          "per_page": 50,
+          "last_page": 1,
+          "total": 2,
+          "totals": null
+        },
+        "message": null
+      }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Finance\ListCategoriesRequest;
+use App\Http\Requests\Finance\ListIncomeRequest;
 use App\Http\Requests\Finance\ListTransactionsRequest;
 use App\Http\Requests\Finance\ReverseTransactionRequest;
 use App\Http\Requests\Finance\StoreExpenseRequest;
@@ -13,6 +14,7 @@ use App\Http\Requests\Finance\SummaryRequest;
 use App\Http\Resources\FinanceCategoryResource;
 use App\Http\Resources\FinanceTransactionResource;
 use App\Services\Finance\FinanceQueries;
+use App\Services\Finance\IncomeQueries;
 use App\Services\Finance\FinanceService;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiResponse;
@@ -49,6 +51,28 @@ class FinanceController extends Controller
         $page = $queries->transactions($ctx, $request->validated());
 
         return ApiResponse::success(FinanceTransactionResource::collection($page->getCollection())->resolve($request), ['current_page' => $page->currentPage(), 'per_page' => $page->perPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()]);
+    }
+
+    /**
+     * Income: sales and other money in, one list
+     *
+     * Requires finance.view (everything) or sale.view (sale rows only, no other income, meta.totals null). One row per SALE
+     * (kind sale) plus one row per manual income ledger entry (kind other_income: other_income, services, grants_loans_support, any
+     * non-sale income); the individual payments of a sale are never listed, reversed manual entries and their reversals are hidden.
+     * Real SQL UNION, newest date first (sale date / occurred_on), then created_at. money_status: sale = paid | part_paid | not_paid
+     * (| cancelled with include_cancelled=true); other income = received. amount_received / balance of a sale come from its live
+     * payments (0 / total while un-invoiced). meta.totals (for the from/to range only): money_received = ledger income by occurred_on,
+     * reversals subtracted (= GET /finance/summary totals.income for the same range); still_owed = sum of balances of every non-cancelled
+     * sale as of now, un-invoiced sales included (not date filtered).
+     *
+     * @response array{data: array<int, array{kind: 'sale'|'other_income', id: string, reference: string, date: string, contact_id: string|null, contact_name: string|null, contact_phone: string|null, summary: string|null, category: array{id: string, code: string, name: string}|null, total: string, amount_received: string, balance: string, money_status: 'paid'|'part_paid'|'not_paid'|'received'|'cancelled', links: array{sale: string|null, transaction: string|null}}>, meta: array{current_page:int,per_page:int,last_page:int,total:int, totals: array{currency: string, from: string|null, to: string|null, money_received: string, still_owed: string}|null}, message: null}
+     */
+    public function incomeList(ListIncomeRequest $request, FarmContext $ctx, IncomeQueries $queries): JsonResponse
+    {
+        $result = $queries->list($ctx, $request->validated());
+        $page = $result['page'];
+
+        return ApiResponse::success($result['rows'], ['current_page' => $page->currentPage(), 'per_page' => $page->perPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'totals' => $result['totals']]);
     }
 
     /**
