@@ -126,6 +126,7 @@ a type public or archives a public type.
 | create / edit / archive / copy types (`master_data.manage`) | yes | yes | no | no | no |
 | record with a type (`record.create`) | yes | yes | yes | no | no |
 | reverse such a record (`record.reverse`) | yes | yes | no | no | no |
+
 `GET /finance/income` (Income tab): `finance.view` sees sale rows, other-income
 rows and the money totals; a user with only `sale.view` (Farm Worker) gets sale
 rows only and `meta.totals: null`. No other permission is added; Vet gets 403.
