@@ -183,13 +183,20 @@ class PurchaseService
         $lines = [];
         foreach (array_values($items) as $index => $line) {
             $prefix = 'items.'.$index;
-            $stockFields = ['inventory_item_id', 'output', 'storage_location_id', 'lot_id', 'lot', 'components'];
+            $stockFields = ['inventory_item_id', 'new_item', 'output', 'storage_location_id', 'lot_id', 'lot', 'components'];
             if ($line['kind'] === 'stock') {
                 $hasOutput = ! empty($line['output']);
-                if ($hasOutput === ! empty($line['inventory_item_id'])) {
-                    $this->invalid($prefix.($hasOutput ? '.output' : '.inventory_item_id'), 'Name the stock with exactly one of inventory_item_id or output.');
+                $hasNew = ! empty($line['new_item']);
+                if (($hasOutput ? 1 : 0) + ($hasNew ? 1 : 0) + (! empty($line['inventory_item_id']) ? 1 : 0) !== 1) {
+                    $this->invalid($prefix.($hasOutput ? '.output' : ($hasNew ? '.new_item' : '.inventory_item_id')), 'Name the stock with exactly one of inventory_item_id, new_item or output.');
                 }
-                foreach ($hasOutput ? ['components'] : ['inventory_item_id', 'components'] as $required) {
+                if ($hasNew) { // the stock-in create-or-reuse rule, run in this transaction (the store is optional: the main-store resolver picks it)
+                    $reused = false;
+                    $line['inventory_item_id'] = $this->inventory->itemForNewStock($ctx, $line['new_item'], $reused, $prefix.'.new_item')->id;
+                    $line['item_reused'] = $reused;
+                    unset($line['new_item']);
+                }
+                foreach (($hasOutput ? ['components'] : ['inventory_item_id', 'components']) as $required) {
                     if (empty($line[$required])) {
                         $this->invalid($prefix.'.'.$required, 'This is required for a stock line.');
                     }
@@ -233,7 +240,7 @@ class PurchaseService
         [$location, $lot] = $this->inventory->purchaseDestination($ctx, $item, $line, $when, $prefix);
         $row = PurchaseItem::create([
             'farm_id' => $ctx->farm->id, 'purchase_id' => $purchase->id, 'line_no' => $index + 1, 'kind' => 'stock', 'description' => $item->name,
-            'inventory_item_id' => $item->id, 'storage_location_id' => $location->id, 'inventory_lot_id' => $lot?->id,
+            'inventory_item_id' => $item->id, 'item_reused' => $line['item_reused'] ?? null, 'storage_location_id' => $location->id, 'inventory_lot_id' => $lot?->id,
             'quantity' => Decimal::trim($result->normalized->value), 'measurement' => $result->toArray(), 'amount' => $line['amount'],
         ]);
         $this->inventory->receiveForPurchase($ctx, $purchase->id, $row->id, $item, $location, $lot, $result->toArray(), $when, $prefix);

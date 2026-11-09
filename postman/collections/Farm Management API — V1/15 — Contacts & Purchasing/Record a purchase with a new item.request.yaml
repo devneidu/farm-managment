@@ -1,0 +1,90 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Records a store purchase where one stock line buys something NOT yet in the item list: `new_item {name, category, unit}` instead of `inventory_item_id`. Same create-or-reuse rule as stock-in: an ACTIVE item with the same normalised name and category is reused (`item_reused: true`), otherwise it is created, all in the same transaction as the stock-in and the expense.
+
+  **WHEN TO USE IT**
+  The Expense form, choice `store_purchase`, when the user types a new item instead of picking one.
+
+  **IMPORTANT INPUTS**
+  - Per stock line, send exactly ONE of `inventory_item_id`, `new_item` or `output` (422 on `items.N.new_item` otherwise).
+  - `new_item`: `name`, `category`, `unit` required; `tracks_lots`, `tracks_expiry`, `low_stock_threshold`, `description` optional (same validation as POST /inventory/items).
+  - `storage_location_id` is optional: the farm's main store is used.
+
+  **IMPORTANT BEHAVIOR**
+  - Requires `purchase.create`. Idempotent on `idempotency_key`: an identical retry returns the original purchase and creates nothing twice.
+  - The line shows `item_reused` (only for `new_item` lines). A 422 creates no item and books nothing.
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **ACCESS**
+  `purchase.create` — `owner`, `manager`, `finance`.
+
+  **URL**
+  `POST {{base_url}}/purchases`
+
+  **SUCCESS**
+  `201 Created` — same body as POST /purchases; each `new_item` line also carries `item_reused`.
+
+  **ERRORS**
+  - `401`, `403 forbidden`, `422 validation_failed` (e.g. `items.0.new_item.unit` required), `409 idempotency_conflict`.
+url: "{{base_url}}/purchases"
+method: POST
+headers:
+  - key: Accept
+    value: "application/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-XSRF-TOKEN
+    value: "{{xsrf_token}}"
+    description: "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+  - key: Content-Type
+    value: "application/json"
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    disabled: true
+body:
+  type: json
+  content: |-
+    {
+        "recorded_at": "{{recorded_at_2h}}",
+        "idempotency_key": "{{purchase_key}}",
+        "items": [
+            {
+                "kind": "stock",
+                "new_item": {
+                    "name": "Layer Mash",
+                    "category": "feed",
+                    "unit": "kg"
+                },
+                "components": [
+                    {
+                        "quantity": "25",
+                        "unit": "kg"
+                    }
+                ],
+                "amount": "15000.00"
+            }
+        ]
+    }
+scripts:
+  - type: beforeRequest
+    code: pm.collectionVariables.set("purchase_key", pm.variables.replaceIn("{{$guid}}"));
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Record a purchase with a new item.resources/examples
+order: 6500

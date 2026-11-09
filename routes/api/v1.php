@@ -513,6 +513,7 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     });
     Route::prefix('finance')->group(function () {
         $c = FinanceController::class;
+        Route::get('/form-options', [$c, 'formOptions'])->name('api.v1.finance.form-options');
         Route::get('/categories', [$c, 'categories'])->middleware('farm.permission:finance.view')->name('api.v1.finance.categories');
         // finance.view or sale.view (sale rows only): authorised in IncomeQueries, so no single-permission middleware here.
         Route::get('/income', [$c, 'incomeList'])->name('api.v1.finance.income.list');

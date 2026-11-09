@@ -19,6 +19,41 @@ There is **no Sales page**. Selling and getting paid live in the **Income** tab.
 - **Other money in** → `POST /income` (categories from `GET /finance/categories` with `manual_entry: true`; egg/milk/crop/livestock sales are sales, not manual income). Needs `finance.create`.
 - Hide the totals when `meta.totals` is `null`.
 
+## 1b. The one dynamic Income form — `GET /finance/form-options?direction=income`
+
+There is **one** Income form. The user first picks *what kind of money came in* (a **choice**), the form then shows the **fields** for that choice, and Save goes to that choice's **endpoint**. Never hard-code the choices: read them from the server. Needs any farm membership; options the user may not use are left out (so the list can be empty, e.g. a Vet — then hide the button).
+
+Real response (first three options shown; the list continues with `grants_loans_support`):
+
+```json
+{ "data": {
+    "direction": "income",
+    "options": [
+      { "code": "farm_sale", "label": "Sold something from your farm", "kind": "sale",
+        "description": "Animals, eggs, milk, crops or items from your store. Records what left the farm, who bought it and what was paid.",
+        "endpoint": { "method": "POST", "path": "/sales" }, "finance_category_id": null, "permission": "sale.create" },
+      { "code": "other_income", "label": "Other income", "kind": "manual",
+        "description": "Money received that is not a sale, such as a refund or a one-off payment.",
+        "endpoint": { "method": "POST", "path": "/income" }, "finance_category_id": "01a1c1e4-bcd2-70cf-a554-a0d003018e54", "permission": "finance.create" },
+      { "code": "services", "label": "Services", "kind": "manual",
+        "description": "Money earned for work or services done for someone.",
+        "endpoint": { "method": "POST", "path": "/income" }, "finance_category_id": "01a1c1e4-bcdf-700e-a8f3-b4bec213ab59", "permission": "finance.create" } ],
+    "payment_methods": ["cash", "bank_transfer", "pos", "mobile_money", "cheque", "other"],
+    "settings": { "use_stock_for_usage": false },
+    "can_add_stock": true },
+  "meta": [], "message": null }
+```
+
+| Choice (`kind`) | Fields to show | Save to |
+|---|---|---|
+| `sale` (`farm_sale`, always first) | the Sell form of section 4: lines (animals / store items / typed products), buyer, optional "paid now" | `POST /sales` |
+| `manual` (every other option) | amount (or quantity × unit price), date, payment method (`payment_methods`), received from, batch, description | `POST /income` with `finance_category_id` from the option |
+
+- `settings.use_stock_for_usage` ON → the Sell form must not offer typed products (section 4); `can_add_stock` false → under "pick from your store" show "Ask your manager to add it to the store" instead of an add button.
+- Product-sales categories never appear as `manual` options.
+- A Farm Worker gets only `farm_sale` (no `finance.create`). Real response: `"options": [ { "code": "farm_sale", … } ]`.
+- Missing/invalid `direction` → 422, real: `{"message":"The direction field is required.","code":"validation_failed","errors":{"direction":["The direction field is required."]}}`.
+
 ## 2. The list — `GET /finance/income?per_page=10`
 
 ```json

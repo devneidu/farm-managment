@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Finance\FormOptionsRequest;
 use App\Http\Requests\Finance\ListCategoriesRequest;
 use App\Http\Requests\Finance\ListIncomeRequest;
 use App\Http\Requests\Finance\ListTransactionsRequest;
@@ -14,8 +15,9 @@ use App\Http\Requests\Finance\SummaryRequest;
 use App\Http\Resources\FinanceCategoryResource;
 use App\Http\Resources\FinanceTransactionResource;
 use App\Services\Finance\FinanceQueries;
-use App\Services\Finance\IncomeQueries;
 use App\Services\Finance\FinanceService;
+use App\Services\Finance\FormOptions;
+use App\Services\Finance\IncomeQueries;
 use App\Support\Access\FarmContext;
 use App\Support\Api\ApiResponse;
 use Dedoc\Scramble\Attributes\Response;
@@ -36,6 +38,23 @@ class FinanceController extends Controller
     public function categories(ListCategoriesRequest $request, FarmContext $ctx, FinanceService $service): JsonResponse
     {
         return ApiResponse::success(FinanceCategoryResource::collection($service->categories($ctx, $request->validated()))->resolve($request));
+    }
+
+    /**
+     * Choices for the Income / Expense form
+     *
+     * Any farm member. One ordered list for the single dynamic form: for income `farm_sale` (POST /sales) first, then each manual-entry
+     * income category (POST /income with finance_category_id); for expense `store_purchase` (POST /purchases) first, then each manual-entry
+     * expense category (POST /expenses with finance_category_id). Each option has code, label, a short description, kind (sale | purchase | manual),
+     * the endpoint and the permission it needs. Options the caller may not use (sale.create, purchase.create, finance.create) are left out, so the
+     * list can be empty (for example a Vet). Also returns payment_methods, settings.use_stock_for_usage (ON: typed products/medicines are refused,
+     * items must come from the store) and can_add_stock (inventory.add: show "add it to the store" or "ask your manager").
+     *
+     * @response array{data: array{direction: 'income'|'expense', options: array<int, array{code: string, label: string, kind: 'sale'|'purchase'|'manual', description: string, endpoint: array{method: string, path: string}, finance_category_id: string|null, permission: string}>, payment_methods: string[], settings: array{use_stock_for_usage: bool}, can_add_stock: bool}, meta: object, message: null}
+     */
+    public function formOptions(FormOptionsRequest $request, FarmContext $ctx, FormOptions $options): JsonResponse
+    {
+        return ApiResponse::success($options->for($ctx, $request->validated()['direction']));
     }
 
     /**

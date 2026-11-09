@@ -34,7 +34,10 @@ class PurchaseResource extends JsonResource
 
                 return [
                     'id' => $line->id, 'line_no' => $line->line_no, 'kind' => $line->kind, 'description' => $line->description,
-                    'inventory_item_id' => $line->inventory_item_id, 'storage_location_id' => $line->storage_location_id, 'inventory_lot_id' => $line->inventory_lot_id,
+                    'inventory_item_id' => $line->inventory_item_id,
+                    /** Only on a line bought with `new_item`: true = an existing item with that name and category was reused, false = this purchase created it. Absent otherwise. */
+                    ...($line->item_reused !== null ? ['item_reused' => (bool) $line->item_reused] : []),
+                    'storage_location_id' => $line->storage_location_id, 'inventory_lot_id' => $line->inventory_lot_id,
                     'lot' => $line->lot ? ['code' => $line->lot->code, 'expires_on' => $line->lot->expires_on?->toDateString()] : null,
                     'quantity' => $canonical === null ? null : $ledger->display($line->item, $canonical) + ['normalized' => $ledger->canonical($line->item, $canonical)],
                     'measurement' => $line->measurement, 'amount' => (string) $line->amount,

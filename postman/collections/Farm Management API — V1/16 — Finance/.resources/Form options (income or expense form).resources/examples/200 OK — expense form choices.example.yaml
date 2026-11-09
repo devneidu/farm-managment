@@ -1,0 +1,73 @@
+$kind: http-example
+name: 200 OK — expense form choices
+request:
+  url: "{{base_url}}/finance/form-options?direction=expense"
+  method: GET
+  headers:
+    - key: Accept
+      value: "application/json"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "direction": "expense",
+              "options": [
+                  {
+                      "code": "store_purchase",
+                      "label": "Bought items for the store",
+                      "kind": "purchase",
+                      "description": "Feed, medicine, seed or supplies bought. Adds them to the store and records the expense in one step.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/purchases"
+                      },
+                      "finance_category_id": null,
+                      "permission": "purchase.create"
+                  },
+                  {
+                      "code": "feed",
+                      "label": "Feed",
+                      "kind": "manual",
+                      "description": "Feed bought and paid for.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/expenses"
+                      },
+                      "finance_category_id": "01a1c1e4-bc41-7335-930c-c3ed5b59036b",
+                      "permission": "finance.create"
+                  },
+                  {
+                      "code": "medicine_veterinary",
+                      "label": "Medicine & veterinary",
+                      "kind": "manual",
+                      "description": "Medicine or vet services paid for.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/expenses"
+                      },
+                      "finance_category_id": "01a1c1e4-bc4c-7148-a17d-bbf17b7f6d1c",
+                      "permission": "finance.create"
+                  }
+              ],
+              "payment_methods": [
+                  "cash",
+                  "bank_transfer",
+                  "pos",
+                  "mobile_money",
+                  "cheque",
+                  "other"
+              ],
+              "settings": {
+                  "use_stock_for_usage": false
+              },
+              "can_add_stock": true
+          },
+          "meta": [],
+          "message": null
+      }

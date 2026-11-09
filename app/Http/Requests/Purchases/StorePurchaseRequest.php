@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Purchases;
 
 use App\Http\Requests\Inventory\InventoryRules;
+use App\Http\Requests\Inventory\StockInRequest;
 use App\Rules\MoneyAmount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -32,7 +33,7 @@ class StorePurchaseRequest extends FormRequest
             ...InventoryRules::event(),
             /** 1-30 lines. Total = sum of line amounts. */
             'items' => ['required', 'array', 'min:1', 'max:30'],
-            'items.*' => ['required', 'array:kind,description,inventory_item_id,output,storage_location_id,lot_id,lot,components,amount'],
+            'items.*' => ['required', 'array:kind,description,inventory_item_id,new_item,output,storage_location_id,lot_id,lot,components,amount'],
             /** stock = received into inventory through a stock-in; non_stock = a cost with no physical stock (services, transport...). */
             'items.*.kind' => ['required', Rule::in(['stock', 'non_stock'])],
             /** Required for non_stock lines; stock lines use the item name. */
@@ -41,6 +42,12 @@ class StorePurchaseRequest extends FormRequest
             'items.*.inventory_item_id' => ['sometimes', 'uuid'],
             /** stock only. The farm's automatic egg or milk stock, instead of inventory_item_id. Purchase resolves (or creates) the item and, with no storage_location_id, uses the farm's main store (created as "Main Store" when there is none). storage_location_id is optional on every stock line. Never needs the item id. */
             'items.*.output' => ['sometimes', Rule::in(['eggs', 'milk']), 'prohibits:items.*.inventory_item_id'],
+            /**
+             * stock only. Buy something not yet in the item list, in one step: `{name, category, unit}` (plus the optional fields of POST /inventory/items). Send exactly one of inventory_item_id, new_item or output.
+             * Same rule as stock-in: an ACTIVE item with the same name and category is reused (the line shows `item_reused: true`), otherwise it is created in the same transaction. Same validation as POST /inventory/items.
+             */
+            'items.*.new_item' => ['sometimes', 'array:name,category,unit,tracks_lots,tracks_expiry,low_stock_threshold,description', 'prohibits:items.*.output'],
+            ...StockInRequest::newItemRules('items.*.new_item'),
             /** Optional: omitted, the farm main store is used. */
             'items.*.storage_location_id' => ['sometimes', 'uuid'],
             'items.*.lot_id' => ['sometimes', 'nullable', 'uuid', 'prohibits:items.*.lot'],

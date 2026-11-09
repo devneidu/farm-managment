@@ -128,6 +128,54 @@ POST /api/v1/income
 
 On the Income form show a prominent option **"Sold something from your farm?"** (eggs, milk, crops, livestock, other produce). It **opens the Sell form** described in [FRONTEND-SALES-FLOW.md](FRONTEND-SALES-FLOW.md): one form, one `POST /sales` that records what left the farm, the buyer and (optionally) the money received; stock and income are booked correctly when the money is received. Never offer the four sales categories in the manual form (the server refuses them).
 
+### The one dynamic Expense form — `GET /finance/form-options?direction=expense`
+
+There is **one** Expense form (and one Income form, see [FRONTEND-INCOME-FLOW.md](FRONTEND-INCOME-FLOW.md) section 1b). Flow: **choice → fields → endpoint**. Read the choices from the server; options the user may not use are left out.
+
+```json
+{ "data": { "direction": "expense", "options": [
+    { "code": "store_purchase", "label": "Bought items for the store", "kind": "purchase",
+      "description": "Feed, medicine, seed or supplies bought. Adds them to the store and records the expense in one step.",
+      "endpoint": { "method": "POST", "path": "/purchases" }, "finance_category_id": null, "permission": "purchase.create" },
+    { "code": "feed", "label": "Feed", "kind": "manual", "description": "Feed bought and paid for.",
+      "endpoint": { "method": "POST", "path": "/expenses" }, "finance_category_id": "01a1c1e4-bc41-7335-930c-c3ed5b59036b", "permission": "finance.create" } ],
+    "payment_methods": ["cash", "bank_transfer", "pos", "mobile_money", "cheque", "other"],
+    "settings": { "use_stock_for_usage": false }, "can_add_stock": true },
+  "meta": [], "message": null }
+```
+
+| Choice (`kind`) | Fields | Save to |
+|---|---|---|
+| `purchase` (`store_purchase`, first) | supplier, date, lines: item + quantity + amount (or **new item**), optional store/lot | `POST /purchases` — adds stock and books the expense in one step |
+| `manual` (each category) | the fields below | `POST /expenses` with the option's `finance_category_id` |
+
+A Farm Worker gets an **empty** `options` list for expense (no `purchase.create`, no `finance.create`): hide the Add expense button.
+
+#### Store purchase with a new item — `POST /purchases`
+
+Each stock line names its stock with exactly one of `inventory_item_id`, `new_item` or `output`. `new_item` is the same popup as stock-in: `{ name, category, unit }`. An **active item with the same name (case/space-insensitive) and category is reused**, otherwise it is created — in the same transaction as the purchase, stock-in and expense. The store (`storage_location_id`) is optional: the main store is used. Retrying the same `idempotency_key` with the same body returns the same purchase and changes nothing.
+
+```json
+{ "recorded_at": "2026-10-14T09:00:00Z", "idempotency_key": "pur-newitem-1",
+  "items": [ { "kind": "stock", "new_item": { "name": "Layer Mash", "category": "feed", "unit": "kg" },
+               "components": [ { "quantity": "25", "unit": "kg" } ], "amount": "15000.00" } ] }
+```
+
+`201` (trimmed): the line carries **`item_reused`** — `false` here because the purchase created the item:
+
+```json
+{ "data": { "reference": "PUR-2026-00001", "total_amount": "15000.00",
+    "finance_category": { "code": "feed", "name": "Feed" }, "finance_transaction_id": "01a1c1e5-40cb-7337-930a-0c672ded279f",
+    "items": [ { "line_no": 1, "kind": "stock", "description": "Layer Mash", "inventory_item_id": "01a1c1e5-3fd2-72b5-bc10-8e33438608d8",
+                 "item_reused": false, "quantity": { "quantity": "25", "unit": "kg" }, "amount": "15000.00",
+                 "inventory_movement_id": "01a1c1e5-4086-7187-b11b-e993005e6668" } ] },
+  "message": "Purchase recorded." }
+```
+
+Buying the same item again with `new_item` returns the same `inventory_item_id` and `"item_reused": true` (stock goes up on the existing item). A line bought with `inventory_item_id` has no `item_reused` key. Show a small "Added to your store as a new item" note when `item_reused` is `false`.
+
+Errors (real): a missing field is reported under the line — `422 {"errors":{"items.0.new_item.unit":["The items.0.new_item.unit field is required when items.0.new_item is present."]}}`; sending `inventory_item_id` together with `new_item` is `422` on `items.0.new_item` ("Name the stock with exactly one of inventory_item_id, new_item or output."). Nothing is created or booked on a 422.
+
 ## 3. Correcting entries
 
 The ledger is append-only: there is no edit and no delete.

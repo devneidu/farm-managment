@@ -1,0 +1,64 @@
+$kind: http-request
+description: |-
+  **WHAT IT DOES**
+  Returns the choices for the ONE dynamic Income form or the ONE dynamic Expense form: an ordered list with code, label, short description, kind (sale | purchase | manual), the endpoint to submit to and the permission it needs. Also returns the payment methods, `settings.use_stock_for_usage` and `can_add_stock`.
+
+  **WHEN TO USE IT**
+  When the user opens Add income / Add expense: show the choices, then the fields for the chosen one, then submit to its `endpoint` (see `docs/api/FRONTEND-INCOME-FLOW.md` section 1b and `docs/api/FRONTEND-TRANSACTIONS-FLOW.md`).
+
+  **IMPORTANT INPUTS**
+  - `direction` (required): `income` | `expense`.
+
+  **IMPORTANT BEHAVIOR**
+  - Income: `farm_sale` (POST /sales) first, then each manual-entry income category (POST /income with `finance_category_id`). Expense: `store_purchase` (POST /purchases) first, then each manual-entry expense category (POST /expenses with `finance_category_id`).
+  - Options the user may not use (`sale.create`, `purchase.create`, `finance.create`) are left out, so the list can be empty (Vet; Farm Worker on the expense form).
+  - Product-sales categories never appear as manual options.
+
+  **FRONTEND NOTES**
+  - `use_stock_for_usage` ON: do not offer typed products. `can_add_stock` false: show "Ask your manager to add it to the store".
+
+  ---
+  **REFERENCE (detail)**
+
+  **AUTHENTICATION**
+  **Required** — Sanctum session cookie.
+
+  **ACCESS**
+  Any active member of the farm; the content depends on the role.
+
+  **URL**
+  `GET {{base_url}}/finance/form-options?direction=income`
+
+  **SUCCESS**
+  `200 OK` — `data`: `direction`, `options[]` (`code`, `label`, `kind`, `description`, `endpoint {method, path}`, `finance_category_id`, `permission`), `payment_methods[]`, `settings {use_stock_for_usage}`, `can_add_stock`.
+
+  **ERRORS**
+  - `401 unauthenticated`, `422 validation_failed` (direction missing or not income/expense).
+url: "{{base_url}}/finance/form-options?direction=income"
+method: GET
+headers:
+  - key: Accept
+    value: "application/json"
+  - key: Origin
+    value: "{{frontend_origin}}"
+    description: "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+  - key: X-Farm-Id
+    value: "{{farm_id}}"
+    description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+    disabled: true
+queryParams:
+  - key: direction
+    value: "income"
+    description: "enum: income | expense (required)"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Status is 200", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });
+      const isJson = (pm.response.headers.get("Content-Type") || "").includes("json");
+      if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
+        const json = pm.response.json();
+        pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
+      }
+    language: text/javascript
+examples: ./.resources/Form options (income or expense form).resources/examples
+order: 12000

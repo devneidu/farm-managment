@@ -163,3 +163,8 @@ Row: `kind, id, reference, date, contact_id, contact_name, contact_phone, summar
 - `still_owed` — sum of `total − live payments` over every non-cancelled sale, un-invoiced sales included, as of now. Not date filtered (summary has no equivalent).
 
 Date note: a sale's date is its `recorded_at` in the farm's current UTC offset.
+
+## Money forms (form options, purchases with new items)
+
+* `GET /finance/form-options?direction=income|expense` — the choices for the single dynamic Income / Expense form (any farm member; options the user cannot use are omitted). See `FRONTEND-INCOME-FLOW.md` §1b and `FRONTEND-TRANSACTIONS-FLOW.md`.
+* `POST /purchases` stock lines accept `new_item {name, category, unit}` instead of `inventory_item_id`: the same create-or-reuse rule as stock-in (active item with the same normalised name and category is reused), in the purchase's own transaction, idempotent. The line response carries `item_reused` (`purchase_items.item_reused`, null for lines that named an existing item).

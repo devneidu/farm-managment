@@ -185,7 +185,7 @@ class InventoryService
      * otherwise it is created by the ordinary item-creation path (same validation, same name rule, so a name taken by another category or
      * an inactive item is still the usual 409). Runs inside the stock-in transaction, under the farm lock.
      */
-    private function itemForNewStock(FarmContext $ctx, array $new, bool &$reused): InventoryItem
+    public function itemForNewStock(FarmContext $ctx, array $new, bool &$reused, string $field = 'new_item'): InventoryItem
     {
         $existing = InventoryItem::ofFarm($ctx->farm)->where('normalized_name', InventoryItem::normalizeName($new['name']))->where('is_active', true)->where('category', $new['category'])->first();
         if ($existing !== null) {
@@ -198,7 +198,7 @@ class InventoryService
         try {
             $created = $this->makeItem($ctx, $input); // the popup is covered by inventory.add (checked in stockIn)
         } catch (ValidationException $e) { // report the item rules' errors where the client put the fields
-            throw ValidationException::withMessages(collect($e->errors())->mapWithKeys(fn ($messages, $key) => ['new_item.'.($key === 'stock_unit' ? 'unit' : $key) => $messages])->all());
+            throw ValidationException::withMessages(collect($e->errors())->mapWithKeys(fn ($messages, $key) => [$field.'.'.($key === 'stock_unit' ? 'unit' : $key) => $messages])->all());
         }
 
         return $this->lockItem($ctx, $created->id);

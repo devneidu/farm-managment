@@ -42,12 +42,12 @@ class StockInRequest extends InventoryRequest
     }
 
     /** The item-creation rules (StoreItemRequest), re-keyed under new_item (stock_unit is called `unit` here) and only required when new_item is sent. */
-    private static function newItemRules(): array
+    public static function newItemRules(string $prefix = 'new_item'): array
     {
         $rules = [];
         foreach ((new StoreItemRequest)->rules() as $key => $rule) {
             $key = $key === 'stock_unit' ? 'unit' : $key;
-            $rules['new_item.'.$key] = array_map(fn ($r) => $r === 'required' ? 'required_with:new_item' : (is_string($r) && str_starts_with($r, 'required_with:') ? 'required_with:new_item.'.substr($r, 14) : $r), $rule);
+            $rules[$prefix.'.'.$key] = array_map(fn ($r) => $r === 'required' ? 'required_with:'.$prefix : (is_string($r) && str_starts_with($r, 'required_with:') ? 'required_with:'.$prefix.'.'.substr($r, 14) : $r), $rule);
         }
 
         return $rules;

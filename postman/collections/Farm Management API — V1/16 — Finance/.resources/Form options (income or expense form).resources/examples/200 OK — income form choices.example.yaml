@@ -1,0 +1,73 @@
+$kind: http-example
+name: 200 OK — income form choices
+request:
+  url: "{{base_url}}/finance/form-options?direction=income"
+  method: GET
+  headers:
+    - key: Accept
+      value: "application/json"
+response:
+  statusCode: 200
+  statusText: OK
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "direction": "income",
+              "options": [
+                  {
+                      "code": "farm_sale",
+                      "label": "Sold something from your farm",
+                      "kind": "sale",
+                      "description": "Animals, eggs, milk, crops or items from your store. Records what left the farm, who bought it and what was paid.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/sales"
+                      },
+                      "finance_category_id": null,
+                      "permission": "sale.create"
+                  },
+                  {
+                      "code": "other_income",
+                      "label": "Other income",
+                      "kind": "manual",
+                      "description": "Money received that is not a sale, such as a refund or a one-off payment.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/income"
+                      },
+                      "finance_category_id": "01a1c1e4-bcd2-70cf-a554-a0d003018e54",
+                      "permission": "finance.create"
+                  },
+                  {
+                      "code": "services",
+                      "label": "Services",
+                      "kind": "manual",
+                      "description": "Money earned for work or services done for someone.",
+                      "endpoint": {
+                          "method": "POST",
+                          "path": "/income"
+                      },
+                      "finance_category_id": "01a1c1e4-bcdf-700e-a8f3-b4bec213ab59",
+                      "permission": "finance.create"
+                  }
+              ],
+              "payment_methods": [
+                  "cash",
+                  "bank_transfer",
+                  "pos",
+                  "mobile_money",
+                  "cheque",
+                  "other"
+              ],
+              "settings": {
+                  "use_stock_for_usage": false
+              },
+              "can_add_stock": true
+          },
+          "meta": [],
+          "message": null
+      }

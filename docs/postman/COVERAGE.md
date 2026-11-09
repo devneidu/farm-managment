@@ -395,3 +395,10 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * Folder **16 — Finance** gains `Income list` (2 saved examples: owner with totals, Farm Worker sale rows only). Folder **17 — Sales, Invoices & Payments** gains `Sell: typed product` (201 and the 422 "sells from the store"). Both added to the JSON collection and the Postman YAML tree. Examples are real responses captured from the code; Newman was not re-run.
 * Sale responses gain `total`, `amount_received`, `balance`, `money_status`; sale lines gain `product_type`, `entered_quantity`. Totals in §1 were not recomputed.
 * Frontend contract: `docs/api/FRONTEND-INCOME-FLOW.md`.
+
+## Addendum — Money forms (form options, purchases with new items)
+
+* Folder **16 — Finance** gains `Form options (income or expense form)` (`GET /finance/form-options?direction=`; 4 saved examples: income choices, expense choices, Farm Worker with no expense options, 422 direction required). Folder **15 — Contacts & Purchasing** gains `Record a purchase with a new item` (`new_item` on a stock line; 201 created, 201 reused, 422 missing unit). Both added to the JSON collection and the Postman YAML tree. Examples are real responses captured from the code; Newman was not re-run.
+* `POST /purchases`: stock lines accept `new_item {name, category, unit}` (exactly one of `inventory_item_id` / `new_item` / `output`); the line response gains `item_reused` (only for `new_item` lines). The existing `Record a purchase (stock + expense)` request is unchanged.
+* Frontend contract: `docs/api/FRONTEND-INCOME-FLOW.md` (section 1b) and `docs/api/FRONTEND-TRANSACTIONS-FLOW.md` (dynamic Expense form).
+* The endpoint total (`openapi.json` / the §1 counts) was not regenerated.

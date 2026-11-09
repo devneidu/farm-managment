@@ -1,0 +1,148 @@
+$kind: http-example
+name: 201 Created — item created (item_reused false)
+request:
+  url: "{{base_url}}/purchases"
+  method: POST
+  headers:
+    - key: Accept
+      value: "application/json"
+    - key: Content-Type
+      value: "application/json"
+    - key: X-Farm-Id
+      value: "{{farm_id}}"
+      description: "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership."
+      disabled: true
+  body:
+    type: json
+    content: |-
+      {
+          "recorded_at": "{{recorded_at_2h}}",
+          "idempotency_key": "{{purchase_key}}",
+          "items": [
+              {
+                  "kind": "stock",
+                  "new_item": {
+                      "name": "Layer Mash",
+                      "category": "feed",
+                      "unit": "kg"
+                  },
+                  "components": [
+                      {
+                          "quantity": "25",
+                          "unit": "kg"
+                      }
+                  ],
+                  "amount": "15000.00"
+              }
+          ]
+      }
+response:
+  statusCode: 201
+  statusText: Created
+  headers:
+    Content-Type: application/json
+  body:
+    type: json
+    content: |-
+      {
+          "data": {
+              "id": "01a1c1e5-3ff9-7151-98e8-bd2ecffbd6af",
+              "reference": "PUR-2026-00001",
+              "status": "active",
+              "contact_id": null,
+              "contact_name": null,
+              "production_cycle_id": null,
+              "supplier_reference": null,
+              "recorded_at": "2026-10-14T09:00:00.000000Z",
+              "total_amount": "15000.00",
+              "currency": "NGN",
+              "finance_category": {
+                  "id": "01a1c1e4-bc41-7335-930c-c3ed5b59036b",
+                  "code": "feed",
+                  "name": "Feed"
+              },
+              "records_expense": true,
+              "finance_transaction_id": "01a1c1e5-40cb-7337-930a-0c672ded279f",
+              "finance_reversal_transaction_id": null,
+              "notes": null,
+              "corrects_purchase_id": null,
+              "cancelled_at": null,
+              "cancel_reason": null,
+              "items": [
+                  {
+                      "id": "01a1c1e5-406b-731b-a1f0-f8cdef950b31",
+                      "line_no": 1,
+                      "kind": "stock",
+                      "description": "Layer Mash",
+                      "inventory_item_id": "01a1c1e5-3fd2-72b5-bc10-8e33438608d8",
+                      "item_reused": false,
+                      "storage_location_id": "01a1c1e5-4047-7379-b1ab-3630c146792e",
+                      "inventory_lot_id": null,
+                      "lot": null,
+                      "quantity": {
+                          "quantity": "25",
+                          "unit": "kg",
+                          "normalized": {
+                              "quantity": "25000",
+                              "unit": "g"
+                          }
+                      },
+                      "measurement": {
+                          "total": {
+                              "unit": "kg",
+                              "quantity": "25"
+                          },
+                          "entered": [
+                              {
+                                  "unit": "kg",
+                                  "quantity": "25"
+                              }
+                          ],
+                          "snapshot": {
+                              "total": {
+                                  "unit": "kg",
+                                  "quantity": "25"
+                              },
+                              "schema": 1,
+                              "entered": [
+                                  {
+                                      "unit": {
+                                          "code": "kg",
+                                          "factor": "1000",
+                                          "family": "weight",
+                                          "strategy": "linear",
+                                          "dimension": "weight",
+                                          "integer_only": false
+                                      },
+                                      "quantity": "25"
+                                  }
+                              ],
+                              "packages": [],
+                              "normalized": {
+                                  "unit": "g",
+                                  "quantity": "25000"
+                              },
+                              "result_unit": {
+                                  "code": "kg",
+                                  "factor": "1000",
+                                  "family": "weight",
+                                  "strategy": "linear",
+                                  "dimension": "weight",
+                                  "integer_only": false
+                              }
+                          },
+                          "normalized": {
+                              "unit": "g",
+                              "quantity": "25000"
+                          }
+                      },
+                      "amount": "15000.00",
+                      "inventory_movement_id": "01a1c1e5-4086-7187-b11b-e993005e6668"
+                  }
+              ],
+              "created_by": "01a1c1e5-3d2c-71a7-8657-fc5cbaf7315e",
+              "created_at": "2026-10-14T12:00:00.000000Z"
+          },
+          "meta": [],
+          "message": "Purchase recorded."
+      }
