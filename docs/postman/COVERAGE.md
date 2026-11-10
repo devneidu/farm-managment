@@ -2,6 +2,8 @@
 
 Package: `docs/postman/Farm-Management-API.postman_collection.json` (Postman Collection v2.1), `docs/postman/Farm-Management-Local.postman_environment.json`, `docs/postman/WORKFLOWS.md`, with the contract in `docs/api/API-CONTRACT.md` and `docs/api/FRONTEND-INTEGRATION.md`.
 
+> **Single source of truth.** `docs/postman/Farm-Management-API.postman_collection.json` is the **only** Postman collection. The root `postman/` folder (the Postman-app YAML Git-sync copy) was removed; every mention of the "YAML tree" / "YAML export" in the older addenda below is historical. Postman changes are made in the JSON collection (and its environment file) only.
+
 ## 1. Summary
 
 Figures below were measured on the final collection after the frontend-handoff correction pass (GAP-01 … GAP-08, see the addendum at the end); earlier versions of this report carried approximate counts.
@@ -418,3 +420,9 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 **Examples re-captured from the real application** (Newman responses, plus a throwaway feature test for the worker view, the overpayment and the accepted invitation; neither is committed): `Use stock setting`, `Feed use, typed name`, `Vaccination, typed medicine`, the sale-payment examples (201 part payment on an uninvoiced sale, 409 `payment_exceeds_balance`), `Get current farm` (owner and the worker example), `Update farm name`, `Get current auth state (me)`, login, onboarding and `Accept a farm invitation`, with the Flow 1, 2, S and 13 copies. They now show `inventory.add`, `settings.use_stock_for_usage` and `can_add_stock`. Not re-captured: `List roles` (its permission lists still omit `inventory.add`), the platform-admin farm list/show (a different resource), and the 403/422 examples of `Update farm name` (their shape did not change).
 
 **Known gaps (unchanged):** the YAML tree has no files for several JSON requests added on earlier branches (the `Livestock exit: ...` requests, `Sell: part payment`, `Sell: paid in full`, `Sell: not paid yet`, `Record a payment on a sale (invoice auto-created)`), so those fixes exist in the JSON only. `docs/api/openapi.json` was not regenerated. No application bug was found by this run.
+
+## Addendum — single JSON collection
+
+* The root `postman/` folder (about 1,760 files: the YAML export of the collection and two environments) was deleted. `docs/postman/Farm-Management-API.postman_collection.json` and `docs/postman/Farm-Management-Local.postman_environment.json` are the only Postman artefacts; from now on Postman updates go to the JSON only.
+* `.postman/resources.yaml` (Postman workspace link) no longer maps a cloud collection to the removed folder; it still points at the JSON collection, the JSON environment and `docs/api/openapi.json`.
+* Searched docs, README, WORKLOG, scripts, CI (`.github`), `composer.json` and `package.json` for `postman/collections`: the only live reference was `.postman/resources.yaml`.

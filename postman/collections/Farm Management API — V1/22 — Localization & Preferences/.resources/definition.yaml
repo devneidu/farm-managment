@@ -1,6 +1,0 @@
-$kind: collection
-description: |-
-  Supported languages, translation bundles and the user's language preference. Locale never changes money, quantity or timestamp formats.
-
-  Typical screens: language picker and UI text loading.
-order: 24000

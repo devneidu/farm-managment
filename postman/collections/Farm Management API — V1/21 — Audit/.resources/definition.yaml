@@ -1,6 +1,0 @@
-$kind: collection
-description: |-
-  Who did what, when, to which resource (Owner and Manager).
-
-  Typical screens: audit log (owners/managers).
-order: 23000

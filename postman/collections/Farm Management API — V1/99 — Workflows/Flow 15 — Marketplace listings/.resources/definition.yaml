@@ -1,3 +1,0 @@
-$kind: collection
-description: Seller (no farm) -> approved shop -> listings -> photo -> publish -> public feed -> pause -> admin restrict/lift -> republish. Executed with Newman on a fresh database.
-order: 16000
