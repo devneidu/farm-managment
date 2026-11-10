@@ -208,7 +208,8 @@ class WorkTemplateService
         if ($schedule) {
             $step = array_replace($step, ['recurrence' => $schedule->recurrence->value, 'interval_value' => $schedule->interval_value, 'weekdays' => $schedule->weekdays,
                 'occurrence_limit' => $schedule->occurrence_limit, 'ends_type' => $schedule->ends_type === 'batch_end' ? 'batch_end' : null]);
-            if ($schedule->ends_on !== null) {
+            // A batch-end series stores the batch's end date in ends_on; the routine must keep "ends with the batch" alone (the template refuses a second end).
+            if ($schedule->ends_on !== null && $schedule->ends_type !== 'batch_end') {
                 $step['until_offset_days'] = (int) $schedule->starts_on->diffInDays($schedule->ends_on);
             }
         }

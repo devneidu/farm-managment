@@ -75,7 +75,7 @@ class CalendarFeedTest extends TeamTestCase
 
         $first = $this->postJson('/api/v1/calendar-feed')->assertCreated()->json('data');
         $this->assertTrue($first['enabled']);
-        $this->assertStringStartsWith('https://', $first['https_url']);
+        $this->assertStringStartsWith(rtrim((string) config('app.url'), '/').'/api/v1/calendar-feed/', $first['https_url'], 'the link follows APP_URL (https in production, http locally)');
         $this->assertStringStartsWith('webcal://', $first['webcal_url']);
         $this->assertStringEndsWith('.ics', $first['webcal_url']);
         $token = $this->token($first);

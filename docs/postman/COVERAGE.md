@@ -442,11 +442,13 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 | Flows 1-14 (order 1, 2, S, 3-11, 12, 14, 13) | **177 requests, 372 assertions, 0 failures** |
 | Flows 15-19 (marketplace) | **287 requests, 0 failures** |
 | Folders 12, 14, 18, 19, 20, 21, 22, 04 | pass (0 failures) |
-| Folder 13 | 36 requests: 33 pass; `Save as routine` fails (app issue below) and `Calendar feed ics` fails only because the local server hands out an `https://` link (harness env) |
+| Folder 13 | 36 requests, 0 failures after the fixes below (Newman, fresh database) |
 | Folder 90 | 52 requests, 13 failing assertions, all state dependent: they need ids from other folders (a user to suspend from Flow 13, species ids from 05, a shop in `pending_review` from Flow 15) or hit an already-applied state (`Change a farm's plan` 409). Not resolved in this pass |
 | Folders 00, 01, 02 | `00` and `02` pass. `01`: the password-reset requests act on `chidi.worker@example.com`, which exists only after Flow 13, so they fail on a fresh database; the resend request needs a 60 s wait (HTTP 429 before). A run with that account pre-seeded was stopped before it finished |
 | Folders 23-28 (marketplace reference) | **not verified.** They cannot run as one session (separate buyer, seller, staff and admin personas; shops need admin approval first). Their behaviour is covered by Flows 15-19, which pass. A single-session attempt failed on those prerequisites |
 
-**App issue found (reported, not fixed):** `POST /tasks/{id}/save-as-routine` on a repeating task that ends with the batch (`repeat.ends.type = batch_end`) answers `422 items.0.repeat.ends.type: Until the batch ends cannot be combined with another end` when the batch has an end date. `WorkTemplateService::saveAsRoutine` copies the schedule's end date as `until_offset_days` next to `ends_type = batch_end`, and the template validation then refuses the pair. The unit test covers a daily series on a batch without that end date only.
+**App issue (fixed):** `POST /tasks/{id}/save-as-routine` on a series that ends with the batch used to answer `422 Until the batch ends cannot be combined with another end` because the series' end date was copied next to `ends_type = batch_end`. `WorkTemplateService::saveAsRoutine` now keeps `batch_end` alone; `RoutinesTest` covers saving such a series and applying the routine to another batch.
+
+**Calendar link:** `https_url` now follows `APP_URL`'s scheme (it was forced to `https`). **Collection mistake fixed:** `Calendar feed ics` ran after `Calendar link off`, so it got 404; it now runs before it.
 
 **Unchanged:** `docs/api/openapi.json` was not regenerated; the Postman examples of requests not named above are the earlier captures.

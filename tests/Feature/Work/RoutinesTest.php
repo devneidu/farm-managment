@@ -187,6 +187,27 @@ class RoutinesTest extends TeamTestCase
         $this->postJson('/api/v1/tasks/'.$ongoing.'/save-as-routine', ['name' => 'Daily water general', 'scope' => 'general'])->assertStatus(422);
     }
 
+    public function test_a_batch_end_series_saves_as_a_routine_that_ends_with_the_batch_it_is_applied_to(): void
+    {
+        $cycle = $this->cycle('chicken', ['expected_end_date' => '2026-03-01']);
+        $created = $this->task(['title' => 'Water', 'category' => 'feeding_watering', 'production_cycle_id' => $cycle, 'repeat' => ['pattern' => 'daily', 'ends' => ['type' => 'batch_end']]])->assertCreated();
+        $taskId = $created->json('data.tasks.0.id');
+        $scheduleId = Task::findOrFail($taskId)->schedule_id;
+        // Whatever end date the series carries (the batch's expected end), the routine keeps "ends with the batch" alone.
+        Schedule::whereKey($scheduleId)->update(['ends_on' => '2026-03-01']);
+
+        $routine = $this->postJson('/api/v1/tasks/'.$taskId.'/save-as-routine', ['name' => 'Water until batch ends'])->assertCreated()->assertJsonPath('data.items.0.repeat.ends.type', 'batch_end')->json('data');
+        $this->assertSame(['type' => 'batch_end'], $routine['items'][0]['repeat']['ends']);
+
+        $other = $this->cycle('chicken', ['expected_end_date' => '2026-06-01']);
+        $applied = $this->apply($routine['id'], ['production_cycle_id' => $other])->assertCreated()->json('data');
+        $schedule = Schedule::where('template_application_id', $applied['id'])->firstOrFail();
+        $this->assertSame('batch_end', $schedule->ends_type);
+        $this->assertNull($schedule->occurrence_limit);
+        $this->assertSame($other, $schedule->production_cycle_id);
+        $this->assertSame('active', $schedule->status);
+    }
+
     // ------------------------------------------------------------------ preview
 
     public function test_preview_lists_the_jobs_and_saves_nothing(): void

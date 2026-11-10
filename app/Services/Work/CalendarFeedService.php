@@ -137,8 +137,9 @@ class CalendarFeedService
         if (! $feed || ! $feed->enabled || $feed->token_encrypted === null) {
             return ['enabled' => false, 'include_milestones' => (bool) $feed?->include_milestones, 'https_url' => null, 'webcal_url' => null];
         }
-        $url = url('/api/v1/calendar-feed/'.Crypt::decryptString($feed->token_encrypted).'.ics');
-        $https = preg_replace('#^http://#', 'https://', $url);
+        // Follows APP_URL's scheme: https in production, http on a local server (the key keeps its name for the frontend).
+        $url = rtrim((string) config('app.url'), '/').'/api/v1/calendar-feed/'.Crypt::decryptString($feed->token_encrypted).'.ics';
+        $https = $url;
 
         return ['enabled' => true, 'include_milestones' => $feed->include_milestones, 'https_url' => $https, 'webcal_url' => preg_replace('#^https?://#', 'webcal://', $url)];
     }
