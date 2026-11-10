@@ -24,7 +24,7 @@ request:
           "problem_type": "routine_prevention",
           "target_disease": "Newcastle disease"
         },
-        "animals_affected": 490,
+        "animals_affected": 400,
         "follow_up_on": "{{date_in_14d}}",
         "notes": "Whole flock, Pen 1",
         "medicines": [
@@ -51,8 +51,8 @@ response:
     content: |-
       {
         "data": {
-          "id": "01a1045e-71c7-7136-836e-110a2edba3cd",
-          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "id": "01a1c4fc-d891-7192-a2d7-a8359335b67d",
+          "production_cycle_id": "01a1c4fb-82bf-70c1-a4bf-32c8e7dcc256",
           "type": "vaccination",
           "details": {
             "problem_type": "routine_prevention",
@@ -60,31 +60,31 @@ response:
           },
           "problem_type": "routine_prevention",
           "problem_type_label": "Routine care or prevention (check-ups, vitamins, general vaccination)",
-          "animals_affected": 490,
-          "follow_up_on": "2026-10-18",
+          "animals_affected": 400,
+          "follow_up_on": "2026-11-24",
           "mortality_record_id": null,
-          "recorded_at": "2026-10-03T22:44:06.000000Z",
+          "recorded_at": "2026-11-10T08:24:26.000000Z",
           "notes": "Whole flock, Pen 1",
           "reverses_record_id": null,
           "corrects_record_id": null,
           "reversed_by_record_id": null,
           "medicines": [
             {
-              "id": "01a1045e-720e-7157-9919-136fb840f4d4",
+              "id": "01a1c4fc-d8ae-7262-bace-4d62ef8124fc",
               "line_no": 1,
-              "is_typed": true,
               "inventory_item_id": null,
               "item_name": "Local herbal mix",
               "storage_location_id": null,
               "inventory_lot_id": null,
               "lot": null,
+              "is_typed": true,
               "quantity_used": null,
               "measurement": null,
               "dose_per_animal": {
                 "components": [
                   {
-                    "quantity": "0.5",
-                    "unit": "ml"
+                    "unit": "ml",
+                    "quantity": "0.5"
                   }
                 ],
                 "normalized": null
@@ -93,17 +93,16 @@ response:
               "withdrawal": {
                 "days": 7,
                 "source": "explicit",
-                "started_at": "2026-10-03T22:44:06.000000Z",
-                "ends_at": "2026-10-10T22:44:06.000000Z",
+                "started_at": "2026-11-10T08:24:26.000000Z",
+                "ends_at": "2026-11-17T08:24:26.000000Z",
                 "is_active": true
               },
               "inventory_movement_id": null
             }
           ],
-          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
-          "created_at": "2026-10-04T00:45:08.000000Z"
+          "created_by": "01a1c4fa-e4f6-70d8-ab64-0a970674d096",
+          "created_at": "2026-11-10T10:24:27.000000Z"
         },
         "meta": [],
         "message": "Health record saved."
       }
-order: 1000

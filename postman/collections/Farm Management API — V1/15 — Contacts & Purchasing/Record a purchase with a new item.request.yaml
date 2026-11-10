@@ -85,6 +85,7 @@ scripts:
         const json = pm.response.json();
         pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
       }
+      if (pm.response.code === 201) { pm.environment.set("purchase_c_id", String(pm.response.json().data.id)); }
     language: text/javascript
 examples: ./.resources/Record a purchase with a new item.resources/examples
 order: 6500

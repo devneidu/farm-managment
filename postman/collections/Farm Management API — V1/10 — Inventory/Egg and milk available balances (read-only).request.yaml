@@ -70,4 +70,4 @@ scripts:
       }
     language: text/javascript
 examples: ./.resources/Egg and milk available balances (read-only).resources/examples
-order: 15000
+order: 18001

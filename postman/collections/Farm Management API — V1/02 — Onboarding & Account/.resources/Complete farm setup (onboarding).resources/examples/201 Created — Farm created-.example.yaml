@@ -28,27 +28,31 @@ response:
           "has_active_farm": true,
           "next_action": "none",
           "user": {
-            "id": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
+            "id": "01a1c4fa-e4f6-70d8-ab64-0a970674d096",
             "email": "ada.okafor@example.com",
             "name": null,
-            "email_verified_at": "2026-10-04T00:45:08+00:00",
+            "email_verified_at": "2026-11-10T10:22:20+00:00",
             "has_password": true,
             "platform_role": null,
             "providers": [],
             "locale": null
           },
           "farm": {
-            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+            "id": "01a1c4fa-edf9-71b5-ab87-e46db203f7ad",
             "name": "Okafor Integrated Farms",
             "country_code": "NG",
             "currency": "NGN",
             "timezone": "Africa/Lagos",
             "locale": "en",
-            "role": "owner"
+            "role": "owner",
+            "settings": {
+              "use_stock_for_usage": false
+            },
+            "can_add_stock": true
           },
           "farms": [
             {
-              "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+              "id": "01a1c4fa-edf9-71b5-ab87-e46db203f7ad",
               "name": "Okafor Integrated Farms",
               "role": "owner"
             }
@@ -57,7 +61,6 @@ response:
             "shop_count": 0
           }
         },
-        "meta": {},
+        "meta": [],
         "message": "Farm created."
       }
-order: 1000

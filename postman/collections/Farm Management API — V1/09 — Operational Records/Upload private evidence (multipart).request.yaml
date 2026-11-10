@@ -84,7 +84,7 @@ body:
   content:
     - type: file
       key: file
-      src: []
+      src: samples/listing-photo.png
       description: "Evidence file: jpg, jpeg, png, webp, pdf, csv, txt, xls or xlsx, max 10 MiB."
 scripts:
   - type: afterResponse

@@ -25,7 +25,7 @@ request:
           }
         ],
         "recorded_at": "{{recorded_at_30h}}",
-        "idempotency_key": "{{stockin_key}}"
+        "idempotency_key": "{{$guid}}"
       }
 response:
   statusCode: 201

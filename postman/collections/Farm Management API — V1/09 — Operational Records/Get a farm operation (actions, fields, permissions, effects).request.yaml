@@ -31,7 +31,7 @@ scripts:
       if (isJson && pm.response.code >= 200 && pm.response.code < 300) {
         const json = pm.response.json();
         pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
-        pm.test("every schema states permissions_required and inventory metadata", function () { const rows = Array.isArray(json.data) ? json.data : [json.data]; rows.forEach(function (t) { pm.expect(t.permissions_required.always).to.be.an("array"); pm.expect(t).to.have.property("inventory"); pm.expect(t).to.have.property("area_fields"); }); });
+        pm.test("every action states permissions_required.always", function () { const g = json.data.actions; const all = Array.isArray(g) ? g : [].concat.apply([], Object.keys(g).map(function (k) { return g[k]; })); pm.expect(all).to.not.be.empty; all.forEach(function (a) { pm.expect(a.permissions_required.always).to.be.an("array"); }); });
       }
     language: text/javascript
 order: 3000

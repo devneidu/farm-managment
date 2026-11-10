@@ -40,7 +40,7 @@ body:
         }
       ],
       "recorded_at": "{{recorded_at_30h}}",
-      "idempotency_key": "{{stockin_key}}"
+      "idempotency_key": "{{$guid}}"
     }
 examples: ./.resources/Add stock, new item.resources/examples
 order: 9001

@@ -120,7 +120,7 @@ body:
         "problem_type": "routine_prevention",
         "target_disease": "Newcastle disease"
       },
-      "animals_affected": 490,
+      "animals_affected": 400,
       "follow_up_on": "{{date_in_14d}}",
       "notes": "Whole flock, Pen 1",
       "medicines": [
@@ -148,6 +148,7 @@ scripts:
         const get = (o, p) => p.split(".").reduce((a, k) => (a === undefined || a === null ? undefined : a[k]), o);
         { const v = get(json, "data.id"); if (v !== undefined && v !== null) pm.environment.set("health_record_id", String(v)); else console.warn("Could not capture health_record_id from data.id"); }
       }
+      if (pm.response.code === 201) { pm.environment.set("health_med2_id", String(pm.response.json().data.id)); }
     language: text/javascript
 examples: ./.resources/Vaccination, typed medicine.resources/examples
 order: 7500

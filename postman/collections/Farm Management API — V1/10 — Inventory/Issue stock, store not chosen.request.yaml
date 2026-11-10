@@ -28,7 +28,7 @@ body:
         }
       ],
       "recorded_at": "{{recorded_at_30h}}",
-      "idempotency_key": "{{stockout_key}}"
+      "idempotency_key": "{{$guid}}"
     }
 examples: ./.resources/Issue stock, store not chosen.resources/examples
 order: 9002

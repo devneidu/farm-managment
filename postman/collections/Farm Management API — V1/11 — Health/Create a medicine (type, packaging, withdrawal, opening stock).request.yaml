@@ -48,7 +48,7 @@ body:
   type: json
   content: |-
     {
-      "idempotency_key": "create-oxytet-001",
+      "idempotency_key": "{{$guid}}",
       "name": "Oxytetracycline 20% LA",
       "medicine_type": "antibiotic",
       "stock_unit": "ml",
@@ -59,7 +59,7 @@ body:
       "default_withdrawal_days": 14,
       "notes": "Keep below 25 C",
       "opening_stock": {
-        "storage_location_id": "01a135b0-9289-70f0-9e18-e89b1135a808",
+        "storage_location_id": "{{store_id}}",
         "components": [
           {
             "quantity": "5",

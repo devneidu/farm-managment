@@ -28,28 +28,32 @@ response:
           "has_active_farm": true,
           "next_action": "none",
           "user": {
-            "id": "01a1045e-4251-709f-a2f4-bfa626691fbc",
+            "id": "01a1c4f0-4b49-703c-b903-0325734ff51b",
             "email": "chidi.worker@example.com",
-            "name": null,
-            "email_verified_at": "2026-10-04T00:45:08+00:00",
+            "name": "Chidi Eze",
+            "email_verified_at": "2026-10-14T12:00:00+00:00",
             "has_password": true,
             "platform_role": null,
             "providers": [],
             "locale": null
           },
           "farm": {
-            "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
-            "name": "Okafor Integrated Farms Ltd",
+            "id": "01a1c4f0-441c-707a-857a-0105ea18971d",
+            "name": "Green Acres",
             "country_code": "NG",
             "currency": "NGN",
             "timezone": "Africa/Lagos",
             "locale": "en",
-            "role": "farm_worker"
+            "role": "farm_worker",
+            "settings": {
+              "use_stock_for_usage": false
+            },
+            "can_add_stock": true
           },
           "farms": [
             {
-              "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
-              "name": "Okafor Integrated Farms Ltd",
+              "id": "01a1c4f0-441c-707a-857a-0105ea18971d",
+              "name": "Green Acres",
               "role": "farm_worker"
             }
           ],
@@ -58,8 +62,7 @@ response:
           }
         },
         "meta": {
-          "accepted_farm_id": "01a1045e-3d57-71be-bf77-53f72c7c2dac"
+          "accepted_farm_id": "01a1c4f0-441c-707a-857a-0105ea18971d"
         },
         "message": "Invitation accepted."
       }
-order: 1000

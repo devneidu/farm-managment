@@ -7,7 +7,7 @@ description: |-
   "Reverse payment" (bounced/incorrect).
 
   **IMPORTANT INPUTS**
-  - Path ids (UUIDv7): `{{payment_b_id}}`.
+  - Path ids (UUIDv7): `{{payment_id}}`.
   - Required body fields: `reason`, `idempotency_key`.
 
   **IMPORTANT BEHAVIOR**
@@ -34,10 +34,10 @@ description: |-
   Rate limited by limiter `finance-write`: 240 per hour per user (`429 too_many_requests` + `Retry-After`).
 
   **URL**
-  `POST {{base_url}}/payments/{{payment_b_id}}/reverse`
+  `POST {{base_url}}/payments/{{payment_id}}/reverse`
 
   **PATH PARAMETERS**
-  - `{{payment_b_id}}` — UUID. Captured by "Record a payment (full)" (17 — Sales, Invoices & Payments) or from the list endpoint of this resource.
+  - `{{payment_id}}` — UUID. Captured by "Record a payment (full)" (17 — Sales, Invoices & Payments) or from the list endpoint of this resource.
 
   **REQUEST BODY** (`application/json`)
   - `reason` — string, **required**, max 2000 chars
@@ -45,7 +45,7 @@ description: |-
   - `idempotency_key` — string, **required**, max 80 chars, pattern `^[A-Za-z0-9._:-]+$`
 
   **VARIABLES USED**
-  - `{{payment_b_id}}` — captured by "Record a payment (full)"
+  - `{{payment_id}}` — captured by "Record a payment (full)"
 
   **BUSINESS RULES**
   - `409 payment_already_reversed`; `409 cycle_closed` when the income was allocated to a cycle that is now closed.
@@ -65,7 +65,7 @@ description: |-
   - `422 validation_failed` — `errors` is keyed by field (nested keys like `details.quantity`); some domain rules return a specific `code` (for example measurement errors).
   - `419 session_expired` — missing/expired CSRF token: call "Initialise CSRF cookie" and retry once.
   - `429 too_many_requests` — honour `Retry-After`.
-url: "{{base_url}}/payments/{{payment_b_id}}/reverse"
+url: "{{base_url}}/payments/{{payment_id}}/reverse"
 method: POST
 headers:
   - key: Accept

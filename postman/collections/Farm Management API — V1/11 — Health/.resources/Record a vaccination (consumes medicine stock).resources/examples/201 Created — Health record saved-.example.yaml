@@ -24,7 +24,7 @@ request:
           "problem_type": "routine_prevention",
           "target_disease": "Newcastle disease"
         },
-        "animals_affected": 490,
+        "animals_affected": 400,
         "follow_up_on": "{{date_in_14d}}",
         "notes": "Whole flock, Pen 1",
         "medicines": [
@@ -68,7 +68,7 @@ response:
           },
           "problem_type": "routine_prevention",
           "problem_type_label": "Routine care or prevention (check-ups, vitamins, general vaccination)",
-          "animals_affected": 490,
+          "animals_affected": 400,
           "follow_up_on": "2026-10-18",
           "mortality_record_id": null,
           "recorded_at": "2026-10-03T22:44:06.000000Z",

@@ -68,4 +68,4 @@ scripts:
       pm.test("Status is 201", function () { pm.expect(pm.response.code).to.be.oneOf([201]); });
     language: text/javascript
 examples: ./.resources/Record custom type.resources/examples
-order: 47000
+order: 43999

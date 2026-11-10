@@ -40,18 +40,21 @@ response:
     content: |-
       {
         "data": {
-          "id": "01a1045e-628e-72e0-bfee-cc134a2af5c8",
-          "production_cycle_id": "01a1045e-4eb5-7020-85dc-ac87e0bd8aef",
+          "id": "01a1c4fc-3bd0-72cb-91a6-e935b672b25a",
+          "production_cycle_id": "01a1c4fb-82bf-70c1-a4bf-32c8e7dcc256",
           "type": "feed_use",
+          "type_name": "Feed usage",
+          "custom_record_type_id": null,
+          "custom_schema_version": null,
           "details": {
             "item_name": "New Feed",
-            "feed_name": "New Feed",
             "components": [
               {
                 "quantity": "10",
                 "unit": "kg"
               }
-            ]
+            ],
+            "feed_name": "New Feed"
           },
           "measurement": {
             "entered": [
@@ -103,17 +106,17 @@ response:
             }
           },
           "population_delta": 0,
-          "recorded_at": "2026-10-03T21:44:06.000000Z",
+          "recorded_at": "2026-11-10T07:23:46.000000Z",
           "notes": null,
           "reverses_record_id": null,
           "corrects_record_id": null,
+          "linked_record_id": null,
           "reversed_by_record_id": null,
           "inventory_movement_id": null,
-          "created_by": "01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5",
-          "created_at": "2026-10-04T00:45:08.000000Z",
+          "created_by": "01a1c4fa-e4f6-70d8-ab64-0a970674d096",
+          "created_at": "2026-11-10T10:23:47.000000Z",
           "attachments": []
         },
         "meta": [],
         "message": "Operational record saved."
       }
-order: 1000

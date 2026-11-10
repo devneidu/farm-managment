@@ -70,7 +70,7 @@ scripts:
         const json = pm.response.json();
         pm.test("Standard success envelope", function () { pm.expect(json).to.have.property("data"); pm.expect(json).to.have.property("meta"); });
         pm.test("Cattle purpose, stage and acquisition metadata are echoed", function () { const l = json.data.livestock; pm.expect(l.species.code).to.eql("cattle"); pm.expect(l.production_purpose.code).to.eql("dairy"); pm.expect(l.growth_stage.code).to.eql("calf"); pm.expect(l.acquisition_price_per_animal).to.eql("185000.50"); pm.expect(l.acquisition_currency).to.eql("NGN"); pm.expect(l.supplier_contact.id).to.eql(pm.environment.get("supplier_id")); pm.expect(l.current_population).to.eql(12); });
-        { const v = json.data && json.data.id; if (v) pm.environment.set("cycle_cattle_id", String(v)); else console.warn("Could not capture cycle_cattle_id"); }
+        { const v = json.data && json.data.id; if (v) pm.environment.set("cycle_cattle_id", String(v)); if (v) pm.environment.set("dairy_cycle_id", String(v)); else console.warn("Could not capture cycle_cattle_id"); }
       }
     language: text/javascript
 examples: ./.resources/Start a livestock batch (Cattle — dairy, with price and suppli.resources/examples

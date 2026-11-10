@@ -101,4 +101,4 @@ scripts:
       }
     language: text/javascript
 examples: ./.resources/Create a package conversion (inventory item).resources/examples
-order: 12000
+order: 2500

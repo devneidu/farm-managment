@@ -125,7 +125,7 @@ body:
         "problem_type": "routine_prevention",
         "target_disease": "Newcastle disease"
       },
-      "animals_affected": 490,
+      "animals_affected": 400,
       "follow_up_on": "{{date_in_14d}}",
       "notes": "Whole flock, Pen 1",
       "medicines": [

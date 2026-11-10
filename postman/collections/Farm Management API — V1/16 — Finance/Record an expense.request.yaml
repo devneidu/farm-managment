@@ -106,7 +106,7 @@ body:
   content: |-
     {
       "finance_category_id": "{{cat_labour_id}}",
-      "amount": "15000.00",
+      "amount": "14750.00",
       "occurred_on": "{{today}}",
       "description": "Casual labour - house clean-out",
       "production_cycle_id": "{{cycle_id}}",

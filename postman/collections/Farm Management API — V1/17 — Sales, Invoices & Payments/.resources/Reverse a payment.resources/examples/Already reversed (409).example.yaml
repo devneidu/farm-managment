@@ -1,6 +1,6 @@
 $kind: http-example
 request:
-  url: "{{base_url}}/payments/{{payment_b_id}}/reverse"
+  url: "{{base_url}}/payments/{{payment_id}}/reverse"
   method: POST
   headers:
     - key: Accept

@@ -21,7 +21,7 @@ request:
           }
         ],
         "recorded_at": "{{recorded_at_30h}}",
-        "idempotency_key": "{{stockout_key}}"
+        "idempotency_key": "{{$guid}}"
       }
 response:
   statusCode: 422

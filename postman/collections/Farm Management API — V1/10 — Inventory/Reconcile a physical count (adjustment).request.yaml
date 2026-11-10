@@ -121,4 +121,4 @@ scripts:
       }
     language: text/javascript
 examples: ./.resources/Reconcile a physical count (adjustment).resources/examples
-order: 26000
+order: 14001

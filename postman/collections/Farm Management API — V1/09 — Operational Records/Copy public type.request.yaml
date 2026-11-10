@@ -1,5 +1,8 @@
 $kind: http-request
 description: |-
+  **PREREQUISITE**
+  Needs `{{public_record_type_id}}`, set by `Make type public` (90 — Platform Admin → Master Data, as a platform admin). Run that first, then log in as the farm user again.
+
   **WHAT IT DOES**
   Copies a PUBLIC, active record type into this farm: a private, editable copy (version 1, same fields) with an optional new `name`.
 

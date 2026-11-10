@@ -19,14 +19,17 @@ response:
     content: |-
       {
         "data": {
-          "id": "01a1045e-3d57-71be-bf77-53f72c7c2dac",
+          "id": "01a1c4fa-edf9-71b5-ab87-e46db203f7ad",
           "name": "Okafor Integrated Farms",
           "country_code": "NG",
           "currency": "NGN",
           "timezone": "Africa/Lagos",
           "locale": "en",
+          "settings": {
+            "use_stock_for_usage": false
+          },
           "membership": {
-            "id": "01a1045e-3d68-7120-81fe-71d691c8d2f6",
+            "id": "01a1c4fa-ee31-70ce-bdfc-d511eb58ce59",
             "role": "owner",
             "role_label": "Owner",
             "permissions": [
@@ -55,6 +58,7 @@ response:
               "record.adjust",
               "inventory.view",
               "inventory.use",
+              "inventory.add",
               "inventory.manage",
               "inventory.adjust",
               "health.view",
@@ -87,11 +91,12 @@ response:
               "report.view",
               "report.export",
               "audit.view",
+              "marketplace.manage",
               "livestock.batch.create"
-            ]
+            ],
+            "can_add_stock": true
           }
         },
-        "meta": {},
+        "meta": [],
         "message": null
       }
-order: 1000

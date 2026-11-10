@@ -18,4 +18,4 @@ headers:
   - key: Content-Type
     value: "application/json"
 examples: ./.resources/Make main store.resources/examples
-order: 9003
+order: 10500
