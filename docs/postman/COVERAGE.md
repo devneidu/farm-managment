@@ -452,3 +452,57 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 **Calendar link:** `https_url` now follows `APP_URL`'s scheme (it was forced to `https`). **Collection mistake fixed:** `Calendar feed ics` ran after `Calendar link off`, so it got 404; it now runs before it.
 
 **Unchanged:** `docs/api/openapi.json` was not regenerated; the Postman examples of requests not named above are the earlier captures.
+
+## Addendum — examples for all 17 reports (chore/postman-reports)
+
+**Added to folder 19:** 11 requests, each with a saved `200 OK` response, using only the filters the report lists in `GET /reports`: sales summary, egg and milk output, production cycle performance, crop establishment/loss/harvest, livestock growth, feed and input consumption, health and treatment, breeding outcomes, task completion, supplier and customer history, and a second farm-made records request that uses `production_cycle_id` and `custom_record_type_id`. The income & expense request gained the real `403 feature_not_available` example and its Farm Worker `403 forbidden` example was replaced with the captured one. The folder description and the catalogue text now say 17 reports (`custom_records` was missing from the list). Collection: 944 -> **955 requests**, 828 -> **840 saved examples**.
+
+**How the responses were captured:** a temporary feature test (not committed) built one farm on the `farm-business` plan through the public API (a layer flock with eggs, deaths, weigh-ins, feed use against stock, a vet visit and an incubation project with an outcome; a yam project with planting, loss, establishment and harvest; tasks; two invoiced sales, one part-paid; manual income and expense; a farm-made record type with a record), called each report as the Owner, then called `income_expense` on the `free` plan and as a Farm Worker. The saved bodies are those responses unedited. Dates in the examples are the test clock's (October 2026).
+
+**Run result: all 17 reports returned `200`** (no errors, no app bugs found):
+
+| Report | Result | Rows |
+|---|---|---:|
+| cycle_performance | 200 | 2 |
+| livestock_population | 200 | 2 |
+| mortality | 200 | 1 |
+| livestock_growth | 200 | 1 |
+| production_output | 200 | 1 |
+| crop_performance | 200 | 1 |
+| breeding_outcomes | 200 | 1 (`status=completed`; `status=active` correctly returned 0, the project was fully accounted) |
+| health_treatment | 200 | 1 |
+| inventory_stock | 200 | 4 |
+| input_consumption | 200 | 1 |
+| income_expense | 200 | 3 |
+| cycle_profitability | 200 | 2 |
+| sales_summary | 200 | 1 |
+| receivables | 200 | 2 |
+| task_compliance | 200 | 1 |
+| contact_history | 200 | 2 |
+| custom_records | 200 | 2 (also with `custom_record_type_id`: 2) |
+| `income_expense` on the `free` plan | 403 `feature_not_available` ("Advanced reports is not included in your farm's current plan.", `details.entitlement_key = advanced_reports`) | |
+| `income_expense` as a Farm Worker | 403 `forbidden` ("You are not allowed to perform this action.") | |
+
+**Why a report can be "not available" to a user.** Every report needs `report.view`; on top of that:
+
+| Report | Also needs permissions | Plan feature | Default roles that can run it |
+|---|---|---|---|
+| cycle_performance | production_cycle.view, record.view | advanced_reports | owner, manager, farm_worker, finance, vet |
+| livestock_population, mortality, livestock_growth, production_output | record.view, production_cycle.view | none | owner, manager, farm_worker, finance, vet |
+| crop_performance | record.view, production_cycle.view | none | owner, manager, farm_worker, finance, vet |
+| custom_records | record.view, production_cycle.view | none | owner, manager, farm_worker, finance, vet |
+| breeding_outcomes | breeding.view | none | owner, manager, farm_worker, vet |
+| health_treatment | health.view | none | owner, manager, farm_worker, vet |
+| inventory_stock, input_consumption | inventory.view | none | owner, manager, farm_worker, finance, vet |
+| task_compliance | task.view (a worker sees only their own tasks) | none | owner, manager, farm_worker, finance, vet |
+| income_expense | finance.view | advanced_reports | owner, manager, finance |
+| cycle_profitability | finance.view, production_cycle.view | advanced_reports | owner, manager, finance |
+| sales_summary | sale.view, finance.view | advanced_reports | owner, manager, finance |
+| receivables | invoice.view, payment.view | advanced_reports | owner, manager, finance |
+| contact_history | contact.view, plus purchase.view and/or sale.view | advanced_reports | owner, manager, finance |
+
+* Plans: `free` has neither `advanced_reports` nor `data_export`; `farm-pro` has `advanced_reports` only; `farm-business` has both. Exports additionally need `report.export` and `data_export`.
+* `GET /reports` hides a report whose permissions the viewer lacks and marks a plan-gated one `available: false` with `unavailable_reason: feature_not_available`. Livestock-only and crop-only reports show `relevant: false` on a farm with none of that kind.
+* The roles column is the default role grants as read from the code; a report's permissions are what is enforced.
+
+**Not done:** Newman was not run for this pass (the responses come from the feature test above); `docs/api/openapi.json` was not touched.

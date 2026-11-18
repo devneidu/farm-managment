@@ -45899,7 +45899,7 @@
     },
     {
       "name": "19 — Reports & Exports",
-      "description": "Sixteen derived reports, plus queued CSV/XLSX/PDF exports (plan feature `data_export`) that are private to the requesting user.\n\nTypical screens: reports menu/viewer and the \"my exports\" list.",
+      "description": "Seventeen derived reports, plus queued CSV/XLSX/PDF exports (plan feature `data_export`) that are private to the requesting user.\n\nTypical screens: reports menu/viewer and the \"my exports\" list.",
       "item": [
         {
           "name": "List reports (catalogue)",
@@ -45949,7 +45949,7 @@
                 "reports"
               ]
             },
-            "description": "**WHAT IT DOES**\nThe report catalogue for this farm and viewer. A report whose data the viewer cannot see is NOT listed. Each entry has `filters` it accepts, `relevant` (false when the farm has no operation of that kind), `available`/`unavailable_reason`/`required_feature` (advanced reports need the `advanced_reports` plan feature), `exportable` and `export_formats`.\n\n**WHEN TO USE IT**\nThe reports menu (only reports the user may run).\n\n**IMPORTANT INPUTS**\n- None (no body or query parameters are required).\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `report.view` (taken from the current farm context; never sent by the client).\n\n**WHAT TO DO NEXT**\nRun a report.\n\n**FRONTEND NOTES**\n- Needs the signed-in session cookie (send requests with credentials).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).\n\n**ACCESS**\nRequired backend farm permission: **`report.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)\n\n**URL**\n`GET {{base_url}}/reports`\n\n**BUSINESS RULES**\n- Requires `report.view` (Owner, Manager, Finance, Farm Worker, Vet). The 16 report codes: cycle_performance, livestock_population, mortality, livestock_growth, production_output, crop_performance, breeding_outcomes, health_treatment, inventory_stock, input_consumption, income_expense, cycle_profitability, sales_summary, receivables, task_compliance, contact_history.\n\n**SUCCESS**\n`200 OK`\n\n`data` is an array of objects with fields: `code`, `title`, `family`, `description`, `filters`, `applies_to`, `relevant`, `available`, `unavailable_reason`, `required_feature`, `exportable`, `export_formats`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `report.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`."
+            "description": "**WHAT IT DOES**\nThe report catalogue for this farm and viewer. A report whose data the viewer cannot see is NOT listed. Each entry has `filters` it accepts, `relevant` (false when the farm has no operation of that kind), `available`/`unavailable_reason`/`required_feature` (advanced reports need the `advanced_reports` plan feature), `exportable` and `export_formats`.\n\n**WHEN TO USE IT**\nThe reports menu (only reports the user may run).\n\n**IMPORTANT INPUTS**\n- None (no body or query parameters are required).\n\n**IMPORTANT BEHAVIOR**\n- Requires the farm permission `report.view` (taken from the current farm context; never sent by the client).\n\n**WHAT TO DO NEXT**\nRun a report.\n\n**FRONTEND NOTES**\n- Needs the signed-in session cookie (send requests with credentials).\n- Permissions come from the current farm context (`GET /farm` → `membership.permissions`); optional `X-Farm-Id` selects another farm you belong to.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie. The user must be verified, onboarded and an ACTIVE member of the current farm (oldest active membership, or `X-Farm-Id`).\n\n**ACCESS**\nRequired backend farm permission: **`report.view`** — granted to: `owner`, `manager`, `farm_worker`, `finance`, `vet`. (Documentation only: the request never contains a permission string.)\n\n**URL**\n`GET {{base_url}}/reports`\n\n**BUSINESS RULES**\n- Requires `report.view` (Owner, Manager, Finance, Farm Worker, Vet). The 17 report codes: cycle_performance, livestock_population, mortality, livestock_growth, production_output, crop_performance, breeding_outcomes, health_treatment, inventory_stock, input_consumption, income_expense, cycle_profitability, sales_summary, receivables, task_compliance, contact_history, custom_records.\n\n**SUCCESS**\n`200 OK`\n\n`data` is an array of objects with fields: `code`, `title`, `family`, `description`, `filters`, `applies_to`, `relevant`, `available`, `unavailable_reason`, `required_feature`, `exportable`, `export_formats`.\n\n**ERRORS**\n- `401 unauthenticated` — no valid session: show the login screen.\n- `403` — `forbidden` when the caller lacks `report.view`; other codes: `account_suspended`, `email_verification_required`, `onboarding_required`, `no_active_farm`, `farm_access_denied`."
           },
           "response": [
             {
@@ -46345,7 +46345,92 @@
                 }
               ],
               "cookie": [],
-              "body": "{\n  \"message\": \"You are not allowed to perform this action.\",\n  \"code\": \"forbidden\",\n  \"request_id\": \"01a1045e-afe6-70cb-929d-80eab5cae88c\"\n}"
+              "body": "{\n  \"message\": \"You are not allowed to perform this action.\",\n  \"code\": \"forbidden\",\n  \"request_id\": \"01a1eefa-7574-73db-b520-424a05ba66c9\"\n}"
+            },
+            {
+              "name": "Advanced reports not in the farm's plan (403 feature_not_available)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/income_expense?from={{month_start}}&to={{today}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "income_expense"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}"
+                    },
+                    {
+                      "key": "as_of",
+                      "value": "",
+                      "description": "string (date)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    },
+                    {
+                      "key": "kind",
+                      "value": "",
+                      "description": "enum: livestock | crop",
+                      "disabled": true
+                    },
+                    {
+                      "key": "status",
+                      "value": "",
+                      "description": "enum: active | closed | completed | cancelled",
+                      "disabled": true
+                    },
+                    {
+                      "key": "per_page",
+                      "value": "",
+                      "description": "integer — min 1, max 500",
+                      "disabled": true
+                    },
+                    {
+                      "key": "page",
+                      "value": "",
+                      "description": "integer — min 1",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Advanced reports is not included in your farm's current plan.\",\n  \"code\": \"feature_not_available\",\n  \"request_id\": \"01a1eefa-7480-702a-bc69-6313001bc0e5\",\n  \"details\": {\n    \"entitlement_key\": \"advanced_reports\"\n  }\n}"
             },
             {
               "name": "Invalid date range (422)",
@@ -47507,6 +47592,1415 @@
               ],
               "cookie": [],
               "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"custom_records\",\n      \"title\": \"Farm-made records\",\n      \"family\": \"records\",\n      \"description\": \"Records of your own record types per batch or crop project in the period, with the total of each number field; reversed records are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1bcc2-14ab-73b2-949a-f3b974350827\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-01-01\",\n      \"to\": \"2026-12-31\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-11-08T20:03:30.754204Z\",\n    \"columns\": [\n      {\n        \"key\": \"type\",\n        \"label\": \"Record type\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Batch / project\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"records\",\n        \"label\": \"Records\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"field\",\n        \"label\": \"Number field\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"unit\",\n        \"label\": \"Unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"sum\",\n        \"label\": \"Total\",\n        \"type\": \"decimal\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"type\": \"Egg check\",\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layer flock\",\n        \"records\": 2,\n        \"field\": \"Crates\",\n        \"unit\": \"crates\",\n        \"sum\": \"29\"\n      },\n      {\n        \"type\": \"Egg check\",\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layer flock\",\n        \"records\": 2,\n        \"field\": \"Cracked eggs\",\n        \"unit\": null,\n        \"sum\": \"3\"\n      }\n    ],\n    \"summary\": {\n      \"records\": 2,\n      \"sums\": [\n        {\n          \"type\": \"Egg check\",\n          \"field\": \"Crates\",\n          \"unit\": \"crates\",\n          \"sum\": \"29\"\n        },\n        {\n          \"type\": \"Egg check\",\n          \"field\": \"Cracked eggs\",\n          \"unit\": null,\n          \"sum\": \"3\"\n        }\n      ]\n    },\n    \"notes\": [\n      \"Each row is one number field of one record type in one batch; \\\"Records\\\" is the count of that type in that batch and repeats on its field rows.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (sales summary)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/sales_summary?from={{month_start}}&to={{today}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "sales_summary"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nSales by line kind in the period, with cancelled sales counted separately. Money is exact.\n\n**WHEN TO USE IT**\nThe report viewer (sales summary).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, sale.view, finance.view.\n- Plan feature: `advanced_reports` (`403 feature_not_available` on a plan without it).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/sales_summary`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/sales_summary?from={{month_start}}&to={{today}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "sales_summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"sales_summary\",\n      \"title\": \"Sales summary\",\n      \"family\": \"sales\",\n      \"description\": \"Sales in the period by line kind (livestock, produce stock, other) with exact totals; cancelled sales are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"kind\",\n        \"label\": \"Line kind\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"sales\",\n        \"label\": \"Sales\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"lines\",\n        \"label\": \"Lines\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"head_sold\",\n        \"label\": \"Head sold\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"amount\",\n        \"label\": \"Amount (NGN)\",\n        \"type\": \"money\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"kind\": \"Stock (produce)\",\n        \"sales\": 2,\n        \"lines\": 2,\n        \"head_sold\": null,\n        \"amount\": \"1500.00\"\n      }\n    ],\n    \"summary\": {\n      \"currency\": \"NGN\",\n      \"sales\": 2,\n      \"total\": \"1500.00\",\n      \"cancelled_sales\": 0\n    },\n    \"notes\": [\n      \"A sale appears once per line kind it contains, so the Sales column can add up to more than the number of sales.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (egg and milk output)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/production_output?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "production_output"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nEgg and milk collected per batch. Livestock batches only.\n\n**WHEN TO USE IT**\nThe report viewer (egg and milk output).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, record.view, production_cycle.view.\n- Plan feature: none (available on every plan).\n- Applies to livestock cycles only; the catalogue marks it `relevant: false` on a farm with none.\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/production_output`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/production_output?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "production_output"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"production_output\",\n      \"title\": \"Egg and milk output\",\n      \"family\": \"production\",\n      \"description\": \"Egg collections and milk yield per cycle in the period, in normalised units; reversed collections are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"product\",\n        \"label\": \"Product\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"unit\",\n        \"label\": \"Unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"records\",\n        \"label\": \"Records\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"quantity\",\n        \"label\": \"Quantity\",\n        \"type\": \"decimal\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"product\": \"Eggs\",\n        \"unit\": \"piece\",\n        \"records\": 1,\n        \"quantity\": \"240\"\n      }\n    ],\n    \"summary\": {\n      \"totals_by_product_unit\": {\n        \"Eggs (piece)\": \"240\"\n      }\n    },\n    \"notes\": []\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (production cycle performance)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/cycle_performance?from={{month_start}}&to={{today}}&kind=livestock&status=active",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "cycle_performance"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "kind",
+                  "value": "livestock",
+                  "description": "string"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "string"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "",
+                  "description": "string (uuid)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nEvery cycle active in the period; `kind` is `livestock` or `crop`, `status` is the cycle status.\n\n**WHEN TO USE IT**\nThe report viewer (production cycle performance).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `kind`, `status`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, production_cycle.view, record.view.\n- Plan feature: `advanced_reports` (`403 feature_not_available` on a plan without it).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/cycle_performance`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/cycle_performance?from={{month_start}}&to={{today}}&kind=livestock&status=active",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "cycle_performance"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "kind",
+                      "value": "livestock",
+                      "description": "string"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "description": "string"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"cycle_performance\",\n      \"title\": \"Production cycle performance\",\n      \"family\": \"production\",\n      \"description\": \"Every production cycle active in the period: dates, ledger population at the start and end of the period, deaths and mortality rate (livestock), planting baseline (crops).\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"kind\": \"livestock\",\n      \"status\": \"active\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"kind\",\n        \"label\": \"Kind\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"operation\",\n        \"label\": \"Operation\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"status\",\n        \"label\": \"Status\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"start_date\",\n        \"label\": \"Start\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"end_date\",\n        \"label\": \"End\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"days_in_production\",\n        \"label\": \"Days in production\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"initial_population\",\n        \"label\": \"Initial head\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"opening_population\",\n        \"label\": \"Head at period start\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"closing_population\",\n        \"label\": \"Head at period end\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"deaths\",\n        \"label\": \"Deaths in period\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"mortality_rate\",\n        \"label\": \"Mortality rate %\",\n        \"type\": \"percent\"\n      },\n      {\n        \"key\": \"planting_units\",\n        \"label\": \"Planting units\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"planting_unit\",\n        \"label\": \"Planting unit\",\n        \"type\": \"string\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"kind\": \"livestock\",\n        \"operation\": \"Poultry\",\n        \"status\": \"active\",\n        \"start_date\": \"2026-01-01\",\n        \"end_date\": null,\n        \"days_in_production\": 286,\n        \"initial_population\": 100,\n        \"opening_population\": 100,\n        \"closing_population\": 97,\n        \"deaths\": 3,\n        \"mortality_rate\": \"3\",\n        \"planting_units\": null,\n        \"planting_unit\": null\n      },\n      {\n        \"reference\": \"BAT-2026-00003\",\n        \"name\": \"Chicken hatch – 2026-10-14\",\n        \"kind\": \"livestock\",\n        \"operation\": \"Poultry\",\n        \"status\": \"active\",\n        \"start_date\": \"2026-10-14\",\n        \"end_date\": null,\n        \"days_in_production\": 0,\n        \"initial_population\": 37,\n        \"opening_population\": 0,\n        \"closing_population\": 37,\n        \"deaths\": 0,\n        \"mortality_rate\": \"0\",\n        \"planting_units\": null,\n        \"planting_unit\": null\n      }\n    ],\n    \"summary\": {\n      \"cycles\": 2,\n      \"active_cycles\": 2,\n      \"deaths\": 3\n    },\n    \"notes\": []\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (crop establishment, loss and harvest)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/crop_performance?from={{month_start}}&to={{today}}&status=active&production_cycle_id={{crop_cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "crop_performance"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "string"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{crop_cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nCrop projects only: planting units, loss, establishment and harvest by unit.\n\n**WHEN TO USE IT**\nThe report viewer (crop establishment, loss and harvest).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `status`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, record.view, production_cycle.view.\n- Plan feature: none (available on every plan).\n- Applies to crop cycles only; the catalogue marks it `relevant: false` on a farm with none.\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/crop_performance`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/crop_performance?from={{month_start}}&to={{today}}&status=active&production_cycle_id={{crop_cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "crop_performance"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "status",
+                      "value": "active",
+                      "description": "string"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{crop_cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"crop_performance\",\n      \"title\": \"Crop establishment, loss and harvest\",\n      \"family\": \"crops\",\n      \"description\": \"Per crop project: planting units planted and lost, latest establishment survival and harvest output by unit; reversed records are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"status\": \"active\",\n      \"production_cycle_id\": \"01a1eefa-3ad6-70b8-969c-7814901ea7bd\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Project\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"crop\",\n        \"label\": \"Crop\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"status\",\n        \"label\": \"Status\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"start_date\",\n        \"label\": \"Planting date\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"planting_unit\",\n        \"label\": \"Planting unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"initial_planting_units\",\n        \"label\": \"Planned planting units\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"units_planted\",\n        \"label\": \"Units planted in period\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"units_lost\",\n        \"label\": \"Units lost in period\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"established_units\",\n        \"label\": \"Established units (latest check)\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"survival_percent\",\n        \"label\": \"Survival % (latest check)\",\n        \"type\": \"percent\"\n      },\n      {\n        \"key\": \"harvest_quantity\",\n        \"label\": \"Harvest\",\n        \"type\": \"decimal\"\n      },\n      {\n        \"key\": \"harvest_unit\",\n        \"label\": \"Harvest unit\",\n        \"type\": \"string\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"CRP-2026-00002\",\n        \"name\": \"Yam Jk3W\",\n        \"crop\": \"Yam\",\n        \"status\": \"active\",\n        \"start_date\": \"2026-01-10\",\n        \"planting_unit\": \"Heap\",\n        \"initial_planting_units\": 500,\n        \"units_planted\": 300,\n        \"units_lost\": 25,\n        \"established_units\": 250,\n        \"survival_percent\": \"50\",\n        \"harvest_quantity\": \"120500\",\n        \"harvest_unit\": \"g\"\n      }\n    ],\n    \"summary\": {\n      \"projects\": 1,\n      \"harvest_totals_by_unit\": {\n        \"g\": \"120500\"\n      }\n    },\n    \"notes\": [\n      \"Planting units differ per project (heap, stand, ...) and are not summed; harvest is only totalled within one unit.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (livestock growth)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/livestock_growth?from={{date_30d_ago}}&to={{today}}&production_cycle_id={{cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "livestock_growth"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{date_30d_ago}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nAverage weight per head from weigh-in records. Livestock batches only.\n\n**WHEN TO USE IT**\nThe report viewer (livestock growth (weight)).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, record.view, production_cycle.view.\n- Plan feature: none (available on every plan).\n- Applies to livestock cycles only; the catalogue marks it `relevant: false` on a farm with none.\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/livestock_growth`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/livestock_growth?from={{date_30d_ago}}&to={{today}}&production_cycle_id={{cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "livestock_growth"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{date_30d_ago}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"livestock_growth\",\n      \"title\": \"Livestock growth (weight)\",\n      \"family\": \"livestock\",\n      \"description\": \"Weigh-ins per livestock cycle: sampled head, weighted average weight per head and the latest sample average. Reversed weigh-ins are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-08-15\",\n      \"to\": \"2026-10-14\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"unit\",\n        \"label\": \"Weight unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"weigh_ins\",\n        \"label\": \"Weigh-ins\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"head_sampled\",\n        \"label\": \"Head sampled\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"average_weight_per_head\",\n        \"label\": \"Average weight per head\",\n        \"type\": \"decimal\"\n      },\n      {\n        \"key\": \"latest_average_weight_per_head\",\n        \"label\": \"Latest sample average per head\",\n        \"type\": \"decimal\"\n      },\n      {\n        \"key\": \"first_weighed_at\",\n        \"label\": \"First weigh-in\",\n        \"type\": \"datetime\"\n      },\n      {\n        \"key\": \"last_weighed_at\",\n        \"label\": \"Last weigh-in\",\n        \"type\": \"datetime\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"unit\": \"g\",\n        \"weigh_ins\": 2,\n        \"head_sampled\": 20,\n        \"average_weight_per_head\": \"300\",\n        \"latest_average_weight_per_head\": \"350\",\n        \"first_weighed_at\": \"2026-10-13 05:00:00\",\n        \"last_weighed_at\": \"2026-10-14 09:00:00\"\n      }\n    ],\n    \"summary\": {\n      \"weigh_ins\": 2\n    },\n    \"notes\": [\n      \"Weights are in the normalised unit shown; averages are never combined across units or cycles.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (feed and input consumption)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/input_consumption?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "input_consumption"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nStock used by records in the period, net of reversals.\n\n**WHEN TO USE IT**\nThe report viewer (feed and input consumption).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, inventory.view.\n- Plan feature: none (available on every plan).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/input_consumption`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/input_consumption?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "input_consumption"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"input_consumption\",\n      \"title\": \"Feed and input consumption\",\n      \"family\": \"inventory\",\n      \"description\": \"Stock used per item and cycle in the period (feed, fertilizer, pesticide, planting material, medicine), net of reversals.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"item\",\n        \"label\": \"Item\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"category\",\n        \"label\": \"Category\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"cycle\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"origin\",\n        \"label\": \"Used for\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"unit\",\n        \"label\": \"Unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"quantity\",\n        \"label\": \"Quantity used\",\n        \"type\": \"decimal\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"item\": \"Feed 7LoYDp\",\n        \"category\": \"feed\",\n        \"cycle\": \"BAT-2026-00001\",\n        \"origin\": \"Feed and crop inputs\",\n        \"unit\": \"kg\",\n        \"quantity\": \"5\"\n      }\n    ],\n    \"summary\": {\n      \"rows\": 1\n    },\n    \"notes\": [\n      \"Quantities are in each item unit and are not totalled across items.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (health and treatment)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/health_treatment?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "health_treatment"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nHealth events per type with animals affected.\n\n**WHEN TO USE IT**\nThe report viewer (health and treatment).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, health.view.\n- Plan feature: none (available on every plan).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/health_treatment`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/health_treatment?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "health_treatment"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"health_treatment\",\n      \"title\": \"Health and treatment\",\n      \"family\": \"health\",\n      \"description\": \"Health events per cycle and type in the period, with the animals affected and the medicine lines used; reversed events are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"type\",\n        \"label\": \"Event type\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"events\",\n        \"label\": \"Events\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"animals_affected\",\n        \"label\": \"Animals affected\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"medicine_lines\",\n        \"label\": \"Medicine lines\",\n        \"type\": \"integer\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"type\": \"vet_visit\",\n        \"events\": 1,\n        \"animals_affected\": 50,\n        \"medicine_lines\": 0\n      }\n    ],\n    \"summary\": {\n      \"events\": 1,\n      \"animals_affected\": 50\n    },\n    \"notes\": [\n      \"Animals affected is the sum over events; the same animal treated twice is counted twice.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (breeding outcomes)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/breeding_outcomes?from={{month_start}}&to={{today}}&status=completed&production_cycle_id={{cycle_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "breeding_outcomes"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "description": "string"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nBreeding projects with eggs set and net live / lost counts. Here `status` is the BREEDING PROJECT status (a fully accounted project is `completed`, so `status=active` can legitimately return no rows).\n\n**WHEN TO USE IT**\nThe report viewer (breeding outcomes).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `status`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, breeding.view.\n- Plan feature: none (available on every plan).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/breeding_outcomes`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/breeding_outcomes?from={{month_start}}&to={{today}}&status=completed&production_cycle_id={{cycle_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "breeding_outcomes"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "status",
+                      "value": "completed",
+                      "description": "string"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"breeding_outcomes\",\n      \"title\": \"Breeding outcomes\",\n      \"family\": \"breeding\",\n      \"description\": \"Breeding projects started or with an outcome in the period: expected window against the live and lost offspring actually recorded (reversed outcomes excluded).\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"status\": \"completed\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"reference\",\n        \"label\": \"Project\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"workflow\",\n        \"label\": \"Workflow\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"cycle\",\n        \"label\": \"Cycle\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"status\",\n        \"label\": \"Status\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"start_date\",\n        \"label\": \"Started\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"expected_from\",\n        \"label\": \"Expected from\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"expected_to\",\n        \"label\": \"Expected to\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"eggs_set\",\n        \"label\": \"Eggs set\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"females_bred\",\n        \"label\": \"Females bred\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"expected_offspring\",\n        \"label\": \"Expected offspring\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"outcome_date\",\n        \"label\": \"Outcome date\",\n        \"type\": \"date\"\n      },\n      {\n        \"key\": \"live_count\",\n        \"label\": \"Live offspring\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"loss_count\",\n        \"label\": \"Lost\",\n        \"type\": \"integer\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"reference\": \"BRD-2026-00001\",\n        \"workflow\": \"incubation\",\n        \"cycle\": \"BAT-2026-00001\",\n        \"status\": \"completed\",\n        \"start_date\": \"2026-09-24\",\n        \"expected_from\": \"2026-10-15\",\n        \"expected_to\": \"2026-10-15\",\n        \"eggs_set\": 50,\n        \"females_bred\": null,\n        \"expected_offspring\": null,\n        \"outcome_date\": \"2026-10-14\",\n        \"live_count\": 37,\n        \"loss_count\": 13\n      }\n    ],\n    \"summary\": {\n      \"projects\": 1,\n      \"live_offspring\": 37,\n      \"lost\": 13\n    },\n    \"notes\": []\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (task completion)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/task_compliance?from={{month_start}}&to={{today}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "task_compliance"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "",
+                  "description": "string (uuid)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nTasks due in the period: on time, late, overdue, upcoming and the completion rate. A worker only counts the tasks they can see.\n\n**WHEN TO USE IT**\nThe report viewer (task completion).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, task.view.\n- Plan feature: none (available on every plan).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/task_compliance`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/task_compliance?from={{month_start}}&to={{today}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "task_compliance"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "",
+                      "description": "string (uuid)",
+                      "disabled": true
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"task_compliance\",\n      \"title\": \"Task completion\",\n      \"family\": \"work\",\n      \"description\": \"Tasks due in the period by category: completed on time, completed late, still open and overdue, and the completion rate. Cancelled tasks are not counted.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-09\",\n      \"to\": \"2026-10-19\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"category\",\n        \"label\": \"Category\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"total\",\n        \"label\": \"Tasks due\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"completed\",\n        \"label\": \"Completed\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"on_time\",\n        \"label\": \"On time\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"late\",\n        \"label\": \"Late\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"overdue\",\n        \"label\": \"Overdue (open)\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"upcoming\",\n        \"label\": \"Not yet due (open)\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"cancelled\",\n        \"label\": \"Cancelled\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"completion_rate\",\n        \"label\": \"Completion rate %\",\n        \"type\": \"percent\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"category\": \"feeding_watering\",\n        \"total\": 3,\n        \"completed\": 1,\n        \"on_time\": 0,\n        \"late\": 1,\n        \"overdue\": 1,\n        \"upcoming\": 1,\n        \"cancelled\": 0,\n        \"completion_rate\": \"33.33\"\n      }\n    ],\n    \"summary\": {\n      \"total\": 3,\n      \"completed\": 1,\n      \"on_time\": 0,\n      \"late\": 1,\n      \"overdue\": 1,\n      \"upcoming\": 1,\n      \"cancelled\": 0,\n      \"completion_rate\": \"33.33\"\n    },\n    \"notes\": [\n      \"Cancelled tasks are listed but not part of \\\"Tasks due\\\" or the completion rate.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 1\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Run a report (supplier and customer history)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/contact_history?from={{month_start}}&to={{today}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "contact_history"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nPurchases and sales per contact; a column the viewer may not see is not in `columns`.\n\n**WHEN TO USE IT**\nThe report viewer (supplier and customer history).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, contact.view (plus purchase.view and/or sale.view for those columns; sales totals also need finance.view).\n- Plan feature: `advanced_reports` (`403 feature_not_available` on a plan without it).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/contact_history`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/contact_history?from={{month_start}}&to={{today}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "contact_history"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"contact_history\",\n      \"title\": \"Supplier and customer history\",\n      \"family\": \"contacts\",\n      \"description\": \"Purchases from suppliers and sales to customers per contact in the period; cancelled purchases and sales are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"contact\",\n        \"label\": \"Contact\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"kind\",\n        \"label\": \"Type\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"phone\",\n        \"label\": \"Phone\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"purchases\",\n        \"label\": \"Purchases\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"purchase_total\",\n        \"label\": \"Purchased (NGN)\",\n        \"type\": \"money\"\n      },\n      {\n        \"key\": \"sales\",\n        \"label\": \"Sales\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"sales_total\",\n        \"label\": \"Sold (NGN)\",\n        \"type\": \"money\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"contact\": \"Buyer ibiI\",\n        \"kind\": \"business\",\n        \"phone\": null,\n        \"purchases\": 0,\n        \"purchase_total\": \"0.00\",\n        \"sales\": 1,\n        \"sales_total\": \"500.00\"\n      },\n      {\n        \"contact\": \"Mama Ngozi\",\n        \"kind\": \"business\",\n        \"phone\": null,\n        \"purchases\": 0,\n        \"purchase_total\": \"0.00\",\n        \"sales\": 1,\n        \"sales_total\": \"1000.00\"\n      }\n    ],\n    \"summary\": {\n      \"currency\": \"NGN\",\n      \"contacts\": 2,\n      \"purchase_total\": \"0.00\",\n      \"sales_total\": \"1500.00\"\n    },\n    \"notes\": [\n      \"Sales without a saved contact (walk-in customers) are not attributed to a contact.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Farm-made records report (one type and batch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-Farm-Id",
+                "value": "{{farm_id}}",
+                "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/reports/custom_records?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}&custom_record_type_id={{custom_record_type_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "reports",
+                "custom_records"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "{{month_start}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "to",
+                  "value": "{{today}}",
+                  "description": "string (date)"
+                },
+                {
+                  "key": "production_cycle_id",
+                  "value": "{{cycle_id}}",
+                  "description": "string (uuid)"
+                },
+                {
+                  "key": "custom_record_type_id",
+                  "value": "{{custom_record_type_id}}",
+                  "description": "string (uuid)"
+                }
+              ]
+            },
+            "description": "**WHAT IT DOES**\nThe same report narrowed to one farm-made record type (`custom_record_type_id`) and one batch. Another farm's type is `422`.\n\n**WHEN TO USE IT**\nThe report viewer (farm-made records).\n\n**IMPORTANT INPUTS**\n- Filters this report accepts (from `GET /reports`): `from`, `to`, `production_cycle_id`, `custom_record_type_id`. Any other filter is ignored.\n- `per_page` (1-500, default 100) and `page`.\n\n**IMPORTANT BEHAVIOR**\n- Needs the permissions: report.view, record.view, production_cycle.view.\n- Plan feature: none (available on every plan).\n- `from` / `to` are inclusive farm-local days (default: the last 30 days). Quantities are in the canonical unit (g, ml, piece) and never added across units; money is an exact string.\n- Reversed and cancelled records are excluded or netted, as the report's `notes` say.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — Sanctum session cookie.\n\n**URL**\n`GET {{base_url}}/reports/custom_records`\n\n**ERRORS**\n- `403 forbidden` — a permission above is missing (for example a Farm Worker on a finance report).\n- `403 feature_not_available` — the plan lacks the feature above.\n- `404 report_not_found` — unknown code.\n- `422 validation_failed` — `to` before `from`, or a `production_cycle_id` / `custom_record_type_id` that does not exist or belongs to another farm.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "X-Farm-Id",
+                    "value": "{{farm_id}}",
+                    "description": "Optional: select one of the farms you actively belong to. Omit to use your oldest active membership.",
+                    "disabled": true
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/reports/custom_records?from={{month_start}}&to={{today}}&production_cycle_id={{cycle_id}}&custom_record_type_id={{custom_record_type_id}}",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "reports",
+                    "custom_records"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "{{month_start}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "to",
+                      "value": "{{today}}",
+                      "description": "string (date)"
+                    },
+                    {
+                      "key": "production_cycle_id",
+                      "value": "{{cycle_id}}",
+                      "description": "string (uuid)"
+                    },
+                    {
+                      "key": "custom_record_type_id",
+                      "value": "{{custom_record_type_id}}",
+                      "description": "string (uuid)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"report\": {\n      \"code\": \"custom_records\",\n      \"title\": \"Farm-made records\",\n      \"family\": \"records\",\n      \"description\": \"Records of your own record types per batch or crop project in the period, with the total of each number field; reversed records are excluded.\"\n    },\n    \"farm\": {\n      \"id\": \"01a1eefa-3508-7013-a13e-d5b16450ad5c\",\n      \"name\": \"Green Acres\",\n      \"currency\": \"NGN\"\n    },\n    \"filters\": {\n      \"from\": \"2026-10-01\",\n      \"to\": \"2026-10-14\",\n      \"production_cycle_id\": \"01a1eefa-37f1-718d-a767-f5f1bcf62b1d\",\n      \"custom_record_type_id\": \"01a1eefa-66fa-73b7-b560-f03e9cef2c12\"\n    },\n    \"timezone\": \"Africa/Lagos\",\n    \"generated_at\": \"2026-10-14T11:00:00.000000Z\",\n    \"columns\": [\n      {\n        \"key\": \"type\",\n        \"label\": \"Record type\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"reference\",\n        \"label\": \"Reference\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"name\",\n        \"label\": \"Batch / project\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"records\",\n        \"label\": \"Records\",\n        \"type\": \"integer\"\n      },\n      {\n        \"key\": \"field\",\n        \"label\": \"Number field\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"unit\",\n        \"label\": \"Unit\",\n        \"type\": \"string\"\n      },\n      {\n        \"key\": \"sum\",\n        \"label\": \"Total\",\n        \"type\": \"decimal\"\n      }\n    ],\n    \"rows\": [\n      {\n        \"type\": \"Egg check\",\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"records\": 1,\n        \"field\": \"Crates\",\n        \"unit\": \"crates\",\n        \"sum\": \"3\"\n      },\n      {\n        \"type\": \"Egg check\",\n        \"reference\": \"BAT-2026-00001\",\n        \"name\": \"Layers FR7k\",\n        \"records\": 1,\n        \"field\": \"Cracked\",\n        \"unit\": null,\n        \"sum\": \"1\"\n      }\n    ],\n    \"summary\": {\n      \"records\": 1,\n      \"sums\": [\n        {\n          \"type\": \"Egg check\",\n          \"field\": \"Crates\",\n          \"unit\": \"crates\",\n          \"sum\": \"3\"\n        },\n        {\n          \"type\": \"Egg check\",\n          \"field\": \"Cracked\",\n          \"unit\": null,\n          \"sum\": \"1\"\n        }\n      ]\n    },\n    \"notes\": [\n      \"Each row is one number field of one record type in one batch; \\\"Records\\\" is the count of that type in that batch and repeats on its field rows.\"\n    ]\n  },\n  \"meta\": {\n    \"current_page\": 1,\n    \"per_page\": 100,\n    \"last_page\": 1,\n    \"total\": 2\n  },\n  \"message\": null\n}"
             }
           ]
         },
