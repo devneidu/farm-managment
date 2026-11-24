@@ -81,6 +81,8 @@ class MobileAuthTest extends TeamTestCase
 
     public function test_login_returns_a_named_expiring_token_and_the_auth_state_without_any_cookie(): void
     {
+        $this->freezeTime();
+
         $response = $this->login('Pixel 8')->assertOk()
             ->assertJsonPath('data.token_type', 'Bearer')
             ->assertJsonPath('data.authenticated', true)
@@ -93,15 +95,16 @@ class MobileAuthTest extends TeamTestCase
         $token = PersonalAccessToken::findToken($response->json('data.token'));
         $this->assertSame('Pixel 8', $token->name);
         $this->assertTrue($token->tokenable->is($this->owner));
-        $this->assertEquals(now()->addDays(90)->timestamp, $token->expires_at->timestamp, '', 5);
+        $this->assertSame(now()->addDays(90)->timestamp, $token->expires_at->timestamp);
         $this->assertSame($token->expires_at->toIso8601String(), $response->json('data.expires_at'));
     }
 
     public function test_token_lifetime_is_configurable(): void
     {
         config(['identity.mobile.token_ttl_days' => 7]);
+        $this->freezeTime();
 
-        $this->assertEquals(now()->addDays(7)->timestamp, PersonalAccessToken::findToken($this->token())->expires_at->timestamp, '', 5);
+        $this->assertSame(now()->addDays(7)->timestamp, PersonalAccessToken::findToken($this->token())->expires_at->timestamp);
     }
 
     public function test_wrong_credentials_and_unknown_email_are_refused_identically_and_issue_no_token(): void
