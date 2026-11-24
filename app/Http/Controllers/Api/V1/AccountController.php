@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Account\ChangePasswordRequest;
 use App\Http\Requests\Account\UpdateProfileRequest;
 use App\Http\Resources\AccountResource;
+use App\Services\Auth\TokenAuthenticator;
 use App\Support\Api\ApiHttpException;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -45,13 +46,13 @@ class AccountController extends Controller
     /**
      * Change my password
      *
-     * Requires the current password. On success every other session and all API tokens are revoked; the
-     * current session stays signed in. Accounts without a password (Google-only) get `409 password_not_set`:
+     * Requires the current password. On success every other session and token is revoked; the current session (cookie)
+     * or the current Bearer token (mobile) stays signed in. Accounts without a password (Google-only) get `409 password_not_set`:
      * use the forgot-password flow to set one.
      *
      * Errors: `401`, `409 password_not_set`, `422` (wrong `current_password`, weak/unconfirmed password), `429`.
      */
-    public function password(ChangePasswordRequest $request): JsonResponse
+    public function password(ChangePasswordRequest $request, TokenAuthenticator $tokens): JsonResponse
     {
         $user = $request->user();
 
@@ -63,16 +64,11 @@ class AccountController extends Controller
             throw ValidationException::withMessages(['current_password' => ['The current password is incorrect.']]);
         }
 
-        DB::transaction(function () use ($user, $request) {
+        DB::transaction(function () use ($user, $request, $tokens) {
             $user->forceFill(['password' => $request->validated('password'), 'remember_token' => null])->save();
-            $user->tokens()->delete();
-
-            if (config('session.driver') === 'database' && $request->hasSession()) {
-                DB::table(config('session.table', 'sessions'))
-                    ->where('user_id', $user->id)
-                    ->where('id', '!=', $request->session()->getId())
-                    ->delete();
-            }
+            $current = $tokens->current($user);
+            $user->tokens()->when($current, fn ($q) => $q->where('id', '!=', $current->getKey()))->delete();
+            $tokens->deleteSessions($user, $request->hasSession() ? $request->session()->getId() : null);
         });
 
         return ApiResponse::success(message: 'Password changed.');

@@ -28,8 +28,10 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    // Accepted ID-token audiences: GOOGLE_CLIENT_IDS (comma-separated: web + Android + iOS), else the single GOOGLE_CLIENT_ID.
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_ids' => array_values(array_filter(array_map('trim', explode(',', (string) (env('GOOGLE_CLIENT_IDS') ?: env('GOOGLE_CLIENT_ID')))))),
     ],
 
     // Marketplace service payments (Phase 26). Only the SECRET key exists server-side; it signs/verifies and is never returned by any endpoint.

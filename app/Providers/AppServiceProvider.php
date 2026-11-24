@@ -45,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
         // with the @unauthenticated tag on the controller method.
         Scramble::afterOpenApiGenerated(function (OpenApi $openApi) {
             $openApi->secure(
+                SecurityScheme::http('bearer')
+                    ->setDescription('Native/mobile apps: personal access token returned by POST /auth/mobile/login, /auth/mobile/register or /auth/mobile/google. Send `Authorization: Bearer <token>`; no cookies or CSRF (see docs/api/MOBILE-AUTH.md).')
+            );
+            $openApi->secure(
                 SecurityScheme::apiKey('cookie', config('session.cookie'))
                     ->setDescription('Sanctum session cookie set by /auth/login, /auth/register or /auth/google. Send requests with credentials and, for POST/PUT/PATCH/DELETE, the X-XSRF-TOKEN header (see docs/api/README.md).')
             );

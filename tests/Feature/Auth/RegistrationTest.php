@@ -97,7 +97,7 @@ class RegistrationTest extends AuthTestCase
 
     public function test_registration_is_rate_limited(): void
     {
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < config('identity.rate_limits.register.ip.0'); $i++) {
             $this->postJson('/api/v1/auth/register', $this->registerPayload(['email' => "user{$i}@example.com"]))->assertCreated();
         }
 

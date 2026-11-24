@@ -20,9 +20,9 @@ class JwtGoogleIdentityVerifier implements GoogleIdentityVerifier
 
     public function verify(string $credential): GoogleIdentity
     {
-        $clientId = config('services.google.client_id');
+        $clientIds = $this->clientIds();
 
-        if (! $clientId) {
+        if ($clientIds === []) {
             throw new GoogleAuthUnavailableException('Google client id is not configured.');
         }
 
@@ -38,7 +38,8 @@ class JwtGoogleIdentityVerifier implements GoogleIdentityVerifier
         $audience = (array) ($claims['aud'] ?? []);
 
         if (! in_array($claims['iss'] ?? null, self::ISSUERS, true)
-            || ! in_array($clientId, $audience, true)
+            || array_intersect($audience, $clientIds) === []
+            || (isset($claims['azp']) && ! in_array($claims['azp'], $clientIds, true))
             || empty($claims['sub'])) {
             throw new InvalidGoogleCredentialException('Invalid Google credential.');
         }
@@ -49,6 +50,18 @@ class JwtGoogleIdentityVerifier implements GoogleIdentityVerifier
             emailVerified: filter_var($claims['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
             name: isset($claims['name']) ? (string) $claims['name'] : null,
         );
+    }
+
+    /** @return list<string> the accepted audiences: services.google.client_ids, else the single client_id */
+    private function clientIds(): array
+    {
+        $ids = (array) config('services.google.client_ids', []);
+
+        if ($ids === []) {
+            $ids = [config('services.google.client_id')];
+        }
+
+        return array_values(array_filter(array_map(fn ($id) => is_string($id) ? trim($id) : '', $ids)));
     }
 
     private function keySet(): array

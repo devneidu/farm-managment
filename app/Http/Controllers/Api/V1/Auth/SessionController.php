@@ -5,14 +5,11 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\AuthStateResource;
-use App\Models\User;
+use App\Services\Auth\CredentialAuthenticator;
 use App\Services\Auth\SessionAuthenticator;
-use App\Support\Api\ApiHttpException;
 use App\Support\Api\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class SessionController extends Controller
 {
@@ -32,23 +29,9 @@ class SessionController extends Controller
      *
      * @response array{data: AuthStateResource, meta: object, message: string}
      */
-    public function login(LoginRequest $request, SessionAuthenticator $sessions): JsonResponse
+    public function login(LoginRequest $request, CredentialAuthenticator $credentials, SessionAuthenticator $sessions): JsonResponse
     {
-        $user = User::where('email', $request->validated('email'))->first();
-
-        $valid = $user && $user->password && Hash::check($request->validated('password'), $user->password);
-
-        if (! $user || ! $user->password) {
-            Hash::make(Str::random(16)); // comparable work for unknown/passwordless accounts
-        }
-
-        if (! $valid) {
-            throw new ApiHttpException(401, 'invalid_credentials', 'These credentials do not match our records.');
-        }
-
-        if ($user->isSuspended()) {
-            throw new ApiHttpException(403, 'account_suspended', 'This account is suspended.');
-        }
+        $user = $credentials->attempt($request->validated('email'), $request->validated('password'));
 
         $sessions->login($request, $user);
 

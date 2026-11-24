@@ -24,7 +24,7 @@ class JwtGoogleIdentityVerifierTest extends TestCase
     {
         parent::setUp();
 
-        config(['services.google.client_id' => 'client-123']);
+        config(['services.google.client_ids' => ['client-123']]);
         Cache::flush();
 
         $this->privateKey = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
@@ -89,9 +89,39 @@ class JwtGoogleIdentityVerifierTest extends TestCase
 
     public function test_unconfigured_client_id_is_reported_as_unavailable(): void
     {
-        config(['services.google.client_id' => null]);
+        config(['services.google.client_id' => null, 'services.google.client_ids' => []]);
 
         $this->expectException(GoogleAuthUnavailableException::class);
         $this->verify($this->token());
+    }
+
+    public function test_any_configured_client_id_is_an_accepted_audience(): void
+    {
+        config(['services.google.client_ids' => ['web-1', 'android-2', 'ios-3']]);
+
+        foreach (['web-1', 'android-2', 'ios-3'] as $aud) {
+            $this->assertSame('sub-1', $this->verify($this->token(['aud' => $aud]))->subject);
+        }
+
+        $this->expectException(InvalidGoogleCredentialException::class);
+        $this->verify($this->token(['aud' => 'client-123'])); // no longer in the list
+    }
+
+    public function test_authorized_party_must_also_be_an_accepted_client_when_present(): void
+    {
+        config(['services.google.client_ids' => ['web-1', 'android-2']]);
+
+        $this->assertSame('sub-1', $this->verify($this->token(['aud' => 'web-1', 'azp' => 'android-2']))->subject);
+        $this->assertSame('sub-1', $this->verify($this->token(['aud' => 'web-1']))->subject, 'azp is optional');
+
+        $this->expectException(InvalidGoogleCredentialException::class);
+        $this->verify($this->token(['aud' => 'web-1', 'azp' => 'attacker-app']));
+    }
+
+    public function test_single_client_id_setting_is_used_when_no_list_is_configured(): void
+    {
+        config(['services.google.client_ids' => [], 'services.google.client_id' => 'solo']);
+
+        $this->assertSame('sub-1', $this->verify($this->token(['aud' => 'solo']))->subject);
     }
 }

@@ -5,11 +5,8 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\GoogleLoginRequest;
 use App\Http\Resources\AuthStateResource;
-use App\Services\Auth\Google\GoogleAuthUnavailableException;
-use App\Services\Auth\Google\InvalidGoogleCredentialException;
-use App\Services\Auth\GoogleAuthService;
+use App\Services\Auth\CredentialAuthenticator;
 use App\Services\Auth\SessionAuthenticator;
-use App\Support\Api\ApiHttpException;
 use Illuminate\Http\JsonResponse;
 
 class GoogleAuthController extends Controller
@@ -26,6 +23,7 @@ class GoogleAuthController extends Controller
      * the standard auth state (`next_action` is `complete_farm_setup` until a farm exists).
      *
      * An existing email/password account with the same email is linked, not duplicated.
+     * Native apps use `POST /auth/mobile/google` instead.
      *
      * Errors: `401 invalid_google_credential`, `403 account_suspended`,
      * `422` (no verified Google email), `429`, `503 google_unavailable`.
@@ -34,17 +32,11 @@ class GoogleAuthController extends Controller
      *
      * @response array{data: AuthStateResource, meta: array{created: bool}, message: string}
      */
-    public function __invoke(GoogleLoginRequest $request, GoogleAuthService $google, SessionAuthenticator $sessions): JsonResponse
+    public function __invoke(GoogleLoginRequest $request, CredentialAuthenticator $credentials, SessionAuthenticator $sessions): JsonResponse
     {
         $sessions->assertStateful($request);
 
-        try {
-            [$user, $created] = $google->authenticate($request->validated('credential'));
-        } catch (InvalidGoogleCredentialException) {
-            throw new ApiHttpException(401, 'invalid_google_credential', 'The Google credential is invalid.');
-        } catch (GoogleAuthUnavailableException) {
-            throw new ApiHttpException(503, 'google_unavailable', 'Google sign-in is currently unavailable.');
-        }
+        [$user, $created] = $credentials->google($request->validated('credential'));
 
         $sessions->login($request, $user);
 

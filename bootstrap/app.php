@@ -25,6 +25,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->prepend(AssignRequestId::class);
 
+        // Behind a load balancer / Cloudflare the real client IP (rate limits are keyed by it) comes from X-Forwarded-For, which is only
+        // honoured from trusted proxies. Unset (default) = trust none, i.e. unchanged behaviour. TRUSTED_PROXIES is '*' or a comma-separated
+        // list of proxy IPs/CIDRs. Trust '*' only when the origin is reachable exclusively through the proxy.
+        if (($proxies = trim((string) env('TRUSTED_PROXIES', ''))) !== '') {
+            $middleware->trustProxies(at: $proxies === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', $proxies)))));
+        }
+
         // Sanctum first-party SPA: cookie session + CSRF for requests from stateful frontend origins.
         $middleware->statefulApi();
         $middleware->appendToGroup('api', SetRequestLocale::class);

@@ -27,15 +27,21 @@ return [
         'task_path' => '/'.trim((string) env('FRONTEND_TASK_PATH', 'app/tasks'), '/'),
     ],
 
+    // Native/mobile clients: bearer tokens (personal access tokens, one per device sign-in).
+    'mobile' => [
+        'token_ttl_days' => (int) env('MOBILE_TOKEN_TTL_DAYS', 90),
+    ],
+
+    // Per-IP caps are higher than per-account caps because many mobile users share one carrier-NAT address.
     'rate_limits' => [
-        'register' => ['ip' => [10, 60]],
-        'login' => ['email_ip' => [5, 1], 'ip' => [30, 1]],
+        'register' => ['ip' => [(int) env('RATE_REGISTER_IP_PER_HOUR', 30), 60]],
+        'login' => ['email_ip' => [5, 1], 'ip' => [(int) env('RATE_LOGIN_IP_PER_MINUTE', 60), 1]],
         'otp_verify' => ['user' => [10, 10]],
         'otp_resend' => ['user' => [5, 60]],
         'forgot_password' => ['email_ip' => [5, 60], 'ip' => [30, 60]],
         'reset_verify' => ['email_ip' => [10, 10], 'ip' => [30, 10]],
         'reset_password' => ['ip' => [10, 10]],
-        'google' => ['ip' => [20, 1]],
+        'google' => ['ip' => [(int) env('RATE_GOOGLE_IP_PER_MINUTE', 60), 1]],
         'account_password' => ['user' => [5, 10]],
         'invitation_accept' => ['user' => [10, 10]],
         'team_invite' => ['user' => [30, 60]],
