@@ -10,4 +10,5 @@ enum OtpPurpose: string
     case EmailVerification = 'email_verification';
     case PasswordReset = 'password_reset';
     case PasswordResetAuthorization = 'password_reset_authorization';
+    case AccountDeletion = 'account_deletion';
 }

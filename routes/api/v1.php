@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AccountController;
+use App\Http\Controllers\Api\V1\AccountDeletionController;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\Auth\CsrfCookieController;
 use App\Http\Controllers\Api\V1\Auth\DeviceController;
@@ -156,6 +157,14 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Account deletion (user-level). Deliberately NOT behind email.verified / onboarding: anyone with an account, including one that never
+// verified its email or never created a farm, must be able to delete it (app-store requirement).
+Route::middleware(['auth:sanctum', 'account.active'])->prefix('account/delete')->group(function () {
+    Route::get('/check', [AccountDeletionController::class, 'check'])->middleware('throttle:60,1')->name('api.v1.account.delete.check');
+    Route::post('/request-code', [AccountDeletionController::class, 'requestCode'])->middleware('throttle:auth-otp-resend')->name('api.v1.account.delete.request-code');
+    Route::post('/', [AccountDeletionController::class, 'destroy'])->middleware('throttle:account-delete')->name('api.v1.account.delete');
+});
+
 Route::middleware(['auth:sanctum', 'account.active', 'email.verified'])->group(function () {
     Route::post('/onboarding/farm', [OnboardingController::class, 'createFarm'])->name('api.v1.onboarding.farm');
 
@@ -275,6 +284,8 @@ Route::middleware(['app.access', 'farm.context'])->group(function () {
     Route::patch('/farm', [FarmController::class, 'update'])->middleware('farm.permission:farm.update')->name('api.v1.farm.update');
 
     Route::get('/roles', [RoleController::class, 'index'])->middleware('farm.permission:team.view')->name('api.v1.roles.index');
+
+    Route::post('/farm/transfer-ownership', [TeamMemberController::class, 'transferOwnership'])->middleware(['farm.permission:team.transfer_ownership', 'throttle:ownership-transfer'])->name('api.v1.farm.transfer-ownership');
 
     Route::prefix('farm/members')->group(function () {
         Route::get('/', [TeamMemberController::class, 'index'])->middleware('farm.permission:team.view')->name('api.v1.farm.members.index');
@@ -695,6 +706,7 @@ Route::prefix('platform-admin')->middleware(['auth:sanctum', 'account.active', '
     Route::get('/users/{user}', [PlatformSupportController::class, 'user'])->whereUuid('user')->name('api.v1.platform.users.show');
     Route::post('/users/{user}/suspend', [PlatformSupportController::class, 'suspend'])->whereUuid('user')->middleware($write)->name('api.v1.platform.users.suspend');
     Route::post('/users/{user}/restore', [PlatformSupportController::class, 'restore'])->whereUuid('user')->middleware($write)->name('api.v1.platform.users.restore');
+    Route::post('/users/{user}/delete', [PlatformSupportController::class, 'destroyUser'])->whereUuid('user')->middleware($write)->name('api.v1.platform.users.delete');
     Route::get('/farms', [PlatformSupportController::class, 'farms'])->name('api.v1.platform.farms.index');
     Route::get('/farms/{farm}', [PlatformSupportController::class, 'farm'])->whereUuid('farm')->name('api.v1.platform.farms.show');
     Route::post('/farms/{farm}/subscription/plan', [PlatformSupportController::class, 'changePlan'])->whereUuid('farm')->middleware($write)->name('api.v1.platform.farms.plan');

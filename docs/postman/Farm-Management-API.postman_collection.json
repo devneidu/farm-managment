@@ -3869,6 +3869,247 @@
               "body": "{\n  \"message\": \"Unauthenticated.\",\n  \"code\": \"unauthenticated\",\n  \"request_id\": \"01a20d3a-1b8b-7120-b46d-fc03b6e47de8\"\n}"
             }
           ]
+        },
+        {
+          "name": "Can I delete my account? (Bearer)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  pm.test(\"allowed is boolean\", function () { pm.expect(json.data.allowed).to.be.a(\"boolean\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mobile_token}}",
+                "description": "Mobile token from the Mobile login request. No cookie, no CSRF token, no Origin."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/delete/check",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "account",
+                "delete",
+                "check"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nTells the app whether the signed-in user may delete their account right now and, if not, why.\n\n**WHEN TO USE IT**\nBefore showing the \"Delete account\" screen, so blockers are shown up front.\n\n**IMPORTANT BEHAVIOR**\n- Read-only; nothing changes.\n- `allowed=false` while any blocker exists. Blocker codes: `owner_must_transfer` (names the farm in `farm`), `marketplace_deals_open` (`count`, `shops[]`), `platform_admin_protected`.\n- `has_password` tells the UI whether to ask for the password or to offer an emailed code.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — `Authorization: Bearer {{mobile_token}}` (run a Mobile login first). No cookie, no CSRF token, no Origin. The email does NOT need to be verified and no farm is needed.\n\n**URL**\n`GET {{base_url}}/account/delete/check`\n\n**SUCCESS**\n`200 OK` — `data: {allowed, blockers[], has_password, confirmation}`.\n\n**ERRORS**\n- `401 unauthenticated`.\n\nFull contract: `docs/api/ACCOUNT-DELETION.md`."
+          },
+          "response": [
+            {
+              "name": "200 OK — allowed",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete/check",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete",
+                    "check"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"allowed\": true,\n    \"blockers\": [],\n    \"has_password\": true,\n    \"confirmation\": \"DELETE\"\n  },\n  \"meta\": [],\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete my account (Bearer, DESTRUCTIVE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200/409/422/429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 409, 422, 429]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{mobile_token}}",
+                "description": "Mobile token from the Mobile login request. No cookie, no CSRF token, no Origin."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "account",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm\": \"DELETE\",\n  \"password\": \"{{delete_account_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\n**DESTRUCTIVE.** Deletes the signed-in user's account immediately by anonymisation: name, email, password, Google link, devices/sessions, calendar links and notification inbox are removed; farm memberships end; a farm they alone belonged to is archived; their marketplace shops are closed; a final email goes to the old address. Farm records are kept and show \"Deleted user\". The email address can register again as a new account.\n\n**WHEN TO USE IT**\nThe final confirm button of the delete-account screen, after `GET /account/delete/check` returned `allowed=true`.\n\n**SAFETY IN THIS COLLECTION**\nThe body uses `{{delete_account_password}}` (empty by default), so a run of the whole collection gets a harmless `422`. Fill `delete_account_password` (or use `{{deletion_code}}`) only when you really want to delete the demo account.\n\n**IMPORTANT INPUTS**\n- `confirm` — must be exactly `DELETE`.\n- `password` **or** `code` (the emailed code).\n\n**IMPORTANT BEHAVIOR**\n- Blockers are checked first (`409 account_deletion_blocked`, `details.blockers[]`), so a blocked request does not spend the code.\n- One transaction; idempotent. After success every token/session is gone: the next call (including a repeat of this one) is `401`.\n- Rate limited: 5 per 10 minutes per user.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — `Authorization: Bearer {{mobile_token}}` (run a Mobile login first). No cookie, no CSRF token, no Origin. The email does NOT need to be verified and no farm is needed.\n\n**URL**\n`POST {{base_url}}/account/delete`\n\n**REQUEST BODY** (`application/json`)\n- `confirm` — string, **required**, exactly `DELETE`\n- `password` — string, required without `code`\n- `code` — 6 digits, required without `password`\n\n**SUCCESS**\n`200 OK` — message: \"Your account has been deleted.\"\n\n**ERRORS**\n- `401 unauthenticated`.\n- `409 account_deletion_blocked` — `details.blockers[]` (`owner_must_transfer`, `marketplace_deals_open`, `platform_admin_protected`).\n- `422 validation_failed` — `confirm` not `DELETE`, wrong `password`, or invalid/expired `code`.\n- `429 too_many_requests` — honour `Retry-After`.\n\nFull contract and the app-store review notes: `docs/api/ACCOUNT-DELETION.md`."
+          },
+          "response": [
+            {
+              "name": "200 OK — deleted with the emailed code",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"DELETE\",\n  \"code\": \"{{deletion_code}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": null,\n  \"meta\": [],\n  \"message\": \"Your account has been deleted.\"\n}"
+            },
+            {
+              "name": "409 — blocked",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"DELETE\",\n  \"password\": \"<password>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"This account cannot be deleted yet.\",\n  \"code\": \"account_deletion_blocked\",\n  \"request_id\": \"01a20d77-7c56-7048-bcb0-9e89d12757d7\",\n  \"details\": {\n    \"blockers\": [\n      {\n        \"code\": \"owner_must_transfer\",\n        \"message\": \"You own the farm \\\"Green Acres\\\" and it has other members. Transfer ownership to another member before deleting your account.\",\n        \"farm\": {\n          \"id\": \"01a20d77-7bf5-7222-8a94-06aab6bca6b2\",\n          \"name\": \"Green Acres\"\n        }\n      }\n    ]\n  }\n}"
+            }
+          ]
         }
       ]
     },
@@ -4420,6 +4661,519 @@
               ],
               "cookie": [],
               "body": "{\n  \"message\": \"The current password is incorrect.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a1045e-d3c0-735b-bfd6-29e0eb8d719d\",\n  \"errors\": {\n    \"current_password\": [\n      \"The current password is incorrect.\"\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Can I delete my account? (check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200\", function () { pm.expect(pm.response.code).to.be.oneOf([200]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "  pm.test(\"allowed is boolean\", function () { pm.expect(json.data.allowed).to.be.a(\"boolean\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/delete/check",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "account",
+                "delete",
+                "check"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nTells the app whether the signed-in user may delete their account right now and, if not, why.\n\n**WHEN TO USE IT**\nBefore showing the \"Delete account\" screen, so blockers are shown up front.\n\n**IMPORTANT BEHAVIOR**\n- Read-only; nothing changes.\n- `allowed=false` while any blocker exists. Blocker codes: `owner_must_transfer` (names the farm in `farm`), `marketplace_deals_open` (`count`, `shops[]`), `platform_admin_protected`.\n- `has_password` tells the UI whether to ask for the password or to offer an emailed code.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — a signed-in account of any state: the email does NOT need to be verified and no farm is needed. State-changing calls need the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**URL**\n`GET {{base_url}}/account/delete/check`\n\n**SUCCESS**\n`200 OK` — `data: {allowed, blockers[], has_password, confirmation}`.\n\n**ERRORS**\n- `401 unauthenticated`.\n\nFull contract: `docs/api/ACCOUNT-DELETION.md`."
+          },
+          "response": [
+            {
+              "name": "200 OK — blocked: owns a farm with other members",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete/check",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete",
+                    "check"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"allowed\": false,\n    \"blockers\": [\n      {\n        \"code\": \"owner_must_transfer\",\n        \"message\": \"You own the farm \\\"Green Acres\\\" and it has other members. Transfer ownership to another member before deleting your account.\",\n        \"farm\": {\n          \"id\": \"01a20d77-7bf5-7222-8a94-06aab6bca6b2\",\n          \"name\": \"Green Acres\"\n        }\n      }\n    ],\n    \"has_password\": true,\n    \"confirmation\": \"DELETE\"\n  },\n  \"meta\": [],\n  \"message\": null\n}"
+            },
+            {
+              "name": "200 OK — allowed (after transferring ownership)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete/check",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete",
+                    "check"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"allowed\": true,\n    \"blockers\": [],\n    \"has_password\": true,\n    \"confirmation\": \"DELETE\"\n  },\n  \"meta\": [],\n  \"message\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Request an account-deletion code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200/429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 429]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/delete/request-code",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "account",
+                "delete",
+                "request-code"
+              ]
+            },
+            "description": "**WHAT IT DOES**\nEmails a one-time 6-digit code that confirms account deletion (same OTP system as email verification).\n\n**WHEN TO USE IT**\nFor Google-only accounts (no password). Any account may use it as an alternative to the password.\n\n**IMPORTANT BEHAVIOR**\n- A new code replaces the previous one; single use; expires like the other OTPs.\n- 60 s cooldown between sends: `429 too_many_requests` with `Retry-After`.\n- With `MAIL_MAILER=log` the code is in `storage/logs/laravel.log`. Put it in the environment variable `deletion_code`.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — a signed-in account of any state: the email does NOT need to be verified and no farm is needed. State-changing calls need the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**URL**\n`POST {{base_url}}/account/delete/request-code`\n\n**SUCCESS**\n`200 OK` — `data: {cooldown_seconds}`.\n\n**ERRORS**\n- `401 unauthenticated`.\n- `429 too_many_requests` — honour `Retry-After`."
+          },
+          "response": [
+            {
+              "name": "200 OK — code emailed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete/request-code",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete",
+                    "request-code"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"cooldown_seconds\": 60\n  },\n  \"meta\": [],\n  \"message\": \"A confirmation code has been sent to your email.\"\n}"
+            },
+            {
+              "name": "429 — cooldown",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete/request-code",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete",
+                    "request-code"
+                  ]
+                }
+              },
+              "status": "Too Many Requests",
+              "code": 429,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"Please wait 60 seconds before requesting another code.\",\n  \"code\": \"too_many_requests\",\n  \"request_id\": \"01a20d77-7ccc-7393-bd14-ef521e358f6d\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete my account (DESTRUCTIVE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200/409/422/429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 409, 422, 429]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/account/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "account",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirm\": \"DELETE\",\n  \"password\": \"{{delete_account_password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\n**DESTRUCTIVE.** Deletes the signed-in user's account immediately by anonymisation: name, email, password, Google link, devices/sessions, calendar links and notification inbox are removed; farm memberships end; a farm they alone belonged to is archived; their marketplace shops are closed; a final email goes to the old address. Farm records are kept and show \"Deleted user\". The email address can register again as a new account.\n\n**WHEN TO USE IT**\nThe final confirm button of the delete-account screen, after `GET /account/delete/check` returned `allowed=true`.\n\n**SAFETY IN THIS COLLECTION**\nThe body uses `{{delete_account_password}}` (empty by default), so a run of the whole collection gets a harmless `422`. Fill `delete_account_password` (or use `{{deletion_code}}`) only when you really want to delete the demo account.\n\n**IMPORTANT INPUTS**\n- `confirm` — must be exactly `DELETE`.\n- `password` **or** `code` (the emailed code).\n\n**IMPORTANT BEHAVIOR**\n- Blockers are checked first (`409 account_deletion_blocked`, `details.blockers[]`), so a blocked request does not spend the code.\n- One transaction; idempotent. After success every token/session is gone: the next call (including a repeat of this one) is `401`.\n- Rate limited: 5 per 10 minutes per user.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — a signed-in account of any state: the email does NOT need to be verified and no farm is needed. State-changing calls need the `X-XSRF-TOKEN` header and a stateful `Origin` (the collection script adds both).\n\n**URL**\n`POST {{base_url}}/account/delete`\n\n**REQUEST BODY** (`application/json`)\n- `confirm` — string, **required**, exactly `DELETE`\n- `password` — string, required without `code`\n- `code` — 6 digits, required without `password`\n\n**SUCCESS**\n`200 OK` — message: \"Your account has been deleted.\"\n\n**ERRORS**\n- `401 unauthenticated`.\n- `409 account_deletion_blocked` — `details.blockers[]` (`owner_must_transfer`, `marketplace_deals_open`, `platform_admin_protected`).\n- `422 validation_failed` — `confirm` not `DELETE`, wrong `password`, or invalid/expired `code`.\n- `429 too_many_requests` — honour `Retry-After`.\n\nFull contract and the app-store review notes: `docs/api/ACCOUNT-DELETION.md`."
+          },
+          "response": [
+            {
+              "name": "200 OK — deleted with the emailed code",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"DELETE\",\n  \"code\": \"{{deletion_code}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": null,\n  \"meta\": [],\n  \"message\": \"Your account has been deleted.\"\n}"
+            },
+            {
+              "name": "409 — blocked (owner of a farm with other members)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"DELETE\",\n  \"password\": \"<password>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"This account cannot be deleted yet.\",\n  \"code\": \"account_deletion_blocked\",\n  \"request_id\": \"01a20d77-7c56-7048-bcb0-9e89d12757d7\",\n  \"details\": {\n    \"blockers\": [\n      {\n        \"code\": \"owner_must_transfer\",\n        \"message\": \"You own the farm \\\"Green Acres\\\" and it has other members. Transfer ownership to another member before deleting your account.\",\n        \"farm\": {\n          \"id\": \"01a20d77-7bf5-7222-8a94-06aab6bca6b2\",\n          \"name\": \"Green Acres\"\n        }\n      }\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 — confirm is not exactly DELETE",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"delete\",\n  \"password\": \"<password>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"The selected confirm is invalid.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a20d77-7c68-722c-b4fc-92bbaad642ae\",\n  \"errors\": {\n    \"confirm\": [\n      \"The selected confirm is invalid.\"\n    ]\n  }\n}"
+            },
+            {
+              "name": "422 — wrong or expired code",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/account/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "account",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"confirm\": \"DELETE\",\n  \"code\": \"{{deletion_code}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"The code is invalid or has expired.\",\n  \"code\": \"validation_failed\",\n  \"request_id\": \"01a20d77-7cd4-73bf-b96e-86428105628e\",\n  \"errors\": {\n    \"code\": [\n      \"The code is invalid or has expired.\"\n    ]\n  }\n}"
             }
           ]
         }
@@ -6250,6 +7004,162 @@
               ],
               "cookie": [],
               "body": "{\n  \"data\": {\n    \"id\": \"01a1045e-41b1-7019-ad63-a4a7b7517b94\",\n    \"email\": \"amaka.finance@example.com\",\n    \"role\": \"finance\",\n    \"role_label\": \"Finance\",\n    \"status\": \"revoked\",\n    \"expires_at\": \"2026-10-11T00:45:08+00:00\",\n    \"last_sent_at\": \"2026-10-04T00:45:08+00:00\",\n    \"created_at\": \"2026-10-04T00:45:08+00:00\",\n    \"invited_by\": {\n      \"id\": \"01a1045e-3bbd-71f5-b8b6-0aa8ede5c0b5\",\n      \"name\": \"Ada Okafor\",\n      \"email\": \"ada.okafor@example.com\"\n    }\n  },\n  \"meta\": {},\n  \"message\": \"Invitation revoked.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Transfer farm ownership",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200/403/404/422/429\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 403, 404, 422, 429]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/farm/transfer-ownership",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "farm",
+                "transfer-ownership"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"member_id\": \"{{transfer_member_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\nHands the farm to another active member: they become the owner and you become a manager (atomic; the farm always has exactly one owner).\n\n**WHEN TO USE IT**\nBefore deleting an account that owns a farm with other members (`owner_must_transfer`), or any time ownership should change.\n\n**SAFETY IN THIS COLLECTION**\n`{{transfer_member_id}}` is empty by default (`422`). Set it to a `membership id` from **List team members** (for example `{{membership_chidi_id}}`) to actually transfer; this makes your demo owner a manager, so later owner-only requests will return `403`.\n\n**IMPORTANT INPUTS**\n- `member_id` — the **membership id** from `GET /farm/members` (`id` of the row), not the user id.\n\n**IMPORTANT BEHAVIOR**\n- Owner only (`team.transfer_ownership`); everyone else `403 forbidden`.\n- Another farm's membership, a removed member or an unknown id is `404`.\n- Both changes are audited (`team.member_role_changed`). Rate limited: 5 per 10 minutes.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — signed-in, verified, onboarded owner. Needs `X-XSRF-TOKEN` and a stateful `Origin`.\n\n**URL**\n`POST {{base_url}}/farm/transfer-ownership`\n\n**REQUEST BODY** (`application/json`)\n- `member_id` — uuid, **required**\n\n**SUCCESS**\n`200 OK` — `data: {new_owner, previous_owner}` (member objects).\n\n**ERRORS**\n- `403 forbidden` — not the owner.\n- `404` — not an active member of this farm.\n- `422 cannot_transfer_to_self` / validation.\n- `429 too_many_requests`."
+          },
+          "response": [
+            {
+              "name": "200 OK — ownership transferred",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/farm/transfer-ownership",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "farm",
+                    "transfer-ownership"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"member_id\": \"<membership id>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"new_owner\": {\n      \"id\": \"01a20d77-7c15-72a5-87c2-00448ac89d29\",\n      \"role\": \"owner\",\n      \"role_label\": \"Owner\",\n      \"status\": \"active\",\n      \"joined_at\": \"2026-11-24T12:11:04+00:00\",\n      \"is_current_user\": false,\n      \"user\": {\n        \"id\": \"01a20d77-7c14-7003-b460-f57a9f908771\",\n        \"name\": \"Mary Manager\",\n        \"email\": \"loconner@example.com\"\n      }\n    },\n    \"previous_owner\": {\n      \"id\": \"01a20d77-7c01-72d5-93c3-0ece46105642\",\n      \"role\": \"manager\",\n      \"role_label\": \"Manager\",\n      \"status\": \"active\",\n      \"joined_at\": \"2026-11-24T12:11:04+00:00\",\n      \"is_current_user\": true,\n      \"user\": {\n        \"id\": \"01a20d77-7bf3-70d4-8d32-d401ee175943\",\n        \"name\": \"Olu Owner\",\n        \"email\": \"scole@example.org\"\n      }\n    }\n  },\n  \"meta\": [],\n  \"message\": \"Ownership transferred.\"\n}"
+            },
+            {
+              "name": "403 — the caller is no longer the owner",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/farm/transfer-ownership",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "farm",
+                    "transfer-ownership"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"member_id\": \"<membership id>\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"You are not allowed to perform this action.\",\n  \"code\": \"forbidden\",\n  \"request_id\": \"01a20d77-7cab-7241-8535-ddea61f592a2\"\n}"
             }
           ]
         }
@@ -64577,6 +65487,168 @@
                 "description": "Streams a stored seller photo for review, whatever the listing's state."
               },
               "response": []
+            }
+          ]
+        },
+        {
+          "name": "Delete a user (anonymise)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is one of 200/404/409/422\", function () { pm.expect(pm.response.code).to.be.oneOf([200, 404, 409, 422]); });",
+                  "const isJson = (pm.response.headers.get(\"Content-Type\") || \"\").includes(\"json\");",
+                  "if (isJson && pm.response.code >= 200 && pm.response.code < 300) {",
+                  "  const json = pm.response.json();",
+                  "  pm.test(\"Standard success envelope\", function () { pm.expect(json).to.have.property(\"data\"); pm.expect(json).to.have.property(\"meta\"); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Origin",
+                "value": "{{frontend_origin}}",
+                "description": "Stateful frontend origin (Sanctum). Set by the environment variable frontend_origin."
+              },
+              {
+                "key": "X-XSRF-TOKEN",
+                "value": "{{xsrf_token}}",
+                "description": "CSRF token. Filled automatically from the XSRF-TOKEN cookie by the collection pre-request script."
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/platform-admin/users/{{delete_target_user_id}}/delete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "platform-admin",
+                "users",
+                "{{delete_target_user_id}}",
+                "delete"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"User asked support to delete their account\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "**WHAT IT DOES**\n**DESTRUCTIVE.** Deletes (anonymises) another user's account through the same service as the user's own deletion, with the same blockers. The user's old address gets the final \"account deleted\" email.\n\n**WHEN TO USE IT**\nA support request to delete an account the user cannot delete themselves.\n\n**SAFETY IN THIS COLLECTION**\n`{{delete_target_user_id}}` is empty by default (`404`). Set it to a user id only when you mean it.\n\n**IMPORTANT INPUTS**\n- `reason` — required, 3-500 chars; kept in the platform audit trail as `platform.user_deleted` (no personal data).\n\n**IMPORTANT BEHAVIOR**\n- Platform role `admin` only (`support` gets `403`).\n- `409 account_deletion_blocked` with `details.blockers[]`; an administrator (including yourself) is `platform_admin_protected` until the grant is revoked.\n- Idempotent: an already deleted user returns `200` with `already_deleted: true`.\n\n---\n**REFERENCE (detail)**\n\n**AUTHENTICATION**\n**Required** — platform administrator session (see the 90 folder). Needs `X-XSRF-TOKEN` and a stateful `Origin`.\n\n**URL**\n`POST {{base_url}}/platform-admin/users/{{delete_target_user_id}}/delete`\n\n**SUCCESS**\n`200 OK` — `data: {id, deleted, already_deleted}`.\n\n**ERRORS**\n- `403` — not a platform admin / read-only role.\n- `404` — unknown user.\n- `409 account_deletion_blocked`.\n- `422` — `reason` missing."
+          },
+          "response": [
+            {
+              "name": "200 OK — user deleted",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/users/{{delete_target_user_id}}/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "users",
+                    "{{delete_target_user_id}}",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"User asked support to delete their account\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"data\": {\n    \"id\": \"01a20d77-7d20-73aa-8e36-eb3c0a143f39\",\n    \"deleted\": true,\n    \"already_deleted\": false\n  },\n  \"meta\": [],\n  \"message\": \"The account was deleted.\"\n}"
+            },
+            {
+              "name": "409 — blocked (platform administrator)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/platform-admin/users/{{delete_target_user_id}}/delete",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "platform-admin",
+                    "users",
+                    "{{delete_target_user_id}}",
+                    "delete"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"delete myself\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"message\": \"This account cannot be deleted yet.\",\n  \"code\": \"account_deletion_blocked\",\n  \"request_id\": \"01a20d77-7d47-7156-89f8-25029f033097\",\n  \"details\": {\n    \"blockers\": [\n      {\n        \"code\": \"platform_admin_protected\",\n        \"message\": \"This account holds a platform administrator grant. Revoke it before deleting the account.\"\n      }\n    ]\n  }\n}"
             }
           ]
         }

@@ -506,3 +506,13 @@ One GET route added: `/master/species/{species}/batch-reference` (344 total appl
 * The roles column is the default role grants as read from the code; a report's permissions are what is enforced.
 
 **Not done:** Newman was not run for this pass (the responses come from the feature test above); `docs/api/openapi.json` was not touched.
+
+
+## Addendum — account deletion and ownership transfer (feature/account-deletion)
+
+* 5 new operations: `GET /account/delete/check`, `POST /account/delete/request-code`, `POST /account/delete`, `POST /farm/transfer-ownership`, `POST /platform-admin/users/{user}/delete`. Routes now measured: **388** (GET 194, POST 146, PUT 10, PATCH 31, DELETE 7; `HEAD` not counted), which equals the **388 operations / 323 paths** of the regenerated `docs/api/openapi.json`. The figures in §1 and the folder table predate this addendum and earlier ones; they were not re-measured.
+* 7 new Postman requests, all with saved examples: `Can I delete my account? (check)`, `Request an account-deletion code`, `Delete my account (DESTRUCTIVE)` (02 — Onboarding & Account), `Transfer farm ownership` (03 — Farms, Team & Access), `Delete a user (anonymise)` (90 — Platform Admin), and the Bearer variants `Can I delete my account? (Bearer)` and `Delete my account (Bearer, DESTRUCTIVE)` (Mobile (Bearer)).
+* The saved examples are real responses recorded from the application by a throwaway feature test (deleted): blocked check, allowed check, code request and cooldown, delete with an emailed code, blocked delete, wrong code, bad confirmation, ownership transfer and its `403`, platform delete and its `409`. The ids and emails in them are test data.
+* **Safety:** the destructive requests read their input from environment variables that are empty by default (`delete_account_password`, `deletion_code`, `transfer_member_id`, `delete_target_user_id`, added to `Farm-Management-Local.postman_environment.json`). A full run of the collection therefore gets harmless `422`/`404` answers instead of deleting the demo account or handing the farm over.
+* **Not done:** these requests were not executed through Newman or imported into the Postman app; behaviour is covered by `tests/Feature/Account/AccountDeletionTest.php`. `docs/api/openapi.json` was regenerated with `php -d memory_limit=2G artisan scramble:export`; the committed copy was already stale (for example it had no `/auth/mobile/*` operations), so its diff is large and includes unrelated earlier changes.
+* Frontend contract and app-store review notes: `docs/api/ACCOUNT-DELETION.md`; mobile summary: `docs/api/MOBILE-AUTH.md`.

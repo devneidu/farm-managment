@@ -6,6 +6,7 @@ use App\Enums\FarmRole;
 use App\Enums\MembershipStatus;
 use App\Events\Access\MemberRemoved;
 use App\Events\Access\MemberRoleChanged;
+use App\Models\Farm;
 use App\Models\FarmMembership;
 use App\Models\User;
 use App\Support\Access\FarmContext;
@@ -75,6 +76,44 @@ class TeamService
         return $target;
     }
 
+    /**
+     * Hands the farm to another ACTIVE member: the target becomes the owner and the previous owner becomes a manager, in one transaction under
+     * a farm lock, so there is always exactly one owner. Owner only (team.transfer_ownership); the route guards the permission and this
+     * re-checks it under the lock.
+     *
+     * @return array{0: FarmMembership, 1: FarmMembership} [new owner membership, previous owner (now manager) membership]
+     */
+    public function transferOwnership(FarmContext $ctx, User $actor, string $targetMembershipId): array
+    {
+        [$new, $old, $newFrom] = DB::transaction(function () use ($ctx, $targetMembershipId) {
+            Farm::whereKey($ctx->farm->id)->lockForUpdate()->firstOrFail();
+
+            $old = FarmMembership::active()->where('farm_id', $ctx->farm->id)->whereKey($ctx->membership->id)->lockForUpdate()->first();
+
+            if (! $old || $old->role !== FarmRole::Owner) {
+                throw new ApiHttpException(403, 'insufficient_role', 'Only the owner can transfer ownership.');
+            }
+
+            // A membership of another farm, a removed one or an unknown id all answer 404 (never a hint that it exists elsewhere).
+            $new = FarmMembership::active()->where('farm_id', $ctx->farm->id)->whereKey($targetMembershipId)->lockForUpdate()->firstOrFail();
+
+            if ($new->id === $old->id) {
+                throw new ApiHttpException(422, 'cannot_transfer_to_self', 'Choose another member to become the owner.');
+            }
+
+            $newFrom = $new->role;
+            $new->forceFill(['role' => FarmRole::Owner])->save();
+            $old->forceFill(['role' => FarmRole::Manager])->save();
+
+            return [$new, $old, $newFrom];
+        });
+
+        MemberRoleChanged::dispatch($old, FarmRole::Owner, FarmRole::Manager, $actor);
+        MemberRoleChanged::dispatch($new, $newFrom, FarmRole::Owner, $actor);
+
+        return [$new, $old];
+    }
+
     /** Re-reads the target under a lock, scoped to the acting farm and active only (cross-farm ids are 404). */
     private function lockActiveTarget(FarmContext $ctx, FarmMembership $target): FarmMembership
     {
@@ -106,7 +145,7 @@ class TeamService
             ->count();
 
         if ($owners <= 1) {
-            throw new ApiHttpException(409, 'last_owner', 'A farm must keep at least one owner. Ownership transfer is not supported yet.');
+            throw new ApiHttpException(409, 'last_owner', 'A farm must keep at least one owner. Transfer ownership to another member first.');
         }
     }
 }

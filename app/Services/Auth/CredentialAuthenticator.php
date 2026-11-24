@@ -29,7 +29,7 @@ class CredentialAuthenticator
     {
         $user = User::where('email', $email)->first();
 
-        $valid = $user && $user->password && Hash::check($password, $user->password);
+        $valid = $user && ! $user->isAnonymised() && $user->password && Hash::check($password, $user->password);
 
         if (! $user || ! $user->password) {
             Hash::make(Str::random(16)); // comparable work for unknown/passwordless accounts

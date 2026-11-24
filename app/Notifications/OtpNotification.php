@@ -33,6 +33,11 @@ class OtpNotification extends Notification
                 ["We received a request to reset the password for your {$brand} account.", 'Use the code below to continue.'],
                 "If you didn't request a password reset, you can safely ignore this email. Your password will not change.",
             ],
+            OtpPurpose::AccountDeletion => [
+                "Confirm deleting your {$brand} account",
+                ["We received a request to permanently delete your {$brand} account.", 'Enter the code below in the app to confirm. This cannot be undone.'],
+                "If you didn't request this, ignore this email and your account will not be deleted. Consider changing your password.",
+            ],
             default => [
                 "Verify your {$brand} account",
                 ["Welcome to {$brand}.", 'Use the verification code below to confirm your email address and continue setting up your farm.'],

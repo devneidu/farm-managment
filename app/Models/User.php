@@ -36,6 +36,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'onboarded_at' => 'datetime',
             'suspended_at' => 'datetime',
+            'anonymised_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -53,6 +54,12 @@ class User extends Authenticatable
     public function isSuspended(): bool
     {
         return $this->suspended_at !== null;
+    }
+
+    /** True once the account was deleted: the row is kept for history but holds no personal data and can never sign in. */
+    public function isAnonymised(): bool
+    {
+        return $this->anonymised_at !== null;
     }
 
     public function memberships(): HasMany

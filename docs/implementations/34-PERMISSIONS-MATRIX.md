@@ -107,6 +107,19 @@ mirror `inventory.add`. Purchases (`POST /purchases`, which also book money) kee
 Every permission remains backend enforced and can be refined without
 changing role names.
 
+
+## Ownership transfer and account deletion
+
+`team.transfer_ownership` (`POST /farm/transfer-ownership {member_id}`) is held by the **Owner only**; no other role preset has it and it is not
+configurable. The target must be an active member of the same farm. The previous owner becomes a **manager**, so a farm always has exactly one owner.
+This is the only way to create a new owner (`team.invite` / `team.update_role` still refuse `owner` with `422 ownership_transfer_unsupported`).
+`team.remove` still cannot remove the last owner (`409 last_owner`).
+
+Account deletion (`GET /account/delete/check`, `POST /account/delete/request-code`, `POST /account/delete`) is a **user-level** action, not a farm
+permission: any signed-in user (verified or not, with or without a farm) may delete their **own** account. An owner of a farm that has other active
+members is blocked (`owner_must_transfer`) until they transfer ownership. A platform `admin` may delete another user through
+`POST /platform-admin/users/{user}/delete`; the `support` role may not. See `docs/api/ACCOUNT-DELETION.md`.
+
 ## Farm-made record types
 
 No new permission. Managing a farm's own record types reuses

@@ -93,6 +93,14 @@ class AuthRateLimiters
             self::limit('measurement_preview.user')->by('measurement-preview:'.self::actor($r)),
         ]);
 
+        RateLimiter::for('account-delete', fn (Request $r) => [
+            self::limit('account_delete.user')->by('account-delete:'.self::actor($r)),
+        ]);
+
+        RateLimiter::for('ownership-transfer', fn (Request $r) => [
+            self::limit('ownership_transfer.user')->by('ownership-transfer:'.self::actor($r)),
+        ]);
+
         RateLimiter::for('team-invite', fn (Request $r) => [
             self::limit('team_invite.user')->by('team-invite:'.self::actor($r)),
         ]);

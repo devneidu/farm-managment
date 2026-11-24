@@ -8,6 +8,7 @@ OpenAPI 3.1 docs are generated from the Laravel code by [dedoc/scramble](https:/
 | Browser docs (Stoplight Elements) | `/docs/api` (e.g. `http://localhost/docs/api`) |
 | Live OpenAPI JSON | `/docs/api.json` |
 | Committed spec for the frontend developer | `docs/api/openapi.json` |
+| Account deletion, ownership transfer, app-store review notes | [ACCOUNT-DELETION.md](ACCOUNT-DELETION.md) |
 
 Docs routes are available only when `APP_ENV=local` (Scramble's default gate). To expose them elsewhere,
 define the `viewApiDocs` gate in a service provider.
@@ -199,9 +200,10 @@ Roles: `owner`, `manager`, `farm_worker`, `finance` (labels: Owner, Manager, Far
 | `finance.expense.create` (reserved) | x | | | x |
 | `subscription.view` | x | x | | x |
 | `subscription.manage` | x | | | |
+| `team.transfer_ownership` (hand the farm to another member) | x | | | |
 
 Team rules: Owner may invite/assign manager, farm_worker, finance. Manager may only invite/assign/manage farm_worker and
-finance. **Nobody can assign `owner`** (`422 ownership_transfer_unsupported`), change their own role, or demote/remove the
+finance. **Nobody can assign `owner` through invite or role change** (`422 ownership_transfer_unsupported`; use `POST /farm/transfer-ownership`), change their own role, or demote/remove the
 last owner (`409 last_owner`). Insufficient hierarchy is `403 insufficient_role`; a missing permission is `403 forbidden`.
 
 ## 7. Endpoints
@@ -219,6 +221,8 @@ last owner (`409 last_owner`). Insufficient hierarchy is `403 insufficient_role`
 | `POST /farm/invitations/{id}/resend`, `DELETE /farm/invitations/{id}` | team.invite | resend = new link + new expiry |
 | `POST /invitations/accept` `{token}` | verified user | see below |
 | `GET/PATCH /account`, `PUT /account/password` | verified user | name only; email is read-only |
+| `POST /farm/transfer-ownership` `{member_id}` | team.transfer_ownership (owner only) | target = an active membership id of this farm; you become a manager; `404`, `422 cannot_transfer_to_self`; see [ACCOUNT-DELETION.md](ACCOUNT-DELETION.md) |
+| `GET /account/delete/check`, `POST /account/delete/request-code`, `POST /account/delete` `{confirm:"DELETE", password|code}` | any signed-in user (no verification needed) | account deletion by anonymisation; `409 account_deletion_blocked`; see [ACCOUNT-DELETION.md](ACCOUNT-DELETION.md) |
 | `GET/PUT /settings/notifications` `{channels:{in_app,email}}` | any member | per user per farm; shell only |
 
 ## 8. Invitation flow

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\FarmRole;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Team\TransferOwnershipRequest;
 use App\Http\Requests\Team\UpdateMemberRoleRequest;
 use App\Http\Resources\MemberResource;
 use App\Models\FarmMembership;
@@ -86,6 +87,27 @@ class TeamMemberController extends Controller
         $team->remove($ctx, $request->user(), $this->find($ctx, $membership));
 
         return ApiResponse::success(message: 'Member removed.');
+    }
+
+    /**
+     * Transfer farm ownership
+     *
+     * Owner only (`team.transfer_ownership`). Body: `{ "member_id": "<membership id from GET /farm/members>" }`. The target must be an
+     * ACTIVE member of this farm; they become the owner and you become a manager, atomically (there is always exactly one owner). Both
+     * changes are audited (`team.member_role_changed`). Do this before deleting an account that owns a farm with other members.
+     *
+     * Errors: `403` (not the owner), `404` (not an active member of this farm), `422 cannot_transfer_to_self`, `429`.
+     *
+     * @response array{data: array{new_owner: MemberResource, previous_owner: MemberResource}, meta: object, message: string|null}
+     */
+    public function transferOwnership(TransferOwnershipRequest $request, FarmContext $ctx, TeamService $team): JsonResponse
+    {
+        [$new, $old] = $team->transferOwnership($ctx, $request->user(), $request->validated('member_id'));
+
+        return ApiResponse::success([
+            'new_owner' => (new MemberResource($new->load('user')))->resolve($request),
+            'previous_owner' => (new MemberResource($old->load('user')))->resolve($request),
+        ], message: 'Ownership transferred.');
     }
 
     /** Scoped lookup: only ACTIVE memberships of the acting farm, so cross-farm ids are indistinguishable from missing. */

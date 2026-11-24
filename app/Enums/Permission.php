@@ -16,6 +16,8 @@ enum Permission: string
     case TeamInvite = 'team.invite';
     case TeamUpdateRole = 'team.update_role';
     case TeamRemove = 'team.remove';
+    /** Owner only: the Owner role holds every permission and no other role is granted this one. */
+    case TeamTransferOwnership = 'team.transfer_ownership';
 
     // Phase 3 - subscription (RBAC only; plan entitlements are a separate system)
     case SubscriptionView = 'subscription.view';

@@ -101,10 +101,11 @@ Standard envelope: `{ "message": "…", "code": "…", "request_id": "…" }`; v
 |---|---|---|
 | 401 | `invalid_credentials` | Wrong email or password (same answer for unknown email) |
 | 401 | `invalid_google_credential` | Google token rejected |
-| 401 | `unauthenticated` | Missing, malformed, expired or revoked token |
+| 401 | `unauthenticated` | Missing, malformed, expired or revoked token; also any request after the account was deleted |
 | 403 | `account_suspended` | Suspended account (login, Google, or any later request) |
 | 403 | `email_verification_required` | Token is valid but the email isn't verified yet |
 | 403 | `farm_access_denied` / `no_active_farm` | Bad `X-Farm-Id` / no farm |
+| 409 | `account_deletion_blocked` | `POST /account/delete` while a blocker exists (`details.blockers[]`) |
 | 404 | – | `DELETE /auth/devices/{id}` for a token that isn't yours |
 | 422 | – | Validation (`device_name` missing or over 100 characters, duplicate email, weak password) |
 | 429 | `too_many_requests` | Rate limited; honour `Retry-After` |
@@ -115,3 +116,15 @@ Standard envelope: `{ "message": "…", "code": "…", "request_id": "…" }`; v
 Login is limited per email+IP (5/min) and per IP (default 60/min); register and Google per IP. The same budgets apply to the web and mobile endpoints.
 Mobile users often share an IP, so the per-IP caps are configurable (`RATE_LOGIN_IP_PER_MINUTE`, `RATE_GOOGLE_IP_PER_MINUTE`, `RATE_REGISTER_IP_PER_HOUR`).
 Behind a load balancer or Cloudflare the server must trust the proxy (`TRUSTED_PROXIES`) to see real client IPs.
+
+## Deleting the account (required by the app stores)
+
+The same three endpoints serve the Bearer token and the web cookie. They need no verified email and no farm. Full contract, blockers, what is
+deleted and what is kept: [ACCOUNT-DELETION.md](ACCOUNT-DELETION.md).
+
+1. `GET /account/delete/check` → `{ allowed, blockers[], has_password }`. Show the blockers (each has a plain `message`) before the user starts.
+2. Password account: ask for the password. Google-only account (`has_password: false`): `POST /account/delete/request-code`, then ask for the emailed code.
+3. `POST /account/delete` `{ "confirm": "DELETE", "password": "…" }` or `{ "confirm": "DELETE", "code": "123456" }` → `200`. Delete the stored token and return to the signed-out screen.
+
+After success the token is already revoked on the server; any later request, including a retry of the delete, is `401 unauthenticated`. The old email can
+register again as a brand-new account. Errors: `409 account_deletion_blocked` (`details.blockers[]`), `422` (not exactly `DELETE`, wrong password, bad code), `429`.

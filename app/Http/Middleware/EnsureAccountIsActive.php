@@ -13,6 +13,13 @@ class EnsureAccountIsActive
 
     public function handle(Request $request, Closure $next)
     {
+        // A deleted (anonymised) account is gone: any lingering session or token is treated as signed out.
+        if ($request->user()?->isAnonymised()) {
+            $this->sessions->logout($request);
+
+            throw new ApiHttpException(401, 'unauthenticated', 'Unauthenticated.');
+        }
+
         if ($request->user()?->isSuspended()) {
             $this->sessions->logout($request);
 

@@ -43,6 +43,8 @@ return [
         'reset_password' => ['ip' => [10, 10]],
         'google' => ['ip' => [(int) env('RATE_GOOGLE_IP_PER_MINUTE', 60), 1]],
         'account_password' => ['user' => [5, 10]],
+        'account_delete' => ['user' => [5, 10]],
+        'ownership_transfer' => ['user' => [5, 10]],
         'invitation_accept' => ['user' => [10, 10]],
         'team_invite' => ['user' => [30, 60]],
         'master_data_write' => ['user' => [60, 60]],

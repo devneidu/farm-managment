@@ -12,7 +12,10 @@ use App\Http\Resources\Platform\PlatformFarmResource;
 use App\Http\Resources\Platform\PlatformUserResource;
 use App\Http\Resources\SubscriptionResource;
 use App\Models\Farm;
+use App\Http\Requests\Platform\DeleteUserRequest;
 use App\Models\Plan;
+use App\Models\User;
+use App\Services\Account\AccountDeletionService;
 use App\Services\Platform\PlatformPlanService;
 use App\Services\Platform\PlatformSupportService;
 use App\Support\Api\ApiResponse;
@@ -77,6 +80,27 @@ class PlatformSupportController extends Controller
     public function restore(Request $request, string $user, PlatformSupportService $support): JsonResponse
     {
         return ApiResponse::success((new PlatformUserResource($support->restore($request->user(), $user)))->resolve($request));
+    }
+
+    /**
+     * Delete a user (anonymise)
+     *
+     * Runs the same account deletion as the user's own "delete my account", with the same blockers: the name, email, password, Google link,
+     * tokens and sessions are removed, farm memberships end, a farm they alone belonged to is archived, their shops are closed, and a final
+     * email goes to their old address. Farm records are kept and show "Deleted user". Required `reason` is kept in the audit trail
+     * (`platform.user_deleted`; no personal data). Irreversible. Repeating the request on an already deleted user succeeds without change.
+     *
+     * Errors: `404`, `409 account_deletion_blocked` (`details.blockers`: `owner_must_transfer`, `marketplace_deals_open`, `platform_admin_protected` - this
+     * includes yourself), `422`.
+     *
+     * @response array{data: array{id: string, deleted: bool}, meta: object, message: string|null}
+     */
+    public function destroyUser(DeleteUserRequest $request, string $user, AccountDeletionService $deletion): JsonResponse
+    {
+        $target = User::findOrFail($user);
+        $result = $deletion->delete($target, $request->user(), $request->validated('reason'), 'platform');
+
+        return ApiResponse::success(['id' => $target->id, 'deleted' => true, 'already_deleted' => $result['already_deleted']], message: 'The account was deleted.');
     }
 
     /**
